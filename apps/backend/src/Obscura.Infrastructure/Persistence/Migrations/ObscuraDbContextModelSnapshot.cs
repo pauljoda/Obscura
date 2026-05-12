@@ -315,9 +315,9 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
-                            Code = "performer",
+                            Code = "person",
                             Category = "Taxonomy",
-                            DisplayName = "Performer"
+                            DisplayName = "Person"
                         },
                         new
                         {

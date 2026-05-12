@@ -422,41 +422,41 @@ public static class LegacyMediaImportSql
 
             IF to_regclass('public.gallery_performers') IS NOT NULL THEN
                 INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT gallery_id, performer_id, 'performer', NULL, 0, now()
+                SELECT gallery_id, performer_id, 'person', NULL, 0, now()
                 FROM public.gallery_performers
-                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = 'performer')
+                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = 'person')
                 ON CONFLICT (entity_id, person_entity_id, role) DO NOTHING;
             END IF;
 
             IF to_regclass('public.image_performers') IS NOT NULL THEN
                 INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT image_id, performer_id, 'performer', NULL, 0, now()
+                SELECT image_id, performer_id, 'person', NULL, 0, now()
                 FROM public.image_performers
-                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = 'performer')
+                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = 'person')
                 ON CONFLICT (entity_id, person_entity_id, role) DO NOTHING;
             END IF;
 
             IF to_regclass('public.book_performers') IS NOT NULL THEN
                 INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT book_id, performer_id, 'performer', NULL, 0, now()
+                SELECT book_id, performer_id, 'person', NULL, 0, now()
                 FROM public.book_performers
-                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = 'performer')
+                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = 'person')
                 ON CONFLICT (entity_id, person_entity_id, role) DO NOTHING;
             END IF;
 
             IF to_regclass('public.audio_library_performers') IS NOT NULL THEN
                 INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT library_id, performer_id, 'performer', NULL, 0, now()
+                SELECT library_id, performer_id, 'person', NULL, 0, now()
                 FROM public.audio_library_performers
-                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = 'performer')
+                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = 'person')
                 ON CONFLICT (entity_id, person_entity_id, role) DO NOTHING;
             END IF;
 
             IF to_regclass('public.audio_track_performers') IS NOT NULL THEN
                 INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT track_id, performer_id, 'performer', NULL, 0, now()
+                SELECT track_id, performer_id, 'person', NULL, 0, now()
                 FROM public.audio_track_performers
-                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = 'performer')
+                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = 'person')
                 ON CONFLICT (entity_id, person_entity_id, role) DO NOTHING;
             END IF;
         END $$;

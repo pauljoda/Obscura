@@ -3,7 +3,7 @@ using Obscura.Domain.Entities;
 namespace Obscura.Domain.Capabilities;
 
 /// <summary>
-/// Represents people credited on an entity, such as performers, actors, artists, or authors.
+/// Represents people credited on an entity, with specific end-user labels chosen by the UI context.
 /// </summary>
 /// <param name="People">Ordered references to credited people entities.</param>
 public sealed record Credits(IReadOnlyList<EntityReference> People)

@@ -55,7 +55,7 @@ public sealed class V2FreshStartEndpointTests
         Assert.NotNull(payload);
         Assert.Equal(3, payload.SeriesImported);
         Assert.Equal(12, payload.VideosImported);
-        Assert.Equal(6, payload.PerformersImported);
+        Assert.Equal(6, payload.PeopleImported);
         Assert.Equal(4, payload.TagsImported);
         Assert.Equal(2, payload.StudiosImported);
         Assert.Equal(9, payload.LinksImported);
@@ -119,7 +119,7 @@ public sealed class V2FreshStartEndpointTests
             return Task.FromResult(new LegacyVideoImportResult(
                 SeriesImported: 3,
                 VideosImported: 12,
-                PerformersImported: 6,
+                PeopleImported: 6,
                 TagsImported: 4,
                 StudiosImported: 2,
                 LinksImported: 9));

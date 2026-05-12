@@ -26,7 +26,7 @@ export * from './listCollectionsParams';
 export * from './listEntitiesParams';
 export * from './listGalleriesParams';
 export * from './listImagesParams';
-export * from './listPerformersParams';
+export * from './listPeopleParams';
 export * from './listStudiosParams';
 export * from './listTagsParams';
 export * from './mediaDetail';

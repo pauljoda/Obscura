@@ -502,7 +502,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
         var personIds = links.Select(link => link.PersonEntityId).Distinct().ToArray();
         var people = await _db.Entities
             .AsNoTracking()
-            .Where(entity => personIds.Contains(entity.Id) && entity.KindCode == "performer" && entity.DeletedAt == null)
+            .Where(entity => personIds.Contains(entity.Id) && entity.KindCode == "person" && entity.DeletedAt == null)
             .ToDictionaryAsync(entity => entity.Id, cancellationToken);
 
         return links

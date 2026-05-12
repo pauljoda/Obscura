@@ -14,11 +14,11 @@ public sealed class EntityProjectionServiceTests
         var videoId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var tagId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         var studioId = Guid.Parse("88888888-8888-8888-8888-888888888888");
-        var performerId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+        var personId = Guid.Parse("99999999-9999-9999-9999-999999999999");
         SeedEntity(db, videoId, "video", "A Quiet Scene");
         SeedEntity(db, tagId, "tag", "Favorite");
         SeedEntity(db, studioId, "studio", "Obscura Studio");
-        SeedEntity(db, performerId, "performer", "Ada Actor");
+        SeedEntity(db, personId, "person", "Ada Person");
         db.EntityRatings.Add(new EntityRatingRow { EntityId = videoId, Value = 4 });
         db.EntityFlags.Add(new EntityFlagRow
         {
@@ -37,8 +37,8 @@ public sealed class EntityProjectionServiceTests
         db.EntityCreditLinks.Add(new EntityCreditLinkRow
         {
             EntityId = videoId,
-            PersonEntityId = performerId,
-            Role = "performer",
+            PersonEntityId = personId,
+            Role = "person",
             Character = "Lead",
             SortOrder = 1,
             CreatedAt = DateTimeOffset.UtcNow
@@ -84,8 +84,8 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal(studioId, card.Capabilities.Studio?.Id);
         Assert.Equal("Obscura Studio", card.Capabilities.Studio?.Title);
         var credit = Assert.Single(card.Capabilities.Credits.People);
-        Assert.Equal(performerId, credit.Id);
-        Assert.Equal("Ada Actor", credit.Title);
+        Assert.Equal(personId, credit.Id);
+        Assert.Equal("Ada Person", credit.Title);
         var url = Assert.Single(card.Capabilities.Links.Urls);
         Assert.Equal("https://example.test/videos/a-quiet-scene", url.Url);
         Assert.Equal("Example", url.Label);

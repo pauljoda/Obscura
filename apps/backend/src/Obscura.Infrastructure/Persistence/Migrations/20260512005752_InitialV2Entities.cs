@@ -161,7 +161,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     { "collection", "Collection", "Collection" },
                     { "gallery", "Media", "Gallery" },
                     { "image", "Media", "Image" },
-                    { "performer", "Taxonomy", "Performer" },
+                    { "person", "Taxonomy", "Person" },
                     { "studio", "Taxonomy", "Studio" },
                     { "tag", "Taxonomy", "Tag" },
                     { "video", "Media", "Video" }

@@ -12,7 +12,7 @@ public sealed record TaxonomyListResponse(
     string? NextCursor);
 
 /// <summary>
-/// API-facing detail shape for taxonomy entities such as performers, studios, and tags.
+/// API-facing detail shape for taxonomy entities such as people, studios, and tags.
 /// </summary>
 /// <param name="Id">Taxonomy entity identifier.</param>
 /// <param name="Kind">Entity kind code.</param>

@@ -21,7 +21,7 @@ import type {
   ListEntitiesParams,
   ListGalleriesParams,
   ListImagesParams,
-  ListPerformersParams,
+  ListPeopleParams,
   ListStudiosParams,
   ListTagsParams,
   MediaDetail,
@@ -1400,19 +1400,19 @@ export const importLegacyMedia = async ( options?: RequestInit): Promise<importL
 
 
 
-export type listPerformersResponse200 = {
+export type listPeopleResponse200 = {
   data: TaxonomyListResponse
   status: 200
 }
 
-export type listPerformersResponseSuccess = (listPerformersResponse200) & {
+export type listPeopleResponseSuccess = (listPeopleResponse200) & {
   headers: Headers;
 };
 ;
 
-export type listPerformersResponse = (listPerformersResponseSuccess)
+export type listPeopleResponse = (listPeopleResponseSuccess)
 
-export const getListPerformersUrl = (params?: ListPerformersParams,) => {
+export const getListPeopleUrl = (params?: ListPeopleParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -1424,15 +1424,15 @@ export const getListPerformersUrl = (params?: ListPerformersParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/performers?${stringifiedParams}` : `/api/performers`
+  return stringifiedParams.length > 0 ? `/api/people?${stringifiedParams}` : `/api/people`
 }
 
 /**
- * @summary Lists performer entities through the global entity projection.
+ * @summary Lists person entities through the global entity projection.
  */
-export const listPerformers = async (params?: ListPerformersParams, options?: RequestInit): Promise<listPerformersResponse> => {
+export const listPeople = async (params?: ListPeopleParams, options?: RequestInit): Promise<listPeopleResponse> => {
 
-  return orvalFetch<listPerformersResponse>(getListPerformersUrl(params),
+  return orvalFetch<listPeopleResponse>(getListPeopleUrl(params),
   {
     ...options,
     method: 'GET'
@@ -1443,39 +1443,39 @@ export const listPerformers = async (params?: ListPerformersParams, options?: Re
 
 
 
-export type getPerformerResponse200 = {
+export type getPeopleResponse200 = {
   data: TaxonomyDetail
   status: 200
 }
 
-export type getPerformerResponse404 = {
+export type getPeopleResponse404 = {
   data: ApiProblem
   status: 404
 }
 
-export type getPerformerResponseSuccess = (getPerformerResponse200) & {
+export type getPeopleResponseSuccess = (getPeopleResponse200) & {
   headers: Headers;
 };
-export type getPerformerResponseError = (getPerformerResponse404) & {
+export type getPeopleResponseError = (getPeopleResponse404) & {
   headers: Headers;
 };
 
-export type getPerformerResponse = (getPerformerResponseSuccess | getPerformerResponseError)
+export type getPeopleResponse = (getPeopleResponseSuccess | getPeopleResponseError)
 
-export const getGetPerformerUrl = (id: string,) => {
-
-
+export const getGetPeopleUrl = (id: string,) => {
 
 
-  return `/api/performers/${id}`
+
+
+  return `/api/people/${id}`
 }
 
 /**
- * @summary Gets one performer entity.
+ * @summary Gets one person entity.
  */
-export const getPerformer = async (id: string, options?: RequestInit): Promise<getPerformerResponse> => {
+export const getPeople = async (id: string, options?: RequestInit): Promise<getPeopleResponse> => {
 
-  return orvalFetch<getPerformerResponse>(getGetPerformerUrl(id),
+  return orvalFetch<getPeopleResponse>(getGetPeopleUrl(id),
   {
     ...options,
     method: 'GET'

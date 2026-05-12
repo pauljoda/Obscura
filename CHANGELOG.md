@@ -32,8 +32,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 migration can now preview-import existing video and series metadata into the global entity tables, including tags, studios, ratings, source files, and series-to-episode links for side-by-side testing.
 - The v2 video and series cards now receive imported thumbnail URLs through the shared file capability projection.
 - The v2 video detail page now sends playback requests to the .NET backend during local Svelte development instead of falling back to the legacy SvelteKit API path.
-- The v2 global entity model now imports and projects shared studio and performer credit capabilities for videos and series.
-- The v2 .NET backend now exposes first-class performer, studio, and tag list/detail API routes backed by the global entity projection.
+- The v2 global entity model now imports and projects shared people and studio credit capabilities for videos and series.
+- The v2 .NET backend now exposes first-class people, studio, and tag list/detail API routes backed by the global entity projection.
 - The v2 .NET backend now exposes first-class image, gallery, book, audio-library, and audio-track media routes backed by the global entity projection.
 - The v2 migration can now preview-import existing image, gallery, book, audio-library, and audio-track metadata into the global entity tables for backend comparison.
 - The .NET worker can now run queued legacy video and media preview imports, so migration backfills can execute through the v2 job system as well as direct API calls.
@@ -73,6 +73,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Renamed the v2 .NET taxonomy kind and API route from performer to person/people so the backend stays generic while UI surfaces choose context-specific labels.
 - Added scoped v2 .NET application services for entity, video/series, and collection use cases so API endpoints depend on application orchestration instead of projection interfaces directly.
 - Restructured the v2 .NET backend core so infrastructure now projects PostgreSQL rows into first-class Domain entities, capabilities, and media aggregates before API endpoints map them back to OpenAPI/Orval contracts.
 - The v2 .NET backend now has an `Obscura.Application` boundary for API-facing service interfaces, starting with a cleaner `IEntityCatalog` abstraction over the entity projection implementation.
@@ -142,8 +143,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added v2 entity hierarchy links and a legacy video import endpoint for populating the new entity schema from current videos, series, tags, and studios during migration verification.
 - Added thumbnail file-role projection to v2 entity cards so shared media surfaces can render artwork from the global entity model.
 - Added a shared v2 API URL helper for generated fetches and media URLs, keeping typed API calls and stream sources on the same backend.
-- Added v2 studio and credit capability tables plus legacy import coverage for performers, studios, and video/series cast links.
-- Added typed v2 taxonomy DTOs and OpenAPI coverage for `/api/performers`, `/api/studios`, and `/api/tags`.
+- Added v2 studio and credit capability tables plus legacy import coverage for people, studios, and video/series cast links.
+- Added typed v2 taxonomy DTOs and OpenAPI coverage for `/api/people`, `/api/studios`, and `/api/tags`.
 - Added typed v2 media DTOs and OpenAPI coverage for `/api/images`, `/api/galleries`, `/api/books`, `/api/audio-libraries`, and `/api/audio-tracks`.
 - Added a legacy media import endpoint and Svelte API wrapper coverage for testing the remaining v2 media facades with real local metadata.
 - Added v2 worker handlers for `legacy-video-import` and `legacy-media-import` jobs.

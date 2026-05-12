@@ -17,7 +17,7 @@ public sealed class EntityKindTests
         Assert.Contains("audio", codes);
         Assert.Contains("audio-library", codes);
         Assert.Contains("audio-track", codes);
-        Assert.Contains("performer", codes);
+        Assert.Contains("person", codes);
         Assert.Contains("studio", codes);
         Assert.Contains("tag", codes);
         Assert.All(codes, code => Assert.Matches("^[a-z][a-z0-9_-]*$", code));

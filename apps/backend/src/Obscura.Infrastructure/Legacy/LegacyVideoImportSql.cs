@@ -77,7 +77,7 @@ public static class LegacyVideoImportSql
 
             IF to_regclass('public.performers') IS NOT NULL THEN
                 INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
-                SELECT id, 'performer', name, created_at, updated_at
+                SELECT id, 'person', name, created_at, updated_at
                 FROM public.performers
                 ON CONFLICT (id) DO UPDATE SET
                     kind_code = EXCLUDED.kind_code,
@@ -392,7 +392,7 @@ public static class LegacyVideoImportSql
 
             IF to_regclass('public.video_series_performers') IS NOT NULL THEN
                 INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT series_id, performer_id, 'performer', character, COALESCE("order", 0), now()
+                SELECT series_id, performer_id, 'person', character, COALESCE("order", 0), now()
                 FROM public.video_series_performers
                 ON CONFLICT (entity_id, person_entity_id, role) DO UPDATE SET
                     character = EXCLUDED.character,
@@ -401,7 +401,7 @@ public static class LegacyVideoImportSql
 
             IF to_regclass('public.video_movie_performers') IS NOT NULL THEN
                 INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT movie_id, performer_id, 'performer', character, COALESCE("order", 0), now()
+                SELECT movie_id, performer_id, 'person', character, COALESCE("order", 0), now()
                 FROM public.video_movie_performers
                 ON CONFLICT (entity_id, person_entity_id, role) DO UPDATE SET
                     character = EXCLUDED.character,
@@ -410,7 +410,7 @@ public static class LegacyVideoImportSql
 
             IF to_regclass('public.video_episode_performers') IS NOT NULL THEN
                 INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT episode_id, performer_id, 'performer', character, COALESCE("order", 0), now()
+                SELECT episode_id, performer_id, 'person', character, COALESCE("order", 0), now()
                 FROM public.video_episode_performers
                 ON CONFLICT (entity_id, person_entity_id, role) DO UPDATE SET
                     character = EXCLUDED.character,
@@ -423,7 +423,7 @@ public static class LegacyVideoImportSql
         SELECT
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = 'video-series') AS series_imported,
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = 'video') AS videos_imported,
-            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = 'performer') AS performers_imported,
+            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = 'person') AS people_imported,
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = 'tag') AS tags_imported,
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = 'studio') AS studios_imported,
             ((SELECT COUNT(*)::int FROM v2.entity_hierarchy_links) +

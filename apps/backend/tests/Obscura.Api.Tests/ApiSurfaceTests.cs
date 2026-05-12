@@ -91,7 +91,7 @@ public sealed class ApiSurfaceTests
     }
 
     [Theory]
-    [InlineData("/api/performers")]
+    [InlineData("/api/people")]
     [InlineData("/api/studios")]
     [InlineData("/api/tags")]
     public async Task TaxonomyListEndpointsReturnStablePagedShapes(string path)

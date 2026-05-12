@@ -8,7 +8,7 @@ public enum EntityKindCategory
     /// <summary>Playable, readable, or viewable library items.</summary>
     Media,
 
-    /// <summary>Descriptive classification entities such as performers, studios, and tags.</summary>
+    /// <summary>Descriptive classification entities such as people, studios, and tags.</summary>
     Taxonomy,
 
     /// <summary>User-curated groupings of other entities.</summary>

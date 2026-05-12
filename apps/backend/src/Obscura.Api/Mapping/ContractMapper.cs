@@ -63,7 +63,7 @@ public static class ContractMapper
     /// <summary>
     /// Converts a domain entity page into the taxonomy list response contract.
     /// </summary>
-    /// <param name="page">Domain page containing performer, studio, or tag entities.</param>
+    /// <param name="page">Domain page containing person, studio, or tag entities.</param>
     /// <returns>Taxonomy list contract for API callers.</returns>
     public static TaxonomyListResponse ToTaxonomyListResponse(DomainEntityPage page) =>
         new(page.Items.Select(ToEntityCard).ToArray(), page.NextCursor);

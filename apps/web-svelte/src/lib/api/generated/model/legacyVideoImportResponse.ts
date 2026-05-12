@@ -11,7 +11,7 @@ export interface LegacyVideoImportResponse {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   videosImported: number | string;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  performersImported: number | string;
+  peopleImported: number | string;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   tagsImported: number | string;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */

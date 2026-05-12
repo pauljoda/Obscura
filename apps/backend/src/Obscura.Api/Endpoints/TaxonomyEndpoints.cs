@@ -9,7 +9,7 @@ public static class TaxonomyEndpoints
 {
     public static IEndpointRouteBuilder MapTaxonomyEndpoints(this IEndpointRouteBuilder routes)
     {
-        MapTaxonomyGroup(routes, "/api/performers", "Performers", "performer");
+        MapTaxonomyGroup(routes, "/api/people", "People", "person");
         MapTaxonomyGroup(routes, "/api/studios", "Studios", "studio");
         MapTaxonomyGroup(routes, "/api/tags", "Tags", "tag");
 

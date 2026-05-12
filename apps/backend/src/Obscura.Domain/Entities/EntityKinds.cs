@@ -15,7 +15,7 @@ public static class EntityKinds
         new("audio", "Audio", EntityKindCategory.Media),
         new("audio-library", "Audio Library", EntityKindCategory.Media),
         new("audio-track", "Audio Track", EntityKindCategory.Media),
-        new("performer", "Performer", EntityKindCategory.Taxonomy),
+        new("person", "Person", EntityKindCategory.Taxonomy),
         new("studio", "Studio", EntityKindCategory.Taxonomy),
         new("tag", "Tag", EntityKindCategory.Taxonomy),
         new("collection", "Collection", EntityKindCategory.Collection)
