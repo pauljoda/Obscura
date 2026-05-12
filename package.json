@@ -6,10 +6,12 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev --parallel --filter=@obscura/web-svelte --filter=@obscura/worker",
+    "dev:backend": "dotnet watch --project apps/backend/src/Obscura.Api/Obscura.Api.csproj run --urls http://localhost:8010",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "check": "turbo run lint typecheck",
     "test": "pnpm test:unit",
+    "test:backend": "dotnet test apps/backend/Obscura.slnx",
     "test:unit": "vitest run --config vitest.config.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:web-svelte": "pnpm --filter @obscura/web-svelte test:unit",

@@ -35,6 +35,23 @@ services:
     volumes:
       - cache-data:/data/cache
 
+  backend:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    working_dir: /app
+    command: dotnet watch --project apps/backend/src/Obscura.Api/Obscura.Api.csproj run --urls http://0.0.0.0:8010
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      DATABASE_URL: postgresql://obscura:obscura@postgres:5432/obscura
+      OBSCURA_CACHE_DIR: /data/cache
+      OBSCURA_DATA_DIR: /data
+    ports:
+      - "8010:8010"
+    depends_on:
+      - postgres
+    volumes:
+      - ../..:/app
+      - cache-data:/data/cache
+
   postgres:
     image: postgres:16-alpine
     environment:
