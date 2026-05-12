@@ -1,6 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Obscura.Contracts.Entities;
-using Obscura.Application.Entities;
 using Obscura.Infrastructure.Entities;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
@@ -80,25 +78,25 @@ public sealed class EntityProjectionServiceTests
 
         var card = Assert.Single(response.Items);
         Assert.Equal(videoId, card.Id);
-        Assert.Equal("video", card.Kind);
-        Assert.Equal(4, card.Capabilities.Rating?.Value);
-        Assert.Equal(["Favorite"], card.Capabilities.Tags);
+        Assert.Equal("video", card.Kind.Code);
+        Assert.Equal(4, card.Capabilities.Rating?.Value.Value);
+        Assert.Equal(["Favorite"], card.Capabilities.Tags.Values);
         Assert.Equal(studioId, card.Capabilities.Studio?.Id);
         Assert.Equal("Obscura Studio", card.Capabilities.Studio?.Title);
-        var credit = Assert.Single(card.Capabilities.Credits);
+        var credit = Assert.Single(card.Capabilities.Credits.People);
         Assert.Equal(performerId, credit.Id);
         Assert.Equal("Ada Actor", credit.Title);
-        var url = Assert.Single(card.Capabilities.Urls);
+        var url = Assert.Single(card.Capabilities.Links.Urls);
         Assert.Equal("https://example.test/videos/a-quiet-scene", url.Url);
         Assert.Equal("Example", url.Label);
-        var externalId = Assert.Single(card.Capabilities.ExternalIds);
+        var externalId = Assert.Single(card.Capabilities.Links.ExternalIds);
         Assert.Equal("tmdb", externalId.Provider);
         Assert.Equal("12345", externalId.Value);
         Assert.Equal("https://www.themoviedb.org/movie/12345", externalId.Url);
-        Assert.Equal("/assets/videos/11111111-1111-1111-1111-111111111111/card", card.Capabilities.ThumbnailUrl);
-        Assert.True(card.Capabilities.IsFavorite);
-        Assert.False(card.Capabilities.IsNsfw);
-        Assert.True(card.Capabilities.IsOrganized);
+        Assert.Equal("/assets/videos/11111111-1111-1111-1111-111111111111/card", card.Capabilities.Images.ThumbnailUrl);
+        Assert.True(card.Capabilities.Flags.IsFavorite);
+        Assert.False(card.Capabilities.Flags.IsNsfw);
+        Assert.True(card.Capabilities.Flags.IsOrganized);
     }
 
     [Fact]
@@ -112,14 +110,14 @@ public sealed class EntityProjectionServiceTests
         var service = new EntityProjectionService(db);
         var rated = await service.UpdateRatingAsync(
             imageId,
-            new RatingUpdateRequest(5),
+            5,
             CancellationToken.None);
         var cleared = await service.UpdateRatingAsync(
             imageId,
-            new RatingUpdateRequest(null),
+            null,
             CancellationToken.None);
 
-        Assert.Equal(5, rated?.Capabilities.Rating?.Value);
+        Assert.Equal(5, rated?.Capabilities.Rating?.Value.Value);
         Assert.Null(cleared?.Capabilities.Rating);
         Assert.Empty(db.EntityRatings);
     }
@@ -168,15 +166,15 @@ public sealed class EntityProjectionServiceTests
         var detail = await service.GetVideoAsync(videoId, CancellationToken.None);
 
         Assert.NotNull(detail);
-        Assert.Equal("Feature", detail.Title);
+        Assert.Equal("Feature", detail.Entity.Title);
         Assert.Equal(TimeSpan.FromSeconds(90), detail.Duration);
         Assert.Equal(1920, detail.Width);
         Assert.Equal(1080, detail.Height);
-        Assert.Equal(3, detail.Capabilities.Rating?.Value);
-        var marker = Assert.Single(detail.Markers);
+        Assert.Equal(3, detail.Entity.Capabilities.Rating?.Value.Value);
+        var marker = Assert.Single(detail.Markers.Items);
         Assert.Equal("Opening", marker.Title);
         Assert.Equal(12.5, marker.Seconds);
-        var subtitle = Assert.Single(detail.Subtitles);
+        var subtitle = Assert.Single(detail.Subtitles.Items);
         Assert.Equal("en", subtitle.Language);
         Assert.Equal("English", subtitle.Label);
         Assert.True(subtitle.IsDefault);
@@ -206,10 +204,10 @@ public sealed class EntityProjectionServiceTests
 
         var card = Assert.Single(list.Items);
         Assert.Equal(seriesId, card.Id);
-        Assert.Equal("video-series", card.Kind);
-        Assert.Equal(5, card.Capabilities.Rating?.Value);
+        Assert.Equal("video-series", card.Kind.Code);
+        Assert.Equal(5, card.Capabilities.Rating?.Value.Value);
         Assert.NotNull(detail);
-        Assert.Equal("Collected Episodes", detail.Title);
+        Assert.Equal("Collected Episodes", detail.Entity.Title);
         Assert.Equal("seasons", detail.RenderingMode);
         Assert.Empty(detail.Children);
         var video = Assert.Single(detail.Videos);
@@ -250,8 +248,8 @@ public sealed class EntityProjectionServiceTests
 
         var child = Assert.Single(children);
         Assert.Equal(imageId, child.Id);
-        Assert.Equal("image", child.Kind);
-        Assert.Equal(4, child.Capabilities.Rating?.Value);
+        Assert.Equal("image", child.Kind.Code);
+        Assert.Equal(4, child.Capabilities.Rating?.Value.Value);
     }
 
     private static ObscuraDbContext CreateContext()

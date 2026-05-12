@@ -11,9 +11,13 @@ using Obscura.Contracts.Series;
 using Obscura.Contracts.Settings;
 using Obscura.Contracts.Taxonomy;
 using Obscura.Contracts.Videos;
-using Obscura.Application.Entities;
+using Obscura.Domain.Interfaces;
 using Obscura.Infrastructure.Queue;
 using Obscura.Infrastructure.Settings;
+using DomainEntity = Obscura.Domain.Entities.Entity;
+using DomainEntityPage = Obscura.Domain.Entities.EntityPage;
+using DomainVideo = Obscura.Domain.Media.Video;
+using DomainVideoSeries = Obscura.Domain.Media.VideoSeries;
 
 namespace Obscura.Api.Tests;
 
@@ -28,7 +32,10 @@ public sealed class ApiSurfaceTests
             {
                 builder.ConfigureServices(services =>
                 {
-                    services.AddScoped<IEntityCatalog, EmptyEntityProjectionService>();
+                    services.AddScoped<EmptyEntityProjectionService>();
+                    services.AddScoped<IEntityCatalog>(provider => provider.GetRequiredService<EmptyEntityProjectionService>());
+                    services.AddScoped<IRatingService>(provider => provider.GetRequiredService<EmptyEntityProjectionService>());
+                    services.AddScoped<IVideoLibrary>(provider => provider.GetRequiredService<EmptyEntityProjectionService>());
                     services.AddScoped<IJobQueueService, EmptyJobQueueService>();
                     services.AddScoped<ISettingsService, DefaultSettingsService>();
                 });
@@ -182,65 +189,67 @@ public sealed class ApiSurfaceTests
         }
     }
 
-    private sealed class EmptyEntityProjectionService : IEntityCatalog
+    private sealed class EmptyEntityProjectionService : IEntityCatalog, IRatingService, IVideoLibrary
     {
-        public Task<EntityListResponse> ListAsync(
+        public Task<DomainEntityPage> ListAsync(
             string? kind,
             string? query,
             string? cursor,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult(new EntityListResponse([], null));
+            return Task.FromResult(new DomainEntityPage([], null));
         }
 
-        public Task<EntityCard?> GetCardAsync(Guid id, CancellationToken cancellationToken)
+        public Task<DomainEntity?> GetAsync(Guid id, CancellationToken cancellationToken)
         {
-            return Task.FromResult<EntityCard?>(null);
+            return Task.FromResult<DomainEntity?>(null);
         }
 
-        public Task<IReadOnlyList<EntityCard>> ListChildrenAsync(
+        public Task<IReadOnlyList<DomainEntity>> ListChildrenAsync(
             Guid parentId,
             string relationship,
             string? childKind,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult<IReadOnlyList<EntityCard>>([]);
+            return Task.FromResult<IReadOnlyList<DomainEntity>>([]);
         }
 
-        public Task<EntityCard?> UpdateRatingAsync(
+        public Task<DomainEntity?> UpdateRatingAsync(
             Guid id,
-            RatingUpdateRequest request,
+            int? value,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult<EntityCard?>(null);
+            return Task.FromResult<DomainEntity?>(null);
         }
 
-        public Task<EntityCard?> UpdateFlagsAsync(
+        public Task<DomainEntity?> UpdateFlagsAsync(
             Guid id,
-            EntityFlagsUpdateRequest request,
+            bool? isFavorite,
+            bool? isNsfw,
+            bool? isOrganized,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult<EntityCard?>(null);
+            return Task.FromResult<DomainEntity?>(null);
         }
 
-        public Task<VideoListResponse> ListVideosAsync(CancellationToken cancellationToken)
+        public Task<DomainEntityPage> ListVideosAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult(new VideoListResponse([], null));
+            return Task.FromResult(new DomainEntityPage([], null));
         }
 
-        public Task<VideoDetail?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
+        public Task<DomainVideo?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
         {
-            return Task.FromResult<VideoDetail?>(null);
+            return Task.FromResult<DomainVideo?>(null);
         }
 
-        public Task<VideoSeriesListResponse> ListSeriesAsync(CancellationToken cancellationToken)
+        public Task<DomainEntityPage> ListSeriesAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult(new VideoSeriesListResponse([], null));
+            return Task.FromResult(new DomainEntityPage([], null));
         }
 
-        public Task<VideoSeriesDetail?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
+        public Task<DomainVideoSeries?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
         {
-            return Task.FromResult<VideoSeriesDetail?>(null);
+            return Task.FromResult<DomainVideoSeries?>(null);
         }
     }
 

@@ -1,7 +1,7 @@
-using Obscura.Contracts.Entities;
+using Obscura.Api.Mapping;
 using Obscura.Contracts.Media;
 using Obscura.Contracts.System;
-using Obscura.Application.Entities;
+using Obscura.Domain.Interfaces;
 
 namespace Obscura.Api.Endpoints;
 
@@ -35,7 +35,7 @@ public static class MediaEndpoints
             CancellationToken cancellationToken) =>
         {
             var response = await entities.ListAsync(kind, query, cursor, cancellationToken);
-            return new MediaListResponse(response.Items, response.NextCursor);
+            return ContractMapper.ToMediaListResponse(response);
         })
             .WithName($"List{tag}")
             .WithSummary($"Lists {kind} media entities through the global entity projection.");
@@ -45,24 +45,19 @@ public static class MediaEndpoints
             IEntityCatalog entities,
             CancellationToken cancellationToken) =>
         {
-            var entity = await entities.GetCardAsync(id, cancellationToken);
-            if (entity is null || !entity.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase))
+            var entity = await entities.GetAsync(id, cancellationToken);
+            if (entity is null || !entity.Kind.Code.Equals(kind, StringComparison.OrdinalIgnoreCase))
             {
                 return Results.NotFound(new ApiProblem(
                     $"{kind}_not_found",
                     $"{tag} item '{id}' was not found."));
             }
 
-            IReadOnlyList<EntityCard> childItems = children is null
+            var childItems = children is null
                 ? []
                 : await entities.ListChildrenAsync(id, children.Value.Relationship, children.Value.ChildKind, cancellationToken);
 
-            return Results.Ok(new MediaDetail(
-                entity.Id,
-                entity.Kind,
-                entity.Title,
-                entity.Capabilities,
-                childItems));
+            return Results.Ok(ContractMapper.ToMediaDetail(entity, childItems));
         })
             .WithName($"Get{tag.TrimEnd('s')}")
             .WithSummary($"Gets one {kind} media entity.")

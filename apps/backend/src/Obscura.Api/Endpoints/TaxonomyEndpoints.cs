@@ -1,6 +1,7 @@
+using Obscura.Api.Mapping;
 using Obscura.Contracts.System;
 using Obscura.Contracts.Taxonomy;
-using Obscura.Application.Entities;
+using Obscura.Domain.Interfaces;
 
 namespace Obscura.Api.Endpoints;
 
@@ -31,7 +32,7 @@ public static class TaxonomyEndpoints
             CancellationToken cancellationToken) =>
         {
             var response = await entities.ListAsync(kind, query, cursor, cancellationToken);
-            return new TaxonomyListResponse(response.Items, response.NextCursor);
+            return ContractMapper.ToTaxonomyListResponse(response);
         })
             .WithName($"List{tag}")
             .WithSummary($"Lists {kind} entities through the global entity projection.");
@@ -41,19 +42,15 @@ public static class TaxonomyEndpoints
             IEntityCatalog entities,
             CancellationToken cancellationToken) =>
         {
-            var entity = await entities.GetCardAsync(id, cancellationToken);
-            if (entity is null || !entity.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase))
+            var entity = await entities.GetAsync(id, cancellationToken);
+            if (entity is null || !entity.Kind.Code.Equals(kind, StringComparison.OrdinalIgnoreCase))
             {
                 return Results.NotFound(new ApiProblem(
                     $"{kind}_not_found",
                     $"{tag.TrimEnd('s')} '{id}' was not found."));
             }
 
-            return Results.Ok(new TaxonomyDetail(
-                entity.Id,
-                entity.Kind,
-                entity.Title,
-                entity.Capabilities));
+            return Results.Ok(ContractMapper.ToTaxonomyDetail(entity));
         })
             .WithName($"Get{tag.TrimEnd('s')}")
             .WithSummary($"Gets one {kind} entity.")

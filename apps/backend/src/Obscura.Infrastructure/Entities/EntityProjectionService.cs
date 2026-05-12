@@ -1,14 +1,14 @@
 using Microsoft.EntityFrameworkCore;
-using Obscura.Application.Entities;
-using Obscura.Contracts.Entities;
-using Obscura.Contracts.Series;
-using Obscura.Contracts.Videos;
+using Obscura.Domain.Capabilities;
+using Obscura.Domain.Entities;
+using Obscura.Domain.Interfaces;
+using Obscura.Domain.Media;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Entities;
 
-public sealed class EntityProjectionService : IEntityCatalog
+public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IVideoLibrary
 {
     private const int PageSize = 50;
     private readonly ObscuraDbContext _db;
@@ -18,7 +18,7 @@ public sealed class EntityProjectionService : IEntityCatalog
         _db = db;
     }
 
-    public async Task<EntityListResponse> ListAsync(
+    public async Task<EntityPage> ListAsync(
         string? kind,
         string? query,
         string? cursor,
@@ -51,13 +51,13 @@ public sealed class EntityProjectionService : IEntityCatalog
             .ToListAsync(cancellationToken);
 
         var pageRows = rows.Take(PageSize).ToList();
-        var cards = await BuildCardsAsync(pageRows, cancellationToken);
+        var entities = await BuildEntitiesAsync(pageRows, cancellationToken);
         var nextCursor = rows.Count > PageSize ? (skip + PageSize).ToString() : null;
 
-        return new EntityListResponse(cards, nextCursor);
+        return new EntityPage(entities, nextCursor);
     }
 
-    public async Task<EntityCard?> GetCardAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<Entity?> GetAsync(Guid id, CancellationToken cancellationToken)
     {
         var row = await _db.Entities
             .AsNoTracking()
@@ -70,10 +70,10 @@ public sealed class EntityProjectionService : IEntityCatalog
             return null;
         }
 
-        return (await BuildCardsAsync([row], cancellationToken)).Single();
+        return (await BuildEntitiesAsync([row], cancellationToken)).Single();
     }
 
-    public async Task<IReadOnlyList<EntityCard>> ListChildrenAsync(
+    public async Task<IReadOnlyList<Entity>> ListChildrenAsync(
         Guid parentId,
         string relationship,
         string? childKind,
@@ -82,9 +82,9 @@ public sealed class EntityProjectionService : IEntityCatalog
         return await LoadLinkedChildrenAsync(parentId, relationship, childKind, cancellationToken);
     }
 
-    public async Task<EntityCard?> UpdateRatingAsync(
+    public async Task<Entity?> UpdateRatingAsync(
         Guid id,
-        RatingUpdateRequest request,
+        int? value,
         CancellationToken cancellationToken)
     {
         var entity = await _db.Entities
@@ -95,7 +95,7 @@ public sealed class EntityProjectionService : IEntityCatalog
             return null;
         }
 
-        if (request.Value is null)
+        if (value is null)
         {
             var existing = await _db.EntityRatings.FindAsync([id], cancellationToken);
             if (existing is not null)
@@ -105,20 +105,20 @@ public sealed class EntityProjectionService : IEntityCatalog
         }
         else
         {
-            var value = Math.Clamp(request.Value.Value, 0, 5);
+            var rating = Math.Clamp(value.Value, 0, 5);
             var existing = await _db.EntityRatings.FindAsync([id], cancellationToken);
             if (existing is null)
             {
                 _db.EntityRatings.Add(new EntityRatingRow
                 {
                     EntityId = id,
-                    Value = value,
+                    Value = rating,
                     UpdatedAt = DateTimeOffset.UtcNow
                 });
             }
             else
             {
-                existing.Value = value;
+                existing.Value = rating;
                 existing.UpdatedAt = DateTimeOffset.UtcNow;
             }
         }
@@ -126,12 +126,14 @@ public sealed class EntityProjectionService : IEntityCatalog
         entity.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
 
-        return await GetCardAsync(id, cancellationToken);
+        return await GetAsync(id, cancellationToken);
     }
 
-    public async Task<EntityCard?> UpdateFlagsAsync(
+    public async Task<Entity?> UpdateFlagsAsync(
         Guid id,
-        EntityFlagsUpdateRequest request,
+        bool? isFavorite,
+        bool? isNsfw,
+        bool? isOrganized,
         CancellationToken cancellationToken)
     {
         var entity = await _db.Entities
@@ -149,23 +151,20 @@ public sealed class EntityProjectionService : IEntityCatalog
             _db.EntityFlags.Add(flags);
         }
 
-        flags.IsFavorite = request.IsFavorite ?? flags.IsFavorite;
-        flags.IsNsfw = request.IsNsfw ?? flags.IsNsfw;
-        flags.IsOrganized = request.IsOrganized ?? flags.IsOrganized;
+        flags.IsFavorite = isFavorite ?? flags.IsFavorite;
+        flags.IsNsfw = isNsfw ?? flags.IsNsfw;
+        flags.IsOrganized = isOrganized ?? flags.IsOrganized;
         flags.UpdatedAt = DateTimeOffset.UtcNow;
         entity.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
 
-        return await GetCardAsync(id, cancellationToken);
+        return await GetAsync(id, cancellationToken);
     }
 
-    public async Task<VideoListResponse> ListVideosAsync(CancellationToken cancellationToken)
-    {
-        var entities = await ListAsync("video", null, null, cancellationToken);
-        return new VideoListResponse(entities.Items, entities.NextCursor);
-    }
+    public Task<EntityPage> ListVideosAsync(CancellationToken cancellationToken) =>
+        ListAsync("video", null, null, cancellationToken);
 
-    public async Task<VideoDetail?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<Video?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
     {
         var entity = await _db.Entities
             .AsNoTracking()
@@ -181,30 +180,24 @@ public sealed class EntityProjectionService : IEntityCatalog
         var detail = await _db.VideoDetails
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-        var card = (await BuildCardsAsync([entity], cancellationToken)).Single();
+        var card = (await BuildEntitiesAsync([entity], cancellationToken)).Single();
         var markers = await LoadMarkersAsync(id, cancellationToken);
         var subtitles = await LoadSubtitlesAsync(id, cancellationToken);
 
-        return new VideoDetail(
-            entity.Id,
-            entity.KindCode,
-            entity.Title,
+        return new Video(
+            card,
             detail?.Summary,
             detail?.DurationMs is null ? null : TimeSpan.FromMilliseconds(detail.DurationMs.Value),
             detail?.Width,
             detail?.Height,
-            markers,
-            subtitles,
-            card.Capabilities);
+            new Markers(markers),
+            new Subtitles(subtitles));
     }
 
-    public async Task<VideoSeriesListResponse> ListSeriesAsync(CancellationToken cancellationToken)
-    {
-        var entities = await ListAsync("video-series", null, null, cancellationToken);
-        return new VideoSeriesListResponse(entities.Items, entities.NextCursor);
-    }
+    public Task<EntityPage> ListSeriesAsync(CancellationToken cancellationToken) =>
+        ListAsync("video-series", null, null, cancellationToken);
 
-    public async Task<VideoSeriesDetail?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<VideoSeries?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
     {
         var entity = await _db.Entities
             .AsNoTracking()
@@ -217,21 +210,18 @@ public sealed class EntityProjectionService : IEntityCatalog
             return null;
         }
 
-        var card = (await BuildCardsAsync([entity], cancellationToken)).Single();
+        var card = (await BuildEntitiesAsync([entity], cancellationToken)).Single();
         var videos = await LoadLinkedChildrenAsync(id, "episode", "video", cancellationToken);
 
-        return new VideoSeriesDetail(
-            entity.Id,
-            entity.KindCode,
-            entity.Title,
+        return new VideoSeries(
+            card,
             null,
-            card.Capabilities,
             [],
             videos,
             videos.Count > 0 ? "seasons" : "flat");
     }
 
-    private async Task<IReadOnlyList<EntityCard>> LoadLinkedChildrenAsync(
+    private async Task<IReadOnlyList<Entity>> LoadLinkedChildrenAsync(
         Guid parentId,
         string relationship,
         string? childKind,
@@ -260,7 +250,7 @@ public sealed class EntityProjectionService : IEntityCatalog
         }
 
         var childRows = await childQuery.ToListAsync(cancellationToken);
-        var childCards = await BuildCardsAsync(childRows, cancellationToken);
+        var childCards = await BuildEntitiesAsync(childRows, cancellationToken);
         var cardsById = childCards.ToDictionary(card => card.Id);
 
         return links
@@ -269,7 +259,7 @@ public sealed class EntityProjectionService : IEntityCatalog
             .ToArray();
     }
 
-    private async Task<IReadOnlyList<EntityCard>> BuildCardsAsync(
+    private async Task<IReadOnlyList<Entity>> BuildEntitiesAsync(
         IReadOnlyList<EntityRow> rows,
         CancellationToken cancellationToken)
     {
@@ -306,28 +296,25 @@ public sealed class EntityProjectionService : IEntityCatalog
                 urls.TryGetValue(row.Id, out var urlRefs);
                 externalIds.TryGetValue(row.Id, out var externalIdRefs);
 
-                return new EntityCard(
+                return new Entity(
                     row.Id,
-                    row.KindCode,
+                    ResolveKind(row.KindCode),
                     row.Title,
                     null,
                     new EntityCapabilities(
-                        ratings.ContainsKey(row.Id) ? new Rating(rating) : null,
-                        tagTitles ?? [],
-                        creditRefs ?? [],
+                        ratings.ContainsKey(row.Id) ? Rating.FromNullable(rating) : null,
+                        tagTitles is null ? Tags.Empty : new Tags(tagTitles),
+                        creditRefs is null ? Credits.Empty : new Credits(creditRefs),
                         studio,
-                        urlRefs ?? [],
-                        externalIdRefs ?? [],
-                        thumbnailUrl,
-                        null,
-                        flag?.IsFavorite,
-                        flag?.IsNsfw,
-                        flag?.IsOrganized));
+                        new Images(thumbnailUrl, null),
+                        new Links(urlRefs ?? [], externalIdRefs ?? []),
+                        new EntityFlags(flag?.IsFavorite, flag?.IsNsfw, flag?.IsOrganized),
+                        Files.Empty));
             })
             .ToArray();
     }
 
-    private async Task<IReadOnlyList<VideoMarker>> LoadMarkersAsync(
+    private async Task<IReadOnlyList<EntityMarker>> LoadMarkersAsync(
         Guid entityId,
         CancellationToken cancellationToken)
     {
@@ -336,7 +323,7 @@ public sealed class EntityProjectionService : IEntityCatalog
             .Where(marker => marker.EntityId == entityId)
             .OrderBy(marker => marker.Seconds)
             .ThenBy(marker => marker.Title)
-            .Select(marker => new VideoMarker(
+            .Select(marker => new EntityMarker(
                 marker.Id,
                 marker.Title,
                 marker.Seconds,
@@ -344,7 +331,7 @@ public sealed class EntityProjectionService : IEntityCatalog
             .ToArrayAsync(cancellationToken);
     }
 
-    private async Task<IReadOnlyList<VideoSubtitle>> LoadSubtitlesAsync(
+    private async Task<IReadOnlyList<EntitySubtitle>> LoadSubtitlesAsync(
         Guid entityId,
         CancellationToken cancellationToken)
     {
@@ -354,7 +341,7 @@ public sealed class EntityProjectionService : IEntityCatalog
             .OrderByDescending(subtitle => subtitle.IsDefault)
             .ThenBy(subtitle => subtitle.Language)
             .ThenBy(subtitle => subtitle.Label)
-            .Select(subtitle => new VideoSubtitle(
+            .Select(subtitle => new EntitySubtitle(
                 subtitle.Id,
                 subtitle.Language,
                 subtitle.Label,
@@ -476,7 +463,7 @@ public sealed class EntityProjectionService : IEntityCatalog
                 link =>
                 {
                     var studio = studios[link.StudioId];
-                    return new EntityReference(studio.Id, studio.KindCode, studio.Title);
+                    return new EntityReference(studio.Id, ResolveKind(studio.KindCode), studio.Title);
                 });
     }
 
@@ -511,8 +498,18 @@ public sealed class EntityProjectionService : IEntityCatalog
                     .Select(link =>
                     {
                         var person = people[link.PersonEntityId];
-                        return new EntityReference(person.Id, person.KindCode, person.Title);
+                        return new EntityReference(person.Id, ResolveKind(person.KindCode), person.Title);
                     })
                     .ToArray());
+    }
+
+    private static EntityKind ResolveKind(string code)
+    {
+        if (EntityKinds.TryGet(code, out var kind))
+        {
+            return kind;
+        }
+
+        return new EntityKind(code, code, EntityKindCategory.Media);
     }
 }

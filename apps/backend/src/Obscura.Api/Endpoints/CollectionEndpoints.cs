@@ -1,6 +1,7 @@
+using Obscura.Api.Mapping;
 using Obscura.Contracts.Collections;
 using Obscura.Contracts.System;
-using Obscura.Application.Entities;
+using Obscura.Domain.Interfaces;
 
 namespace Obscura.Api.Endpoints;
 
@@ -18,7 +19,7 @@ public static class CollectionEndpoints
             CancellationToken cancellationToken) =>
         {
             var response = await entities.ListAsync("collection", query, cursor, cancellationToken);
-            return new CollectionListResponse(response.Items, response.NextCursor);
+            return ContractMapper.ToCollectionListResponse(response);
         })
             .WithName("ListCollections")
             .WithSummary("Lists collection entities through the global entity projection.");
@@ -28,8 +29,8 @@ public static class CollectionEndpoints
             IEntityCatalog entities,
             CancellationToken cancellationToken) =>
         {
-            var entity = await entities.GetCardAsync(id, cancellationToken);
-            if (entity is null || !entity.Kind.Equals("collection", StringComparison.OrdinalIgnoreCase))
+            var entity = await entities.GetAsync(id, cancellationToken);
+            if (entity is null || !entity.Kind.Code.Equals("collection", StringComparison.OrdinalIgnoreCase))
             {
                 return Results.NotFound(new ApiProblem(
                     "collection_not_found",
@@ -38,12 +39,7 @@ public static class CollectionEndpoints
 
             var items = await entities.ListChildrenAsync(id, "collection-item", null, cancellationToken);
 
-            return Results.Ok(new CollectionDetail(
-                entity.Id,
-                entity.Kind,
-                entity.Title,
-                entity.Capabilities,
-                items));
+            return Results.Ok(ContractMapper.ToCollectionDetail(entity, items));
         })
             .WithName("GetCollection")
             .WithSummary("Gets one collection entity with its projected items.")

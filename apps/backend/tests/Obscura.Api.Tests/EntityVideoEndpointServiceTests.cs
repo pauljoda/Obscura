@@ -6,7 +6,23 @@ using Microsoft.Extensions.DependencyInjection;
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.Series;
 using Obscura.Contracts.Videos;
-using Obscura.Application.Entities;
+using Obscura.Domain.Entities;
+using Obscura.Domain.Interfaces;
+using DomainCapabilities = Obscura.Domain.Capabilities.EntityCapabilities;
+using DomainCredits = Obscura.Domain.Capabilities.Credits;
+using DomainEntity = Obscura.Domain.Entities.Entity;
+using DomainEntityPage = Obscura.Domain.Entities.EntityPage;
+using DomainFiles = Obscura.Domain.Capabilities.Files;
+using DomainFlags = Obscura.Domain.Capabilities.EntityFlags;
+using DomainImages = Obscura.Domain.Capabilities.Images;
+using DomainLinks = Obscura.Domain.Capabilities.Links;
+using DomainMarkers = Obscura.Domain.Capabilities.Markers;
+using DomainRating = Obscura.Domain.Capabilities.Rating;
+using DomainRatingValue = Obscura.Domain.Capabilities.RatingValue;
+using DomainSubtitles = Obscura.Domain.Capabilities.Subtitles;
+using DomainTags = Obscura.Domain.Capabilities.Tags;
+using DomainVideo = Obscura.Domain.Media.Video;
+using DomainVideoSeries = Obscura.Domain.Media.VideoSeries;
 
 namespace Obscura.Api.Tests;
 
@@ -53,108 +69,109 @@ public sealed class EntityVideoEndpointServiceTests
             {
                 builder.ConfigureServices(services =>
                 {
-                    services.AddScoped<IEntityCatalog, FakeEntityProjectionService>();
+                    services.AddScoped<FakeEntityProjectionService>();
+                    services.AddScoped<IEntityCatalog>(provider => provider.GetRequiredService<FakeEntityProjectionService>());
+                    services.AddScoped<IRatingService>(provider => provider.GetRequiredService<FakeEntityProjectionService>());
+                    services.AddScoped<IVideoLibrary>(provider => provider.GetRequiredService<FakeEntityProjectionService>());
                 });
             });
     }
 
-    private sealed class FakeEntityProjectionService : IEntityCatalog
+    private sealed class FakeEntityProjectionService : IEntityCatalog, IRatingService, IVideoLibrary
     {
         public static readonly Guid VideoId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-        public Task<EntityListResponse> ListAsync(
+        public Task<DomainEntityPage> ListAsync(
             string? kind,
             string? query,
             string? cursor,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult(new EntityListResponse([Card(null)], null));
+            return Task.FromResult(new DomainEntityPage([Card(null)], null));
         }
 
-        public Task<EntityCard?> GetCardAsync(Guid id, CancellationToken cancellationToken)
+        public Task<DomainEntity?> GetAsync(Guid id, CancellationToken cancellationToken)
         {
-            return Task.FromResult(id == VideoId ? Card(null) : null);
+            return Task.FromResult<DomainEntity?>(id == VideoId ? Card(null) : null);
         }
 
-        public Task<IReadOnlyList<EntityCard>> ListChildrenAsync(
+        public Task<IReadOnlyList<DomainEntity>> ListChildrenAsync(
             Guid parentId,
             string relationship,
             string? childKind,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult<IReadOnlyList<EntityCard>>([]);
+            return Task.FromResult<IReadOnlyList<DomainEntity>>([]);
         }
 
-        public Task<EntityCard?> UpdateRatingAsync(
+        public Task<DomainEntity?> UpdateRatingAsync(
             Guid id,
-            RatingUpdateRequest request,
+            int? value,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult(id == VideoId ? Card(request.Value) : null);
+            return Task.FromResult<DomainEntity?>(id == VideoId ? Card(value) : null);
         }
 
-        public Task<EntityCard?> UpdateFlagsAsync(
+        public Task<DomainEntity?> UpdateFlagsAsync(
             Guid id,
-            EntityFlagsUpdateRequest request,
+            bool? isFavorite,
+            bool? isNsfw,
+            bool? isOrganized,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult(id == VideoId ? Card(null) : null);
+            return Task.FromResult<DomainEntity?>(id == VideoId ? Card(null) : null);
         }
 
-        public Task<VideoListResponse> ListVideosAsync(CancellationToken cancellationToken)
+        public Task<DomainEntityPage> ListVideosAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult(new VideoListResponse([Card(null)], null));
+            return Task.FromResult(new DomainEntityPage([Card(null)], null));
         }
 
-        public Task<VideoDetail?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
+        public Task<DomainVideo?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
         {
             if (id != VideoId)
             {
-                return Task.FromResult<VideoDetail?>(null);
+                return Task.FromResult<DomainVideo?>(null);
             }
 
-            return Task.FromResult<VideoDetail?>(new VideoDetail(
-                VideoId,
-                "video",
-                "Projected Video",
+            return Task.FromResult<DomainVideo?>(new DomainVideo(
+                Card(null),
                 "Detail from projection service.",
                 TimeSpan.FromMinutes(2),
                 1280,
                 720,
-                [],
-                [],
-                Card(null).Capabilities));
+                DomainMarkers.Empty,
+                DomainSubtitles.Empty));
         }
 
-        public Task<VideoSeriesListResponse> ListSeriesAsync(CancellationToken cancellationToken)
+        public Task<DomainEntityPage> ListSeriesAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult(new VideoSeriesListResponse([], null));
+            return Task.FromResult(new DomainEntityPage([], null));
         }
 
-        public Task<VideoSeriesDetail?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
+        public Task<DomainVideoSeries?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
         {
-            return Task.FromResult<VideoSeriesDetail?>(null);
+            return Task.FromResult<DomainVideoSeries?>(null);
         }
 
-        private static EntityCard Card(int? rating)
+        private static DomainEntity Card(int? rating)
         {
-            return new EntityCard(
+            EntityKinds.TryGet("video", out var videoKind);
+
+            return new DomainEntity(
                 VideoId,
-                "video",
+                videoKind,
                 "Projected Video",
                 null,
-                new EntityCapabilities(
-                    rating is null ? null : new Rating(rating),
-                    ["Demo"],
-                    [],
+                new DomainCapabilities(
+                    rating is null ? null : new DomainRating(DomainRatingValue.Create(rating.Value)),
+                    new DomainTags(["Demo"]),
+                    DomainCredits.Empty,
                     null,
-                    [],
-                    [],
-                    null,
-                    null,
-                    false,
-                    false,
-                    true));
+                    DomainImages.Empty,
+                    DomainLinks.Empty,
+                    new DomainFlags(false, false, true),
+                    DomainFiles.Empty));
         }
     }
 }

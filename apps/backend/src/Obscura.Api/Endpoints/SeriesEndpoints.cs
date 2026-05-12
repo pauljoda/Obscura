@@ -1,6 +1,7 @@
+using Obscura.Api.Mapping;
 using Obscura.Contracts.Series;
 using Obscura.Contracts.System;
-using Obscura.Application.Entities;
+using Obscura.Domain.Interfaces;
 
 namespace Obscura.Api.Endpoints;
 
@@ -12,24 +13,24 @@ public static class SeriesEndpoints
             .WithTags("Series");
 
         group.MapGet("/", async (
-            IEntityCatalog entities,
+            IVideoLibrary videos,
             CancellationToken cancellationToken) =>
-            await entities.ListSeriesAsync(cancellationToken))
+            ContractMapper.ToVideoSeriesListResponse(await videos.ListSeriesAsync(cancellationToken)))
             .WithName("ListSeries")
             .WithSummary("Lists video series entities through the global entity projection.");
 
         group.MapGet("/{id:guid}", async (
             Guid id,
-            IEntityCatalog entities,
+            IVideoLibrary videos,
             CancellationToken cancellationToken) =>
             {
-                var series = await entities.GetSeriesAsync(id, cancellationToken);
+                var series = await videos.GetSeriesAsync(id, cancellationToken);
 
                 return series is null
                     ? Results.NotFound(new ApiProblem(
                         "series_not_found",
                         $"Series '{id}' was not found."))
-                    : Results.Ok(series);
+                    : Results.Ok(ContractMapper.ToVideoSeriesDetail(series));
             })
             .WithName("GetSeries")
             .WithSummary("Gets one video series detail record.")
