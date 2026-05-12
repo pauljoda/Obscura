@@ -1,7 +1,7 @@
 using Obscura.Api.Mapping;
+using Obscura.Application.Videos;
 using Obscura.Contracts.Series;
 using Obscura.Contracts.System;
-using Obscura.Domain.Interfaces;
 
 namespace Obscura.Api.Endpoints;
 
@@ -13,7 +13,7 @@ public static class SeriesEndpoints
             .WithTags("Series");
 
         group.MapGet("/", async (
-            IVideoLibrary videos,
+            VideoService videos,
             CancellationToken cancellationToken) =>
             ContractMapper.ToVideoSeriesListResponse(await videos.ListSeriesAsync(cancellationToken)))
             .WithName("ListSeries")
@@ -21,7 +21,7 @@ public static class SeriesEndpoints
 
         group.MapGet("/{id:guid}", async (
             Guid id,
-            IVideoLibrary videos,
+            VideoService videos,
             CancellationToken cancellationToken) =>
             {
                 var series = await videos.GetSeriesAsync(id, cancellationToken);

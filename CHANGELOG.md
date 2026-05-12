@@ -72,6 +72,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Added scoped v2 .NET application services for entity, video/series, and collection use cases so API endpoints depend on application orchestration instead of projection interfaces directly.
 - Restructured the v2 .NET backend core so infrastructure now projects PostgreSQL rows into first-class Domain entities, capabilities, and media aggregates before API endpoints map them back to OpenAPI/Orval contracts.
 - The v2 .NET backend now has an `Obscura.Application` boundary for API-facing service interfaces, starting with a cleaner `IEntityCatalog` abstraction over the entity projection implementation.
 - Renamed the v2 .NET API contract records and generated Orval models to remove `Dto` suffixes, keeping request/response names only where they describe API direction.

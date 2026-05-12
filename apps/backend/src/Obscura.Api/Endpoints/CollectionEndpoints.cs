@@ -1,7 +1,8 @@
 using Obscura.Api.Mapping;
+using Obscura.Application.Collections;
+using Obscura.Application.Entities;
 using Obscura.Contracts.Collections;
 using Obscura.Contracts.System;
-using Obscura.Domain.Interfaces;
 
 namespace Obscura.Api.Endpoints;
 
@@ -15,10 +16,10 @@ public static class CollectionEndpoints
         group.MapGet("/", async (
             string? query,
             string? cursor,
-            IEntityCatalog entities,
+            CollectionService collections,
             CancellationToken cancellationToken) =>
         {
-            var response = await entities.ListAsync("collection", query, cursor, cancellationToken);
+            var response = await collections.ListAsync(new EntityListQuery("collection", query, cursor), cancellationToken);
             return ContractMapper.ToCollectionListResponse(response);
         })
             .WithName("ListCollections")
@@ -26,20 +27,18 @@ public static class CollectionEndpoints
 
         group.MapGet("/{id:guid}", async (
             Guid id,
-            IEntityCatalog entities,
+            CollectionService collections,
             CancellationToken cancellationToken) =>
         {
-            var entity = await entities.GetAsync(id, cancellationToken);
-            if (entity is null || !entity.Kind.Code.Equals("collection", StringComparison.OrdinalIgnoreCase))
+            var collection = await collections.GetAsync(id, cancellationToken);
+            if (collection is null)
             {
                 return Results.NotFound(new ApiProblem(
                     "collection_not_found",
                     $"Collection '{id}' was not found."));
             }
 
-            var items = await entities.ListChildrenAsync(id, "collection-item", null, cancellationToken);
-
-            return Results.Ok(ContractMapper.ToCollectionDetail(entity, items));
+            return Results.Ok(ContractMapper.ToCollectionDetail(collection.Entity, collection.Items));
         })
             .WithName("GetCollection")
             .WithSummary("Gets one collection entity with its projected items.")

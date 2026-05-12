@@ -1,4 +1,5 @@
 using Obscura.Api.Endpoints;
+using Obscura.Application;
 using Obscura.Contracts.System;
 using Obscura.Infrastructure;
 using Obscura.Infrastructure.Persistence;
@@ -29,6 +30,7 @@ builder.Services.AddCors(options =>
                  uri.Host.Equals("::1", StringComparison.OrdinalIgnoreCase)));
     });
 });
+builder.Services.AddObscuraApplication();
 builder.Services.AddObscuraInfrastructure(builder.Configuration);
 
 var app = builder.Build();

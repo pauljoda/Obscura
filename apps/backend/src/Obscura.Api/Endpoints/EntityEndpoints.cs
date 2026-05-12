@@ -1,7 +1,7 @@
 using Obscura.Api.Mapping;
+using Obscura.Application.Entities;
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.System;
-using Obscura.Domain.Interfaces;
 
 namespace Obscura.Api.Endpoints;
 
@@ -16,15 +16,16 @@ public static class EntityEndpoints
             string? kind,
             string? query,
             string? cursor,
-            IEntityCatalog entities,
+            EntityService entities,
             CancellationToken cancellationToken) =>
-            ContractMapper.ToEntityListResponse(await entities.ListAsync(kind, query, cursor, cancellationToken)))
+            ContractMapper.ToEntityListResponse(
+                await entities.ListAsync(new EntityListQuery(kind, query, cursor), cancellationToken)))
             .WithName("ListEntities")
             .WithSummary("Lists global entities with optional kind, search, and cursor filters.");
 
         group.MapGet("/{id:guid}", async (
             Guid id,
-            IEntityCatalog entities,
+            EntityService entities,
             CancellationToken cancellationToken) =>
             {
                 var entity = await entities.GetAsync(id, cancellationToken);
@@ -43,10 +44,12 @@ public static class EntityEndpoints
         group.MapPatch("/{id:guid}/rating", async (
             Guid id,
             RatingUpdateRequest request,
-            IRatingService ratings,
+            EntityService entities,
             CancellationToken cancellationToken) =>
             {
-                var entity = await ratings.UpdateRatingAsync(id, request.Value, cancellationToken);
+                var entity = await entities.SetRatingAsync(
+                    new SetEntityRatingCommand(id, request.Value),
+                    cancellationToken);
 
                 return entity is null
                     ? Results.NotFound(new ApiProblem(
@@ -62,14 +65,15 @@ public static class EntityEndpoints
         group.MapPatch("/{id:guid}/flags", async (
             Guid id,
             EntityFlagsUpdateRequest request,
-            IRatingService ratings,
+            EntityService entities,
             CancellationToken cancellationToken) =>
             {
-                var entity = await ratings.UpdateFlagsAsync(
-                    id,
-                    request.IsFavorite,
-                    request.IsNsfw,
-                    request.IsOrganized,
+                var entity = await entities.UpdateFlagsAsync(
+                    new UpdateEntityFlagsCommand(
+                        id,
+                        request.IsFavorite,
+                        request.IsNsfw,
+                        request.IsOrganized),
                     cancellationToken);
 
                 return entity is null
