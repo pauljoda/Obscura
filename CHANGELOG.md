@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 queue now has tested Postgres claim and retry SQL, including `FOR UPDATE SKIP LOCKED` coordination for multiple worker processes.
 - The v2 jobs API now uses the native .NET queue service for listing and creating job runs instead of returning placeholder route-local responses.
 - The v2 settings API now reads and updates the preserved .NET settings row, including an explicit hide-NSFW preference instead of placeholder defaults.
+- The Svelte app can now generate its v2 API client from the .NET OpenAPI contract, reducing duplicate DTO definitions as the migration continues.
 - Migrated the video player to VidStack, using this as the core engine improves playback across browsers, also fixed some backend issues with hls and improper direct streaming, should have much more stable streaming behavior
 - Create "Books" entry type, and moved comics/manga to that library type. To use, enable a library with books in the settings
 - Uses SvelteKit snapshots on previously viewed pages for the grids, should allow you to pop into a entry, such as a video, then navigate back and preserve position in the scroll
@@ -116,6 +117,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added tested v2 queue SQL for claiming, completing, and retrying native Postgres jobs.
 - Added an EF-backed v2 job queue service and wired the jobs API to it.
 - Added an EF-backed v2 settings service and explicit `hide_nsfw` setting storage.
+- Added Orval generation for the v2 .NET OpenAPI contract and wired the existing Svelte v2 API wrapper to generated DTOs and fetch functions.
 - Added Books as a first-class library category with library-root scan toggles, book/chapter/page tables, Books API routes, search and collection support, a `/books` Comics tab, and series-style book detail pages with chapter reading progress.
 - Added book upload, delete, metadata update, and merge-into-book actions so comic archives can be managed from the Books section.
 - Added an in-reader Next Chapter action for multi-chapter books, preserving the current paged, webtoon, and spread preferences while continuing into the following chapter.

@@ -6,7 +6,7 @@ import { env } from "$env/dynamic/public";
 
 export { buildQueryString } from "../query-string";
 
-const API_BASE = env.PUBLIC_API_URL || "/api";
+export const API_BASE = env.PUBLIC_API_URL || "/api";
 
 export async function fetchApi<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
