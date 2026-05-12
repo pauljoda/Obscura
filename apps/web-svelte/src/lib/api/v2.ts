@@ -8,6 +8,7 @@ import {
   getSettings,
   getSeries,
   getVideo,
+  importLegacyVideos,
 } from "./generated/obscura-v2";
 import type {
   EntityCapabilitiesDto,
@@ -16,6 +17,7 @@ import type {
   EntityReferenceDto,
   JobListResponseDto,
   JobRunDto,
+  LegacyVideoImportResponseDto,
   RatingDto,
   SettingsDto,
   VideoDetailDto,
@@ -36,6 +38,7 @@ export type V2VideoSeriesDetailDto = VideoSeriesDetailDto;
 export type V2JobRunDto = JobRunDto;
 export type V2JobListResponseDto = JobListResponseDto;
 export type V2SettingsDto = SettingsDto;
+export type V2LegacyVideoImportResponseDto = LegacyVideoImportResponseDto;
 
 export interface V2RequestOptions {
   signal?: AbortSignal;
@@ -110,4 +113,10 @@ export function fetchV2Jobs(options?: V2RequestOptions): Promise<V2JobListRespon
 
 export function fetchV2Settings(options?: V2RequestOptions): Promise<V2SettingsDto> {
   return getSettings({ signal: options?.signal }).then((response) => response.data);
+}
+
+export function importV2LegacyVideos(
+  options?: V2RequestOptions,
+): Promise<V2LegacyVideoImportResponseDto> {
+  return importLegacyVideos({ signal: options?.signal }).then((response) => response.data);
 }

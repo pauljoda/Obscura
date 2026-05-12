@@ -21,6 +21,8 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<EntityTagLinkRow> EntityTagLinks => Set<EntityTagLinkRow>();
 
+    public DbSet<EntityHierarchyLinkRow> EntityHierarchyLinks => Set<EntityHierarchyLinkRow>();
+
     public DbSet<EntityFileRow> EntityFiles => Set<EntityFileRow>();
 
     public DbSet<VideoDetailRow> VideoDetails => Set<VideoDetailRow>();
@@ -114,6 +116,27 @@ public sealed class ObscuraDbContext : DbContext
             entity.HasOne<EntityRow>()
                 .WithMany()
                 .HasForeignKey(row => row.TagId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EntityHierarchyLinkRow>(entity =>
+        {
+            entity.ToTable("entity_hierarchy_links");
+            entity.HasKey(row => new { row.ParentEntityId, row.ChildEntityId, row.Relationship });
+            entity.Property(row => row.ParentEntityId).HasColumnName("parent_entity_id");
+            entity.Property(row => row.ChildEntityId).HasColumnName("child_entity_id");
+            entity.Property(row => row.Relationship).HasColumnName("relationship").HasMaxLength(64).IsRequired();
+            entity.Property(row => row.SortOrder).HasColumnName("sort_order");
+            entity.Property(row => row.CreatedAt).HasColumnName("created_at");
+            entity.HasIndex(row => new { row.ParentEntityId, row.SortOrder });
+            entity.HasIndex(row => row.ChildEntityId);
+            entity.HasOne<EntityRow>()
+                .WithMany()
+                .HasForeignKey(row => row.ParentEntityId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<EntityRow>()
+                .WithMany()
+                .HasForeignKey(row => row.ChildEntityId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

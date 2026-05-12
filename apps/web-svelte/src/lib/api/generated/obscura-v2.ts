@@ -9,11 +9,13 @@ import type {
   EntityFlagsUpdateRequestDto,
   EntityListResponseDto,
   JobListResponseDto,
+  LegacyVideoImportResponseDto,
   ListEntitiesParams,
   ProblemDetailsDto,
   RatingUpdateRequestDto,
   SettingsDto,
   SettingsUpdateRequestDto,
+  V2FreshStartPrepareResponseDto,
   V2UpgradeGateStatusDto,
   VideoDetailDto,
   VideoListResponseDto,
@@ -752,16 +754,23 @@ export const acceptV2UpgradeGate = async ( options?: RequestInit): Promise<accep
 
 
 export type prepareV2FreshStartResponse200 = {
-  data: void
+  data: V2FreshStartPrepareResponseDto
   status: 200
+}
+
+export type prepareV2FreshStartResponse409 = {
+  data: ProblemDetailsDto
+  status: 409
 }
 
 export type prepareV2FreshStartResponseSuccess = (prepareV2FreshStartResponse200) & {
   headers: Headers;
 };
-;
+export type prepareV2FreshStartResponseError = (prepareV2FreshStartResponse409) & {
+  headers: Headers;
+};
 
-export type prepareV2FreshStartResponse = (prepareV2FreshStartResponseSuccess)
+export type prepareV2FreshStartResponse = (prepareV2FreshStartResponseSuccess | prepareV2FreshStartResponseError)
 
 export const getPrepareV2FreshStartUrl = () => {
 
@@ -777,6 +786,42 @@ export const getPrepareV2FreshStartUrl = () => {
 export const prepareV2FreshStart = async ( options?: RequestInit): Promise<prepareV2FreshStartResponse> => {
 
   return orvalFetch<prepareV2FreshStartResponse>(getPrepareV2FreshStartUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type importLegacyVideosResponse200 = {
+  data: LegacyVideoImportResponseDto
+  status: 200
+}
+
+export type importLegacyVideosResponseSuccess = (importLegacyVideosResponse200) & {
+  headers: Headers;
+};
+;
+
+export type importLegacyVideosResponse = (importLegacyVideosResponseSuccess)
+
+export const getImportLegacyVideosUrl = () => {
+
+
+
+
+  return `/api/system/v2-legacy-video-import`
+}
+
+/**
+ * @summary Imports legacy video and series metadata into the v2 global entity tables for side-by-side migration testing.
+ */
+export const importLegacyVideos = async ( options?: RequestInit): Promise<importLegacyVideosResponse> => {
+
+  return orvalFetch<importLegacyVideosResponse>(getImportLegacyVideosUrl(),
   {
     ...options,
     method: 'POST'

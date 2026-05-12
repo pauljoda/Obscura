@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Obscura.Contracts.System;
 using Obscura.Infrastructure.FreshStart;
+using Obscura.Infrastructure.Legacy;
 using Obscura.Infrastructure.Upgrades;
 
 namespace Obscura.Api.Tests;
@@ -34,6 +35,31 @@ public sealed class V2FreshStartEndpointTests
         Assert.True(payload.PreservedSettings);
     }
 
+    [Fact]
+    public async Task LegacyVideoImportEndpointReturnsImportCounts()
+    {
+        using var factory = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    services.AddSingleton<ILegacyVideoImportService, FakeLegacyVideoImportService>();
+                });
+            });
+        using var client = factory.CreateClient();
+
+        using var response = await client.PostAsync("/api/system/v2-legacy-video-import", null);
+        var payload = await response.Content.ReadFromJsonAsync<LegacyVideoImportResponseDto>();
+
+        Assert.True(response.IsSuccessStatusCode);
+        Assert.NotNull(payload);
+        Assert.Equal(3, payload.SeriesImported);
+        Assert.Equal(12, payload.VideosImported);
+        Assert.Equal(4, payload.TagsImported);
+        Assert.Equal(2, payload.StudiosImported);
+        Assert.Equal(9, payload.LinksImported);
+    }
+
     private sealed class AcceptedGate : IV2UpgradeGate
     {
         public V2UpgradeGateStatus Check()
@@ -56,6 +82,19 @@ public sealed class V2FreshStartEndpointTests
                 PreservedLibraryRoots: 2,
                 PreservedSettings: true,
                 MediaReset: true));
+        }
+    }
+
+    private sealed class FakeLegacyVideoImportService : ILegacyVideoImportService
+    {
+        public Task<LegacyVideoImportResult> ImportAsync(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new LegacyVideoImportResult(
+                SeriesImported: 3,
+                VideosImported: 12,
+                TagsImported: 4,
+                StudiosImported: 2,
+                LinksImported: 9));
         }
     }
 }

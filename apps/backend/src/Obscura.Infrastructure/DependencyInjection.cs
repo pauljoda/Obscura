@@ -6,6 +6,7 @@ using Obscura.Infrastructure.Backups;
 using Obscura.Infrastructure.Database;
 using Obscura.Infrastructure.Entities;
 using Obscura.Infrastructure.FreshStart;
+using Obscura.Infrastructure.Legacy;
 using Obscura.Infrastructure.Media;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Processes;
@@ -46,6 +47,7 @@ public static class DependencyInjection
         services.AddSingleton<IMediaToolService, MediaToolService>();
         services.AddScoped<IDatabaseBackupService, DatabaseBackupService>();
         services.AddScoped<IV2FreshStartService, V2FreshStartService>();
+        services.AddScoped<ILegacyVideoImportService, LegacyVideoImportService>();
         services.AddScoped<IEntityProjectionService, EntityProjectionService>();
         services.AddScoped<IVideoSourceService, VideoSourceService>();
         services.AddSingleton(new HlsAssetServiceOptions(cacheDir));

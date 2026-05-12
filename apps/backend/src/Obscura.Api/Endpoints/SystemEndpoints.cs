@@ -1,5 +1,6 @@
 using Obscura.Contracts.System;
 using Obscura.Infrastructure.FreshStart;
+using Obscura.Infrastructure.Legacy;
 using Obscura.Infrastructure.Upgrades;
 
 namespace Obscura.Api.Endpoints;
@@ -42,7 +43,25 @@ public static class SystemEndpoints
                 result.MediaReset));
         })
             .WithName("PrepareV2FreshStart")
-            .WithSummary("Backs up the current database and preserves settings/library roots for a v2 fresh start.");
+            .WithSummary("Backs up the current database and preserves settings/library roots for a v2 fresh start.")
+            .Produces<V2FreshStartPrepareResponseDto>()
+            .Produces<ProblemDetailsDto>(StatusCodes.Status409Conflict);
+
+        group.MapPost("/v2-legacy-video-import", async (
+            ILegacyVideoImportService legacyImport,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await legacyImport.ImportAsync(cancellationToken);
+            return Results.Ok(new LegacyVideoImportResponseDto(
+                result.SeriesImported,
+                result.VideosImported,
+                result.TagsImported,
+                result.StudiosImported,
+                result.LinksImported));
+        })
+            .WithName("ImportLegacyVideos")
+            .WithSummary("Imports legacy video and series metadata into the v2 global entity tables for side-by-side migration testing.")
+            .Produces<LegacyVideoImportResponseDto>();
 
         return group;
     }

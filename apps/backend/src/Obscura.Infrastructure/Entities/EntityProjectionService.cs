@@ -204,6 +204,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
         }
 
         var card = (await BuildCardsAsync([entity], cancellationToken)).Single();
+        var videos = await LoadSeriesVideosAsync(id, cancellationToken);
 
         return new VideoSeriesDetailDto(
             entity.Id,
@@ -212,8 +213,38 @@ public sealed class EntityProjectionService : IEntityProjectionService
             null,
             card.Capabilities,
             [],
-            [],
-            "flat");
+            videos,
+            videos.Count > 0 ? "seasons" : "flat");
+    }
+
+    private async Task<IReadOnlyList<EntityCardDto>> LoadSeriesVideosAsync(
+        Guid seriesId,
+        CancellationToken cancellationToken)
+    {
+        var links = await _db.EntityHierarchyLinks
+            .AsNoTracking()
+            .Where(link => link.ParentEntityId == seriesId && link.Relationship == "episode")
+            .OrderBy(link => link.SortOrder)
+            .ThenBy(link => link.ChildEntityId)
+            .ToListAsync(cancellationToken);
+
+        if (links.Count == 0)
+        {
+            return [];
+        }
+
+        var childIds = links.Select(link => link.ChildEntityId).ToArray();
+        var childRows = await _db.Entities
+            .AsNoTracking()
+            .Where(entity => childIds.Contains(entity.Id) && entity.KindCode == "video" && entity.DeletedAt == null)
+            .ToListAsync(cancellationToken);
+        var childCards = await BuildCardsAsync(childRows, cancellationToken);
+        var cardsById = childCards.ToDictionary(card => card.Id);
+
+        return links
+            .Where(link => cardsById.ContainsKey(link.ChildEntityId))
+            .Select(link => cardsById[link.ChildEntityId])
+            .ToArray();
     }
 
     private async Task<IReadOnlyList<EntityCardDto>> BuildCardsAsync(

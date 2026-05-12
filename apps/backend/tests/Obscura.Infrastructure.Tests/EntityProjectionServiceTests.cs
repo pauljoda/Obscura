@@ -96,8 +96,17 @@ public sealed class EntityProjectionServiceTests
     {
         await using var db = CreateContext();
         var seriesId = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        var episodeId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         SeedEntity(db, seriesId, "video-series", "Collected Episodes");
+        SeedEntity(db, episodeId, "video", "Pilot");
         db.EntityRatings.Add(new EntityRatingRow { EntityId = seriesId, Value = 5 });
+        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        {
+            ParentEntityId = seriesId,
+            ChildEntityId = episodeId,
+            Relationship = "episode",
+            SortOrder = 1
+        });
         await db.SaveChangesAsync();
 
         var service = new EntityProjectionService(db);
@@ -110,9 +119,10 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal(5, card.Capabilities.Rating?.Value);
         Assert.NotNull(detail);
         Assert.Equal("Collected Episodes", detail.Title);
-        Assert.Equal("flat", detail.RenderingMode);
+        Assert.Equal("seasons", detail.RenderingMode);
         Assert.Empty(detail.Children);
-        Assert.Empty(detail.Videos);
+        var video = Assert.Single(detail.Videos);
+        Assert.Equal(episodeId, video.Id);
     }
 
     private static ObscuraDbContext CreateContext()
