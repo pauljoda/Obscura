@@ -73,6 +73,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Expanded the v2 .NET data model with typed domain-specific tables for taxonomy details, media details, playback/progress, provider identity, UI preferences, and richer book metadata while keeping shared capabilities on the global entity root.
 - Replaced raw v2 .NET entity-kind strings in application and infrastructure code with typed entity-kind and relationship registries, keeping string codes only at API, SQL, and database boundaries.
 - Consolidated duplicate v2 .NET media grouping records into one generic entity-library aggregate so simple entity-plus-children shapes no longer pretend to be specialized domain types.
 - Renamed the v2 .NET taxonomy kind and API route from performer to person/people so the backend stays generic while UI surfaces choose context-specific labels.

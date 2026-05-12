@@ -10,7 +10,7 @@ namespace Obscura.Domain.Entities;
 /// <param name="Title">Primary user-facing title.</param>
 /// <param name="Subtitle">Optional secondary text for cards and detail headers.</param>
 /// <param name="Capabilities">Reusable behaviors and projections attached to this entity.</param>
-public sealed record Entity(
+public record Entity(
     Guid Id,
     EntityKind Kind,
     string Title,

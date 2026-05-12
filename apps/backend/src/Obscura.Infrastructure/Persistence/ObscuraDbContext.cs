@@ -21,6 +21,8 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<EntityTagLinkRow> EntityTagLinks => Set<EntityTagLinkRow>();
 
+    public DbSet<EntityAliasRow> EntityAliases => Set<EntityAliasRow>();
+
     public DbSet<EntityHierarchyLinkRow> EntityHierarchyLinks => Set<EntityHierarchyLinkRow>();
 
     public DbSet<EntityStudioLinkRow> EntityStudioLinks => Set<EntityStudioLinkRow>();
@@ -37,11 +39,59 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<EntityFileRow> EntityFiles => Set<EntityFileRow>();
 
+    public DbSet<EntityFileFingerprintRow> EntityFileFingerprints => Set<EntityFileFingerprintRow>();
+
+    public DbSet<EntityPlaybackRow> EntityPlayback => Set<EntityPlaybackRow>();
+
     public DbSet<VideoDetailRow> VideoDetails => Set<VideoDetailRow>();
+
+    public DbSet<VideoSeriesDetailRow> VideoSeriesDetails => Set<VideoSeriesDetailRow>();
+
+    public DbSet<VideoSeasonDetailRow> VideoSeasonDetails => Set<VideoSeasonDetailRow>();
+
+    public DbSet<GalleryDetailRow> GalleryDetails => Set<GalleryDetailRow>();
+
+    public DbSet<ImageDetailRow> ImageDetails => Set<ImageDetailRow>();
+
+    public DbSet<BookDetailRow> BookDetails => Set<BookDetailRow>();
+
+    public DbSet<BookVolumeDetailRow> BookVolumeDetails => Set<BookVolumeDetailRow>();
+
+    public DbSet<BookChapterDetailRow> BookChapterDetails => Set<BookChapterDetailRow>();
+
+    public DbSet<BookPageDetailRow> BookPageDetails => Set<BookPageDetailRow>();
+
+    public DbSet<BookReadProgressRow> BookReadProgress => Set<BookReadProgressRow>();
+
+    public DbSet<AudioLibraryDetailRow> AudioLibraryDetails => Set<AudioLibraryDetailRow>();
+
+    public DbSet<AudioTrackDetailRow> AudioTrackDetails => Set<AudioTrackDetailRow>();
+
+    public DbSet<PersonDetailRow> PersonDetails => Set<PersonDetailRow>();
+
+    public DbSet<StudioDetailRow> StudioDetails => Set<StudioDetailRow>();
+
+    public DbSet<TagDetailRow> TagDetails => Set<TagDetailRow>();
+
+    public DbSet<CollectionDetailRow> CollectionDetails => Set<CollectionDetailRow>();
+
+    public DbSet<CollectionItemDetailRow> CollectionItemDetails => Set<CollectionItemDetailRow>();
 
     public DbSet<LibraryRootRow> LibraryRoots => Set<LibraryRootRow>();
 
+    public DbSet<MediaFileIgnoreRow> MediaFileIgnores => Set<MediaFileIgnoreRow>();
+
     public DbSet<LibrarySettingsRow> LibrarySettings => Set<LibrarySettingsRow>();
+
+    public DbSet<UiPreferenceRow> UiPreferences => Set<UiPreferenceRow>();
+
+    public DbSet<ProviderConfigRow> ProviderConfigs => Set<ProviderConfigRow>();
+
+    public DbSet<ProviderCredentialRow> ProviderCredentials => Set<ProviderCredentialRow>();
+
+    public DbSet<IdentifyResultRow> IdentifyResults => Set<IdentifyResultRow>();
+
+    public DbSet<FingerprintSubmissionRow> FingerprintSubmissions => Set<FingerprintSubmissionRow>();
 
     public DbSet<DatabaseBackupRow> DatabaseBackups => Set<DatabaseBackupRow>();
 
@@ -130,6 +180,8 @@ public sealed class ObscuraDbContext : DbContext
                 .HasForeignKey(row => row.TagId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        modelBuilder.ConfigureExpandedV2Model();
 
         modelBuilder.Entity<EntityHierarchyLinkRow>(entity =>
         {
@@ -293,14 +345,29 @@ public sealed class ObscuraDbContext : DbContext
             entity.ToTable("video_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
+            entity.Property(row => row.LibraryRootId).HasColumnName("library_root_id");
             entity.Property(row => row.Summary).HasColumnName("summary");
+            entity.Property(row => row.SortTitle).HasColumnName("sort_title");
+            entity.Property(row => row.OriginalTitle).HasColumnName("original_title");
+            entity.Property(row => row.Tagline).HasColumnName("tagline");
+            entity.Property(row => row.ReleaseDate).HasColumnName("release_date");
+            entity.Property(row => row.ContentRating).HasColumnName("content_rating");
             entity.Property(row => row.DurationMs).HasColumnName("duration_ms");
             entity.Property(row => row.Width).HasColumnName("width");
             entity.Property(row => row.Height).HasColumnName("height");
+            entity.Property(row => row.FrameRate).HasColumnName("frame_rate");
+            entity.Property(row => row.BitRate).HasColumnName("bit_rate");
+            entity.Property(row => row.Codec).HasColumnName("codec");
+            entity.Property(row => row.Container).HasColumnName("container");
+            entity.Property(row => row.SubtitlesExtractedAt).HasColumnName("subtitles_extracted_at");
             entity.HasOne<EntityRow>()
                 .WithOne()
                 .HasForeignKey<VideoDetailRow>(row => row.EntityId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<LibraryRootRow>()
+                .WithMany()
+                .HasForeignKey(row => row.LibraryRootId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<LibraryRootRow>(entity =>
