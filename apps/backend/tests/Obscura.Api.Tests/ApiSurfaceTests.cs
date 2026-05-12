@@ -7,6 +7,7 @@ using Obscura.Contracts.Entities;
 using Obscura.Contracts.Jobs;
 using Obscura.Contracts.Series;
 using Obscura.Contracts.Settings;
+using Obscura.Contracts.Taxonomy;
 using Obscura.Contracts.Videos;
 using Obscura.Infrastructure.Entities;
 using Obscura.Infrastructure.Queue;
@@ -62,6 +63,21 @@ public sealed class ApiSurfaceTests
         using var client = _factory.CreateClient();
 
         var response = await client.GetFromJsonAsync<VideoSeriesListResponseDto>("/api/series");
+
+        Assert.NotNull(response);
+        Assert.Empty(response.Items);
+        Assert.Null(response.NextCursor);
+    }
+
+    [Theory]
+    [InlineData("/api/performers")]
+    [InlineData("/api/studios")]
+    [InlineData("/api/tags")]
+    public async Task TaxonomyListEndpointsReturnStablePagedShapes(string path)
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetFromJsonAsync<TaxonomyListResponseDto>(path);
 
         Assert.NotNull(response);
         Assert.Empty(response.Items);

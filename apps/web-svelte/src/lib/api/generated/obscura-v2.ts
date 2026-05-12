@@ -11,10 +11,15 @@ import type {
   JobListResponseDto,
   LegacyVideoImportResponseDto,
   ListEntitiesParams,
+  ListPerformersParams,
+  ListStudiosParams,
+  ListTagsParams,
   ProblemDetailsDto,
   RatingUpdateRequestDto,
   SettingsDto,
   SettingsUpdateRequestDto,
+  TaxonomyDetailDto,
+  TaxonomyListResponseDto,
   V2FreshStartPrepareResponseDto,
   V2UpgradeGateStatusDto,
   VideoDetailDto,
@@ -825,6 +830,264 @@ export const importLegacyVideos = async ( options?: RequestInit): Promise<import
   {
     ...options,
     method: 'POST'
+
+
+  }
+);}
+
+
+
+export type listPerformersResponse200 = {
+  data: TaxonomyListResponseDto
+  status: 200
+}
+
+export type listPerformersResponseSuccess = (listPerformersResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listPerformersResponse = (listPerformersResponseSuccess)
+
+export const getListPerformersUrl = (params?: ListPerformersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/performers?${stringifiedParams}` : `/api/performers`
+}
+
+/**
+ * @summary Lists performer entities through the global entity projection.
+ */
+export const listPerformers = async (params?: ListPerformersParams, options?: RequestInit): Promise<listPerformersResponse> => {
+
+  return orvalFetch<listPerformersResponse>(getListPerformersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getPerformerResponse200 = {
+  data: TaxonomyDetailDto
+  status: 200
+}
+
+export type getPerformerResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
+}
+
+export type getPerformerResponseSuccess = (getPerformerResponse200) & {
+  headers: Headers;
+};
+export type getPerformerResponseError = (getPerformerResponse404) & {
+  headers: Headers;
+};
+
+export type getPerformerResponse = (getPerformerResponseSuccess | getPerformerResponseError)
+
+export const getGetPerformerUrl = (id: string,) => {
+
+
+
+
+  return `/api/performers/${id}`
+}
+
+/**
+ * @summary Gets one performer entity.
+ */
+export const getPerformer = async (id: string, options?: RequestInit): Promise<getPerformerResponse> => {
+
+  return orvalFetch<getPerformerResponse>(getGetPerformerUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listStudiosResponse200 = {
+  data: TaxonomyListResponseDto
+  status: 200
+}
+
+export type listStudiosResponseSuccess = (listStudiosResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listStudiosResponse = (listStudiosResponseSuccess)
+
+export const getListStudiosUrl = (params?: ListStudiosParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/studios?${stringifiedParams}` : `/api/studios`
+}
+
+/**
+ * @summary Lists studio entities through the global entity projection.
+ */
+export const listStudios = async (params?: ListStudiosParams, options?: RequestInit): Promise<listStudiosResponse> => {
+
+  return orvalFetch<listStudiosResponse>(getListStudiosUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getStudioResponse200 = {
+  data: TaxonomyDetailDto
+  status: 200
+}
+
+export type getStudioResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
+}
+
+export type getStudioResponseSuccess = (getStudioResponse200) & {
+  headers: Headers;
+};
+export type getStudioResponseError = (getStudioResponse404) & {
+  headers: Headers;
+};
+
+export type getStudioResponse = (getStudioResponseSuccess | getStudioResponseError)
+
+export const getGetStudioUrl = (id: string,) => {
+
+
+
+
+  return `/api/studios/${id}`
+}
+
+/**
+ * @summary Gets one studio entity.
+ */
+export const getStudio = async (id: string, options?: RequestInit): Promise<getStudioResponse> => {
+
+  return orvalFetch<getStudioResponse>(getGetStudioUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listTagsResponse200 = {
+  data: TaxonomyListResponseDto
+  status: 200
+}
+
+export type listTagsResponseSuccess = (listTagsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listTagsResponse = (listTagsResponseSuccess)
+
+export const getListTagsUrl = (params?: ListTagsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/tags?${stringifiedParams}` : `/api/tags`
+}
+
+/**
+ * @summary Lists tag entities through the global entity projection.
+ */
+export const listTags = async (params?: ListTagsParams, options?: RequestInit): Promise<listTagsResponse> => {
+
+  return orvalFetch<listTagsResponse>(getListTagsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getTagResponse200 = {
+  data: TaxonomyDetailDto
+  status: 200
+}
+
+export type getTagResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
+}
+
+export type getTagResponseSuccess = (getTagResponse200) & {
+  headers: Headers;
+};
+export type getTagResponseError = (getTagResponse404) & {
+  headers: Headers;
+};
+
+export type getTagResponse = (getTagResponseSuccess | getTagResponseError)
+
+export const getGetTagUrl = (id: string,) => {
+
+
+
+
+  return `/api/tags/${id}`
+}
+
+/**
+ * @summary Gets one tag entity.
+ */
+export const getTag = async (id: string, options?: RequestInit): Promise<getTagResponse> => {
+
+  return orvalFetch<getTagResponse>(getGetTagUrl(id),
+  {
+    ...options,
+    method: 'GET'
 
 
   }

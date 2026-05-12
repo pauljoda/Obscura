@@ -61,6 +61,7 @@ app.MapVideoEndpoints();
 app.MapJobEndpoints();
 app.MapSettingsEndpoints();
 app.MapSystemEndpoints();
+app.MapTaxonomyEndpoints();
 
 var staticIndexPath = staticFileProvider is not null
     ? Path.Combine(configuredStaticWebRoot!, "index.html")
