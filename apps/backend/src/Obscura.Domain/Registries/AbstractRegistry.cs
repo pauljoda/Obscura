@@ -3,33 +3,37 @@ using System.Reflection;
 namespace Obscura.Domain.Registries;
 
 /// <summary>
-/// Base implementation for registries that discover domain values from public parameterless implementations.
+/// Base implementation for registries that discover domain values and index them by a stable key.
 /// </summary>
 /// <typeparam name="TItem">Contract implemented by each discovered registry value.</typeparam>
 /// <typeparam name="TKey">Stable key type used to look up a registered value.</typeparam>
-public abstract class DiscoveredRegistry<TItem, TKey>
+public abstract class AbstractRegistry<TItem, TKey>
     where TKey : notnull
 {
     private readonly Assembly _assembly;
     private readonly Func<TItem, TKey> _keySelector;
     private readonly IEqualityComparer<TKey>? _keyComparer;
+    private readonly Func<IEnumerable<TItem>, IEnumerable<TItem>>? _orderItems;
     private readonly Lazy<IReadOnlyList<TItem>> _items;
     private readonly Lazy<IReadOnlyDictionary<TKey, TItem>> _itemsByKey;
 
     /// <summary>
-    /// Creates a registry that scans an assembly for concrete implementations of <typeparamref name="TItem" />.
+    /// Creates a registry that scans an assembly for implementations of <typeparamref name="TItem" />.
     /// </summary>
     /// <param name="assembly">Assembly containing the registry value implementations.</param>
     /// <param name="keySelector">Function that extracts the stable lookup key from each item.</param>
     /// <param name="keyComparer">Optional comparer for lookup keys.</param>
-    protected DiscoveredRegistry(
+    /// <param name="orderItems">Optional function that orders items before the registry exposes them.</param>
+    protected AbstractRegistry(
         Assembly assembly,
         Func<TItem, TKey> keySelector,
-        IEqualityComparer<TKey>? keyComparer = null)
+        IEqualityComparer<TKey>? keyComparer = null,
+        Func<IEnumerable<TItem>, IEnumerable<TItem>>? orderItems = null)
     {
         _assembly = assembly;
         _keySelector = keySelector;
         _keyComparer = keyComparer;
+        _orderItems = orderItems;
         _items = new Lazy<IReadOnlyList<TItem>>(DiscoverItems);
         _itemsByKey = new Lazy<IReadOnlyDictionary<TKey, TItem>>(() => Items.ToDictionary(_keySelector, _keyComparer));
     }
@@ -45,7 +49,16 @@ public abstract class DiscoveredRegistry<TItem, TKey>
     /// <param name="key">Stable lookup key.</param>
     /// <param name="item">The registered item when the method returns true.</param>
     /// <returns><see langword="true" /> when the key is registered; otherwise <see langword="false" />.</returns>
-    protected bool TryGetItem(TKey key, out TItem item) => _itemsByKey.Value.TryGetValue(key, out item!);
+    protected bool TryGetKey(TKey? key, out TItem item)
+    {
+        if (key is not null && _itemsByKey.Value.TryGetValue(key, out item!))
+        {
+            return true;
+        }
+
+        item = default!;
+        return false;
+    }
 
     /// <summary>
     /// Looks up a discovered item by key and throws a domain-specific exception when it is missing.
@@ -53,9 +66,9 @@ public abstract class DiscoveredRegistry<TItem, TKey>
     /// <param name="key">Stable lookup key.</param>
     /// <param name="createErrorMessage">Function that creates the missing-key error message.</param>
     /// <returns>The registered item for the key.</returns>
-    protected TItem RequireItem(TKey key, Func<TKey, string> createErrorMessage)
+    protected TItem RequireKey(TKey key, Func<TKey, string> createErrorMessage)
     {
-        if (TryGetItem(key, out var item))
+        if (TryGetKey(key, out var item))
         {
             return item;
         }
@@ -81,16 +94,12 @@ public abstract class DiscoveredRegistry<TItem, TKey>
     /// <returns>Created registry item.</returns>
     protected virtual TItem CreateItem(Type type) => (TItem)Activator.CreateInstance(type)!;
 
-    /// <summary>
-    /// Orders discovered items before they are exposed by the registry.
-    /// </summary>
-    /// <param name="items">Discovered items.</param>
-    /// <returns>Items in registry order.</returns>
-    protected virtual IEnumerable<TItem> OrderItems(IEnumerable<TItem> items) => items;
-
-    private IReadOnlyList<TItem> DiscoverItems() =>
-        OrderItems(_assembly.GetTypes()
+    private IReadOnlyList<TItem> DiscoverItems()
+    {
+        var discoveredItems = _assembly.GetTypes()
             .Where(IsDiscoverableType)
-            .Select(CreateItem))
-        .ToArray();
+            .Select(CreateItem);
+
+        return (_orderItems?.Invoke(discoveredItems) ?? discoveredItems).ToArray();
+    }
 }

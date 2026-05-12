@@ -5,12 +5,16 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Discovers and exposes code-defined entity kinds.
 /// </summary>
-public sealed class EntityKindRegistry : CodeRegistry<IEntityKind>
+public sealed class EntityKindRegistry : AbstractRegistry<IEntityKind, string>
 {
     private static readonly EntityKindRegistry Registry = new();
 
     private EntityKindRegistry()
-        : base(typeof(EntityKindRegistry).Assembly, kind => kind.Code, "entity kind", nameof(IEntityKind))
+        : base(
+            typeof(EntityKindRegistry).Assembly,
+            kind => kind.Code,
+            StringComparer.OrdinalIgnoreCase,
+            kinds => kinds.OrderBy(kind => kind.Code, StringComparer.Ordinal))
     {
     }
 
@@ -74,7 +78,7 @@ public sealed class EntityKindRegistry : CodeRegistry<IEntityKind>
     /// <param name="kind">The matched kind when the method returns true.</param>
     /// <returns>True when the code is known; otherwise false.</returns>
     public static bool TryGet(string? code, out IEntityKind kind)
-        => Registry.TryGetCode(code, out kind);
+        => Registry.TryGetKey(code, out kind);
 
     /// <summary>
     /// Looks up an entity kind by its stable code and fails when storage contains an unknown kind.
@@ -83,5 +87,6 @@ public sealed class EntityKindRegistry : CodeRegistry<IEntityKind>
     /// <returns>The registered entity kind.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the kind code is not registered.</exception>
     public static IEntityKind Require(string code)
-        => Registry.RequireCode(code);
+        => Registry.RequireKey(code, missingCode =>
+            $"Unknown entity kind code '{missingCode}'. Add an {nameof(IEntityKind)} implementation before using it.");
 }

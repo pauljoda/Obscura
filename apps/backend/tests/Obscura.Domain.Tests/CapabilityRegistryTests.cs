@@ -38,8 +38,8 @@ public sealed class CapabilityRegistryTests
     }
 
     [Fact]
-    public void CapabilityRegistryUsesSharedCodeRegistryInfrastructure()
+    public void CapabilityRegistryUsesSharedRegistryInfrastructure()
     {
-        Assert.True(typeof(CapabilityRegistry).IsSubclassOf(typeof(CodeRegistry<ICapabilityKind>)));
+        Assert.True(typeof(CapabilityRegistry).IsSubclassOf(typeof(AbstractRegistry<ICapabilityKind, string>)));
     }
 }

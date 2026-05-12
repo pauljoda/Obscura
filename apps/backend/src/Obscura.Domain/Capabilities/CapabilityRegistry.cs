@@ -6,13 +6,17 @@ namespace Obscura.Domain.Capabilities;
 /// <summary>
 /// Discovers and exposes code-defined entity capability kinds.
 /// </summary>
-public sealed class CapabilityRegistry : CodeRegistry<ICapabilityKind>
+public sealed class CapabilityRegistry : AbstractRegistry<ICapabilityKind, string>
 {
     private const string CapabilityKindPropertyName = "CapabilityKind";
     private static readonly CapabilityRegistry Registry = new();
 
     private CapabilityRegistry()
-        : base(typeof(CapabilityRegistry).Assembly, capability => capability.Code, "capability", nameof(ICapability))
+        : base(
+            typeof(CapabilityRegistry).Assembly,
+            capability => capability.Code,
+            StringComparer.OrdinalIgnoreCase,
+            capabilities => capabilities.OrderBy(capability => capability.Code, StringComparer.Ordinal))
     {
     }
 
@@ -52,7 +56,7 @@ public sealed class CapabilityRegistry : CodeRegistry<ICapabilityKind>
     /// <param name="capability">The matched capability kind when the method returns true.</param>
     /// <returns>True when the code is known; otherwise false.</returns>
     public static bool TryGet(string? code, out ICapabilityKind capability)
-        => Registry.TryGetCode(code, out capability);
+        => Registry.TryGetKey(code, out capability);
 
     /// <summary>
     /// Looks up a capability kind by code and fails when the code is unknown.
@@ -61,7 +65,8 @@ public sealed class CapabilityRegistry : CodeRegistry<ICapabilityKind>
     /// <returns>The registered capability kind.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the capability code is not registered.</exception>
     public static ICapabilityKind Require(string code)
-        => Registry.RequireCode(code);
+        => Registry.RequireKey(code, missingCode =>
+            $"Unknown capability code '{missingCode}'. Add an {nameof(ICapability)} implementation before using it.");
 
     private static ICapabilityKind<TCapability> Require<TCapability>(string code)
         where TCapability : class, ICapability

@@ -90,6 +90,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Refactored v2 .NET entity kinds and relationships into Codec-style interfaces with one concrete implementation per kind or relationship, dedicated interface files, and separate registries for lookup/discovery behavior instead of central enum-style kind and relationship models.
 - Changed the v2 API capability payload from a fixed grouped object to a discriminated capability list so clients can consume capability kinds independently.
 - Refactored v2 .NET registries for codecs, entity kinds, relationships, and capabilities onto shared discovery infrastructure, with capabilities now owning their kind metadata directly instead of separate kind stub classes.
+- Collapsed the v2 .NET registry base classes into one `AbstractRegistry` so each domain registry declares its own lookup key, ordering, and missing-key behavior in one place.
 - Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.
 - Job Control failures can now be individually suppressed by error type — clicking Suppress on any failed job hides all jobs sharing the same error fingerprint until you click Show all or clear all failures.
 - Job Control completed jobs now show a duration column so you can see how long each run took, plus a retry indicator when a job needed more than one attempt.

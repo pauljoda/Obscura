@@ -5,7 +5,7 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Discovers and exposes codecs for closed-set enum values.
 /// </summary>
-public sealed class CodecRegistry : DiscoveredRegistry<ICodec, Type>
+public sealed class CodecRegistry : AbstractRegistry<ICodec, Type>
 {
     private static readonly CodecRegistry Registry = new();
 
@@ -22,7 +22,7 @@ public sealed class CodecRegistry : DiscoveredRegistry<ICodec, Type>
     public static ICodec<TValue> Get<TValue>()
         where TValue : struct, Enum
     {
-        if (Registry.TryGetItem(typeof(TValue), out var codec) && codec is ICodec<TValue> typedCodec)
+        if (Registry.TryGetKey(typeof(TValue), out var codec) && codec is ICodec<TValue> typedCodec)
         {
             return typedCodec;
         }

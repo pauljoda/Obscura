@@ -5,12 +5,16 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Discovers and exposes code-defined entity relationships.
 /// </summary>
-public sealed class EntityRelationshipRegistry : CodeRegistry<IEntityRelationship>
+public sealed class EntityRelationshipRegistry : AbstractRegistry<IEntityRelationship, string>
 {
     private static readonly EntityRelationshipRegistry Registry = new();
 
     private EntityRelationshipRegistry()
-        : base(typeof(EntityRelationshipRegistry).Assembly, relationship => relationship.Code, "entity relationship", nameof(IEntityRelationship))
+        : base(
+            typeof(EntityRelationshipRegistry).Assembly,
+            relationship => relationship.Code,
+            StringComparer.OrdinalIgnoreCase,
+            relationships => relationships.OrderBy(relationship => relationship.Code, StringComparer.Ordinal))
     {
     }
 
@@ -67,7 +71,7 @@ public sealed class EntityRelationshipRegistry : CodeRegistry<IEntityRelationshi
     /// <param name="relationship">The matched relationship when the method returns true.</param>
     /// <returns>True when the code is known; otherwise false.</returns>
     public static bool TryGet(string? code, out IEntityRelationship relationship)
-        => Registry.TryGetCode(code, out relationship);
+        => Registry.TryGetKey(code, out relationship);
 
     /// <summary>
     /// Looks up a relationship by code and fails when storage contains an unknown relationship.
@@ -76,5 +80,6 @@ public sealed class EntityRelationshipRegistry : CodeRegistry<IEntityRelationshi
     /// <returns>The registered entity relationship.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the relationship code is not registered.</exception>
     public static IEntityRelationship Require(string code)
-        => Registry.RequireCode(code);
+        => Registry.RequireKey(code, missingCode =>
+            $"Unknown entity relationship code '{missingCode}'. Add an {nameof(IEntityRelationship)} implementation before using it.");
 }
