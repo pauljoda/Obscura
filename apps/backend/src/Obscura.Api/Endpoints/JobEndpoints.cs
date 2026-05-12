@@ -1,4 +1,5 @@
 using Obscura.Contracts.Jobs;
+using Obscura.Infrastructure.Queue;
 
 namespace Obscura.Api.Endpoints;
 
@@ -9,21 +10,19 @@ public static class JobEndpoints
         var group = routes.MapGroup("/api/jobs")
             .WithTags("Jobs");
 
-        group.MapGet("/", () => new JobListResponseDto([]))
+        group.MapGet("/", async (
+            IJobQueueService queue,
+            CancellationToken cancellationToken) =>
+            new JobListResponseDto(await queue.ListAsync(cancellationToken)))
             .WithName("ListJobs")
             .WithSummary("Lists Obscura background job runs for the operations dashboard.");
 
-        group.MapPost("/{type}", (string type) =>
+        group.MapPost("/{type}", async (
+            string type,
+            IJobQueueService queue,
+            CancellationToken cancellationToken) =>
         {
-            var job = new JobRunDto(
-                Guid.NewGuid(),
-                type,
-                "queued",
-                0,
-                null,
-                DateTimeOffset.UtcNow,
-                null,
-                null);
+            var job = await queue.EnqueueAsync(type, cancellationToken);
 
             return Results.Accepted($"/api/jobs/{job.Id}", new JobCreateResponseDto(job));
         })

@@ -1,20 +1,30 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.Jobs;
 using Obscura.Contracts.Settings;
 using Obscura.Contracts.Videos;
+using Obscura.Infrastructure.Queue;
 
 namespace Obscura.Api.Tests;
 
-public sealed class ApiSurfaceTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class ApiSurfaceTests
 {
     private readonly WebApplicationFactory<Program> _factory;
 
-    public ApiSurfaceTests(WebApplicationFactory<Program> factory)
+    public ApiSurfaceTests()
     {
-        _factory = factory;
+        _factory = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    services.AddScoped<IJobQueueService, EmptyJobQueueService>();
+                });
+            });
     }
 
     [Fact]
@@ -74,5 +84,18 @@ public sealed class ApiSurfaceTests : IClassFixture<WebApplicationFactory<Progra
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    private sealed class EmptyJobQueueService : IJobQueueService
+    {
+        public Task<IReadOnlyList<JobRunDto>> ListAsync(CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IReadOnlyList<JobRunDto>>([]);
+        }
+
+        public Task<JobRunDto> EnqueueAsync(string type, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("The API surface smoke test does not create jobs.");
+        }
     }
 }
