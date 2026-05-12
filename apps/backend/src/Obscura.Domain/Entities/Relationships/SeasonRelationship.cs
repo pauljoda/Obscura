@@ -7,4 +7,8 @@ public sealed record SeasonRelationship()
     public string Code => "season";
     public string DisplayName => "Season";
     public bool IsStructural => true;
+    public IReadOnlyList<HierarchyLayer> Layers =>
+    [
+        new(EntityKindRegistry.VideoSeries, EntityKindRegistry.VideoSeries, EntityKindRegistry.VideoSeason, this, false, HierarchyOrdering.SortOrder)
+    ];
 }

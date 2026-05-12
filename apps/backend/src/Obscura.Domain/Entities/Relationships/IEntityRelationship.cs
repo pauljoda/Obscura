@@ -13,4 +13,7 @@ public interface IEntityRelationship
 
     /// <summary>True when the relationship represents canonical parentage instead of loose membership.</summary>
     bool IsStructural { get; }
+
+    /// <summary>Allowed hierarchy layers declared by this relationship.</summary>
+    IReadOnlyList<HierarchyLayer> Layers { get; }
 }

@@ -7,4 +7,8 @@ public sealed record NestedTagRelationship()
     public string Code => "nested-tag";
     public string DisplayName => "Nested Tag";
     public bool IsStructural => true;
+    public IReadOnlyList<HierarchyLayer> Layers =>
+    [
+        new(EntityKindRegistry.Tag, EntityKindRegistry.Tag, EntityKindRegistry.Tag, this, false, HierarchyOrdering.SortOrder)
+    ];
 }

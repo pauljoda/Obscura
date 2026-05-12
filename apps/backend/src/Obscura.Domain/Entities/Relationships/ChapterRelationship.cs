@@ -7,4 +7,9 @@ public sealed record ChapterRelationship()
     public string Code => "chapter";
     public string DisplayName => "Chapter";
     public bool IsStructural => true;
+    public IReadOnlyList<HierarchyLayer> Layers =>
+    [
+        new(EntityKindRegistry.Book, EntityKindRegistry.BookVolume, EntityKindRegistry.BookChapter, this, false, HierarchyOrdering.SortOrder),
+        new(EntityKindRegistry.Book, EntityKindRegistry.Book, EntityKindRegistry.BookChapter, this, false, HierarchyOrdering.SortOrder)
+    ];
 }

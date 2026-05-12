@@ -44,32 +44,39 @@ public sealed class EntityHierarchyDefinitionTests
     {
         var series = EntityHierarchyDefinitions.Require(EntityKindRegistry.VideoSeries);
         Assert.Contains(series.Layers, layer =>
+            layer.RootKind == EntityKindRegistry.VideoSeries &&
             layer.ParentKind == EntityKindRegistry.VideoSeries &&
             layer.ChildKind == EntityKindRegistry.VideoSeason &&
             layer.Relationship == EntityRelationshipRegistry.Season);
         Assert.Contains(series.Layers, layer =>
+            layer.RootKind == EntityKindRegistry.VideoSeries &&
             layer.ParentKind == EntityKindRegistry.VideoSeason &&
             layer.ChildKind == EntityKindRegistry.Video &&
             layer.Relationship == EntityRelationshipRegistry.Episode);
         Assert.Contains(series.Layers, layer =>
+            layer.RootKind == EntityKindRegistry.VideoSeries &&
             layer.ParentKind == EntityKindRegistry.VideoSeries &&
             layer.ChildKind == EntityKindRegistry.Video &&
             layer.Relationship == EntityRelationshipRegistry.Episode);
 
         var book = EntityHierarchyDefinitions.Require(EntityKindRegistry.Book);
         Assert.Contains(book.Layers, layer =>
+            layer.RootKind == EntityKindRegistry.Book &&
             layer.ParentKind == EntityKindRegistry.Book &&
             layer.ChildKind == EntityKindRegistry.BookVolume &&
             layer.Relationship == EntityRelationshipRegistry.Volume);
         Assert.Contains(book.Layers, layer =>
+            layer.RootKind == EntityKindRegistry.Book &&
             layer.ParentKind == EntityKindRegistry.BookVolume &&
             layer.ChildKind == EntityKindRegistry.BookChapter &&
             layer.Relationship == EntityRelationshipRegistry.Chapter);
         Assert.Contains(book.Layers, layer =>
+            layer.RootKind == EntityKindRegistry.Book &&
             layer.ParentKind == EntityKindRegistry.Book &&
             layer.ChildKind == EntityKindRegistry.BookChapter &&
             layer.Relationship == EntityRelationshipRegistry.Chapter);
         Assert.Contains(book.Layers, layer =>
+            layer.RootKind == EntityKindRegistry.Book &&
             layer.ParentKind == EntityKindRegistry.BookChapter &&
             layer.ChildKind == EntityKindRegistry.BookPage &&
             layer.Relationship == EntityRelationshipRegistry.Page);

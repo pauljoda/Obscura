@@ -33,4 +33,29 @@ public sealed class EntityRelationshipRegistryTests
 
         Assert.Same(EntityRelationshipRegistry.Episode, found);
     }
+
+    [Fact]
+    public void RelationshipClassesDeclareTheirAllowedHierarchyLayers()
+    {
+        var episodeLayers = EntityRelationshipRegistry.Episode.Layers;
+
+        Assert.Contains(episodeLayers, layer =>
+            layer.RootKind == EntityKindRegistry.VideoSeries &&
+            layer.ParentKind == EntityKindRegistry.VideoSeason &&
+            layer.ChildKind == EntityKindRegistry.Video);
+        Assert.Contains(episodeLayers, layer =>
+            layer.RootKind == EntityKindRegistry.VideoSeries &&
+            layer.ParentKind == EntityKindRegistry.VideoSeries &&
+            layer.ChildKind == EntityKindRegistry.Video);
+
+        var chapterLayers = EntityRelationshipRegistry.Chapter.Layers;
+        Assert.Contains(chapterLayers, layer =>
+            layer.RootKind == EntityKindRegistry.Book &&
+            layer.ParentKind == EntityKindRegistry.BookVolume &&
+            layer.ChildKind == EntityKindRegistry.BookChapter);
+        Assert.Contains(chapterLayers, layer =>
+            layer.RootKind == EntityKindRegistry.Book &&
+            layer.ParentKind == EntityKindRegistry.Book &&
+            layer.ChildKind == EntityKindRegistry.BookChapter);
+    }
 }

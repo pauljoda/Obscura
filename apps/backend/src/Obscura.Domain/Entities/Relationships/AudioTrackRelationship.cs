@@ -7,4 +7,8 @@ public sealed record AudioTrackRelationship()
     public string Code => "audio-track";
     public string DisplayName => "Audio Track";
     public bool IsStructural => true;
+    public IReadOnlyList<HierarchyLayer> Layers =>
+    [
+        new(EntityKindRegistry.AudioLibrary, EntityKindRegistry.AudioLibrary, EntityKindRegistry.AudioTrack, this, false, HierarchyOrdering.SortOrder)
+    ];
 }

@@ -7,4 +7,8 @@ public sealed record GalleryImageRelationship()
     public string Code => "gallery-image";
     public string DisplayName => "Gallery Image";
     public bool IsStructural => true;
+    public IReadOnlyList<HierarchyLayer> Layers =>
+    [
+        new(EntityKindRegistry.Gallery, EntityKindRegistry.Gallery, EntityKindRegistry.Image, this, false, HierarchyOrdering.SortOrder)
+    ];
 }

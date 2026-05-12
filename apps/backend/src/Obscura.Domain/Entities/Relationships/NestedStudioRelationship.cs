@@ -7,4 +7,8 @@ public sealed record NestedStudioRelationship()
     public string Code => "nested-studio";
     public string DisplayName => "Nested Studio";
     public bool IsStructural => true;
+    public IReadOnlyList<HierarchyLayer> Layers =>
+    [
+        new(EntityKindRegistry.Studio, EntityKindRegistry.Studio, EntityKindRegistry.Studio, this, false, HierarchyOrdering.SortOrder)
+    ];
 }

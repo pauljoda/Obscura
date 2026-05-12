@@ -7,4 +7,5 @@ public sealed record CollectionItemRelationship()
     public string Code => "collection-item";
     public string DisplayName => "Collection Item";
     public bool IsStructural => false;
+    public IReadOnlyList<HierarchyLayer> Layers => [];
 }

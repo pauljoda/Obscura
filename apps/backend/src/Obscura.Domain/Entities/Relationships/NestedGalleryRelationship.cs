@@ -7,4 +7,8 @@ public sealed record NestedGalleryRelationship()
     public string Code => "nested-gallery";
     public string DisplayName => "Nested Gallery";
     public bool IsStructural => true;
+    public IReadOnlyList<HierarchyLayer> Layers =>
+    [
+        new(EntityKindRegistry.Gallery, EntityKindRegistry.Gallery, EntityKindRegistry.Gallery, this, false, HierarchyOrdering.SortOrder)
+    ];
 }

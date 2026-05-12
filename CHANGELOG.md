@@ -96,6 +96,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Changed the v2 API capability payload from a fixed grouped object to a discriminated capability list so clients can consume capability kinds independently.
 - Refactored v2 .NET registries for codecs, entity kinds, relationships, and capabilities onto shared discovery infrastructure, with capabilities now owning their kind metadata directly instead of separate kind stub classes.
 - Collapsed the v2 .NET registry base classes into one `AbstractRegistry` so each domain registry declares its own lookup key, ordering, and missing-key behavior in one place.
+- Moved v2 .NET hierarchy layer declarations into the individual relationship classes so each relationship file shows its allowed root, parent, and child entity kinds directly.
 - Corrected v2 .NET media, taxonomy, collection, and structural hierarchy models to inherit from the shared `Entity` root, added playback as an explicit reusable capability, and removed the stale Domain-to-Contracts project reference.
 - Expanded v2 .NET tag and credit capabilities to keep entity references and role metadata, and hydrated file/playback capabilities from their EF rows instead of returning empty placeholders.
 - Simplified the v2 .NET rating model so `Rating` owns the integer value, clamps it to the shared zero-through-five scale, and replaces the extra `RatingValue` wrapper.

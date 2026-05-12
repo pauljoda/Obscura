@@ -12,12 +12,14 @@ public enum HierarchyOrdering
 /// <summary>
 /// One allowed parent-to-child step inside a code-defined entity hierarchy.
 /// </summary>
+/// <param name="RootKind">Entity kind that owns the full hierarchy this layer participates in.</param>
 /// <param name="ParentKind">Entity kind that may own or navigate to the child.</param>
 /// <param name="ChildKind">Entity kind allowed under the parent.</param>
 /// <param name="Relationship">Semantic relationship stored on the hierarchy edge.</param>
 /// <param name="ChildMayHaveMultipleParents">True when the child can be reused under more than one parent for this relationship.</param>
 /// <param name="Ordering">Ordering policy for children in this layer.</param>
 public sealed record HierarchyLayer(
+    IEntityKind RootKind,
     IEntityKind ParentKind,
     IEntityKind ChildKind,
     IEntityRelationship Relationship,
@@ -60,68 +62,39 @@ public sealed record EntityHierarchyTree(
 /// </summary>
 public static class EntityHierarchyDefinitions
 {
-    /// <summary>Hierarchy for video series, including season-grouped and flat episode lists.</summary>
-    public static readonly HierarchyDefinition VideoSeries = new(
-        EntityKindRegistry.VideoSeries,
-        [
-            Layer(EntityKindRegistry.VideoSeries, EntityKindRegistry.VideoSeason, EntityRelationshipRegistry.Season),
-            Layer(EntityKindRegistry.VideoSeason, EntityKindRegistry.Video, EntityRelationshipRegistry.Episode),
-            Layer(EntityKindRegistry.VideoSeries, EntityKindRegistry.Video, EntityRelationshipRegistry.Episode)
-        ]);
-
-    /// <summary>Hierarchy for books, including volume-grouped and direct chapter lists.</summary>
-    public static readonly HierarchyDefinition Book = new(
-        EntityKindRegistry.Book,
-        [
-            Layer(EntityKindRegistry.Book, EntityKindRegistry.BookVolume, EntityRelationshipRegistry.Volume),
-            Layer(EntityKindRegistry.BookVolume, EntityKindRegistry.BookChapter, EntityRelationshipRegistry.Chapter),
-            Layer(EntityKindRegistry.Book, EntityKindRegistry.BookChapter, EntityRelationshipRegistry.Chapter),
-            Layer(EntityKindRegistry.BookChapter, EntityKindRegistry.BookPage, EntityRelationshipRegistry.Page)
-        ]);
-
-    /// <summary>Hierarchy for galleries and their nested galleries or image children.</summary>
-    public static readonly HierarchyDefinition Gallery = new(
-        EntityKindRegistry.Gallery,
-        [
-            Layer(EntityKindRegistry.Gallery, EntityKindRegistry.Gallery, EntityRelationshipRegistry.NestedGallery),
-            Layer(EntityKindRegistry.Gallery, EntityKindRegistry.Image, EntityRelationshipRegistry.GalleryImage)
-        ]);
-
-    /// <summary>Hierarchy for audio libraries and their nested libraries or track children.</summary>
-    public static readonly HierarchyDefinition AudioLibrary = new(
-        EntityKindRegistry.AudioLibrary,
-        [
-            Layer(EntityKindRegistry.AudioLibrary, EntityKindRegistry.AudioLibrary, EntityRelationshipRegistry.NestedAudioLibrary),
-            Layer(EntityKindRegistry.AudioLibrary, EntityKindRegistry.AudioTrack, EntityRelationshipRegistry.AudioTrack)
-        ]);
-
-    /// <summary>Hierarchy for nested tag taxonomy.</summary>
-    public static readonly HierarchyDefinition Tag = new(
-        EntityKindRegistry.Tag,
-        [
-            Layer(EntityKindRegistry.Tag, EntityKindRegistry.Tag, EntityRelationshipRegistry.NestedTag)
-        ]);
-
-    /// <summary>Hierarchy for nested studio taxonomy.</summary>
-    public static readonly HierarchyDefinition Studio = new(
-        EntityKindRegistry.Studio,
-        [
-            Layer(EntityKindRegistry.Studio, EntityKindRegistry.Studio, EntityRelationshipRegistry.NestedStudio)
-        ]);
-
-    private static readonly HierarchyDefinition[] Known =
-    [
-        VideoSeries,
-        Book,
-        Gallery,
-        AudioLibrary,
-        Tag,
-        Studio
-    ];
+    private static readonly HierarchyDefinition[] Known = EntityRelationshipRegistry.Structural
+        .SelectMany(relationship => relationship.Layers)
+        .GroupBy(layer => layer.RootKind.Code, StringComparer.OrdinalIgnoreCase)
+        .Select(group => new HierarchyDefinition(
+            group.First().RootKind,
+            group.OrderBy(layer => layer.ParentKind.Code, StringComparer.Ordinal)
+                .ThenBy(layer => layer.ChildKind.Code, StringComparer.Ordinal)
+                .ThenBy(layer => layer.Relationship.Code, StringComparer.Ordinal)
+                .ToArray()))
+        .OrderBy(definition => definition.RootKind.Code, StringComparer.Ordinal)
+        .ToArray();
 
     private static readonly IReadOnlyDictionary<string, HierarchyDefinition> ByRootKind = Known.ToDictionary(
         definition => definition.RootKind.Code,
         StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Hierarchy for video series, including season-grouped and flat episode lists.</summary>
+    public static readonly HierarchyDefinition VideoSeries = Require(EntityKindRegistry.VideoSeries);
+
+    /// <summary>Hierarchy for books, including volume-grouped and direct chapter lists.</summary>
+    public static readonly HierarchyDefinition Book = Require(EntityKindRegistry.Book);
+
+    /// <summary>Hierarchy for galleries and their nested galleries or image children.</summary>
+    public static readonly HierarchyDefinition Gallery = Require(EntityKindRegistry.Gallery);
+
+    /// <summary>Hierarchy for audio libraries and their nested libraries or track children.</summary>
+    public static readonly HierarchyDefinition AudioLibrary = Require(EntityKindRegistry.AudioLibrary);
+
+    /// <summary>Hierarchy for nested tag taxonomy.</summary>
+    public static readonly HierarchyDefinition Tag = Require(EntityKindRegistry.Tag);
+
+    /// <summary>Hierarchy for nested studio taxonomy.</summary>
+    public static readonly HierarchyDefinition Studio = Require(EntityKindRegistry.Studio);
 
     /// <summary>
     /// Gets every known hierarchy definition in deterministic registry order.
@@ -166,9 +139,4 @@ public static class EntityHierarchyDefinitions
             string.Equals(layer.ChildKind.Code, childKind.Code, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(layer.Relationship.Code, relationship.Code, StringComparison.OrdinalIgnoreCase));
 
-    private static HierarchyLayer Layer(
-        IEntityKind parentKind,
-        IEntityKind childKind,
-        IEntityRelationship relationship) =>
-        new(parentKind, childKind, relationship, false, HierarchyOrdering.SortOrder);
 }

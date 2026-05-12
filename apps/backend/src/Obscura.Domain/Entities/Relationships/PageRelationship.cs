@@ -7,4 +7,8 @@ public sealed record PageRelationship()
     public string Code => "page";
     public string DisplayName => "Page";
     public bool IsStructural => true;
+    public IReadOnlyList<HierarchyLayer> Layers =>
+    [
+        new(EntityKindRegistry.Book, EntityKindRegistry.BookChapter, EntityKindRegistry.BookPage, this, false, HierarchyOrdering.SortOrder)
+    ];
 }

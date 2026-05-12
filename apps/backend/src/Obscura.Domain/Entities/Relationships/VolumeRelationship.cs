@@ -7,4 +7,8 @@ public sealed record VolumeRelationship()
     public string Code => "volume";
     public string DisplayName => "Volume";
     public bool IsStructural => true;
+    public IReadOnlyList<HierarchyLayer> Layers =>
+    [
+        new(EntityKindRegistry.Book, EntityKindRegistry.Book, EntityKindRegistry.BookVolume, this, false, HierarchyOrdering.SortOrder)
+    ];
 }
