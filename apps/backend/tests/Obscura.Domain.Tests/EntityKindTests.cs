@@ -29,7 +29,17 @@ public sealed class EntityKindTests
         var found = EntityKinds.TryGet("Video", out var kind);
 
         Assert.True(found);
+        Assert.Equal(EntityKindCode.Video, kind.Value);
         Assert.Equal("video", kind.Code);
         Assert.Equal(EntityKindCategory.Media, kind.Category);
+    }
+
+    [Fact]
+    public void StaticKnownKindsExposeTypedIdentities()
+    {
+        Assert.Equal(EntityKindCode.Video, EntityKinds.Video.Value);
+        Assert.Equal("video", EntityKinds.Video.Code);
+        Assert.Equal(EntityKindCode.Collection, EntityKinds.Collection.Value);
+        Assert.Equal("collection", EntityKinds.Collection.Code);
     }
 }

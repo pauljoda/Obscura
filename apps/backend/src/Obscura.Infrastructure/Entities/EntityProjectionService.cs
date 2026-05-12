@@ -27,7 +27,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
 
     /// <inheritdoc />
     public async Task<EntityPage> ListAsync(
-        string? kind,
+        EntityKind? kind,
         string? query,
         string? cursor,
         CancellationToken cancellationToken)
@@ -40,9 +40,9 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
             .AsNoTracking()
             .Where(entity => entity.DeletedAt == null);
 
-        if (!string.IsNullOrWhiteSpace(kind))
+        if (kind is not null)
         {
-            entityQuery = entityQuery.Where(entity => entity.KindCode == kind);
+            entityQuery = entityQuery.Where(entity => entity.KindCode == kind.Code);
         }
 
         if (!string.IsNullOrWhiteSpace(query))
@@ -85,8 +85,8 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
     /// <inheritdoc />
     public async Task<IReadOnlyList<Entity>> ListChildrenAsync(
         Guid parentId,
-        string relationship,
-        string? childKind,
+        EntityRelationship relationship,
+        EntityKind? childKind,
         CancellationToken cancellationToken)
     {
         return await LoadLinkedChildrenAsync(parentId, relationship, childKind, cancellationToken);
@@ -175,7 +175,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
 
     /// <inheritdoc />
     public Task<EntityPage> ListVideosAsync(CancellationToken cancellationToken) =>
-        ListAsync("video", null, null, cancellationToken);
+        ListAsync(EntityKinds.Video, null, null, cancellationToken);
 
     /// <inheritdoc />
     public async Task<Video?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
@@ -183,7 +183,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
         var entity = await _db.Entities
             .AsNoTracking()
             .FirstOrDefaultAsync(
-                row => row.Id == id && row.KindCode == "video" && row.DeletedAt == null,
+                row => row.Id == id && row.KindCode == EntityKinds.Video.Code && row.DeletedAt == null,
                 cancellationToken);
 
         if (entity is null)
@@ -210,7 +210,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
 
     /// <inheritdoc />
     public Task<EntityPage> ListSeriesAsync(CancellationToken cancellationToken) =>
-        ListAsync("video-series", null, null, cancellationToken);
+        ListAsync(EntityKinds.VideoSeries, null, null, cancellationToken);
 
     /// <inheritdoc />
     public async Task<VideoSeries?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
@@ -218,7 +218,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
         var entity = await _db.Entities
             .AsNoTracking()
             .FirstOrDefaultAsync(
-                row => row.Id == id && row.KindCode == "video-series" && row.DeletedAt == null,
+                row => row.Id == id && row.KindCode == EntityKinds.VideoSeries.Code && row.DeletedAt == null,
                 cancellationToken);
 
         if (entity is null)
@@ -227,7 +227,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
         }
 
         var card = (await BuildEntitiesAsync([entity], cancellationToken)).Single();
-        var videos = await LoadLinkedChildrenAsync(id, "episode", "video", cancellationToken);
+        var videos = await LoadLinkedChildrenAsync(id, EntityRelationships.Episode, EntityKinds.Video, cancellationToken);
 
         return new VideoSeries(
             card,
@@ -239,13 +239,13 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
 
     private async Task<IReadOnlyList<Entity>> LoadLinkedChildrenAsync(
         Guid parentId,
-        string relationship,
-        string? childKind,
+        EntityRelationship relationship,
+        EntityKind? childKind,
         CancellationToken cancellationToken)
     {
         var links = await _db.EntityHierarchyLinks
             .AsNoTracking()
-            .Where(link => link.ParentEntityId == parentId && link.Relationship == relationship)
+            .Where(link => link.ParentEntityId == parentId && link.Relationship == relationship.Code)
             .OrderBy(link => link.SortOrder)
             .ThenBy(link => link.ChildEntityId)
             .ToListAsync(cancellationToken);
@@ -260,9 +260,9 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
             .AsNoTracking()
             .Where(entity => childIds.Contains(entity.Id) && entity.DeletedAt == null);
 
-        if (!string.IsNullOrWhiteSpace(childKind))
+        if (childKind is not null)
         {
-            childQuery = childQuery.Where(entity => entity.KindCode == childKind);
+            childQuery = childQuery.Where(entity => entity.KindCode == childKind.Code);
         }
 
         var childRows = await childQuery.ToListAsync(cancellationToken);
@@ -427,7 +427,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
         var tagIds = tagLinks.Select(link => link.TagId).Distinct().ToArray();
         var tagTitles = await _db.Entities
             .AsNoTracking()
-            .Where(entity => tagIds.Contains(entity.Id) && entity.KindCode == "tag")
+            .Where(entity => tagIds.Contains(entity.Id) && entity.KindCode == EntityKinds.Tag.Code)
             .ToDictionaryAsync(entity => entity.Id, entity => entity.Title, cancellationToken);
 
         return tagLinks
@@ -469,7 +469,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
         var studioIds = links.Select(link => link.StudioId).Distinct().ToArray();
         var studios = await _db.Entities
             .AsNoTracking()
-            .Where(entity => studioIds.Contains(entity.Id) && entity.KindCode == "studio" && entity.DeletedAt == null)
+            .Where(entity => studioIds.Contains(entity.Id) && entity.KindCode == EntityKinds.Studio.Code && entity.DeletedAt == null)
             .ToDictionaryAsync(entity => entity.Id, cancellationToken);
 
         return links
@@ -502,7 +502,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
         var personIds = links.Select(link => link.PersonEntityId).Distinct().ToArray();
         var people = await _db.Entities
             .AsNoTracking()
-            .Where(entity => personIds.Contains(entity.Id) && entity.KindCode == "person" && entity.DeletedAt == null)
+            .Where(entity => personIds.Contains(entity.Id) && entity.KindCode == EntityKinds.Person.Code && entity.DeletedAt == null)
             .ToDictionaryAsync(entity => entity.Id, cancellationToken);
 
         return links
@@ -519,13 +519,5 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
                     .ToArray());
     }
 
-    private static EntityKind ResolveKind(string code)
-    {
-        if (EntityKinds.TryGet(code, out var kind))
-        {
-            return kind;
-        }
-
-        return new EntityKind(code, code, EntityKindCategory.Media);
-    }
+    private static EntityKind ResolveKind(string code) => EntityKinds.Require(code);
 }

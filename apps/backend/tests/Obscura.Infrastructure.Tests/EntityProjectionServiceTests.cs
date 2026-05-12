@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Entities;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
@@ -193,7 +194,7 @@ public sealed class EntityProjectionServiceTests
         {
             ParentEntityId = seriesId,
             ChildEntityId = episodeId,
-            Relationship = "episode",
+            Relationship = EntityRelationships.Episode.Code,
             SortOrder = 1
         });
         await db.SaveChangesAsync();
@@ -228,7 +229,7 @@ public sealed class EntityProjectionServiceTests
         {
             ParentEntityId = collectionId,
             ChildEntityId = imageId,
-            Relationship = "collection-item",
+            Relationship = EntityRelationships.CollectionItem.Code,
             SortOrder = 2,
             CreatedAt = DateTimeOffset.UtcNow
         });
@@ -236,7 +237,7 @@ public sealed class EntityProjectionServiceTests
         {
             ParentEntityId = collectionId,
             ChildEntityId = audioId,
-            Relationship = "collection-item",
+            Relationship = EntityRelationships.CollectionItem.Code,
             SortOrder = 3,
             CreatedAt = DateTimeOffset.UtcNow
         });
@@ -244,7 +245,11 @@ public sealed class EntityProjectionServiceTests
         await db.SaveChangesAsync();
 
         var service = new EntityProjectionService(db);
-        var children = await service.ListChildrenAsync(collectionId, "collection-item", "image", CancellationToken.None);
+        var children = await service.ListChildrenAsync(
+            collectionId,
+            EntityRelationships.CollectionItem,
+            EntityKinds.Image,
+            CancellationToken.None);
 
         var child = Assert.Single(children);
         Assert.Equal(imageId, child.Id);

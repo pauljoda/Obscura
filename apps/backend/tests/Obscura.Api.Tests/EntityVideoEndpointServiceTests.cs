@@ -82,7 +82,7 @@ public sealed class EntityVideoEndpointServiceTests
         public static readonly Guid VideoId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
         public Task<DomainEntityPage> ListAsync(
-            string? kind,
+            EntityKind? kind,
             string? query,
             string? cursor,
             CancellationToken cancellationToken)
@@ -97,8 +97,8 @@ public sealed class EntityVideoEndpointServiceTests
 
         public Task<IReadOnlyList<DomainEntity>> ListChildrenAsync(
             Guid parentId,
-            string relationship,
-            string? childKind,
+            EntityRelationship relationship,
+            EntityKind? childKind,
             CancellationToken cancellationToken)
         {
             return Task.FromResult<IReadOnlyList<DomainEntity>>([]);
@@ -156,11 +156,9 @@ public sealed class EntityVideoEndpointServiceTests
 
         private static DomainEntity Card(int? rating)
         {
-            EntityKinds.TryGet("video", out var videoKind);
-
             return new DomainEntity(
                 VideoId,
-                videoKind,
+                EntityKinds.Video,
                 "Projected Video",
                 null,
                 new DomainCapabilities(

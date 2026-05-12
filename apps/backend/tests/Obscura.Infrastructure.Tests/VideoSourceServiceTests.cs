@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
 using Obscura.Infrastructure.Videos;
@@ -77,7 +78,7 @@ public sealed class VideoSourceServiceTests : IDisposable
         db.Entities.Add(new EntityRow
         {
             Id = videoId,
-            KindCode = "video",
+            KindCode = EntityKinds.Video.Code,
             Title = "Source",
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow

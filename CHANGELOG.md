@@ -73,6 +73,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Replaced raw v2 .NET entity-kind strings in application and infrastructure code with typed entity-kind and relationship registries, keeping string codes only at API, SQL, and database boundaries.
 - Consolidated duplicate v2 .NET media grouping records into one generic entity-library aggregate so simple entity-plus-children shapes no longer pretend to be specialized domain types.
 - Renamed the v2 .NET taxonomy kind and API route from performer to person/people so the backend stays generic while UI surfaces choose context-specific labels.
 - Added scoped v2 .NET application services for entity, video/series, and collection use cases so API endpoints depend on application orchestration instead of projection interfaces directly.

@@ -10,9 +10,6 @@ namespace Obscura.Application.Collections;
 /// </summary>
 public sealed class CollectionService
 {
-    private const string CollectionKind = "collection";
-    private const string CollectionItemRelationship = "collection-item";
-
     private readonly IEntityCatalog _entities;
 
     /// <summary>
@@ -31,7 +28,7 @@ public sealed class CollectionService
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>A page of collection entity roots.</returns>
     public Task<EntityPage> ListAsync(EntityListQuery query, CancellationToken cancellationToken) =>
-        _entities.ListAsync(CollectionKind, query.Search, query.Cursor, cancellationToken);
+        _entities.ListAsync(EntityKinds.Collection, query.Search, query.Cursor, cancellationToken);
 
     /// <summary>
     /// Gets a collection and expands its collection-item links.
@@ -42,13 +39,13 @@ public sealed class CollectionService
     public async Task<EntityLibrary?> GetAsync(Guid id, CancellationToken cancellationToken)
     {
         var entity = await _entities.GetAsync(id, cancellationToken);
-        if (entity is null || !entity.Kind.Code.Equals(CollectionKind, StringComparison.OrdinalIgnoreCase))
+        if (entity is null || entity.Kind.Value != EntityKindCode.Collection)
         {
             return null;
         }
 
-        var items = await _entities.ListChildrenAsync(id, CollectionItemRelationship, null, cancellationToken);
+        var items = await _entities.ListChildrenAsync(id, EntityRelationships.CollectionItem, null, cancellationToken);
 
-        return new EntityLibrary(entity, items, CollectionItemRelationship, null);
+        return new EntityLibrary(entity, items, EntityRelationships.CollectionItem, null);
     }
 }

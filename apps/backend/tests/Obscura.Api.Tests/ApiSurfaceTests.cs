@@ -11,6 +11,7 @@ using Obscura.Contracts.Series;
 using Obscura.Contracts.Settings;
 using Obscura.Contracts.Taxonomy;
 using Obscura.Contracts.Videos;
+using Obscura.Domain.Entities;
 using Obscura.Domain.Interfaces;
 using Obscura.Infrastructure.Queue;
 using Obscura.Infrastructure.Settings;
@@ -52,6 +53,16 @@ public sealed class ApiSurfaceTests
         Assert.NotNull(response);
         Assert.Empty(response.Items);
         Assert.Null(response.NextCursor);
+    }
+
+    [Fact]
+    public async Task EntityListEndpointRejectsUnknownKinds()
+    {
+        using var client = _factory.CreateClient();
+
+        using var response = await client.GetAsync("/api/entities?kind=surprise");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -192,7 +203,7 @@ public sealed class ApiSurfaceTests
     private sealed class EmptyEntityProjectionService : IEntityCatalog, IRatingService, IVideoLibrary
     {
         public Task<DomainEntityPage> ListAsync(
-            string? kind,
+            EntityKind? kind,
             string? query,
             string? cursor,
             CancellationToken cancellationToken)
@@ -207,8 +218,8 @@ public sealed class ApiSurfaceTests
 
         public Task<IReadOnlyList<DomainEntity>> ListChildrenAsync(
             Guid parentId,
-            string relationship,
-            string? childKind,
+            EntityRelationship relationship,
+            EntityKind? childKind,
             CancellationToken cancellationToken)
         {
             return Task.FromResult<IReadOnlyList<DomainEntity>>([]);

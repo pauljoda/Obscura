@@ -1,6 +1,7 @@
 using Obscura.Api.Mapping;
 using Obscura.Contracts.Media;
 using Obscura.Contracts.System;
+using Obscura.Domain.Entities;
 using Obscura.Domain.Interfaces;
 
 namespace Obscura.Api.Endpoints;
@@ -9,11 +10,11 @@ public static class MediaEndpoints
 {
     public static IEndpointRouteBuilder MapMediaEndpoints(this IEndpointRouteBuilder routes)
     {
-        MapMediaGroup(routes, "/api/images", "Images", "image", null);
-        MapMediaGroup(routes, "/api/galleries", "Galleries", "gallery", ("image", "image"));
-        MapMediaGroup(routes, "/api/books", "Books", "book", null);
-        MapMediaGroup(routes, "/api/audio-libraries", "AudioLibraries", "audio-library", ("audio-track", "audio-track"));
-        MapMediaGroup(routes, "/api/audio-tracks", "AudioTracks", "audio-track", null);
+        MapMediaGroup(routes, "/api/images", "Images", EntityKinds.Image, null);
+        MapMediaGroup(routes, "/api/galleries", "Galleries", EntityKinds.Gallery, (EntityRelationships.GalleryImage, EntityKinds.Image));
+        MapMediaGroup(routes, "/api/books", "Books", EntityKinds.Book, null);
+        MapMediaGroup(routes, "/api/audio-libraries", "AudioLibraries", EntityKinds.AudioLibrary, (EntityRelationships.AudioTrack, EntityKinds.AudioTrack));
+        MapMediaGroup(routes, "/api/audio-tracks", "AudioTracks", EntityKinds.AudioTrack, null);
 
         return routes;
     }
@@ -22,8 +23,8 @@ public static class MediaEndpoints
         IEndpointRouteBuilder routes,
         string path,
         string tag,
-        string kind,
-        (string Relationship, string ChildKind)? children)
+        EntityKind kind,
+        (EntityRelationship Relationship, EntityKind ChildKind)? children)
     {
         var group = routes.MapGroup(path)
             .WithTags(tag);
@@ -38,7 +39,7 @@ public static class MediaEndpoints
             return ContractMapper.ToMediaListResponse(response);
         })
             .WithName($"List{tag}")
-            .WithSummary($"Lists {kind} media entities through the global entity projection.");
+            .WithSummary($"Lists {kind.Code} media entities through the global entity projection.");
 
         group.MapGet("/{id:guid}", async (
             Guid id,
@@ -46,10 +47,10 @@ public static class MediaEndpoints
             CancellationToken cancellationToken) =>
         {
             var entity = await entities.GetAsync(id, cancellationToken);
-            if (entity is null || !entity.Kind.Code.Equals(kind, StringComparison.OrdinalIgnoreCase))
+            if (entity is null || entity.Kind.Value != kind.Value)
             {
                 return Results.NotFound(new ApiProblem(
-                    $"{kind}_not_found",
+                    $"{kind.Code}_not_found",
                     $"{tag} item '{id}' was not found."));
             }
 
@@ -60,7 +61,7 @@ public static class MediaEndpoints
             return Results.Ok(ContractMapper.ToMediaDetail(entity, childItems));
         })
             .WithName($"Get{tag.TrimEnd('s')}")
-            .WithSummary($"Gets one {kind} media entity.")
+            .WithSummary($"Gets one {kind.Code} media entity.")
             .Produces<MediaDetail>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
     }

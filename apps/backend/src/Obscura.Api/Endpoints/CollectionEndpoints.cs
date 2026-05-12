@@ -3,6 +3,7 @@ using Obscura.Application.Collections;
 using Obscura.Application.Entities;
 using Obscura.Contracts.Collections;
 using Obscura.Contracts.System;
+using Obscura.Domain.Entities;
 
 namespace Obscura.Api.Endpoints;
 
@@ -19,7 +20,7 @@ public static class CollectionEndpoints
             CollectionService collections,
             CancellationToken cancellationToken) =>
         {
-            var response = await collections.ListAsync(new EntityListQuery("collection", query, cursor), cancellationToken);
+            var response = await collections.ListAsync(new EntityListQuery(EntityKinds.Collection, query, cursor), cancellationToken);
             return ContractMapper.ToCollectionListResponse(response);
         })
             .WithName("ListCollections")

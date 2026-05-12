@@ -2,6 +2,7 @@ using Obscura.Api.Mapping;
 using Obscura.Application.Entities;
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.System;
+using Obscura.Domain.Entities;
 
 namespace Obscura.Api.Endpoints;
 
@@ -18,10 +19,19 @@ public static class EntityEndpoints
             string? cursor,
             EntityService entities,
             CancellationToken cancellationToken) =>
-            ContractMapper.ToEntityListResponse(
-                await entities.ListAsync(new EntityListQuery(kind, query, cursor), cancellationToken)))
+            {
+                if (!TryResolveEntityKind(kind, out var entityKind, out var problem))
+                {
+                    return Results.BadRequest(problem);
+                }
+
+                var response = await entities.ListAsync(new EntityListQuery(entityKind, query, cursor), cancellationToken);
+                return Results.Ok(ContractMapper.ToEntityListResponse(response));
+            })
             .WithName("ListEntities")
-            .WithSummary("Lists global entities with optional kind, search, and cursor filters.");
+            .WithSummary("Lists global entities with optional kind, search, and cursor filters.")
+            .Produces<EntityListResponse>()
+            .Produces<ApiProblem>(StatusCodes.Status400BadRequest);
 
         group.MapGet("/{id:guid}", async (
             Guid id,
@@ -88,5 +98,27 @@ public static class EntityEndpoints
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
         return group;
+    }
+
+    private static bool TryResolveEntityKind(string? code, out EntityKind? kind, out ApiProblem? problem)
+    {
+        kind = null;
+        problem = null;
+
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return true;
+        }
+
+        if (EntityKinds.TryGet(code, out var knownKind))
+        {
+            kind = knownKind;
+            return true;
+        }
+
+        problem = new ApiProblem(
+            "unknown_entity_kind",
+            $"Entity kind '{code}' is not supported by this Obscura backend.");
+        return false;
     }
 }

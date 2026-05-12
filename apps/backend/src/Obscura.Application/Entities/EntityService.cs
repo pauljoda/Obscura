@@ -44,14 +44,14 @@ public sealed class EntityService
     /// Lists related child entities for use cases that need hierarchy or membership expansion.
     /// </summary>
     /// <param name="parentId">Parent entity identifier.</param>
-    /// <param name="relationship">Relationship code to traverse.</param>
-    /// <param name="childKind">Optional child kind filter.</param>
+    /// <param name="relationship">Typed relationship to traverse.</param>
+    /// <param name="childKind">Optional typed child kind filter.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>Child entities in relationship order.</returns>
     public Task<IReadOnlyList<Entity>> ListChildrenAsync(
         Guid parentId,
-        string relationship,
-        string? childKind,
+        EntityRelationship relationship,
+        EntityKind? childKind,
         CancellationToken cancellationToken) =>
         _entities.ListChildrenAsync(parentId, relationship, childKind, cancellationToken);
 

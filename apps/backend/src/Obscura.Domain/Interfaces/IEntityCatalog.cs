@@ -10,13 +10,13 @@ public interface IEntityCatalog
     /// <summary>
     /// Lists visible entities, optionally filtered by kind, search text, and cursor.
     /// </summary>
-    /// <param name="kind">Optional entity kind code to restrict the list.</param>
+    /// <param name="kind">Optional typed entity kind to restrict the list.</param>
     /// <param name="query">Optional case-insensitive title search.</param>
     /// <param name="cursor">Opaque cursor from a previous page.</param>
     /// <param name="cancellationToken">Token used to cancel the query.</param>
     /// <returns>A page of projected domain entities.</returns>
     Task<EntityPage> ListAsync(
-        string? kind,
+        EntityKind? kind,
         string? query,
         string? cursor,
         CancellationToken cancellationToken);
@@ -33,13 +33,13 @@ public interface IEntityCatalog
     /// Lists child entities linked from a parent through a named relationship.
     /// </summary>
     /// <param name="parentId">Parent entity identifier.</param>
-    /// <param name="relationship">Relationship code, such as episode or collection-item.</param>
-    /// <param name="childKind">Optional child kind code filter.</param>
+    /// <param name="relationship">Typed relationship to traverse.</param>
+    /// <param name="childKind">Optional typed child kind filter.</param>
     /// <param name="cancellationToken">Token used to cancel the query.</param>
     /// <returns>Child entities in relationship order.</returns>
     Task<IReadOnlyList<Entity>> ListChildrenAsync(
         Guid parentId,
-        string relationship,
-        string? childKind,
+        EntityRelationship relationship,
+        EntityKind? childKind,
         CancellationToken cancellationToken);
 }
