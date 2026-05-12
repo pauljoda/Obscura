@@ -25,6 +25,7 @@ using DomainRating = Obscura.Domain.Capabilities.Rating;
 using DomainRatingValue = Obscura.Domain.Capabilities.RatingValue;
 using DomainSubtitles = Obscura.Domain.Capabilities.Subtitles;
 using DomainVideo = Obscura.Domain.Media.Video;
+using DomainVideoDetails = Obscura.Domain.Media.VideoDetails;
 using DomainVideoSeries = Obscura.Domain.Media.VideoSeries;
 
 namespace Obscura.Api.Tests;
@@ -164,10 +165,13 @@ public sealed class EntityVideoEndpointServiceTests
 
             return Task.FromResult<DomainVideo?>(new DomainVideo(
                 Card(null),
-                "Detail from projection service.",
-                TimeSpan.FromMinutes(2),
-                1280,
-                720,
+                DomainVideoDetails.Empty with
+                {
+                    Summary = "Detail from projection service.",
+                    Duration = TimeSpan.FromMinutes(2),
+                    Width = 1280,
+                    Height = 720
+                },
                 DomainMarkers.Empty,
                 DomainSubtitles.Empty));
         }

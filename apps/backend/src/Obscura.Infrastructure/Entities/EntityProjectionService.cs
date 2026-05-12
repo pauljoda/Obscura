@@ -228,10 +228,24 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
 
         return new Video(
             card,
-            detail?.Summary,
-            detail?.DurationMs is null ? null : TimeSpan.FromMilliseconds(detail.DurationMs.Value),
-            detail?.Width,
-            detail?.Height,
+            detail is null
+                ? VideoDetails.Empty
+                : new VideoDetails(
+                    detail.LibraryRootId,
+                    detail.Summary,
+                    detail.SortTitle,
+                    detail.OriginalTitle,
+                    detail.Tagline,
+                    detail.ReleaseDate,
+                    detail.ContentRating,
+                    detail.DurationMs is null ? null : TimeSpan.FromMilliseconds(detail.DurationMs.Value),
+                    detail.Width,
+                    detail.Height,
+                    detail.FrameRate,
+                    detail.BitRate,
+                    detail.Codec,
+                    detail.Container,
+                    detail.SubtitlesExtractedAt),
             new Markers(markers),
             new Subtitles(subtitles));
     }
@@ -255,15 +269,33 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
         }
 
         var card = (await BuildEntitiesAsync([entity], cancellationToken)).Single();
+        var detail = await _db.VideoSeriesDetails
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
         var seasons = await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.Season, EntityKindRegistry.VideoSeason, cancellationToken);
         var videos = await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.Episode, EntityKindRegistry.Video, cancellationToken);
+        var renderingMode = detail?.RenderingMode ??
+            (seasons.Count > 0 ? VideoSeriesRenderingMode.Seasons : VideoSeriesRenderingMode.Flat);
 
         return new VideoSeries(
             card,
-            null,
+            detail is null
+                ? VideoSeriesDetails.Empty with { RenderingMode = renderingMode }
+                : new VideoSeriesDetails(
+                    detail.LibraryRootId,
+                    detail.FolderPath,
+                    detail.RelativePath,
+                    detail.SortTitle,
+                    detail.OriginalTitle,
+                    detail.Overview,
+                    detail.Tagline,
+                    detail.Status,
+                    detail.FirstAirDate,
+                    detail.EndAirDate,
+                    detail.ContentRating,
+                    renderingMode),
             seasons,
-            videos,
-            seasons.Count > 0 ? VideoSeriesRenderingMode.Seasons : VideoSeriesRenderingMode.Flat);
+            videos);
     }
 
     /// <summary>
@@ -529,6 +561,111 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
                     detail.SlideshowAutoAdvance,
                     detail.LastRefreshedAt),
             items);
+    }
+
+    /// <summary>
+    /// Gets one structural video-season aggregate with season-specific detail fields.
+    /// </summary>
+    public async Task<VideoSeason?> GetVideoSeasonAggregateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await GetEntityOfKindAsync(id, EntityKindRegistry.VideoSeason, cancellationToken);
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var detail = await _db.VideoSeasonDetails
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+
+        return new VideoSeason(entity, detail is null
+            ? VideoSeasonDetails.Empty
+            : new VideoSeasonDetails(
+                detail.SeriesEntityId,
+                detail.SeasonNumber,
+                detail.FolderPath,
+                detail.Overview,
+                detail.AirDate));
+    }
+
+    /// <summary>
+    /// Gets one structural book-volume aggregate with volume-specific detail fields.
+    /// </summary>
+    public async Task<BookVolume?> GetBookVolumeAggregateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await GetEntityOfKindAsync(id, EntityKindRegistry.BookVolume, cancellationToken);
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var detail = await _db.BookVolumeDetails
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+
+        return new BookVolume(entity, detail is null
+            ? BookVolumeDetails.Empty
+            : new BookVolumeDetails(
+                detail.BookEntityId,
+                detail.VolumeNumber,
+                detail.FolderPath,
+                detail.RelativePath,
+                detail.CoverImagePath));
+    }
+
+    /// <summary>
+    /// Gets one structural book-chapter aggregate with chapter-specific detail fields.
+    /// </summary>
+    public async Task<BookChapter?> GetBookChapterAggregateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await GetEntityOfKindAsync(id, EntityKindRegistry.BookChapter, cancellationToken);
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var detail = await _db.BookChapterDetails
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+
+        return new BookChapter(entity, detail is null
+            ? BookChapterDetails.Empty
+            : new BookChapterDetails(
+                detail.BookEntityId,
+                detail.VolumeEntityId,
+                detail.ChapterNumber,
+                detail.ArchivePath,
+                detail.RelativePath,
+                detail.PageCount,
+                detail.CoverPageEntityId));
+    }
+
+    /// <summary>
+    /// Gets one structural book-page aggregate with page-specific file detail fields.
+    /// </summary>
+    public async Task<BookPage?> GetBookPageAggregateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await GetEntityOfKindAsync(id, EntityKindRegistry.BookPage, cancellationToken);
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var detail = await _db.BookPageDetails
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+
+        return new BookPage(entity, detail is null
+            ? BookPageDetails.Empty
+            : new BookPageDetails(
+                detail.BookEntityId,
+                detail.ChapterEntityId,
+                detail.FilePath,
+                detail.FileSizeBytes,
+                detail.Width,
+                detail.Height,
+                detail.Format,
+                detail.SortOrder));
     }
 
     private async Task<EntityHierarchyNode> BuildHierarchyNodeAsync(

@@ -525,6 +525,95 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal("Collection description", collection?.Details.Description);
     }
 
+    [Fact]
+    public async Task DetailHydratorsProjectVideoSeriesAndStructuralBookAggregates()
+    {
+        await using var db = CreateContext();
+        var videoId = Guid.Parse("30303030-3030-3030-3030-303030303030");
+        var seriesId = Guid.Parse("31313131-3131-3131-3131-313131313131");
+        var seasonId = Guid.Parse("32323232-3232-3232-3232-323232323232");
+        var bookId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var volumeId = Guid.Parse("34343434-3434-3434-3434-343434343434");
+        var chapterId = Guid.Parse("35353535-3535-3535-3535-353535353535");
+        var pageId = Guid.Parse("36363636-3636-3636-3636-363636363636");
+        SeedEntity(db, videoId, "video", "Feature");
+        SeedEntity(db, seriesId, "video-series", "Series");
+        SeedEntity(db, seasonId, "video-season", "Season 1");
+        SeedEntity(db, bookId, "book", "Book");
+        SeedEntity(db, volumeId, "book-volume", "Volume 1");
+        SeedEntity(db, chapterId, "book-chapter", "Chapter 1");
+        SeedEntity(db, pageId, "book-page", "Page 1");
+        db.VideoDetails.Add(new VideoDetailRow
+        {
+            EntityId = videoId,
+            Summary = "Feature summary",
+            OriginalTitle = "Original Feature",
+            DurationMs = 1500,
+            FrameRate = 23.976,
+            Codec = "h264"
+        });
+        db.VideoSeriesDetails.Add(new VideoSeriesDetailRow
+        {
+            EntityId = seriesId,
+            Overview = "Series overview",
+            OriginalTitle = "Original Series",
+            RenderingMode = VideoSeriesRenderingMode.Flat
+        });
+        db.VideoSeasonDetails.Add(new VideoSeasonDetailRow
+        {
+            EntityId = seasonId,
+            SeriesEntityId = seriesId,
+            SeasonNumber = 1,
+            Overview = "Season overview",
+            AirDate = "2026"
+        });
+        db.BookVolumeDetails.Add(new BookVolumeDetailRow
+        {
+            EntityId = volumeId,
+            BookEntityId = bookId,
+            VolumeNumber = 1,
+            RelativePath = "books/book/volume-1"
+        });
+        db.BookChapterDetails.Add(new BookChapterDetailRow
+        {
+            EntityId = chapterId,
+            BookEntityId = bookId,
+            VolumeEntityId = volumeId,
+            ChapterNumber = 2,
+            ArchivePath = "/media/book/chapter.cbz",
+            PageCount = 30
+        });
+        db.BookPageDetails.Add(new BookPageDetailRow
+        {
+            EntityId = pageId,
+            BookEntityId = bookId,
+            ChapterEntityId = chapterId,
+            FilePath = "/media/book/page-001.jpg",
+            Width = 1200,
+            Height = 1800,
+            SortOrder = 1
+        });
+        await db.SaveChangesAsync();
+
+        var service = new EntityProjectionService(db);
+
+        var video = await service.GetVideoAsync(videoId, CancellationToken.None);
+        var series = await service.GetSeriesAsync(seriesId, CancellationToken.None);
+        var season = await service.GetVideoSeasonAggregateAsync(seasonId, CancellationToken.None);
+        var volume = await service.GetBookVolumeAggregateAsync(volumeId, CancellationToken.None);
+        var chapter = await service.GetBookChapterAggregateAsync(chapterId, CancellationToken.None);
+        var page = await service.GetBookPageAggregateAsync(pageId, CancellationToken.None);
+
+        Assert.Equal("Original Feature", video?.Details.OriginalTitle);
+        Assert.Equal(TimeSpan.FromMilliseconds(1500), video?.Details.Duration);
+        Assert.Equal("Series overview", series?.Details.Overview);
+        Assert.Equal(VideoSeriesRenderingMode.Flat, series?.Details.RenderingMode);
+        Assert.Equal(1, season?.Details.SeasonNumber);
+        Assert.Equal(1, volume?.Details.VolumeNumber);
+        Assert.Equal(30, chapter?.Details.PageCount);
+        Assert.Equal("/media/book/page-001.jpg", page?.Details.FilePath);
+    }
+
     private static ObscuraDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()
