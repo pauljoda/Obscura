@@ -10,9 +10,9 @@ public static class TaxonomyEndpoints
 {
     public static IEndpointRouteBuilder MapTaxonomyEndpoints(this IEndpointRouteBuilder routes)
     {
-        MapTaxonomyGroup(routes, "/api/people", "People", EntityKinds.Person);
-        MapTaxonomyGroup(routes, "/api/studios", "Studios", EntityKinds.Studio);
-        MapTaxonomyGroup(routes, "/api/tags", "Tags", EntityKinds.Tag);
+        MapTaxonomyGroup(routes, "/api/people", "People", EntityKind.Person);
+        MapTaxonomyGroup(routes, "/api/studios", "Studios", EntityKind.Studio);
+        MapTaxonomyGroup(routes, "/api/tags", "Tags", EntityKind.Tag);
 
         return routes;
     }

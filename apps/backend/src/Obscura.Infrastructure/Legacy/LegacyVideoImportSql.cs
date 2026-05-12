@@ -9,7 +9,7 @@ public static class LegacyVideoImportSql
         BEGIN
             IF to_regclass('public.tags') IS NOT NULL THEN
                 INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
-                SELECT id, '{{EntityKinds.Tag.Code}}', name, created_at, updated_at
+                SELECT id, '{{EntityKind.Tag.Code}}', name, created_at, updated_at
                 FROM public.tags
                 ON CONFLICT (id) DO UPDATE SET
                     kind_code = EXCLUDED.kind_code,
@@ -44,7 +44,7 @@ public static class LegacyVideoImportSql
 
             IF to_regclass('public.studios') IS NOT NULL THEN
                 INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
-                SELECT id, '{{EntityKinds.Studio.Code}}', name, created_at, updated_at
+                SELECT id, '{{EntityKind.Studio.Code}}', name, created_at, updated_at
                 FROM public.studios
                 ON CONFLICT (id) DO UPDATE SET
                     kind_code = EXCLUDED.kind_code,
@@ -79,7 +79,7 @@ public static class LegacyVideoImportSql
 
             IF to_regclass('public.performers') IS NOT NULL THEN
                 INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
-                SELECT id, '{{EntityKinds.Person.Code}}', name, created_at, updated_at
+                SELECT id, '{{EntityKind.Person.Code}}', name, created_at, updated_at
                 FROM public.performers
                 ON CONFLICT (id) DO UPDATE SET
                     kind_code = EXCLUDED.kind_code,
@@ -114,7 +114,7 @@ public static class LegacyVideoImportSql
 
             IF to_regclass('public.video_series') IS NOT NULL THEN
                 INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
-                SELECT id, '{{EntityKinds.VideoSeries.Code}}', COALESCE(custom_name, title), created_at, updated_at
+                SELECT id, '{{EntityKind.VideoSeries.Code}}', COALESCE(custom_name, title), created_at, updated_at
                 FROM public.video_series
                 ON CONFLICT (id) DO UPDATE SET
                     kind_code = EXCLUDED.kind_code,
@@ -165,7 +165,7 @@ public static class LegacyVideoImportSql
 
             IF to_regclass('public.video_movies') IS NOT NULL THEN
                 INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
-                SELECT id, '{{EntityKinds.Video.Code}}', title, created_at, updated_at
+                SELECT id, '{{EntityKind.Video.Code}}', title, created_at, updated_at
                 FROM public.video_movies
                 ON CONFLICT (id) DO UPDATE SET
                     kind_code = EXCLUDED.kind_code,
@@ -235,7 +235,7 @@ public static class LegacyVideoImportSql
                 INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
                 SELECT
                     id,
-                    '{{EntityKinds.Video.Code}}',
+                    '{{EntityKind.Video.Code}}',
                     COALESCE(title, 'Episode ' || COALESCE(episode_number::text, absolute_episode_number::text), regexp_replace(file_path, '^.*/', '')),
                     created_at,
                     updated_at
@@ -288,7 +288,7 @@ public static class LegacyVideoImportSql
                     updated_at = EXCLUDED.updated_at;
 
                 INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT series_id, id, '{{EntityRelationships.Episode.Code}}', (season_number * 10000) + COALESCE(episode_number, absolute_episode_number, 0), created_at
+                SELECT series_id, id, '{{EntityRelationship.Episode.Code}}', (season_number * 10000) + COALESCE(episode_number, absolute_episode_number, 0), created_at
                 FROM public.video_episodes
                 ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
                     sort_order = EXCLUDED.sort_order;
@@ -326,7 +326,7 @@ public static class LegacyVideoImportSql
                 INSERT INTO v2.entity_markers (id, entity_id, title, seconds, end_seconds, created_at, updated_at)
                 SELECT marker.id, marker.entity_id, marker.title, marker.seconds, marker.end_seconds, marker.created_at, marker.updated_at
                 FROM public.video_markers marker
-                WHERE EXISTS (SELECT 1 FROM v2.entities entity WHERE entity.id = marker.entity_id AND entity.kind_code = '{{EntityKinds.Video.Code}}')
+                WHERE EXISTS (SELECT 1 FROM v2.entities entity WHERE entity.id = marker.entity_id AND entity.kind_code = '{{EntityKind.Video.Code}}')
                 ON CONFLICT (id) DO UPDATE SET
                     title = EXCLUDED.title,
                     seconds = EXCLUDED.seconds,
@@ -361,7 +361,7 @@ public static class LegacyVideoImportSql
                     subtitle.is_default,
                     subtitle.created_at
                 FROM public.video_subtitles subtitle
-                WHERE EXISTS (SELECT 1 FROM v2.entities entity WHERE entity.id = subtitle.entity_id AND entity.kind_code = '{{EntityKinds.Video.Code}}')
+                WHERE EXISTS (SELECT 1 FROM v2.entities entity WHERE entity.id = subtitle.entity_id AND entity.kind_code = '{{EntityKind.Video.Code}}')
                 ON CONFLICT (entity_id, language, source) DO UPDATE SET
                     label = EXCLUDED.label,
                     format = EXCLUDED.format,
@@ -394,7 +394,7 @@ public static class LegacyVideoImportSql
 
             IF to_regclass('public.video_series_performers') IS NOT NULL THEN
                 INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT series_id, performer_id, '{{EntityKinds.Person.Code}}', character, COALESCE("order", 0), now()
+                SELECT series_id, performer_id, '{{EntityKind.Person.Code}}', character, COALESCE("order", 0), now()
                 FROM public.video_series_performers
                 ON CONFLICT (entity_id, person_entity_id, role) DO UPDATE SET
                     character = EXCLUDED.character,
@@ -403,7 +403,7 @@ public static class LegacyVideoImportSql
 
             IF to_regclass('public.video_movie_performers') IS NOT NULL THEN
                 INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT movie_id, performer_id, '{{EntityKinds.Person.Code}}', character, COALESCE("order", 0), now()
+                SELECT movie_id, performer_id, '{{EntityKind.Person.Code}}', character, COALESCE("order", 0), now()
                 FROM public.video_movie_performers
                 ON CONFLICT (entity_id, person_entity_id, role) DO UPDATE SET
                     character = EXCLUDED.character,
@@ -412,7 +412,7 @@ public static class LegacyVideoImportSql
 
             IF to_regclass('public.video_episode_performers') IS NOT NULL THEN
                 INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT episode_id, performer_id, '{{EntityKinds.Person.Code}}', character, COALESCE("order", 0), now()
+                SELECT episode_id, performer_id, '{{EntityKind.Person.Code}}', character, COALESCE("order", 0), now()
                 FROM public.video_episode_performers
                 ON CONFLICT (entity_id, person_entity_id, role) DO UPDATE SET
                     character = EXCLUDED.character,
@@ -423,11 +423,11 @@ public static class LegacyVideoImportSql
 
     public static readonly string Counts = $$"""
         SELECT
-            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKinds.VideoSeries.Code}}') AS series_imported,
-            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKinds.Video.Code}}') AS videos_imported,
-            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKinds.Person.Code}}') AS people_imported,
-            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKinds.Tag.Code}}') AS tags_imported,
-            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKinds.Studio.Code}}') AS studios_imported,
+            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKind.VideoSeries.Code}}') AS series_imported,
+            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKind.Video.Code}}') AS videos_imported,
+            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKind.Person.Code}}') AS people_imported,
+            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKind.Tag.Code}}') AS tags_imported,
+            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKind.Studio.Code}}') AS studios_imported,
             ((SELECT COUNT(*)::int FROM v2.entity_hierarchy_links) +
              (SELECT COUNT(*)::int FROM v2.entity_credit_links) +
              (SELECT COUNT(*)::int FROM v2.entity_studio_links) +

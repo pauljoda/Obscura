@@ -9,7 +9,7 @@ public static class LegacyMediaImportSql
         BEGIN
             IF to_regclass('public.collections') IS NOT NULL THEN
                 INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
-                SELECT id, '{{EntityKinds.Collection.Code}}', name, created_at, updated_at
+                SELECT id, '{{EntityKind.Collection.Code}}', name, created_at, updated_at
                 FROM public.collections
                 ON CONFLICT (id) DO UPDATE SET
                     kind_code = EXCLUDED.kind_code,
@@ -36,7 +36,7 @@ public static class LegacyMediaImportSql
 
             IF to_regclass('public.galleries') IS NOT NULL THEN
                 INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
-                SELECT id, '{{EntityKinds.Gallery.Code}}', title, created_at, updated_at
+                SELECT id, '{{EntityKind.Gallery.Code}}', title, created_at, updated_at
                 FROM public.galleries
                 ON CONFLICT (id) DO UPDATE SET
                     kind_code = EXCLUDED.kind_code,
@@ -72,12 +72,12 @@ public static class LegacyMediaImportSql
                 SELECT id, studio_id, updated_at
                 FROM public.galleries
                 WHERE studio_id IS NOT NULL
-                  AND EXISTS (SELECT 1 FROM v2.entities studio WHERE studio.id = studio_id AND studio.kind_code = '{{EntityKinds.Studio.Code}}')
+                  AND EXISTS (SELECT 1 FROM v2.entities studio WHERE studio.id = studio_id AND studio.kind_code = '{{EntityKind.Studio.Code}}')
                 ON CONFLICT (entity_id) DO UPDATE SET
                     studio_id = EXCLUDED.studio_id;
 
                 INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT parent_id, id, '{{EntityRelationships.NestedGallery.Code}}', 0, created_at
+                SELECT parent_id, id, '{{EntityRelationship.NestedGallery.Code}}', 0, created_at
                 FROM public.galleries
                 WHERE parent_id IS NOT NULL
                 ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
@@ -94,7 +94,7 @@ public static class LegacyMediaImportSql
 
             IF to_regclass('public.images') IS NOT NULL THEN
                 INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
-                SELECT id, '{{EntityKinds.Image.Code}}', title, created_at, updated_at
+                SELECT id, '{{EntityKind.Image.Code}}', title, created_at, updated_at
                 FROM public.images
                 ON CONFLICT (id) DO UPDATE SET
                     kind_code = EXCLUDED.kind_code,
@@ -137,12 +137,12 @@ public static class LegacyMediaImportSql
                 SELECT id, studio_id, updated_at
                 FROM public.images
                 WHERE studio_id IS NOT NULL
-                  AND EXISTS (SELECT 1 FROM v2.entities studio WHERE studio.id = studio_id AND studio.kind_code = '{{EntityKinds.Studio.Code}}')
+                  AND EXISTS (SELECT 1 FROM v2.entities studio WHERE studio.id = studio_id AND studio.kind_code = '{{EntityKind.Studio.Code}}')
                 ON CONFLICT (entity_id) DO UPDATE SET
                     studio_id = EXCLUDED.studio_id;
 
                 INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT gallery_id, id, '{{EntityRelationships.GalleryImage.Code}}', sort_order, created_at
+                SELECT gallery_id, id, '{{EntityRelationship.GalleryImage.Code}}', sort_order, created_at
                 FROM public.images
                 WHERE gallery_id IS NOT NULL
                 ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
@@ -159,7 +159,7 @@ public static class LegacyMediaImportSql
 
             IF to_regclass('public.books') IS NOT NULL THEN
                 INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
-                SELECT id, '{{EntityKinds.Book.Code}}', title, created_at, updated_at
+                SELECT id, '{{EntityKind.Book.Code}}', title, created_at, updated_at
                 FROM public.books
                 ON CONFLICT (id) DO UPDATE SET
                     kind_code = EXCLUDED.kind_code,
@@ -203,7 +203,7 @@ public static class LegacyMediaImportSql
                 SELECT id, studio_id, updated_at
                 FROM public.books
                 WHERE studio_id IS NOT NULL
-                  AND EXISTS (SELECT 1 FROM v2.entities studio WHERE studio.id = studio_id AND studio.kind_code = '{{EntityKinds.Studio.Code}}')
+                  AND EXISTS (SELECT 1 FROM v2.entities studio WHERE studio.id = studio_id AND studio.kind_code = '{{EntityKind.Studio.Code}}')
                 ON CONFLICT (entity_id) DO UPDATE SET
                     studio_id = EXCLUDED.studio_id;
 
@@ -227,7 +227,7 @@ public static class LegacyMediaImportSql
 
             IF to_regclass('public.audio_libraries') IS NOT NULL THEN
                 INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
-                SELECT id, '{{EntityKinds.AudioLibrary.Code}}', title, created_at, updated_at
+                SELECT id, '{{EntityKind.AudioLibrary.Code}}', title, created_at, updated_at
                 FROM public.audio_libraries
                 ON CONFLICT (id) DO UPDATE SET
                     kind_code = EXCLUDED.kind_code,
@@ -271,12 +271,12 @@ public static class LegacyMediaImportSql
                 SELECT id, studio_id, updated_at
                 FROM public.audio_libraries
                 WHERE studio_id IS NOT NULL
-                  AND EXISTS (SELECT 1 FROM v2.entities studio WHERE studio.id = studio_id AND studio.kind_code = '{{EntityKinds.Studio.Code}}')
+                  AND EXISTS (SELECT 1 FROM v2.entities studio WHERE studio.id = studio_id AND studio.kind_code = '{{EntityKind.Studio.Code}}')
                 ON CONFLICT (entity_id) DO UPDATE SET
                     studio_id = EXCLUDED.studio_id;
 
                 INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT parent_id, id, '{{EntityRelationships.NestedAudioLibrary.Code}}', 0, created_at
+                SELECT parent_id, id, '{{EntityRelationship.NestedAudioLibrary.Code}}', 0, created_at
                 FROM public.audio_libraries
                 WHERE parent_id IS NOT NULL
                 ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
@@ -293,7 +293,7 @@ public static class LegacyMediaImportSql
 
             IF to_regclass('public.audio_tracks') IS NOT NULL THEN
                 INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
-                SELECT id, '{{EntityKinds.AudioTrack.Code}}', title, created_at, updated_at
+                SELECT id, '{{EntityKind.AudioTrack.Code}}', title, created_at, updated_at
                 FROM public.audio_tracks
                 ON CONFLICT (id) DO UPDATE SET
                     kind_code = EXCLUDED.kind_code,
@@ -329,12 +329,12 @@ public static class LegacyMediaImportSql
                 SELECT id, studio_id, updated_at
                 FROM public.audio_tracks
                 WHERE studio_id IS NOT NULL
-                  AND EXISTS (SELECT 1 FROM v2.entities studio WHERE studio.id = studio_id AND studio.kind_code = '{{EntityKinds.Studio.Code}}')
+                  AND EXISTS (SELECT 1 FROM v2.entities studio WHERE studio.id = studio_id AND studio.kind_code = '{{EntityKind.Studio.Code}}')
                 ON CONFLICT (entity_id) DO UPDATE SET
                     studio_id = EXCLUDED.studio_id;
 
                 INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT library_id, id, '{{EntityRelationships.AudioTrack.Code}}', sort_order, created_at
+                SELECT library_id, id, '{{EntityRelationship.AudioTrack.Code}}', sort_order, created_at
                 FROM public.audio_tracks
                 WHERE library_id IS NOT NULL
                 ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
@@ -362,9 +362,9 @@ public static class LegacyMediaImportSql
 
             IF to_regclass('public.collection_items') IS NOT NULL THEN
                 INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT item.collection_id, item.entity_id, '{{EntityRelationships.CollectionItem.Code}}', item.sort_order, item.added_at
+                SELECT item.collection_id, item.entity_id, '{{EntityRelationship.CollectionItem.Code}}', item.sort_order, item.added_at
                 FROM public.collection_items item
-                WHERE EXISTS (SELECT 1 FROM v2.entities collection WHERE collection.id = item.collection_id AND collection.kind_code = '{{EntityKinds.Collection.Code}}')
+                WHERE EXISTS (SELECT 1 FROM v2.entities collection WHERE collection.id = item.collection_id AND collection.kind_code = '{{EntityKind.Collection.Code}}')
                   AND EXISTS (SELECT 1 FROM v2.entities entity WHERE entity.id = item.entity_id)
                 ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
                     sort_order = EXCLUDED.sort_order;
@@ -374,7 +374,7 @@ public static class LegacyMediaImportSql
                 INSERT INTO v2.entity_markers (id, entity_id, title, seconds, end_seconds, created_at, updated_at)
                 SELECT marker.id, marker.track_id, marker.title, marker.seconds, marker.end_seconds, marker.created_at, marker.updated_at
                 FROM public.audio_track_markers marker
-                WHERE EXISTS (SELECT 1 FROM v2.entities entity WHERE entity.id = marker.track_id AND entity.kind_code = '{{EntityKinds.AudioTrack.Code}}')
+                WHERE EXISTS (SELECT 1 FROM v2.entities entity WHERE entity.id = marker.track_id AND entity.kind_code = '{{EntityKind.AudioTrack.Code}}')
                 ON CONFLICT (id) DO UPDATE SET
                     title = EXCLUDED.title,
                     seconds = EXCLUDED.seconds,
@@ -386,7 +386,7 @@ public static class LegacyMediaImportSql
                 INSERT INTO v2.entity_tag_links (entity_id, tag_id, created_at)
                 SELECT gallery_id, tag_id, now()
                 FROM public.gallery_tags
-                WHERE EXISTS (SELECT 1 FROM v2.entities tag WHERE tag.id = tag_id AND tag.kind_code = '{{EntityKinds.Tag.Code}}')
+                WHERE EXISTS (SELECT 1 FROM v2.entities tag WHERE tag.id = tag_id AND tag.kind_code = '{{EntityKind.Tag.Code}}')
                 ON CONFLICT (entity_id, tag_id) DO NOTHING;
             END IF;
 
@@ -394,7 +394,7 @@ public static class LegacyMediaImportSql
                 INSERT INTO v2.entity_tag_links (entity_id, tag_id, created_at)
                 SELECT image_id, tag_id, now()
                 FROM public.image_tags
-                WHERE EXISTS (SELECT 1 FROM v2.entities tag WHERE tag.id = tag_id AND tag.kind_code = '{{EntityKinds.Tag.Code}}')
+                WHERE EXISTS (SELECT 1 FROM v2.entities tag WHERE tag.id = tag_id AND tag.kind_code = '{{EntityKind.Tag.Code}}')
                 ON CONFLICT (entity_id, tag_id) DO NOTHING;
             END IF;
 
@@ -402,7 +402,7 @@ public static class LegacyMediaImportSql
                 INSERT INTO v2.entity_tag_links (entity_id, tag_id, created_at)
                 SELECT book_id, tag_id, now()
                 FROM public.book_tags
-                WHERE EXISTS (SELECT 1 FROM v2.entities tag WHERE tag.id = tag_id AND tag.kind_code = '{{EntityKinds.Tag.Code}}')
+                WHERE EXISTS (SELECT 1 FROM v2.entities tag WHERE tag.id = tag_id AND tag.kind_code = '{{EntityKind.Tag.Code}}')
                 ON CONFLICT (entity_id, tag_id) DO NOTHING;
             END IF;
 
@@ -410,7 +410,7 @@ public static class LegacyMediaImportSql
                 INSERT INTO v2.entity_tag_links (entity_id, tag_id, created_at)
                 SELECT library_id, tag_id, now()
                 FROM public.audio_library_tags
-                WHERE EXISTS (SELECT 1 FROM v2.entities tag WHERE tag.id = tag_id AND tag.kind_code = '{{EntityKinds.Tag.Code}}')
+                WHERE EXISTS (SELECT 1 FROM v2.entities tag WHERE tag.id = tag_id AND tag.kind_code = '{{EntityKind.Tag.Code}}')
                 ON CONFLICT (entity_id, tag_id) DO NOTHING;
             END IF;
 
@@ -418,47 +418,47 @@ public static class LegacyMediaImportSql
                 INSERT INTO v2.entity_tag_links (entity_id, tag_id, created_at)
                 SELECT track_id, tag_id, now()
                 FROM public.audio_track_tags
-                WHERE EXISTS (SELECT 1 FROM v2.entities tag WHERE tag.id = tag_id AND tag.kind_code = '{{EntityKinds.Tag.Code}}')
+                WHERE EXISTS (SELECT 1 FROM v2.entities tag WHERE tag.id = tag_id AND tag.kind_code = '{{EntityKind.Tag.Code}}')
                 ON CONFLICT (entity_id, tag_id) DO NOTHING;
             END IF;
 
             IF to_regclass('public.gallery_performers') IS NOT NULL THEN
                 INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT gallery_id, performer_id, '{{EntityKinds.Person.Code}}', NULL, 0, now()
+                SELECT gallery_id, performer_id, '{{EntityKind.Person.Code}}', NULL, 0, now()
                 FROM public.gallery_performers
-                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = '{{EntityKinds.Person.Code}}')
+                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = '{{EntityKind.Person.Code}}')
                 ON CONFLICT (entity_id, person_entity_id, role) DO NOTHING;
             END IF;
 
             IF to_regclass('public.image_performers') IS NOT NULL THEN
                 INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT image_id, performer_id, '{{EntityKinds.Person.Code}}', NULL, 0, now()
+                SELECT image_id, performer_id, '{{EntityKind.Person.Code}}', NULL, 0, now()
                 FROM public.image_performers
-                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = '{{EntityKinds.Person.Code}}')
+                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = '{{EntityKind.Person.Code}}')
                 ON CONFLICT (entity_id, person_entity_id, role) DO NOTHING;
             END IF;
 
             IF to_regclass('public.book_performers') IS NOT NULL THEN
                 INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT book_id, performer_id, '{{EntityKinds.Person.Code}}', NULL, 0, now()
+                SELECT book_id, performer_id, '{{EntityKind.Person.Code}}', NULL, 0, now()
                 FROM public.book_performers
-                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = '{{EntityKinds.Person.Code}}')
+                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = '{{EntityKind.Person.Code}}')
                 ON CONFLICT (entity_id, person_entity_id, role) DO NOTHING;
             END IF;
 
             IF to_regclass('public.audio_library_performers') IS NOT NULL THEN
                 INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT library_id, performer_id, '{{EntityKinds.Person.Code}}', NULL, 0, now()
+                SELECT library_id, performer_id, '{{EntityKind.Person.Code}}', NULL, 0, now()
                 FROM public.audio_library_performers
-                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = '{{EntityKinds.Person.Code}}')
+                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = '{{EntityKind.Person.Code}}')
                 ON CONFLICT (entity_id, person_entity_id, role) DO NOTHING;
             END IF;
 
             IF to_regclass('public.audio_track_performers') IS NOT NULL THEN
                 INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT track_id, performer_id, '{{EntityKinds.Person.Code}}', NULL, 0, now()
+                SELECT track_id, performer_id, '{{EntityKind.Person.Code}}', NULL, 0, now()
                 FROM public.audio_track_performers
-                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = '{{EntityKinds.Person.Code}}')
+                WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = '{{EntityKind.Person.Code}}')
                 ON CONFLICT (entity_id, person_entity_id, role) DO NOTHING;
             END IF;
         END $$;
@@ -466,14 +466,14 @@ public static class LegacyMediaImportSql
 
     public static readonly string Counts = $$"""
         SELECT
-            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKinds.Image.Code}}') AS images_imported,
-            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKinds.Gallery.Code}}') AS galleries_imported,
-            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKinds.Book.Code}}') AS books_imported,
-            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKinds.AudioLibrary.Code}}') AS audio_libraries_imported,
-            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKinds.AudioTrack.Code}}') AS audio_tracks_imported,
-            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKinds.Collection.Code}}') AS collections_imported,
-            ((SELECT COUNT(*)::int FROM v2.entity_hierarchy_links WHERE relationship IN ('{{EntityRelationships.NestedGallery.Code}}', '{{EntityRelationships.GalleryImage.Code}}', '{{EntityRelationships.NestedAudioLibrary.Code}}', '{{EntityRelationships.AudioTrack.Code}}')) +
-             (SELECT COUNT(*)::int FROM v2.entity_hierarchy_links WHERE relationship = '{{EntityRelationships.CollectionItem.Code}}') +
+            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKind.Image.Code}}') AS images_imported,
+            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKind.Gallery.Code}}') AS galleries_imported,
+            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKind.Book.Code}}') AS books_imported,
+            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKind.AudioLibrary.Code}}') AS audio_libraries_imported,
+            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKind.AudioTrack.Code}}') AS audio_tracks_imported,
+            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKind.Collection.Code}}') AS collections_imported,
+            ((SELECT COUNT(*)::int FROM v2.entity_hierarchy_links WHERE relationship IN ('{{EntityRelationship.NestedGallery.Code}}', '{{EntityRelationship.GalleryImage.Code}}', '{{EntityRelationship.NestedAudioLibrary.Code}}', '{{EntityRelationship.AudioTrack.Code}}')) +
+             (SELECT COUNT(*)::int FROM v2.entity_hierarchy_links WHERE relationship = '{{EntityRelationship.CollectionItem.Code}}') +
              (SELECT COUNT(*)::int FROM v2.entity_credit_links) +
              (SELECT COUNT(*)::int FROM v2.entity_studio_links) +
              (SELECT COUNT(*)::int FROM v2.entity_markers)) AS links_imported;

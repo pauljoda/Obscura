@@ -43,14 +43,152 @@ public enum EntityRelationshipCode
 }
 
 /// <summary>
-/// Describes a known entity hierarchy relationship without exposing raw storage codes to application code.
+/// Contract implemented by every code-defined entity relationship.
+/// </summary>
+public interface IEntityRelationship
+{
+    /// <summary>Compile-time identity for the relationship.</summary>
+    EntityRelationshipCode Value { get; }
+
+    /// <summary>Stable code stored in the hierarchy table.</summary>
+    string Code { get; }
+
+    /// <summary>Human-readable label for diagnostics and future UI surfaces.</summary>
+    string DisplayName { get; }
+
+    /// <summary>True when the relationship represents canonical parentage instead of loose membership.</summary>
+    bool IsStructural { get; }
+}
+
+/// <summary>
+/// Base class for known entity hierarchy relationships without exposing raw storage codes to application code.
 /// </summary>
 /// <param name="Value">Compile-time identity for the relationship.</param>
 /// <param name="Code">Stable code stored in the hierarchy table.</param>
 /// <param name="DisplayName">Human-readable label for diagnostics and future UI surfaces.</param>
 /// <param name="IsStructural">True when the relationship represents canonical parentage instead of loose membership.</param>
-public sealed record EntityRelationship(
+public abstract record EntityRelationship(
     EntityRelationshipCode Value,
     string Code,
     string DisplayName,
-    bool IsStructural);
+    bool IsStructural)
+    : IEntityRelationship
+{
+    private static readonly Lazy<IReadOnlyList<EntityRelationship>> DiscoveredRelationships = new(DiscoverRelationships);
+
+    private static readonly Lazy<IReadOnlyDictionary<string, EntityRelationship>> ByCode = new(() => All.ToDictionary(
+        relationship => relationship.Code,
+        StringComparer.OrdinalIgnoreCase));
+
+    private static readonly Lazy<IReadOnlyDictionary<EntityRelationshipCode, EntityRelationship>> ByValue = new(() => All.ToDictionary(
+        relationship => relationship.Value));
+
+    /// <summary>Relationship from a video series or season to an episode video.</summary>
+    public static EntityRelationship Episode => Require(EntityRelationshipCode.Episode);
+
+    /// <summary>Relationship from a video series to a season grouping.</summary>
+    public static EntityRelationship Season => Require(EntityRelationshipCode.Season);
+
+    /// <summary>Relationship from a user collection to one of its member entities.</summary>
+    public static EntityRelationship CollectionItem => Require(EntityRelationshipCode.CollectionItem);
+
+    /// <summary>Relationship from a gallery to a nested gallery entity.</summary>
+    public static EntityRelationship NestedGallery => Require(EntityRelationshipCode.NestedGallery);
+
+    /// <summary>Relationship from a gallery to one of its image entities.</summary>
+    public static EntityRelationship GalleryImage => Require(EntityRelationshipCode.GalleryImage);
+
+    /// <summary>Relationship from an audio library to a nested audio library entity.</summary>
+    public static EntityRelationship NestedAudioLibrary => Require(EntityRelationshipCode.NestedAudioLibrary);
+
+    /// <summary>Relationship from an audio library to one of its track entities.</summary>
+    public static EntityRelationship AudioTrack => Require(EntityRelationshipCode.AudioTrack);
+
+    /// <summary>Relationship from a book to a volume grouping.</summary>
+    public static EntityRelationship Volume => Require(EntityRelationshipCode.Volume);
+
+    /// <summary>Relationship from a book or volume to a readable chapter.</summary>
+    public static EntityRelationship Chapter => Require(EntityRelationshipCode.Chapter);
+
+    /// <summary>Relationship from a chapter to a readable page.</summary>
+    public static EntityRelationship Page => Require(EntityRelationshipCode.Page);
+
+    /// <summary>Relationship from a tag to a nested tag.</summary>
+    public static EntityRelationship NestedTag => Require(EntityRelationshipCode.NestedTag);
+
+    /// <summary>Relationship from a studio to a nested studio.</summary>
+    public static EntityRelationship NestedStudio => Require(EntityRelationshipCode.NestedStudio);
+
+    /// <summary>
+    /// Gets every known entity relationship in deterministic registry order.
+    /// </summary>
+    public static IReadOnlyList<EntityRelationship> All => DiscoveredRelationships.Value;
+
+    /// <summary>
+    /// Gets canonical structural relationships that represent ownership or navigational parentage.
+    /// </summary>
+    public static IReadOnlyList<EntityRelationship> Structural => All.Where(relationship => relationship.IsStructural).ToArray();
+
+    /// <summary>
+    /// Looks up an entity relationship by its stable code.
+    /// </summary>
+    /// <param name="code">Relationship code from storage or API input.</param>
+    /// <param name="relationship">The matched relationship when the method returns true.</param>
+    /// <returns>True when the code is known; otherwise false.</returns>
+    public static bool TryGet(string? code, out EntityRelationship relationship)
+    {
+        if (code is not null && ByCode.Value.TryGetValue(code, out var match))
+        {
+            relationship = match;
+            return true;
+        }
+
+        relationship = default!;
+        return false;
+    }
+
+    /// <summary>
+    /// Looks up a relationship by code and fails when storage contains an unknown relationship.
+    /// </summary>
+    /// <param name="code">Relationship code from storage.</param>
+    /// <returns>The registered entity relationship.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the relationship code is not registered.</exception>
+    public static EntityRelationship Require(string code)
+    {
+        if (TryGet(code, out var relationship))
+        {
+            return relationship;
+        }
+
+        throw new InvalidOperationException($"Unknown entity relationship code '{code}'. Add an {nameof(IEntityRelationship)} implementation before using it.");
+    }
+
+    /// <summary>
+    /// Looks up a relationship by compile-time identity and fails when it is not registered.
+    /// </summary>
+    /// <param name="value">Compile-time relationship identity.</param>
+    /// <returns>The registered entity relationship.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the relationship value is not registered.</exception>
+    public static EntityRelationship Require(EntityRelationshipCode value)
+    {
+        if (ByValue.Value.TryGetValue(value, out var relationship))
+        {
+            return relationship;
+        }
+
+        throw new InvalidOperationException($"Unknown entity relationship value '{value}'. Add an {nameof(IEntityRelationship)} implementation before using it.");
+    }
+
+    private static IReadOnlyList<EntityRelationship> DiscoverRelationships() =>
+        typeof(EntityRelationship)
+            .Assembly
+            .GetTypes()
+            .Where(type =>
+                !type.IsAbstract &&
+                !type.IsInterface &&
+                typeof(IEntityRelationship).IsAssignableFrom(type) &&
+                type.GetConstructor(Type.EmptyTypes) is not null)
+            .Select(type => (EntityRelationship)Activator.CreateInstance(type)!)
+            .OrderBy(relationship => relationship.Value)
+            .ToArray();
+}

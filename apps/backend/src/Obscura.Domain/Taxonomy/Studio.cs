@@ -12,7 +12,7 @@ public sealed record Studio(
     string? Subtitle,
     EntityCapabilities Capabilities,
     StudioDetails Details)
-    : Entity(Id, EntityKinds.Studio, Title, Subtitle, Capabilities)
+    : Entity(Id, EntityKind.Studio, Title, Subtitle, Capabilities)
 {
     /// <summary>
     /// Returns a copy of the studio with updated studio-specific metadata.

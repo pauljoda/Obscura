@@ -12,7 +12,7 @@ public sealed record AudioLibrary(
     string? Subtitle,
     EntityCapabilities Capabilities,
     AudioLibraryDetails Details)
-    : Entity(Id, EntityKinds.AudioLibrary, Title, Subtitle, Capabilities)
+    : Entity(Id, EntityKind.AudioLibrary, Title, Subtitle, Capabilities)
 {
     /// <summary>
     /// Returns a copy of the audio library with updated audio-library-specific metadata.

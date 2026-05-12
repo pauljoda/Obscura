@@ -12,7 +12,7 @@ public sealed record Gallery(
     string? Subtitle,
     EntityCapabilities Capabilities,
     GalleryDetails Details)
-    : Entity(Id, EntityKinds.Gallery, Title, Subtitle, Capabilities)
+    : Entity(Id, EntityKind.Gallery, Title, Subtitle, Capabilities)
 {
     /// <summary>
     /// Returns a copy of the gallery with updated gallery-specific metadata.

@@ -62,51 +62,51 @@ public static class EntityHierarchyDefinitions
 {
     /// <summary>Hierarchy for video series, including season-grouped and flat episode lists.</summary>
     public static readonly HierarchyDefinition VideoSeries = new(
-        EntityKinds.VideoSeries,
+        EntityKind.VideoSeries,
         [
-            Layer(EntityKinds.VideoSeries, EntityKinds.VideoSeason, EntityRelationships.Season),
-            Layer(EntityKinds.VideoSeason, EntityKinds.Video, EntityRelationships.Episode),
-            Layer(EntityKinds.VideoSeries, EntityKinds.Video, EntityRelationships.Episode)
+            Layer(EntityKind.VideoSeries, EntityKind.VideoSeason, EntityRelationship.Season),
+            Layer(EntityKind.VideoSeason, EntityKind.Video, EntityRelationship.Episode),
+            Layer(EntityKind.VideoSeries, EntityKind.Video, EntityRelationship.Episode)
         ]);
 
     /// <summary>Hierarchy for books, including volume-grouped and direct chapter lists.</summary>
     public static readonly HierarchyDefinition Book = new(
-        EntityKinds.Book,
+        EntityKind.Book,
         [
-            Layer(EntityKinds.Book, EntityKinds.BookVolume, EntityRelationships.Volume),
-            Layer(EntityKinds.BookVolume, EntityKinds.BookChapter, EntityRelationships.Chapter),
-            Layer(EntityKinds.Book, EntityKinds.BookChapter, EntityRelationships.Chapter),
-            Layer(EntityKinds.BookChapter, EntityKinds.BookPage, EntityRelationships.Page)
+            Layer(EntityKind.Book, EntityKind.BookVolume, EntityRelationship.Volume),
+            Layer(EntityKind.BookVolume, EntityKind.BookChapter, EntityRelationship.Chapter),
+            Layer(EntityKind.Book, EntityKind.BookChapter, EntityRelationship.Chapter),
+            Layer(EntityKind.BookChapter, EntityKind.BookPage, EntityRelationship.Page)
         ]);
 
     /// <summary>Hierarchy for galleries and their nested galleries or image children.</summary>
     public static readonly HierarchyDefinition Gallery = new(
-        EntityKinds.Gallery,
+        EntityKind.Gallery,
         [
-            Layer(EntityKinds.Gallery, EntityKinds.Gallery, EntityRelationships.NestedGallery),
-            Layer(EntityKinds.Gallery, EntityKinds.Image, EntityRelationships.GalleryImage)
+            Layer(EntityKind.Gallery, EntityKind.Gallery, EntityRelationship.NestedGallery),
+            Layer(EntityKind.Gallery, EntityKind.Image, EntityRelationship.GalleryImage)
         ]);
 
     /// <summary>Hierarchy for audio libraries and their nested libraries or track children.</summary>
     public static readonly HierarchyDefinition AudioLibrary = new(
-        EntityKinds.AudioLibrary,
+        EntityKind.AudioLibrary,
         [
-            Layer(EntityKinds.AudioLibrary, EntityKinds.AudioLibrary, EntityRelationships.NestedAudioLibrary),
-            Layer(EntityKinds.AudioLibrary, EntityKinds.AudioTrack, EntityRelationships.AudioTrack)
+            Layer(EntityKind.AudioLibrary, EntityKind.AudioLibrary, EntityRelationship.NestedAudioLibrary),
+            Layer(EntityKind.AudioLibrary, EntityKind.AudioTrack, EntityRelationship.AudioTrack)
         ]);
 
     /// <summary>Hierarchy for nested tag taxonomy.</summary>
     public static readonly HierarchyDefinition Tag = new(
-        EntityKinds.Tag,
+        EntityKind.Tag,
         [
-            Layer(EntityKinds.Tag, EntityKinds.Tag, EntityRelationships.NestedTag)
+            Layer(EntityKind.Tag, EntityKind.Tag, EntityRelationship.NestedTag)
         ]);
 
     /// <summary>Hierarchy for nested studio taxonomy.</summary>
     public static readonly HierarchyDefinition Studio = new(
-        EntityKinds.Studio,
+        EntityKind.Studio,
         [
-            Layer(EntityKinds.Studio, EntityKinds.Studio, EntityRelationships.NestedStudio)
+            Layer(EntityKind.Studio, EntityKind.Studio, EntityRelationship.NestedStudio)
         ]);
 
     private static readonly HierarchyDefinition[] Known =

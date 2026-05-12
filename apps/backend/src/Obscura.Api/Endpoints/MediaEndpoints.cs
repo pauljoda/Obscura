@@ -10,11 +10,11 @@ public static class MediaEndpoints
 {
     public static IEndpointRouteBuilder MapMediaEndpoints(this IEndpointRouteBuilder routes)
     {
-        MapMediaGroup(routes, "/api/images", "Images", EntityKinds.Image, null);
-        MapMediaGroup(routes, "/api/galleries", "Galleries", EntityKinds.Gallery, (EntityRelationships.GalleryImage, EntityKinds.Image));
-        MapMediaGroup(routes, "/api/books", "Books", EntityKinds.Book, null);
-        MapMediaGroup(routes, "/api/audio-libraries", "AudioLibraries", EntityKinds.AudioLibrary, (EntityRelationships.AudioTrack, EntityKinds.AudioTrack));
-        MapMediaGroup(routes, "/api/audio-tracks", "AudioTracks", EntityKinds.AudioTrack, null);
+        MapMediaGroup(routes, "/api/images", "Images", EntityKind.Image, null);
+        MapMediaGroup(routes, "/api/galleries", "Galleries", EntityKind.Gallery, (EntityRelationship.GalleryImage, EntityKind.Image));
+        MapMediaGroup(routes, "/api/books", "Books", EntityKind.Book, null);
+        MapMediaGroup(routes, "/api/audio-libraries", "AudioLibraries", EntityKind.AudioLibrary, (EntityRelationship.AudioTrack, EntityKind.AudioTrack));
+        MapMediaGroup(routes, "/api/audio-tracks", "AudioTracks", EntityKind.AudioTrack, null);
 
         return routes;
     }

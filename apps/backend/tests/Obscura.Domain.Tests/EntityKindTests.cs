@@ -7,7 +7,7 @@ public sealed class EntityKindTests
     [Fact]
     public void KnownKindsExposeStableLowercaseCodes()
     {
-        var codes = EntityKinds.All.Select(kind => kind.Code).ToArray();
+        var codes = EntityKind.All.Select(kind => kind.Code).ToArray();
 
         Assert.Contains("video", codes);
         Assert.Contains("video-series", codes);
@@ -26,7 +26,7 @@ public sealed class EntityKindTests
     [Fact]
     public void TryGetReturnsKnownKindCaseInsensitively()
     {
-        var found = EntityKinds.TryGet("Video", out var kind);
+        var found = EntityKind.TryGet("Video", out var kind);
 
         Assert.True(found);
         Assert.Equal(EntityKindCode.Video, kind.Value);
@@ -37,9 +37,29 @@ public sealed class EntityKindTests
     [Fact]
     public void StaticKnownKindsExposeTypedIdentities()
     {
-        Assert.Equal(EntityKindCode.Video, EntityKinds.Video.Value);
-        Assert.Equal("video", EntityKinds.Video.Code);
-        Assert.Equal(EntityKindCode.Collection, EntityKinds.Collection.Value);
-        Assert.Equal("collection", EntityKinds.Collection.Code);
+        Assert.Equal(EntityKindCode.Video, EntityKind.Video.Value);
+        Assert.Equal("video", EntityKind.Video.Code);
+        Assert.Equal(EntityKindCode.Collection, EntityKind.Collection.Value);
+        Assert.Equal("collection", EntityKind.Collection.Code);
+    }
+
+    [Fact]
+    public void KnownKindsAreDiscoveredConcreteImplementations()
+    {
+        Assert.Contains(EntityKind.All, kind => kind is IEntityKind && kind.GetType().Name == "VideoEntityKind");
+        Assert.Contains(EntityKind.All, kind => kind is IEntityKind && kind.GetType().Name == "BookPageEntityKind");
+        Assert.All(EntityKind.All, kind =>
+        {
+            Assert.NotEqual(typeof(EntityKind), kind.GetType());
+            Assert.True(kind.GetType().IsSealed);
+        });
+    }
+
+    [Fact]
+    public void StaticKnownKindsReturnDiscoveredInstances()
+    {
+        var found = EntityKind.Require("video");
+
+        Assert.Same(EntityKind.Video, found);
     }
 }

@@ -194,7 +194,7 @@ public sealed class EntityProjectionServiceTests
         {
             ParentEntityId = seriesId,
             ChildEntityId = episodeId,
-            Relationship = EntityRelationships.Episode.Code,
+            Relationship = EntityRelationship.Episode.Code,
             SortOrder = 1
         });
         await db.SaveChangesAsync();
@@ -229,14 +229,14 @@ public sealed class EntityProjectionServiceTests
         {
             ParentEntityId = seriesId,
             ChildEntityId = seasonId,
-            Relationship = EntityRelationships.Season.Code,
+            Relationship = EntityRelationship.Season.Code,
             SortOrder = 1
         });
         db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
         {
             ParentEntityId = seasonId,
             ChildEntityId = episodeId,
-            Relationship = EntityRelationships.Episode.Code,
+            Relationship = EntityRelationship.Episode.Code,
             SortOrder = 1
         });
         await db.SaveChangesAsync();
@@ -278,28 +278,28 @@ public sealed class EntityProjectionServiceTests
             {
                 ParentEntityId = bookId,
                 ChildEntityId = volumeId,
-                Relationship = EntityRelationships.Volume.Code,
+                Relationship = EntityRelationship.Volume.Code,
                 SortOrder = 1
             },
             new EntityHierarchyLinkRow
             {
                 ParentEntityId = volumeId,
                 ChildEntityId = chapterId,
-                Relationship = EntityRelationships.Chapter.Code,
+                Relationship = EntityRelationship.Chapter.Code,
                 SortOrder = 1
             },
             new EntityHierarchyLinkRow
             {
                 ParentEntityId = chapterId,
                 ChildEntityId = deletedPageId,
-                Relationship = EntityRelationships.Page.Code,
+                Relationship = EntityRelationship.Page.Code,
                 SortOrder = 1
             },
             new EntityHierarchyLinkRow
             {
                 ParentEntityId = chapterId,
                 ChildEntityId = firstPageId,
-                Relationship = EntityRelationships.Page.Code,
+                Relationship = EntityRelationship.Page.Code,
                 SortOrder = 2
             });
         await db.SaveChangesAsync();
@@ -310,9 +310,9 @@ public sealed class EntityProjectionServiceTests
         Assert.NotNull(tree);
         Assert.Equal(bookId, tree.Root.Entity.Id);
         var volume = Assert.Single(tree.Root.Children);
-        Assert.Equal(EntityRelationships.Volume, volume.RelationshipToParent);
+        Assert.Equal(EntityRelationship.Volume, volume.RelationshipToParent);
         var chapter = Assert.Single(volume.Children);
-        Assert.Equal(EntityRelationships.Chapter, chapter.RelationshipToParent);
+        Assert.Equal(EntityRelationship.Chapter, chapter.RelationshipToParent);
         var page = Assert.Single(chapter.Children);
         Assert.Equal(firstPageId, page.Entity.Id);
         Assert.Equal(2, page.SortOrder);
@@ -332,7 +332,7 @@ public sealed class EntityProjectionServiceTests
         {
             ParentEntityId = collectionId,
             ChildEntityId = imageId,
-            Relationship = EntityRelationships.CollectionItem.Code,
+            Relationship = EntityRelationship.CollectionItem.Code,
             SortOrder = 2,
             CreatedAt = DateTimeOffset.UtcNow
         });
@@ -340,7 +340,7 @@ public sealed class EntityProjectionServiceTests
         {
             ParentEntityId = collectionId,
             ChildEntityId = audioId,
-            Relationship = EntityRelationships.CollectionItem.Code,
+            Relationship = EntityRelationship.CollectionItem.Code,
             SortOrder = 3,
             CreatedAt = DateTimeOffset.UtcNow
         });
@@ -350,8 +350,8 @@ public sealed class EntityProjectionServiceTests
         var service = new EntityProjectionService(db);
         var children = await service.ListChildrenAsync(
             collectionId,
-            EntityRelationships.CollectionItem,
-            EntityKinds.Image,
+            EntityRelationship.CollectionItem,
+            EntityKind.Image,
             CancellationToken.None);
 
         var child = Assert.Single(children);

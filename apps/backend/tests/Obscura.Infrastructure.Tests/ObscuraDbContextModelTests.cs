@@ -77,10 +77,10 @@ public sealed class ObscuraDbContextModelTests
             .Cast<string>()
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        Assert.Contains(EntityKinds.VideoSeason.Code, seededCodes);
-        Assert.Contains(EntityKinds.BookVolume.Code, seededCodes);
-        Assert.Contains(EntityKinds.BookChapter.Code, seededCodes);
-        Assert.Contains(EntityKinds.BookPage.Code, seededCodes);
+        Assert.Contains(EntityKind.VideoSeason.Code, seededCodes);
+        Assert.Contains(EntityKind.BookVolume.Code, seededCodes);
+        Assert.Contains(EntityKind.BookChapter.Code, seededCodes);
+        Assert.Contains(EntityKind.BookPage.Code, seededCodes);
     }
 
     [Fact]
@@ -98,8 +98,8 @@ public sealed class ObscuraDbContextModelTests
 
         Assert.NotNull(index);
         Assert.Contains("relationship IN", index!.GetFilter(), StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(EntityRelationships.Chapter.Code, index.GetFilter(), StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(EntityRelationships.Page.Code, index.GetFilter(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(EntityRelationship.Chapter.Code, index.GetFilter(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(EntityRelationship.Page.Code, index.GetFilter(), StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]

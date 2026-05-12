@@ -110,7 +110,7 @@ public static class EntityEndpoints
             return true;
         }
 
-        if (EntityKinds.TryGet(code, out var knownKind))
+        if (EntityKind.TryGet(code, out var knownKind))
         {
             kind = knownKind;
             return true;

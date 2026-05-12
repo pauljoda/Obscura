@@ -28,7 +28,7 @@ public sealed class CollectionService
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>A page of collection entity roots.</returns>
     public Task<EntityPage> ListAsync(EntityListQuery query, CancellationToken cancellationToken) =>
-        _entities.ListAsync(EntityKinds.Collection, query.Search, query.Cursor, cancellationToken);
+        _entities.ListAsync(EntityKind.Collection, query.Search, query.Cursor, cancellationToken);
 
     /// <summary>
     /// Gets a collection and expands its collection-item links.
@@ -44,8 +44,8 @@ public sealed class CollectionService
             return null;
         }
 
-        var items = await _entities.ListChildrenAsync(id, EntityRelationships.CollectionItem, null, cancellationToken);
+        var items = await _entities.ListChildrenAsync(id, EntityRelationship.CollectionItem, null, cancellationToken);
 
-        return new EntityLibrary(entity, items, EntityRelationships.CollectionItem, null);
+        return new EntityLibrary(entity, items, EntityRelationship.CollectionItem, null);
     }
 }

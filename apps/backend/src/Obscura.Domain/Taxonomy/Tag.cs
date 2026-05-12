@@ -12,7 +12,7 @@ public sealed record Tag(
     string? Subtitle,
     EntityCapabilities Capabilities,
     TagDetails Details)
-    : Entity(Id, EntityKinds.Tag, Title, Subtitle, Capabilities)
+    : Entity(Id, EntityKind.Tag, Title, Subtitle, Capabilities)
 {
     /// <summary>
     /// Returns a copy of the tag with updated tag-specific metadata.
