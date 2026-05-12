@@ -87,7 +87,7 @@ public sealed class VideoSourceServiceTests : IDisposable
         {
             Id = Guid.NewGuid(),
             EntityId = videoId,
-            Role = "source",
+            Role = EntityFileRole.Source,
             Path = path,
             MimeType = mimeType,
             CreatedAt = DateTimeOffset.UtcNow,

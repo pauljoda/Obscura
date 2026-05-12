@@ -228,7 +228,11 @@ public sealed class ObscuraDbContext : DbContext
             entity.HasKey(row => new { row.EntityId, row.PersonEntityId, row.Role });
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
             entity.Property(row => row.PersonEntityId).HasColumnName("person_entity_id");
-            entity.Property(row => row.Role).HasColumnName("role").HasMaxLength(64).IsRequired();
+            entity.Property(row => row.Role)
+                .HasColumnName("role")
+                .HasMaxLength(64)
+                .HasConversion(value => value.ToCode(), value => value.ToEntityCreditRole())
+                .IsRequired();
             entity.Property(row => row.Character).HasColumnName("character");
             entity.Property(row => row.SortOrder).HasColumnName("sort_order");
             entity.Property(row => row.CreatedAt).HasColumnName("created_at");
@@ -308,7 +312,11 @@ public sealed class ObscuraDbContext : DbContext
             entity.Property(row => row.Language).HasColumnName("language").HasMaxLength(32).IsRequired();
             entity.Property(row => row.Label).HasColumnName("label");
             entity.Property(row => row.Format).HasColumnName("format").HasMaxLength(32).IsRequired();
-            entity.Property(row => row.Source).HasColumnName("source").HasMaxLength(64).IsRequired();
+            entity.Property(row => row.Source)
+                .HasColumnName("source")
+                .HasMaxLength(64)
+                .HasConversion(value => value.ToCode(), value => value.ToEntitySubtitleSource())
+                .IsRequired();
             entity.Property(row => row.StoragePath).HasColumnName("storage_path").IsRequired();
             entity.Property(row => row.SourceFormat).HasColumnName("source_format").HasMaxLength(32).IsRequired();
             entity.Property(row => row.SourcePath).HasColumnName("source_path");
@@ -327,7 +335,11 @@ public sealed class ObscuraDbContext : DbContext
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.Role).HasColumnName("role").HasMaxLength(64).IsRequired();
+            entity.Property(row => row.Role)
+                .HasColumnName("role")
+                .HasMaxLength(64)
+                .HasConversion(value => value.ToCode(), value => value.ToEntityFileRole())
+                .IsRequired();
             entity.Property(row => row.Path).HasColumnName("path").IsRequired();
             entity.Property(row => row.MimeType).HasColumnName("mime_type").HasMaxLength(128);
             entity.Property(row => row.SizeBytes).HasColumnName("size_bytes");
@@ -412,11 +424,15 @@ public sealed class ObscuraDbContext : DbContext
             entity.Property(row => row.MetadataStorageDedicated).HasColumnName("metadata_storage_dedicated");
             entity.Property(row => row.SubtitlesAutoEnable).HasColumnName("subtitles_auto_enable");
             entity.Property(row => row.SubtitlesPreferredLanguages).HasColumnName("subtitles_preferred_languages");
-            entity.Property(row => row.SubtitleStyle).HasColumnName("subtitle_style");
+            entity.Property(row => row.SubtitleStyle)
+                .HasColumnName("subtitle_style")
+                .HasConversion(value => value.ToCode(), value => value.ToSubtitleStyle());
             entity.Property(row => row.SubtitleFontScale).HasColumnName("subtitle_font_scale");
             entity.Property(row => row.SubtitlePositionPercent).HasColumnName("subtitle_position_percent");
             entity.Property(row => row.SubtitleOpacity).HasColumnName("subtitle_opacity");
-            entity.Property(row => row.DefaultPlaybackMode).HasColumnName("default_playback_mode");
+            entity.Property(row => row.DefaultPlaybackMode)
+                .HasColumnName("default_playback_mode")
+                .HasConversion(value => value.ToCode(), value => value.ToPlaybackMode());
             entity.Property(row => row.ShowCastControls).HasColumnName("show_cast_controls");
             entity.Property(row => row.CreatedAt).HasColumnName("created_at");
             entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
@@ -428,7 +444,11 @@ public sealed class ObscuraDbContext : DbContext
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
             entity.Property(row => row.BackupPath).HasColumnName("backup_path").IsRequired();
-            entity.Property(row => row.Status).HasColumnName("status").HasMaxLength(32).IsRequired();
+            entity.Property(row => row.Status)
+                .HasColumnName("status")
+                .HasMaxLength(32)
+                .HasConversion(value => value.ToCode(), value => value.ToDatabaseBackupStatus())
+                .IsRequired();
             entity.Property(row => row.Error).HasColumnName("error");
             entity.Property(row => row.CreatedAt).HasColumnName("created_at");
             entity.Property(row => row.CompletedAt).HasColumnName("completed_at");
@@ -439,8 +459,16 @@ public sealed class ObscuraDbContext : DbContext
             entity.ToTable("job_runs");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
-            entity.Property(row => row.Type).HasColumnName("type").HasMaxLength(128).IsRequired();
-            entity.Property(row => row.Status).HasColumnName("status").HasMaxLength(32).IsRequired();
+            entity.Property(row => row.Type)
+                .HasColumnName("type")
+                .HasMaxLength(128)
+                .HasConversion(value => value.ToCode(), value => value.ToJobType())
+                .IsRequired();
+            entity.Property(row => row.Status)
+                .HasColumnName("status")
+                .HasMaxLength(32)
+                .HasConversion(value => value.ToCode(), value => value.ToJobRunStatus())
+                .IsRequired();
             entity.Property(row => row.PayloadJson).HasColumnName("payload_json").HasColumnType("jsonb").IsRequired();
             entity.Property(row => row.Priority).HasColumnName("priority");
             entity.Property(row => row.Attempts).HasColumnName("attempts");

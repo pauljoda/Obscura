@@ -1,3 +1,5 @@
+using Obscura.Domain.Entities;
+
 namespace Obscura.Infrastructure.Persistence.Entities;
 
 public sealed class EntitySubtitleRow
@@ -12,7 +14,7 @@ public sealed class EntitySubtitleRow
 
     public string Format { get; set; } = string.Empty;
 
-    public string Source { get; set; } = string.Empty;
+    public EntitySubtitleSource Source { get; set; } = EntitySubtitleSource.Manual;
 
     public string StoragePath { get; set; } = string.Empty;
 

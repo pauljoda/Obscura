@@ -34,9 +34,9 @@ public sealed record Book(
     /// <param name="chapterId">Chapter currently being read.</param>
     /// <param name="pageIndex">Zero-based page index within the chapter.</param>
     /// <param name="pageCount">Total pages in the active chapter.</param>
-    /// <param name="readerMode">Reader mode selected by the user, such as paged or webtoon.</param>
+    /// <param name="readerMode">Reader layout selected by the user.</param>
     /// <returns>A new book instance with updated reading progress.</returns>
-    public Book MoveReaderToChapter(Guid chapterId, int pageIndex, int pageCount, string readerMode)
+    public Book MoveReaderToChapter(Guid chapterId, int pageIndex, int pageCount, ReaderMode readerMode)
     {
         var normalizedPageCount = Math.Max(0, pageCount);
         var normalizedPageIndex = normalizedPageCount == 0
@@ -50,7 +50,7 @@ public sealed record Book(
                 ChapterId = chapterId,
                 PageIndex = normalizedPageIndex,
                 PageCount = normalizedPageCount,
-                ReaderMode = string.IsNullOrWhiteSpace(readerMode) ? "paged" : readerMode,
+                ReaderMode = readerMode,
                 CompletedAt = null
             }
         };
@@ -68,7 +68,7 @@ public sealed record Book(
 /// <summary>
 /// Book-specific metadata that should not live on the shared global entity root.
 /// </summary>
-/// <param name="BookType">Book category, such as comic, manga, novel, or audiobook companion.</param>
+/// <param name="BookType">Closed book category used by scanning, readers, and provider adapters.</param>
 /// <param name="SortTitle">Optional normalized title used for sorting.</param>
 /// <param name="Summary">Book synopsis or freeform details.</param>
 /// <param name="Date">Release or publication date as provider/user-facing text.</param>
@@ -79,7 +79,7 @@ public sealed record Book(
 /// <param name="PageCount">Total projected pages across all chapters.</param>
 /// <param name="ChapterCount">Total projected chapters.</param>
 public sealed record BookDetails(
-    string BookType,
+    BookType BookType,
     string? SortTitle,
     string? Summary,
     string? Date,
@@ -93,7 +93,7 @@ public sealed record BookDetails(
     /// <summary>
     /// Empty book details used before scan or provider metadata is attached.
     /// </summary>
-    public static BookDetails Empty { get; } = new("book", null, null, null, null, null, null, null, 0, 0);
+    public static BookDetails Empty { get; } = new(BookType.Book, null, null, null, null, null, null, null, 0, 0);
 }
 
 /// <summary>
@@ -102,17 +102,17 @@ public sealed record BookDetails(
 /// <param name="ChapterId">Current chapter entity identifier, when reading has started.</param>
 /// <param name="PageIndex">Zero-based current page index within the chapter.</param>
 /// <param name="PageCount">Total page count in the active chapter.</param>
-/// <param name="ReaderMode">Reader mode selected by the user.</param>
+/// <param name="ReaderMode">Reader layout selected by the user.</param>
 /// <param name="CompletedAt">Completion timestamp when the book has been read through.</param>
 public sealed record BookReadProgress(
     Guid? ChapterId,
     int PageIndex,
     int PageCount,
-    string ReaderMode,
+    ReaderMode ReaderMode,
     DateTimeOffset? CompletedAt)
 {
     /// <summary>
     /// Empty reading progress for books that have not been opened yet.
     /// </summary>
-    public static BookReadProgress Empty { get; } = new(null, 0, 0, "paged", null);
+    public static BookReadProgress Empty { get; } = new(null, 0, 0, ReaderMode.Paged, null);
 }

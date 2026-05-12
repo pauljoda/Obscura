@@ -1,3 +1,5 @@
+using Obscura.Domain.Entities;
+
 namespace Obscura.Infrastructure.Persistence.Entities;
 
 public sealed class LibrarySettingsRow
@@ -38,7 +40,7 @@ public sealed class LibrarySettingsRow
 
     public string SubtitlesPreferredLanguages { get; set; } = "en,eng";
 
-    public string SubtitleStyle { get; set; } = "stylized";
+    public SubtitleStyle SubtitleStyle { get; set; } = SubtitleStyle.Stylized;
 
     public float SubtitleFontScale { get; set; } = 1;
 
@@ -46,7 +48,7 @@ public sealed class LibrarySettingsRow
 
     public float SubtitleOpacity { get; set; } = 1;
 
-    public string DefaultPlaybackMode { get; set; } = "direct";
+    public PlaybackMode DefaultPlaybackMode { get; set; } = PlaybackMode.Direct;
 
     public bool ShowCastControls { get; set; } = true;
 

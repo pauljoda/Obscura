@@ -175,7 +175,7 @@ public sealed class ApiSurfaceTests
             return Task.FromResult<IReadOnlyList<JobRun>>([]);
         }
 
-        public Task<JobRun> EnqueueAsync(string type, CancellationToken cancellationToken)
+        public Task<JobRun> EnqueueAsync(JobType type, CancellationToken cancellationToken)
         {
             throw new NotSupportedException("The API surface smoke test does not create jobs.");
         }

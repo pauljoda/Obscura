@@ -39,7 +39,7 @@ public sealed class EntityProjectionServiceTests
         {
             EntityId = videoId,
             PersonEntityId = personId,
-            Role = "person",
+            Role = EntityCreditRole.Person,
             Character = "Lead",
             SortOrder = 1,
             CreatedAt = DateTimeOffset.UtcNow
@@ -67,7 +67,7 @@ public sealed class EntityProjectionServiceTests
         {
             Id = Guid.Parse("77777777-7777-7777-7777-777777777777"),
             EntityId = videoId,
-            Role = "thumbnail",
+            Role = EntityFileRole.Thumbnail,
             Path = "/assets/videos/11111111-1111-1111-1111-111111111111/card",
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
@@ -154,7 +154,7 @@ public sealed class EntityProjectionServiceTests
             Language = "en",
             Label = "English",
             Format = "vtt",
-            Source = "manual",
+            Source = EntitySubtitleSource.Manual,
             StoragePath = "/data/subtitles/feature.vtt",
             SourceFormat = "srt",
             SourcePath = "/media/feature.srt",
@@ -209,7 +209,7 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal(5, card.Capabilities.Rating?.Value.Value);
         Assert.NotNull(detail);
         Assert.Equal("Collected Episodes", detail.Entity.Title);
-        Assert.Equal("seasons", detail.RenderingMode);
+        Assert.Equal(VideoSeriesRenderingMode.Seasons, detail.RenderingMode);
         Assert.Empty(detail.Children);
         var video = Assert.Single(detail.Videos);
         Assert.Equal(episodeId, video.Id);

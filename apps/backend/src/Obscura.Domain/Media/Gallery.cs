@@ -26,7 +26,7 @@ public sealed record Gallery(
 public sealed record GalleryDetails(
     string? Summary,
     string? Date,
-    string GalleryType,
+    GalleryType GalleryType,
     string? FolderPath,
     string? ZipFilePath,
     string? Photographer,
@@ -36,5 +36,5 @@ public sealed record GalleryDetails(
     /// <summary>
     /// Empty gallery details used before scan metadata is attached.
     /// </summary>
-    public static GalleryDetails Empty { get; } = new(null, null, "virtual", null, null, null, null, 0);
+    public static GalleryDetails Empty { get; } = new(null, null, GalleryType.Virtual, null, null, null, null, 0);
 }

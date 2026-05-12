@@ -1,3 +1,5 @@
+using Obscura.Domain.Entities;
+
 namespace Obscura.Infrastructure.Persistence.Entities;
 
 public sealed class DatabaseBackupRow
@@ -6,7 +8,7 @@ public sealed class DatabaseBackupRow
 
     public string BackupPath { get; set; } = string.Empty;
 
-    public string Status { get; set; } = string.Empty;
+    public DatabaseBackupStatus Status { get; set; } = DatabaseBackupStatus.Running;
 
     public string? Error { get; set; }
 

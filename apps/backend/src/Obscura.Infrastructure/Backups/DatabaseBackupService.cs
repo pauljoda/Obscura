@@ -1,3 +1,4 @@
+using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
 
@@ -30,7 +31,7 @@ public sealed class DatabaseBackupService : IDatabaseBackupService
         {
             Id = Guid.NewGuid(),
             BackupPath = plan.BackupPath,
-            Status = "running",
+            Status = DatabaseBackupStatus.Running,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
@@ -41,7 +42,7 @@ public sealed class DatabaseBackupService : IDatabaseBackupService
         var exitCode = await _processRunner.RunAsync(plan.FileName, plan.Arguments, environment, cancellationToken);
 
         row.CompletedAt = DateTimeOffset.UtcNow;
-        row.Status = exitCode == 0 ? "completed" : "failed";
+        row.Status = exitCode == 0 ? DatabaseBackupStatus.Completed : DatabaseBackupStatus.Failed;
         row.Error = exitCode == 0 ? null : $"pg_dump exited with code {exitCode}.";
         await _db.SaveChangesAsync(cancellationToken);
 

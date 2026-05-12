@@ -1,4 +1,5 @@
 using Obscura.Contracts.Jobs;
+using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Queue;
 
 namespace Obscura.Api.Endpoints;
@@ -22,7 +23,15 @@ public static class JobEndpoints
             IJobQueueService queue,
             CancellationToken cancellationToken) =>
         {
-            var job = await queue.EnqueueAsync(type, cancellationToken);
+            if (!type.TryToJobType(out var jobType))
+            {
+                return Results.Problem(
+                    title: "Unknown job type.",
+                    detail: $"'{type}' is not a supported Obscura job type.",
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            var job = await queue.EnqueueAsync(jobType, cancellationToken);
 
             return Results.Accepted($"/api/jobs/{job.Id}", new JobCreateResponse(job));
         })

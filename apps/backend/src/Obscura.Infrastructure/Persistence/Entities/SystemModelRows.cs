@@ -1,3 +1,5 @@
+using Obscura.Domain.Entities;
+
 namespace Obscura.Infrastructure.Persistence.Entities;
 
 public sealed class MediaFileIgnoreRow
@@ -20,7 +22,7 @@ public sealed class ProviderConfigRow
     public Guid Id { get; set; }
     public string ProviderCode { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
-    public string ProviderType { get; set; } = string.Empty;
+    public ProviderType ProviderType { get; set; } = ProviderType.Native;
     public string SettingsJson { get; set; } = "{}";
     public bool Enabled { get; set; } = true;
     public bool IsNsfw { get; set; }
@@ -44,7 +46,7 @@ public sealed class IdentifyResultRow
     public Guid EntityId { get; set; }
     public Guid? ProviderConfigId { get; set; }
     public string Action { get; set; } = string.Empty;
-    public string Status { get; set; } = "pending";
+    public IdentifyResultStatus Status { get; set; } = IdentifyResultStatus.Pending;
     public string? MatchType { get; set; }
     public string? RawResultJson { get; set; }
     public string? ProposedResultJson { get; set; }
@@ -60,7 +62,7 @@ public sealed class FingerprintSubmissionRow
     public Guid? ProviderConfigId { get; set; }
     public string Algorithm { get; set; } = string.Empty;
     public string Hash { get; set; } = string.Empty;
-    public string Status { get; set; } = string.Empty;
+    public FingerprintSubmissionStatus Status { get; set; } = FingerprintSubmissionStatus.Success;
     public string? Error { get; set; }
     public DateTimeOffset SubmittedAt { get; set; }
 }

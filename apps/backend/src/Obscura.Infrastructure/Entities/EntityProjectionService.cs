@@ -234,7 +234,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
             null,
             [],
             videos,
-            videos.Count > 0 ? "seasons" : "flat");
+            videos.Count > 0 ? VideoSeriesRenderingMode.Seasons : VideoSeriesRenderingMode.Flat);
     }
 
     private async Task<IReadOnlyList<Entity>> LoadLinkedChildrenAsync(
@@ -294,7 +294,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
             .Where(row => ids.Contains(row.EntityId))
             .ToDictionaryAsync(row => row.EntityId, cancellationToken);
         var tags = await LoadTagTitlesAsync(ids, cancellationToken);
-        var thumbnails = await LoadFilePathsAsync(ids, "thumbnail", cancellationToken);
+        var thumbnails = await LoadFilePathsAsync(ids, EntityFileRole.Thumbnail, cancellationToken);
         var studios = await LoadStudioReferencesAsync(ids, cancellationToken);
         var credits = await LoadCreditReferencesAsync(ids, cancellationToken);
         var urls = await LoadUrlsAsync(ids, cancellationToken);
@@ -443,7 +443,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
 
     private async Task<IReadOnlyDictionary<Guid, string>> LoadFilePathsAsync(
         IReadOnlyList<Guid> entityIds,
-        string role,
+        EntityFileRole role,
         CancellationToken cancellationToken)
     {
         return await _db.EntityFiles

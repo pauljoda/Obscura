@@ -1,3 +1,4 @@
+using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Queue;
 
 namespace Obscura.Worker;
@@ -10,9 +11,7 @@ public sealed class QueueWorker(
     private static readonly TimeSpan IdleDelay = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(30);
     private readonly string _workerId = $"{Environment.MachineName}-{Guid.NewGuid():N}";
-    private readonly IReadOnlyDictionary<string, IJobHandler> _handlers = handlers.ToDictionary(
-        handler => handler.Type,
-        StringComparer.OrdinalIgnoreCase);
+    private readonly IReadOnlyDictionary<JobType, IJobHandler> _handlers = handlers.ToDictionary(handler => handler.Type);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -30,7 +29,7 @@ public sealed class QueueWorker(
                 continue;
             }
 
-            if (!_handlers.TryGetValue(job.Type, out var handler))
+            if (!job.Type.TryToJobType(out var jobType) || !_handlers.TryGetValue(jobType, out var handler))
             {
                 await queue.FailAsync(
                     job.Id,

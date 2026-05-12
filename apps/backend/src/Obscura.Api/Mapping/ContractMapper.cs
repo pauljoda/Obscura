@@ -4,6 +4,7 @@ using Obscura.Contracts.Media;
 using Obscura.Contracts.Series;
 using Obscura.Contracts.Taxonomy;
 using Obscura.Contracts.Videos;
+using Obscura.Domain.Entities;
 using DomainCapabilities = Obscura.Domain.Capabilities.EntityCapabilities;
 using DomainEntity = Obscura.Domain.Entities.Entity;
 using DomainEntityLibrary = Obscura.Domain.Media.EntityLibrary;
@@ -161,7 +162,7 @@ public static class ContractMapper
             ToEntityCapabilities(series.Entity.Capabilities),
             ToEntityCards(series.Children),
             ToEntityCards(series.Videos),
-            series.RenderingMode);
+            series.RenderingMode.ToCode());
 
     private static EntityCapabilities ToEntityCapabilities(DomainCapabilities capabilities) =>
         new(
@@ -179,7 +180,7 @@ public static class ContractMapper
             capabilities.Flags.IsNsfw,
             capabilities.Flags.IsOrganized);
 
-    private static EntityReference ToEntityReference(DomainEntityReference reference) =>
+    private static Obscura.Contracts.Entities.EntityReference ToEntityReference(DomainEntityReference reference) =>
         new(reference.Id, reference.Kind.Code, reference.Title);
 
     private static VideoMarker ToVideoMarker(DomainMarker marker) =>
@@ -191,7 +192,7 @@ public static class ContractMapper
             subtitle.Language,
             subtitle.Label,
             subtitle.Format,
-            subtitle.Source,
+            subtitle.Source.ToCode(),
             subtitle.StoragePath,
             subtitle.SourceFormat,
             subtitle.SourcePath,

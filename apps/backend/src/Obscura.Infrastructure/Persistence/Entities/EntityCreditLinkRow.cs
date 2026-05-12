@@ -1,3 +1,5 @@
+using Obscura.Domain.Entities;
+
 namespace Obscura.Infrastructure.Persistence.Entities;
 
 public sealed class EntityCreditLinkRow
@@ -6,7 +8,7 @@ public sealed class EntityCreditLinkRow
 
     public Guid PersonEntityId { get; set; }
 
-    public string Role { get; set; } = string.Empty;
+    public EntityCreditRole Role { get; set; } = EntityCreditRole.Person;
 
     public string? Character { get; set; }
 

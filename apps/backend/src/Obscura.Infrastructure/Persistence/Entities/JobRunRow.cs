@@ -1,12 +1,14 @@
+using Obscura.Domain.Entities;
+
 namespace Obscura.Infrastructure.Persistence.Entities;
 
 public sealed class JobRunRow
 {
     public Guid Id { get; set; }
 
-    public string Type { get; set; } = string.Empty;
+    public JobType Type { get; set; } = JobType.Noop;
 
-    public string Status { get; set; } = "queued";
+    public JobRunStatus Status { get; set; } = JobRunStatus.Queued;
 
     public string PayloadJson { get; set; } = "{}";
 

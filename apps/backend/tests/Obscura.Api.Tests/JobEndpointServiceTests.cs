@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Obscura.Contracts.Jobs;
+using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Queue;
 
 namespace Obscura.Api.Tests;
@@ -40,6 +41,17 @@ public sealed class JobEndpointServiceTests
         Assert.Equal("queued", payload.Job.Status);
     }
 
+    [Fact]
+    public async Task CreateJobEndpointRejectsUnknownJobType()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        using var response = await client.PostAsync("/api/jobs/not-real", null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     private static WebApplicationFactory<Program> CreateFactory()
     {
         return new WebApplicationFactory<Program>()
@@ -67,11 +79,11 @@ public sealed class JobEndpointServiceTests
             return Task.FromResult(jobs);
         }
 
-        public Task<JobRun> EnqueueAsync(string type, CancellationToken cancellationToken)
+        public Task<JobRun> EnqueueAsync(JobType type, CancellationToken cancellationToken)
         {
             return Task.FromResult(new JobRun(
                 CreatedJobId,
-                type,
+                type.ToCode(),
                 "queued",
                 0,
                 null,

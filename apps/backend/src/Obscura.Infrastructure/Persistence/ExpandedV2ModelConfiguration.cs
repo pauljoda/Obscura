@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Persistence;
@@ -78,7 +79,10 @@ internal static class ExpandedV2ModelConfiguration
             entity.Property(row => row.FirstAirDate).HasColumnName("first_air_date");
             entity.Property(row => row.EndAirDate).HasColumnName("end_air_date");
             entity.Property(row => row.ContentRating).HasColumnName("content_rating");
-            entity.Property(row => row.RenderingMode).HasColumnName("rendering_mode").HasMaxLength(64);
+            entity.Property(row => row.RenderingMode)
+                .HasColumnName("rendering_mode")
+                .HasMaxLength(64)
+                .HasConversion(value => value.ToCode(), value => value.ToVideoSeriesRenderingMode());
             entity.HasIndex(row => row.FolderPath).IsUnique();
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<VideoSeriesDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<LibraryRootRow>().WithMany().HasForeignKey(row => row.LibraryRootId).OnDelete(DeleteBehavior.SetNull);
@@ -106,7 +110,10 @@ internal static class ExpandedV2ModelConfiguration
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
             entity.Property(row => row.Details).HasColumnName("details");
             entity.Property(row => row.Date).HasColumnName("date");
-            entity.Property(row => row.GalleryType).HasColumnName("gallery_type").HasMaxLength(64);
+            entity.Property(row => row.GalleryType)
+                .HasColumnName("gallery_type")
+                .HasMaxLength(64)
+                .HasConversion(value => value.ToCode(), value => value.ToGalleryType());
             entity.Property(row => row.FolderPath).HasColumnName("folder_path");
             entity.Property(row => row.ZipFilePath).HasColumnName("zip_file_path");
             entity.Property(row => row.Photographer).HasColumnName("photographer");
@@ -146,7 +153,10 @@ internal static class ExpandedV2ModelConfiguration
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
             entity.Property(row => row.LibraryRootId).HasColumnName("library_root_id");
-            entity.Property(row => row.BookType).HasColumnName("book_type").HasMaxLength(64);
+            entity.Property(row => row.BookType)
+                .HasColumnName("book_type")
+                .HasMaxLength(64)
+                .HasConversion(value => value.ToCode(), value => value.ToBookType());
             entity.Property(row => row.SortTitle).HasColumnName("sort_title");
             entity.Property(row => row.Summary).HasColumnName("summary");
             entity.Property(row => row.Date).HasColumnName("date");
@@ -222,7 +232,10 @@ internal static class ExpandedV2ModelConfiguration
             entity.Property(row => row.ChapterEntityId).HasColumnName("chapter_entity_id");
             entity.Property(row => row.PageIndex).HasColumnName("page_index");
             entity.Property(row => row.PageCount).HasColumnName("page_count");
-            entity.Property(row => row.ReaderMode).HasColumnName("reader_mode").HasMaxLength(64);
+            entity.Property(row => row.ReaderMode)
+                .HasColumnName("reader_mode")
+                .HasMaxLength(64)
+                .HasConversion(value => value.ToCode(), value => value.ToReaderMode());
             entity.Property(row => row.CompletedAt).HasColumnName("completed_at");
             entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<BookReadProgressRow>(row => row.BookEntityId).OnDelete(DeleteBehavior.Cascade);
@@ -321,10 +334,16 @@ internal static class ExpandedV2ModelConfiguration
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
             entity.Property(row => row.Description).HasColumnName("description");
-            entity.Property(row => row.Mode).HasColumnName("mode").HasMaxLength(64);
+            entity.Property(row => row.Mode)
+                .HasColumnName("mode")
+                .HasMaxLength(64)
+                .HasConversion(value => value.ToCode(), value => value.ToCollectionMode());
             entity.Property(row => row.RuleTreeJson).HasColumnName("rule_tree_json").HasColumnType("jsonb");
             entity.Property(row => row.ItemCount).HasColumnName("item_count");
-            entity.Property(row => row.CoverMode).HasColumnName("cover_mode").HasMaxLength(64);
+            entity.Property(row => row.CoverMode)
+                .HasColumnName("cover_mode")
+                .HasMaxLength(64)
+                .HasConversion(value => value.ToCode(), value => value.ToCollectionCoverMode());
             entity.Property(row => row.CoverImagePath).HasColumnName("cover_image_path");
             entity.Property(row => row.CoverItemEntityId).HasColumnName("cover_item_entity_id");
             entity.Property(row => row.SlideshowDurationSeconds).HasColumnName("slideshow_duration_seconds");
@@ -340,7 +359,10 @@ internal static class ExpandedV2ModelConfiguration
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
             entity.Property(row => row.CollectionEntityId).HasColumnName("collection_entity_id");
             entity.Property(row => row.ItemEntityId).HasColumnName("item_entity_id");
-            entity.Property(row => row.Source).HasColumnName("source").HasMaxLength(64);
+            entity.Property(row => row.Source)
+                .HasColumnName("source")
+                .HasMaxLength(64)
+                .HasConversion(value => value.ToCode(), value => value.ToCollectionItemSource());
             entity.Property(row => row.SortOrder).HasColumnName("sort_order");
             entity.Property(row => row.AddedAt).HasColumnName("added_at");
             entity.HasIndex(row => new { row.CollectionEntityId, row.ItemEntityId }).IsUnique();
@@ -378,7 +400,11 @@ internal static class ExpandedV2ModelConfiguration
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
             entity.Property(row => row.ProviderCode).HasColumnName("provider_code").HasMaxLength(128).IsRequired();
             entity.Property(row => row.DisplayName).HasColumnName("display_name").HasMaxLength(256).IsRequired();
-            entity.Property(row => row.ProviderType).HasColumnName("provider_type").HasMaxLength(64).IsRequired();
+            entity.Property(row => row.ProviderType)
+                .HasColumnName("provider_type")
+                .HasMaxLength(64)
+                .HasConversion(value => value.ToCode(), value => value.ToProviderType())
+                .IsRequired();
             entity.Property(row => row.SettingsJson).HasColumnName("settings_json").HasColumnType("jsonb");
             entity.Property(row => row.Enabled).HasColumnName("enabled");
             entity.Property(row => row.IsNsfw).HasColumnName("is_nsfw");
@@ -409,7 +435,11 @@ internal static class ExpandedV2ModelConfiguration
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
             entity.Property(row => row.ProviderConfigId).HasColumnName("provider_config_id");
             entity.Property(row => row.Action).HasColumnName("action").HasMaxLength(128).IsRequired();
-            entity.Property(row => row.Status).HasColumnName("status").HasMaxLength(64).IsRequired();
+            entity.Property(row => row.Status)
+                .HasColumnName("status")
+                .HasMaxLength(64)
+                .HasConversion(value => value.ToCode(), value => value.ToIdentifyResultStatus())
+                .IsRequired();
             entity.Property(row => row.MatchType).HasColumnName("match_type").HasMaxLength(64);
             entity.Property(row => row.RawResultJson).HasColumnName("raw_result_json").HasColumnType("jsonb");
             entity.Property(row => row.ProposedResultJson).HasColumnName("proposed_result_json").HasColumnType("jsonb");
@@ -430,7 +460,11 @@ internal static class ExpandedV2ModelConfiguration
             entity.Property(row => row.ProviderConfigId).HasColumnName("provider_config_id");
             entity.Property(row => row.Algorithm).HasColumnName("algorithm").HasMaxLength(64).IsRequired();
             entity.Property(row => row.Hash).HasColumnName("hash").IsRequired();
-            entity.Property(row => row.Status).HasColumnName("status").HasMaxLength(64).IsRequired();
+            entity.Property(row => row.Status)
+                .HasColumnName("status")
+                .HasMaxLength(64)
+                .HasConversion(value => value.ToCode(), value => value.ToFingerprintSubmissionStatus())
+                .IsRequired();
             entity.Property(row => row.Error).HasColumnName("error");
             entity.Property(row => row.SubmittedAt).HasColumnName("submitted_at");
             entity.HasIndex(row => new { row.EntityId, row.Algorithm, row.Hash }).IsUnique();

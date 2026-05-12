@@ -1,3 +1,5 @@
+using Obscura.Domain.Entities;
+
 namespace Obscura.Infrastructure.Persistence.Entities;
 
 public sealed class EntityFileRow
@@ -6,7 +8,7 @@ public sealed class EntityFileRow
 
     public Guid EntityId { get; set; }
 
-    public string Role { get; set; } = string.Empty;
+    public EntityFileRole Role { get; set; } = EntityFileRole.Source;
 
     public string Path { get; set; } = string.Empty;
 

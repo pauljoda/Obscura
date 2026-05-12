@@ -15,4 +15,4 @@ public sealed record VideoSeries(
     string? Summary,
     IReadOnlyList<Entity> Children,
     IReadOnlyList<Entity> Videos,
-    string RenderingMode);
+    VideoSeriesRenderingMode RenderingMode);

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Queue;
 
@@ -12,8 +13,8 @@ public sealed class JobQueueServiceTests
         await using var db = CreateContext();
         var service = new JobQueueService(db);
 
-        var first = await service.EnqueueAsync("scan-library", CancellationToken.None);
-        var second = await service.EnqueueAsync("probe-video", CancellationToken.None);
+        var first = await service.EnqueueAsync(JobType.ScanLibrary, CancellationToken.None);
+        var second = await service.EnqueueAsync(JobType.ProbeVideo, CancellationToken.None);
         var jobs = await service.ListAsync(CancellationToken.None);
 
         Assert.Equal("queued", first.Status);
@@ -29,7 +30,7 @@ public sealed class JobQueueServiceTests
         await using var db = CreateContext();
         var service = new JobQueueService(db);
 
-        var created = await service.EnqueueAsync("noop", CancellationToken.None);
+        var created = await service.EnqueueAsync(JobType.Noop, CancellationToken.None);
         var claimed = await service.ClaimNextAsync("worker-1", CancellationToken.None);
         await service.CompleteAsync(created.Id, "done", CancellationToken.None);
         var completed = await db.JobRuns.FindAsync(created.Id);
@@ -38,7 +39,7 @@ public sealed class JobQueueServiceTests
         Assert.Equal(created.Id, claimed.Id);
         Assert.Equal("running", claimed.Status);
         Assert.NotNull(completed);
-        Assert.Equal("completed", completed.Status);
+        Assert.Equal(JobRunStatus.Completed, completed.Status);
         Assert.Equal(100, completed.Progress);
         Assert.Equal("done", completed.Message);
     }
@@ -49,7 +50,7 @@ public sealed class JobQueueServiceTests
         await using var db = CreateContext();
         var service = new JobQueueService(db);
 
-        var created = await service.EnqueueAsync("unknown", CancellationToken.None);
+        var created = await service.EnqueueAsync(JobType.LegacyMediaImport, CancellationToken.None);
         await service.ClaimNextAsync("worker-1", CancellationToken.None);
         await service.FailAsync(created.Id, "missing handler", TimeSpan.Zero, CancellationToken.None);
         await service.ClaimNextAsync("worker-1", CancellationToken.None);
@@ -59,7 +60,7 @@ public sealed class JobQueueServiceTests
         var failed = await db.JobRuns.FindAsync(created.Id);
 
         Assert.NotNull(failed);
-        Assert.Equal("failed", failed.Status);
+        Assert.Equal(JobRunStatus.Failed, failed.Status);
         Assert.Equal(3, failed.Attempts);
         Assert.NotNull(failed.FinishedAt);
     }

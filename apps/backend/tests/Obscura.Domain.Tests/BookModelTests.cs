@@ -16,7 +16,7 @@ public sealed class BookModelTests
             EntityCapabilities.Empty,
             BookDetails.Empty with
             {
-                BookType = "comic",
+                BookType = BookType.Comic,
                 SortTitle = "Brass Archive",
                 PageCount = 120,
                 ChapterCount = 6
@@ -25,7 +25,7 @@ public sealed class BookModelTests
 
         Assert.Equal(EntityKindCode.Book, book.Kind.Value);
         Assert.Equal("The Brass Archive", book.Title);
-        Assert.Equal("comic", book.Details.BookType);
+        Assert.Equal(BookType.Comic, book.Details.BookType);
         Assert.Equal(120, book.Details.PageCount);
     }
 
@@ -42,7 +42,7 @@ public sealed class BookModelTests
 
         var updated = book
             .WithDetails(book.Details with { Summary = "Updated from metadata.", PageCount = 12 })
-            .MoveReaderToChapter(Guid.Parse("33333333-3333-3333-3333-333333333333"), 4, 12, "paged");
+            .MoveReaderToChapter(Guid.Parse("33333333-3333-3333-3333-333333333333"), 4, 12, ReaderMode.Paged);
 
         Assert.Equal("Updated from metadata.", updated.Details.Summary);
         Assert.Equal(12, updated.Details.PageCount);

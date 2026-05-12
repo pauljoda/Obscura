@@ -1,4 +1,5 @@
 using Obscura.Contracts.Jobs;
+using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Legacy;
 
 namespace Obscura.Worker;
@@ -12,7 +13,7 @@ public sealed class LegacyVideoImportJobHandler : IJobHandler
         _scopeFactory = scopeFactory;
     }
 
-    public string Type => "legacy-video-import";
+    public JobType Type => JobType.LegacyVideoImport;
 
     public async Task HandleAsync(JobRun job, CancellationToken cancellationToken)
     {

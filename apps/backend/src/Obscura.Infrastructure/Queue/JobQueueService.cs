@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Obscura.Contracts.Jobs;
+using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
 
@@ -22,8 +23,8 @@ public sealed class JobQueueService : IJobQueueService
             .Take(100)
             .Select(row => new JobRun(
                 row.Id,
-                row.Type,
-                row.Status,
+                row.Type.ToCode(),
+                row.Status.ToCode(),
                 row.Progress,
                 row.Message,
                 row.CreatedAt,
@@ -32,16 +33,14 @@ public sealed class JobQueueService : IJobQueueService
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<JobRun> EnqueueAsync(string type, CancellationToken cancellationToken)
+    public async Task<JobRun> EnqueueAsync(JobType type, CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(type);
-
         var now = DateTimeOffset.UtcNow;
         var row = new JobRunRow
         {
             Id = Guid.NewGuid(),
             Type = type,
-            Status = "queued",
+            Status = JobRunStatus.Queued,
             PayloadJson = "{}",
             Priority = 0,
             Attempts = 0,
@@ -63,7 +62,7 @@ public sealed class JobQueueService : IJobQueueService
 
         var now = DateTimeOffset.UtcNow;
         var row = await _db.JobRuns
-            .Where(job => job.Status == "queued" && job.AvailableAt <= now)
+            .Where(job => job.Status == JobRunStatus.Queued && job.AvailableAt <= now)
             .OrderByDescending(job => job.Priority)
             .ThenBy(job => job.AvailableAt)
             .ThenBy(job => job.CreatedAt)
@@ -74,7 +73,7 @@ public sealed class JobQueueService : IJobQueueService
             return null;
         }
 
-        row.Status = "running";
+        row.Status = JobRunStatus.Running;
         row.LockedAt = now;
         row.LockedBy = workerId;
         row.StartedAt ??= now;
@@ -92,7 +91,7 @@ public sealed class JobQueueService : IJobQueueService
             return;
         }
 
-        row.Status = "completed";
+        row.Status = JobRunStatus.Completed;
         row.Progress = 100;
         row.Message = message;
         row.LockedAt = null;
@@ -114,7 +113,7 @@ public sealed class JobQueueService : IJobQueueService
         }
 
         var shouldRetry = row.Attempts < row.MaxAttempts;
-        row.Status = shouldRetry ? "queued" : "failed";
+        row.Status = shouldRetry ? JobRunStatus.Queued : JobRunStatus.Failed;
         row.Message = message;
         row.LockedAt = null;
         row.LockedBy = null;
@@ -127,8 +126,8 @@ public sealed class JobQueueService : IJobQueueService
     {
         return new JobRun(
             row.Id,
-            row.Type,
-            row.Status,
+            row.Type.ToCode(),
+            row.Status.ToCode(),
             row.Progress,
             row.Message,
             row.CreatedAt,

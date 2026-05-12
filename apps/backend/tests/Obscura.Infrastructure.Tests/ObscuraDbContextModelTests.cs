@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Domain.Capabilities;
+using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
 
@@ -81,6 +83,36 @@ public sealed class ObscuraDbContextModelTests
 
         Assert.NotNull(property);
         Assert.Equal(columnName, property.GetColumnName());
+    }
+
+    [Theory]
+    [InlineData(typeof(BookDetailRow), nameof(BookDetailRow.BookType), typeof(BookType))]
+    [InlineData(typeof(BookReadProgressRow), nameof(BookReadProgressRow.ReaderMode), typeof(ReaderMode))]
+    [InlineData(typeof(GalleryDetailRow), nameof(GalleryDetailRow.GalleryType), typeof(GalleryType))]
+    [InlineData(typeof(VideoSeriesDetailRow), nameof(VideoSeriesDetailRow.RenderingMode), typeof(VideoSeriesRenderingMode))]
+    [InlineData(typeof(CollectionDetailRow), nameof(CollectionDetailRow.Mode), typeof(CollectionMode))]
+    [InlineData(typeof(CollectionDetailRow), nameof(CollectionDetailRow.CoverMode), typeof(CollectionCoverMode))]
+    [InlineData(typeof(CollectionItemDetailRow), nameof(CollectionItemDetailRow.Source), typeof(CollectionItemSource))]
+    [InlineData(typeof(ProviderConfigRow), nameof(ProviderConfigRow.ProviderType), typeof(ProviderType))]
+    [InlineData(typeof(IdentifyResultRow), nameof(IdentifyResultRow.Status), typeof(IdentifyResultStatus))]
+    [InlineData(typeof(FingerprintSubmissionRow), nameof(FingerprintSubmissionRow.Status), typeof(FingerprintSubmissionStatus))]
+    [InlineData(typeof(EntityCreditLinkRow), nameof(EntityCreditLinkRow.Role), typeof(EntityCreditRole))]
+    [InlineData(typeof(EntityFileRow), nameof(EntityFileRow.Role), typeof(EntityFileRole))]
+    [InlineData(typeof(EntitySubtitleRow), nameof(EntitySubtitleRow.Source), typeof(EntitySubtitleSource))]
+    [InlineData(typeof(DatabaseBackupRow), nameof(DatabaseBackupRow.Status), typeof(DatabaseBackupStatus))]
+    [InlineData(typeof(JobRunRow), nameof(JobRunRow.Type), typeof(JobType))]
+    [InlineData(typeof(JobRunRow), nameof(JobRunRow.Status), typeof(JobRunStatus))]
+    [InlineData(typeof(LibrarySettingsRow), nameof(LibrarySettingsRow.SubtitleStyle), typeof(SubtitleStyle))]
+    [InlineData(typeof(LibrarySettingsRow), nameof(LibrarySettingsRow.DefaultPlaybackMode), typeof(PlaybackMode))]
+    public void V2ModelUsesEnumsForClosedChoiceCodes(Type entityType, string propertyName, Type clrType)
+    {
+        using var db = CreateContext();
+        var modelEntity = db.Model.FindEntityType(entityType);
+
+        var property = modelEntity!.FindProperty(propertyName);
+
+        Assert.NotNull(property);
+        Assert.Equal(clrType, property.ClrType);
     }
 
     private static ObscuraDbContext CreateContext()

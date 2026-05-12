@@ -43,7 +43,7 @@ public sealed class VideoSourceService : IVideoSourceService
             where entity.Id == id &&
                 entity.KindCode == EntityKinds.Video.Code &&
                 entity.DeletedAt == null &&
-                file.Role == "source"
+                file.Role == EntityFileRole.Source
             select file)
             .FirstOrDefaultAsync(cancellationToken);
 

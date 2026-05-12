@@ -1,3 +1,5 @@
+using Obscura.Domain.Entities;
+
 namespace Obscura.Domain.Capabilities;
 
 /// <summary>
@@ -17,7 +19,7 @@ public sealed record EntitySubtitle(
     string Language,
     string? Label,
     string Format,
-    string Source,
+    EntitySubtitleSource Source,
     string StoragePath,
     string SourceFormat,
     string? SourcePath,

@@ -1,3 +1,5 @@
+using Obscura.Domain.Entities;
+
 namespace Obscura.Infrastructure.Persistence.Entities;
 
 public sealed class VideoSeriesDetailRow
@@ -14,7 +16,7 @@ public sealed class VideoSeriesDetailRow
     public string? FirstAirDate { get; set; }
     public string? EndAirDate { get; set; }
     public string? ContentRating { get; set; }
-    public string RenderingMode { get; set; } = "flat";
+    public VideoSeriesRenderingMode RenderingMode { get; set; } = VideoSeriesRenderingMode.Flat;
 }
 
 public sealed class VideoSeasonDetailRow
@@ -32,7 +34,7 @@ public sealed class GalleryDetailRow
     public Guid EntityId { get; set; }
     public string? Details { get; set; }
     public string? Date { get; set; }
-    public string GalleryType { get; set; } = "virtual";
+    public GalleryType GalleryType { get; set; } = GalleryType.Virtual;
     public string? FolderPath { get; set; }
     public string? ZipFilePath { get; set; }
     public string? Photographer { get; set; }
@@ -57,7 +59,7 @@ public sealed class BookDetailRow
 {
     public Guid EntityId { get; set; }
     public Guid? LibraryRootId { get; set; }
-    public string BookType { get; set; } = "book";
+    public BookType BookType { get; set; } = BookType.Book;
     public string? SortTitle { get; set; }
     public string? Summary { get; set; }
     public string? Date { get; set; }
@@ -110,7 +112,7 @@ public sealed class BookReadProgressRow
     public Guid? ChapterEntityId { get; set; }
     public int PageIndex { get; set; }
     public int PageCount { get; set; }
-    public string ReaderMode { get; set; } = "paged";
+    public ReaderMode ReaderMode { get; set; } = ReaderMode.Paged;
     public DateTimeOffset? CompletedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }
