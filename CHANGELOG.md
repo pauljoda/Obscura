@@ -86,6 +86,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 thumbnail lab now uses more realistic per-entity labels, including poster-shaped seasons and quieter page cards without redundant page metadata.
 - The v2 thumbnail lab now keeps card heights consistent by reserving fixed title, subtitle, and metadata slots instead of letting wrapped titles stretch individual cards.
 - The v2 thumbnail lab now shrinks long card titles within a readable range before truncating, keeping row heights even without oversized title slots.
+- The v2 thumbnail lab now supports multi-select cards with a top-left checkbox that appears on hover, focus, or selected state.
 
 ### Docs
 
@@ -154,6 +155,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Updated v2 thumbnail lab fixtures so row samples better match actual entity cards instead of internal entity-type descriptions.
 - Standardized v2 thumbnail body sizing so rows stay aligned while long titles and metadata clamp within fixed slots.
 - Replaced the two-line thumbnail title slot with measured one-line title fitting, so long names scale down slightly before ellipsis.
+- Added selectable thumbnail state to the shared v2 card component and wired the lab page to track multiple selected entities.
 - Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.
 - Job Control failures can now be individually suppressed by error type — clicking Suppress on any failed job hides all jobs sharing the same error fingerprint until you click Show all or clear all failures.
 - Job Control completed jobs now show a duration column so you can see how long each run took, plus a retry indicator when a job needed more than one attempt.

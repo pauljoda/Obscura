@@ -26,9 +26,12 @@
 
   interface Props {
     card: EntityThumbnailCard;
+    onSelectedChange?: (selected: boolean) => void;
+    selectable?: boolean;
+    selected?: boolean;
   }
 
-  let { card }: Props = $props();
+  let { card, onSelectedChange, selectable = false, selected = false }: Props = $props();
 
   let pointerRatio = $state<number | null>(null);
 
@@ -81,6 +84,15 @@
     pointerRatio = null;
   }
 
+  function handleSelectionChange(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    onSelectedChange?.(input.checked);
+  }
+
+  function stopSelectionActivation(event: Event) {
+    event.stopPropagation();
+  }
+
   function formatRating(value: number): string {
     if (value <= 0) return "";
     return value <= 5 ? `${value}/5` : `${Math.round(value)}%`;
@@ -88,12 +100,13 @@
 </script>
 
 <svelte:element
-  this={card.href ? "a" : "article"}
-  href={card.href}
-  role={card.href ? undefined : "group"}
-  tabindex={card.href ? undefined : 0}
+  this={card.href && !selectable ? "a" : "article"}
+  href={card.href && !selectable ? card.href : undefined}
+  role={card.href && !selectable ? undefined : "group"}
+  tabindex={card.href && !selectable ? undefined : 0}
   class="entity-thumbnail"
   class:is-hovering={pointerRatio !== null}
+  class:is-selected={selected}
   aria-label={card.entity.title}
   onpointermove={handlePointerMove}
   onpointerleave={clearHover}
@@ -112,6 +125,20 @@
     {/if}
 
     <div class="scrim" aria-hidden="true"></div>
+
+    {#if selectable}
+      <input
+        class="selection"
+        class:is-selected={selected}
+        type="checkbox"
+        checked={selected}
+        title={`Select ${card.entity.title}`}
+        aria-label={`Select ${card.entity.title}`}
+        onclick={stopSelectionActivation}
+        onpointerdown={stopSelectionActivation}
+        onchange={handleSelectionChange}
+      />
+    {/if}
 
     {#if nsfw || rating > 0}
       <div class="badges">
@@ -201,6 +228,14 @@
       0 14px 28px rgb(0 0 0 / 0.24);
   }
 
+  .entity-thumbnail.is-selected {
+    border-color: rgb(196 154 90 / 0.55);
+    box-shadow:
+      inset 0 0 0 1px rgb(196 154 90 / 0.22),
+      0 0 24px rgb(196 154 90 / 0.12),
+      0 14px 28px rgb(0 0 0 / 0.24);
+  }
+
   .media {
     position: relative;
     overflow: hidden;
@@ -253,12 +288,14 @@
   .badges {
     position: absolute;
     top: 0.45rem;
-    left: 0.45rem;
     right: 0.45rem;
+    left: 2.45rem;
     display: flex;
     flex-wrap: wrap;
     gap: 0.35rem;
     align-items: center;
+    justify-content: flex-end;
+    pointer-events: none;
   }
 
   .badge {
@@ -284,6 +321,73 @@
   .danger {
     color: #ffb5a9;
     border-color: rgb(255 121 97 / 0.35);
+  }
+
+  .selection {
+    position: absolute;
+    top: 0.45rem;
+    left: 0.45rem;
+    z-index: 2;
+    display: grid;
+    inline-size: 1.55rem;
+    block-size: 1.55rem;
+    border: 1px solid rgb(255 255 255 / 0.12);
+    background: rgb(11 11 12 / 0.72);
+    appearance: none;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    backdrop-filter: blur(12px);
+    transition:
+      opacity 120ms ease,
+      border-color 120ms ease,
+      box-shadow 120ms ease;
+  }
+
+  .entity-thumbnail:is(:hover, :focus-within) .selection,
+  .entity-thumbnail.is-selected .selection,
+  .selection:focus {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .selection::before {
+    position: absolute;
+    inset: 0.38rem;
+    border: 1px solid rgb(244 239 230 / 0.7);
+    background: rgb(0 0 0 / 0.16);
+    content: "";
+    pointer-events: none;
+  }
+
+  .selection::after {
+    position: absolute;
+    top: 0.58rem;
+    left: 0.54rem;
+    inline-size: 0.45rem;
+    block-size: 0.24rem;
+    border-bottom: 2px solid #0b0b0c;
+    border-left: 2px solid #0b0b0c;
+    content: "";
+    opacity: 0;
+    transform: rotate(-45deg);
+  }
+
+  .selection:checked,
+  .selection.is-selected {
+    border-color: rgb(196 154 90 / 0.74);
+    box-shadow: 0 0 16px rgb(196 154 90 / 0.22);
+  }
+
+  .selection:checked::before,
+  .selection.is-selected::before {
+    border-color: rgb(196 154 90 / 0.95);
+    background: linear-gradient(135deg, #d9b370, #9f7333);
+  }
+
+  .selection:checked::after,
+  .selection.is-selected::after {
+    opacity: 1;
   }
 
   .copy {

@@ -3,6 +3,15 @@
   import { thumbnailLabRows } from "$lib/entities/thumbnail-lab-data";
 
   let thumbnailScale = $state(14);
+  let selectedIds = $state<string[]>([]);
+
+  const selectedCount = $derived(selectedIds.length);
+
+  function updateSelection(id: string, selected: boolean) {
+    selectedIds = selected
+      ? Array.from(new Set([...selectedIds, id]))
+      : selectedIds.filter((selectedId) => selectedId !== id);
+  }
 </script>
 
 <svelte:head>
@@ -21,6 +30,7 @@
         <strong>{thumbnailScale}rem</strong>
       </label>
       <input id="thumbnail-scale" type="range" min="9" max="21" step="1" bind:value={thumbnailScale} />
+      <span>{selectedCount} selected</span>
       <span>{thumbnailLabRows.length} entity kinds</span>
     </div>
   </header>
@@ -38,7 +48,12 @@
 
         <div class="strip">
           {#each row.cards as card (card.entity.id)}
-            <V2EntityThumbnail {card} />
+            <V2EntityThumbnail
+              {card}
+              selectable
+              selected={selectedIds.includes(card.entity.id)}
+              onSelectedChange={(selected) => updateSelection(card.entity.id, selected)}
+            />
           {/each}
         </div>
       </section>
@@ -101,7 +116,7 @@
 
   .controls {
     display: grid;
-    grid-template-columns: auto minmax(9rem, 14rem) auto;
+    grid-template-columns: auto minmax(9rem, 14rem) auto auto;
     gap: 0.7rem;
     align-items: center;
   }
