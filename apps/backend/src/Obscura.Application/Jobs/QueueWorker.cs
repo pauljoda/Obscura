@@ -1,8 +1,14 @@
-using Obscura.Application.Jobs;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Obscura.Contracts.Jobs;
 using Obscura.Domain.Entities;
 
-namespace Obscura.Worker;
+namespace Obscura.Application.Jobs;
 
+/// <summary>
+/// Hosted application service that claims durable queue jobs and dispatches them to typed handlers.
+/// </summary>
 public sealed class QueueWorker(
     IServiceScopeFactory scopeFactory,
     IEnumerable<IJobHandler> handlers,
@@ -13,6 +19,10 @@ public sealed class QueueWorker(
     private readonly string _workerId = $"{Environment.MachineName}-{Guid.NewGuid():N}";
     private readonly IReadOnlyDictionary<JobType, IJobHandler> _handlers = handlers.ToDictionary(handler => handler.Type);
 
+    /// <summary>
+    /// Runs the worker loop until the host shuts down.
+    /// </summary>
+    /// <param name="stoppingToken">Token signaled when the worker host is stopping.</param>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation("Obscura .NET worker {WorkerId} started.", _workerId);
