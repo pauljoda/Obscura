@@ -2,8 +2,14 @@ using Obscura.Domain.Entities;
 
 namespace Obscura.Infrastructure.Legacy;
 
+/// <summary>
+/// Provides SQL used to preview-import legacy video, series, taxonomy, and relationship tables into the v2 entity model.
+/// </summary>
 public static class LegacyVideoImportSql
 {
+    /// <summary>
+    /// PostgreSQL block that imports legacy video-oriented entities and their shared capabilities.
+    /// </summary>
     public static readonly string Import = $$"""
         DO $$
         BEGIN
@@ -767,6 +773,9 @@ public static class LegacyVideoImportSql
         END $$;
         """;
 
+    /// <summary>
+    /// SQL query that reports preview-import counts for migrated video entities, taxonomy entities, and links.
+    /// </summary>
     public static readonly string Counts = $$"""
         SELECT
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKindRegistry.VideoSeries.Code}}') AS series_imported,

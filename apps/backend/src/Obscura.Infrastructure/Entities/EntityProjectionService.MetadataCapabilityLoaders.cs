@@ -8,6 +8,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Entities;
 
+/// <summary>
+/// Loads metadata capability rows such as stats, dates, technical values, sources, progress, positions, and classifications.
+/// </summary>
 public sealed partial class EntityProjectionService
 {
     private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityStat>>> LoadStatsAsync(

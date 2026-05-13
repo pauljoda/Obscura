@@ -5,8 +5,16 @@ using DomainTag = Obscura.Domain.Taxonomy.Tag;
 
 namespace Obscura.Api.Mapping;
 
+/// <summary>
+/// Contains taxonomy-specific detail contract mapping for v2 person, studio, and tag routes.
+/// </summary>
 public static partial class ContractMapper
 {
+    /// <summary>
+    /// Converts a person aggregate into its object-specific detail contract.
+    /// </summary>
+    /// <param name="person">Domain person aggregate with person profile fields.</param>
+    /// <returns>Person detail contract for API callers.</returns>
     public static PersonDetail ToPersonDetail(DomainPerson person) =>
         new(
             person.Id,
@@ -28,6 +36,11 @@ public static partial class ContractMapper
             person.CareerStart,
             person.CareerEnd);
 
+    /// <summary>
+    /// Converts a studio aggregate into its object-specific detail contract.
+    /// </summary>
+    /// <param name="studio">Domain studio aggregate with hierarchy metadata.</param>
+    /// <returns>Studio detail contract for API callers.</returns>
     public static StudioDetail ToStudioDetail(DomainStudio studio) =>
         new(
             studio.Id,
@@ -36,6 +49,11 @@ public static partial class ContractMapper
             ToEntityCapabilities(studio.Capabilities),
             studio.ParentStudioId);
 
+    /// <summary>
+    /// Converts a tag aggregate into its object-specific detail contract.
+    /// </summary>
+    /// <param name="tag">Domain tag aggregate with hierarchy and automation metadata.</param>
+    /// <returns>Tag detail contract for API callers.</returns>
     public static TagDetail ToTagDetail(DomainTag tag) =>
         new(
             tag.Id,

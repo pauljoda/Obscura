@@ -1,7 +1,13 @@
 namespace Obscura.Infrastructure.FreshStart;
 
+/// <summary>
+/// Provides SQL statements used by the v2 fresh-start flow to preserve configuration while resetting media data.
+/// </summary>
 public static class FreshStartSql
 {
+    /// <summary>
+    /// SQL block that copies legacy settings and library roots into v2 preservation tables.
+    /// </summary>
     public const string PreserveConfiguration = """
         TRUNCATE TABLE
             v2.entity_hierarchy_links,
@@ -124,10 +130,16 @@ public static class FreshStartSql
         ORDER BY path;
         """;
 
+    /// <summary>
+    /// SQL query that counts preserved v2 library roots after the fresh-start preparation step.
+    /// </summary>
     public const string CountPreservedLibraryRoots = """
         SELECT COUNT(*) FROM v2.library_roots;
         """;
 
+    /// <summary>
+    /// SQL query that reports whether a preserved v2 library-settings row exists.
+    /// </summary>
     public const string HasPreservedSettings = """
         SELECT EXISTS (SELECT 1 FROM v2.library_settings);
         """;

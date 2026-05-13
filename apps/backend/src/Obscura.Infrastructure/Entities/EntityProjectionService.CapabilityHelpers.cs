@@ -8,6 +8,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Entities;
 
+/// <summary>
+/// Provides small helpers for adding detail-derived shared capabilities during aggregate hydration.
+/// </summary>
 public sealed partial class EntityProjectionService
 {
     private static string? TryGetDescription(Entity entity) =>

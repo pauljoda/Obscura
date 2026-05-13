@@ -8,6 +8,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Entities;
 
+/// <summary>
+/// Loads ordered entity hierarchy links and builds shared hierarchy tree projections.
+/// </summary>
 public sealed partial class EntityProjectionService
 {
     private async Task<EntityHierarchyNode> BuildHierarchyNodeAsync(

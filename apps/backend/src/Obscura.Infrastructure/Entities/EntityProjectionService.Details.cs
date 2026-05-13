@@ -8,6 +8,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Entities;
 
+/// <summary>
+/// Hydrates typed media, taxonomy, collection, and structural aggregates from v2 detail rows.
+/// </summary>
 public sealed partial class EntityProjectionService
 {
     /// <summary>

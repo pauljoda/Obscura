@@ -26,26 +26,64 @@ using ContractRating = Obscura.Contracts.Entities.Rating;
 
 namespace Obscura.Api.Mapping;
 
+/// <summary>
+/// Contains shared entity and list-response contract mapping for v2 API routes.
+/// </summary>
 public static partial class ContractMapper
 {
+    /// <summary>
+    /// Converts a domain entity page into the generic entity list response contract.
+    /// </summary>
+    /// <param name="page">Domain page returned by the entity catalog.</param>
+    /// <returns>API contract page with entity cards.</returns>
     public static EntityListResponse ToEntityListResponse(DomainEntityPage page) =>
         new(page.Items.Select(ToEntityCard).ToArray(), page.NextCursor);
 
+    /// <summary>
+    /// Converts a domain entity page into the video list response contract.
+    /// </summary>
+    /// <param name="page">Domain page containing video entities.</param>
+    /// <returns>Video list contract for API callers.</returns>
     public static VideoListResponse ToVideoListResponse(DomainEntityPage page) =>
         new(page.Items.Select(ToEntityCard).ToArray(), page.NextCursor);
 
+    /// <summary>
+    /// Converts a domain entity page into the video-series list response contract.
+    /// </summary>
+    /// <param name="page">Domain page containing video series entities.</param>
+    /// <returns>Video-series list contract for API callers.</returns>
     public static VideoSeriesListResponse ToVideoSeriesListResponse(DomainEntityPage page) =>
         new(page.Items.Select(ToEntityCard).ToArray(), page.NextCursor);
 
+    /// <summary>
+    /// Converts a domain entity page into the shared media list response contract.
+    /// </summary>
+    /// <param name="page">Domain page containing image, gallery, book, or audio entities.</param>
+    /// <returns>Media list contract for API callers.</returns>
     public static MediaListResponse ToMediaListResponse(DomainEntityPage page) =>
         new(page.Items.Select(ToEntityCard).ToArray(), page.NextCursor);
 
+    /// <summary>
+    /// Converts a domain entity page into the collection list response contract.
+    /// </summary>
+    /// <param name="page">Domain page containing collection entities.</param>
+    /// <returns>Collection list contract for API callers.</returns>
     public static CollectionListResponse ToCollectionListResponse(DomainEntityPage page) =>
         new(page.Items.Select(ToEntityCard).ToArray(), page.NextCursor);
 
+    /// <summary>
+    /// Converts a domain entity page into the taxonomy list response contract.
+    /// </summary>
+    /// <param name="page">Domain page containing person, studio, or tag entities.</param>
+    /// <returns>Taxonomy list contract for API callers.</returns>
     public static TaxonomyListResponse ToTaxonomyListResponse(DomainEntityPage page) =>
         new(page.Items.Select(ToEntityCard).ToArray(), page.NextCursor);
 
+    /// <summary>
+    /// Converts a domain entity root into the normalized card contract used by all list surfaces.
+    /// </summary>
+    /// <param name="entity">Domain entity root with shared capabilities.</param>
+    /// <returns>API entity card contract.</returns>
     public static EntityCard ToEntityCard(DomainEntity entity) =>
         new(
             entity.Id,
@@ -54,6 +92,11 @@ public static partial class ContractMapper
             entity.Subtitle,
             ToEntityCapabilities(entity.Capabilities));
 
+    /// <summary>
+    /// Converts a collection of domain entity roots into card contracts.
+    /// </summary>
+    /// <param name="entities">Domain entities to expose as cards.</param>
+    /// <returns>Card contracts in the same order.</returns>
     public static IReadOnlyList<EntityCard> ToEntityCards(IReadOnlyList<DomainEntity> entities) =>
         entities.Select(ToEntityCard).ToArray();
 

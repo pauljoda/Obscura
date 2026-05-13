@@ -8,6 +8,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Entities;
 
+/// <summary>
+/// Loads file-backed asset and fingerprint capability rows for entity projection.
+/// </summary>
 public sealed partial class EntityProjectionService
 {
     private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityFile>>> LoadFilesAsync(

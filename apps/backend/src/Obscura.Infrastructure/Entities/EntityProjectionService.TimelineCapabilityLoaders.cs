@@ -8,6 +8,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Entities;
 
+/// <summary>
+/// Loads timeline capability rows such as playback, counters, markers, and subtitles.
+/// </summary>
 public sealed partial class EntityProjectionService
 {
     private async Task<IReadOnlyDictionary<Guid, Playback>> LoadPlaybackAsync(

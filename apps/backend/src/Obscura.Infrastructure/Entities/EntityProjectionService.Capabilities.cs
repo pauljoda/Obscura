@@ -8,6 +8,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Entities;
 
+/// <summary>
+/// Builds explicit domain capability lists from v2 entity and capability table rows.
+/// </summary>
 public sealed partial class EntityProjectionService
 {
     private async Task<IReadOnlyList<Entity>> BuildEntitiesAsync(

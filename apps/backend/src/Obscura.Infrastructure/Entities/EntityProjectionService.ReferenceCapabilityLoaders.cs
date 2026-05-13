@@ -8,6 +8,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Entities;
 
+/// <summary>
+/// Loads reference capability rows for URLs, external IDs, tags, studios, and credits.
+/// </summary>
 public sealed partial class EntityProjectionService
 {
     private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityUrl>>> LoadUrlsAsync(
