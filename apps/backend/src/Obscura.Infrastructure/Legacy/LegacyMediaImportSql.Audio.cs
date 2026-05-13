@@ -85,20 +85,12 @@ public static partial class LegacyMediaImportSql
 
                 INSERT INTO v2.audio_library_details (
                     entity_id,
-                    details,
-                    date,
-                    folder_path,
-                    parent_library_entity_id,
-                    track_count
+                    parent_library_entity_id
                 )
-                SELECT id, details, date, folder_path, parent_id, track_count
+                SELECT id, parent_id
                 FROM public.audio_libraries
                 ON CONFLICT (entity_id) DO UPDATE SET
-                    details = EXCLUDED.details,
-                    date = EXCLUDED.date,
-                    folder_path = EXCLUDED.folder_path,
-                    parent_library_entity_id = EXCLUDED.parent_library_entity_id,
-                    track_count = EXCLUDED.track_count;
+                    parent_library_entity_id = EXCLUDED.parent_library_entity_id;
 
                 INSERT INTO v2.entity_studio_links (entity_id, studio_id, created_at)
                 SELECT id, studio_id, updated_at
@@ -263,47 +255,17 @@ public static partial class LegacyMediaImportSql
 
                 INSERT INTO v2.audio_track_details (
                     entity_id,
-                    details,
-                    date,
-                    duration_seconds,
-                    bit_rate,
-                    sample_rate,
-                    channels,
-                    codec,
-                    container,
                     embedded_artist,
-                    embedded_album,
-                    track_number,
-                    waveform_path
+                    embedded_album
                 )
                 SELECT
                     id,
-                    details,
-                    date,
-                    duration,
-                    bit_rate,
-                    sample_rate,
-                    channels,
-                    codec,
-                    container,
                     embedded_artist,
-                    embedded_album,
-                    track_number,
-                    waveform_path
+                    embedded_album
                 FROM public.audio_tracks
                 ON CONFLICT (entity_id) DO UPDATE SET
-                    details = EXCLUDED.details,
-                    date = EXCLUDED.date,
-                    duration_seconds = EXCLUDED.duration_seconds,
-                    bit_rate = EXCLUDED.bit_rate,
-                    sample_rate = EXCLUDED.sample_rate,
-                    channels = EXCLUDED.channels,
-                    codec = EXCLUDED.codec,
-                    container = EXCLUDED.container,
                     embedded_artist = EXCLUDED.embedded_artist,
-                    embedded_album = EXCLUDED.embedded_album,
-                    track_number = EXCLUDED.track_number,
-                    waveform_path = EXCLUDED.waveform_path;
+                    embedded_album = EXCLUDED.embedded_album;
 
                 INSERT INTO v2.entity_studio_links (entity_id, studio_id, created_at)
                 SELECT id, studio_id, updated_at

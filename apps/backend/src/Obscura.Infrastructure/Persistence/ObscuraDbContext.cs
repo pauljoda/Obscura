@@ -79,8 +79,6 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<BookPageDetailRow> BookPageDetails => Set<BookPageDetailRow>();
 
-    public DbSet<BookReadProgressRow> BookReadProgress => Set<BookReadProgressRow>();
-
     public DbSet<AudioLibraryDetailRow> AudioLibraryDetails => Set<AudioLibraryDetailRow>();
 
     public DbSet<AudioTrackDetailRow> AudioTrackDetails => Set<AudioTrackDetailRow>();
@@ -381,19 +379,6 @@ public sealed class ObscuraDbContext : DbContext
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
             entity.Property(row => row.LibraryRootId).HasColumnName("library_root_id");
-            entity.Property(row => row.Summary).HasColumnName("summary");
-            entity.Property(row => row.SortTitle).HasColumnName("sort_title");
-            entity.Property(row => row.OriginalTitle).HasColumnName("original_title");
-            entity.Property(row => row.Tagline).HasColumnName("tagline");
-            entity.Property(row => row.ReleaseDate).HasColumnName("release_date");
-            entity.Property(row => row.ContentRating).HasColumnName("content_rating");
-            entity.Property(row => row.DurationMs).HasColumnName("duration_ms");
-            entity.Property(row => row.Width).HasColumnName("width");
-            entity.Property(row => row.Height).HasColumnName("height");
-            entity.Property(row => row.FrameRate).HasColumnName("frame_rate");
-            entity.Property(row => row.BitRate).HasColumnName("bit_rate");
-            entity.Property(row => row.Codec).HasColumnName("codec");
-            entity.Property(row => row.Container).HasColumnName("container");
             entity.Property(row => row.SubtitlesExtractedAt).HasColumnName("subtitles_extracted_at");
             entity.HasOne<EntityRow>()
                 .WithOne()

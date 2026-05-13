@@ -143,7 +143,7 @@ public sealed partial class EntityProjectionService
             entity.Subtitle,
             Disambiguation: detail?.Disambiguation,
             Gender: detail?.Gender,
-            Birthdate: detail?.Birthdate,
+            Birthdate: null,
             Country: detail?.Country,
             Ethnicity: detail?.Ethnicity,
             EyeColor: detail?.EyeColor,
@@ -153,8 +153,8 @@ public sealed partial class EntityProjectionService
             Measurements: detail?.Measurements,
             Tattoos: detail?.Tattoos,
             Piercings: detail?.Piercings,
-            CareerStart: detail?.CareerStart,
-            CareerEnd: detail?.CareerEnd,
+            CareerStart: null,
+            CareerEnd: null,
             capabilities: entity.Capabilities);
     }
 

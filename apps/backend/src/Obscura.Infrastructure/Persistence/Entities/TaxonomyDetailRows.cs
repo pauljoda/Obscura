@@ -5,7 +5,6 @@ public sealed class PersonDetailRow
     public Guid EntityId { get; set; }
     public string? Disambiguation { get; set; }
     public string? Gender { get; set; }
-    public string? Birthdate { get; set; }
     public string? Country { get; set; }
     public string? Ethnicity { get; set; }
     public string? EyeColor { get; set; }
@@ -15,22 +14,17 @@ public sealed class PersonDetailRow
     public string? Measurements { get; set; }
     public string? Tattoos { get; set; }
     public string? Piercings { get; set; }
-    public int? CareerStart { get; set; }
-    public int? CareerEnd { get; set; }
-    public string? Details { get; set; }
 }
 
 public sealed class StudioDetailRow
 {
     public Guid EntityId { get; set; }
-    public string? Description { get; set; }
     public Guid? ParentStudioEntityId { get; set; }
 }
 
 public sealed class TagDetailRow
 {
     public Guid EntityId { get; set; }
-    public string? Description { get; set; }
     public Guid? ParentTagEntityId { get; set; }
     public bool IgnoreAutoTag { get; set; }
 }

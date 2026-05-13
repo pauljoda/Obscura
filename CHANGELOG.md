@@ -122,6 +122,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added typed v2 .NET EF rows, mappings, and projection hydration for the expanded capability-first tables.
 - Updated the v2 fresh-start reset to clear the expanded capability-first tables before preserving settings and library roots.
 - Changed v2 entity detail hydration to read shared descriptions, dates, sources, stats, technical metadata, progress, positions, markers, subtitles, and classifications from capability tables instead of duplicated per-kind detail fields.
+- Slimmed the v2 detail tables to keep only kind-specific fields, with shared metadata now stored in capability tables and old book read progress replaced by the shared progress capability.
 - Renamed v2 video and series detail API text fields from summary to description so generated clients match the capability-first domain language.
 - Split v2 .NET media and taxonomy contracts plus API mappers by entity type, replacing generic catch-all detail records with modular object-specific detail records.
 - Split the v2 .NET entity projection infrastructure into focused partial modules for entry-point projection, typed detail hydration, hierarchy loading, capability assembly, and capability-family table readers.

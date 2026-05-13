@@ -15,7 +15,6 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
             entity.Property(row => row.Disambiguation).HasColumnName("disambiguation");
             entity.Property(row => row.Gender).HasColumnName("gender");
-            entity.Property(row => row.Birthdate).HasColumnName("birthdate");
             entity.Property(row => row.Country).HasColumnName("country");
             entity.Property(row => row.Ethnicity).HasColumnName("ethnicity");
             entity.Property(row => row.EyeColor).HasColumnName("eye_color");
@@ -25,9 +24,6 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.Property(row => row.Measurements).HasColumnName("measurements");
             entity.Property(row => row.Tattoos).HasColumnName("tattoos");
             entity.Property(row => row.Piercings).HasColumnName("piercings");
-            entity.Property(row => row.CareerStart).HasColumnName("career_start");
-            entity.Property(row => row.CareerEnd).HasColumnName("career_end");
-            entity.Property(row => row.Details).HasColumnName("details");
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<PersonDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -36,7 +32,6 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.ToTable("studio_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.Description).HasColumnName("description");
             entity.Property(row => row.ParentStudioEntityId).HasColumnName("parent_studio_entity_id");
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<StudioDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
@@ -46,7 +41,6 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.ToTable("tag_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.Description).HasColumnName("description");
             entity.Property(row => row.ParentTagEntityId).HasColumnName("parent_tag_entity_id");
             entity.Property(row => row.IgnoreAutoTag).HasColumnName("ignore_auto_tag");
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<TagDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);

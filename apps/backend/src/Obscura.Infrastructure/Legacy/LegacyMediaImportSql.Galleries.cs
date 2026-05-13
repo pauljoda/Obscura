@@ -81,24 +81,14 @@ public static partial class LegacyMediaImportSql
 
                 INSERT INTO v2.gallery_details (
                     entity_id,
-                    details,
-                    date,
                     gallery_type,
-                    folder_path,
-                    zip_file_path,
-                    cover_image_entity_id,
-                    image_count
+                    cover_image_entity_id
                 )
-                SELECT id, details, date, gallery_type, folder_path, zip_file_path, cover_image_id, image_count
+                SELECT id, gallery_type, cover_image_id
                 FROM public.galleries
                 ON CONFLICT (entity_id) DO UPDATE SET
-                    details = EXCLUDED.details,
-                    date = EXCLUDED.date,
                     gallery_type = EXCLUDED.gallery_type,
-                    folder_path = EXCLUDED.folder_path,
-                    zip_file_path = EXCLUDED.zip_file_path,
-                    cover_image_entity_id = EXCLUDED.cover_image_entity_id,
-                    image_count = EXCLUDED.image_count;
+                    cover_image_entity_id = EXCLUDED.cover_image_entity_id;
 
                 INSERT INTO v2.entity_studio_links (entity_id, studio_id, created_at)
                 SELECT id, studio_id, updated_at

@@ -39,7 +39,6 @@ public sealed class ObscuraDbContextModelTests
     [InlineData(typeof(BookVolumeDetailRow), "book_volume_details")]
     [InlineData(typeof(BookChapterDetailRow), "book_chapter_details")]
     [InlineData(typeof(BookPageDetailRow), "book_page_details")]
-    [InlineData(typeof(BookReadProgressRow), "book_read_progress")]
     [InlineData(typeof(AudioLibraryDetailRow), "audio_library_details")]
     [InlineData(typeof(AudioTrackDetailRow), "audio_track_details")]
     [InlineData(typeof(PersonDetailRow), "person_details")]
@@ -134,6 +133,7 @@ public sealed class ObscuraDbContextModelTests
 
         Assert.Contains("20260513001500_AddCapabilityFirstTables", migrations);
         Assert.Contains("20260513002000_RemoveGalleryPhotographer", migrations);
+        Assert.Contains("20260513041249_SlimCapabilityFirstDetails", migrations);
     }
 
     [Theory]
@@ -148,7 +148,7 @@ public sealed class ObscuraDbContextModelTests
     [InlineData(typeof(EntityPositionRow), nameof(EntityPositionRow.Label), "label")]
     [InlineData(typeof(EntityClassificationRow), nameof(EntityClassificationRow.Value), "value")]
     [InlineData(typeof(EntityFlagRow), nameof(EntityFlagRow.IsFavorite), "is_favorite")]
-    [InlineData(typeof(VideoDetailRow), nameof(VideoDetailRow.DurationMs), "duration_ms")]
+    [InlineData(typeof(VideoDetailRow), nameof(VideoDetailRow.SubtitlesExtractedAt), "subtitles_extracted_at")]
     [InlineData(typeof(LibraryRootRow), nameof(LibraryRootRow.ScanVideos), "scan_videos")]
     [InlineData(typeof(LibrarySettingsRow), nameof(LibrarySettingsRow.AutoScanEnabled), "auto_scan_enabled")]
     [InlineData(typeof(LibrarySettingsRow), nameof(LibrarySettingsRow.HideNsfw), "hide_nsfw")]
@@ -167,7 +167,6 @@ public sealed class ObscuraDbContextModelTests
 
     [Theory]
     [InlineData(typeof(BookDetailRow), nameof(BookDetailRow.BookType), typeof(BookType))]
-    [InlineData(typeof(BookReadProgressRow), nameof(BookReadProgressRow.ReaderMode), typeof(ReaderMode))]
     [InlineData(typeof(GalleryDetailRow), nameof(GalleryDetailRow.GalleryType), typeof(GalleryType))]
     [InlineData(typeof(VideoSeriesDetailRow), nameof(VideoSeriesDetailRow.RenderingMode), typeof(VideoSeriesRenderingMode))]
     [InlineData(typeof(CollectionDetailRow), nameof(CollectionDetailRow.Mode), typeof(CollectionMode))]

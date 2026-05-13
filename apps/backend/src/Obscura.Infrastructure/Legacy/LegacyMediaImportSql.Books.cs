@@ -94,44 +94,17 @@ public static partial class LegacyMediaImportSql
 
                 INSERT INTO v2.book_details (
                     entity_id,
-                    library_root_id,
                     book_type,
-                    sort_title,
-                    summary,
-                    date,
-                    folder_path,
-                    relative_path,
-                    cover_page_entity_id,
-                    cover_image_path,
-                    page_count,
-                    chapter_count
+                    cover_page_entity_id
                 )
                 SELECT
                     id,
-                    library_root_id,
                     book_type,
-                    sort_title,
-                    details,
-                    date,
-                    folder_path,
-                    relative_path,
-                    cover_page_id,
-                    cover_image_path,
-                    page_count,
-                    chapter_count
+                    cover_page_id
                 FROM public.books
                 ON CONFLICT (entity_id) DO UPDATE SET
-                    library_root_id = EXCLUDED.library_root_id,
                     book_type = EXCLUDED.book_type,
-                    sort_title = EXCLUDED.sort_title,
-                    summary = EXCLUDED.summary,
-                    date = EXCLUDED.date,
-                    folder_path = EXCLUDED.folder_path,
-                    relative_path = EXCLUDED.relative_path,
-                    cover_page_entity_id = EXCLUDED.cover_page_entity_id,
-                    cover_image_path = EXCLUDED.cover_image_path,
-                    page_count = EXCLUDED.page_count,
-                    chapter_count = EXCLUDED.chapter_count;
+                    cover_page_entity_id = EXCLUDED.cover_page_entity_id;
 
                 INSERT INTO v2.entity_studio_links (entity_id, studio_id, created_at)
                 SELECT id, studio_id, updated_at
@@ -162,26 +135,6 @@ public static partial class LegacyMediaImportSql
 
     private static readonly string BookReadProgressImport = $$"""
             IF to_regclass('public.book_read_progress') IS NOT NULL THEN
-                INSERT INTO v2.book_read_progress (
-                    book_entity_id,
-                    chapter_entity_id,
-                    page_index,
-                    page_count,
-                    reader_mode,
-                    completed_at,
-                    updated_at
-                )
-                SELECT book_id, chapter_id, page_index, page_count, reader_mode, completed_at, updated_at
-                FROM public.book_read_progress
-                WHERE EXISTS (SELECT 1 FROM v2.entities entity WHERE entity.id = book_id AND entity.kind_code = '{{EntityKindRegistry.Book.Code}}')
-                ON CONFLICT (book_entity_id) DO UPDATE SET
-                    chapter_entity_id = EXCLUDED.chapter_entity_id,
-                    page_index = EXCLUDED.page_index,
-                    page_count = EXCLUDED.page_count,
-                    reader_mode = EXCLUDED.reader_mode,
-                    completed_at = EXCLUDED.completed_at,
-                    updated_at = EXCLUDED.updated_at;
-
                 INSERT INTO v2.entity_progress (
                     entity_id,
                     current_entity_id,

@@ -13,18 +13,15 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.ToTable("collection_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.Description).HasColumnName("description");
             entity.Property(row => row.Mode)
                 .HasColumnName("mode")
                 .HasMaxLength(64)
                 .HasConversion(value => value.ToCode(), value => value.DecodeAs<CollectionMode>());
             entity.Property(row => row.RuleTreeJson).HasColumnName("rule_tree_json").HasColumnType("jsonb");
-            entity.Property(row => row.ItemCount).HasColumnName("item_count");
             entity.Property(row => row.CoverMode)
                 .HasColumnName("cover_mode")
                 .HasMaxLength(64)
                 .HasConversion(value => value.ToCode(), value => value.DecodeAs<CollectionCoverMode>());
-            entity.Property(row => row.CoverImagePath).HasColumnName("cover_image_path");
             entity.Property(row => row.CoverItemEntityId).HasColumnName("cover_item_entity_id");
             entity.Property(row => row.SlideshowDurationSeconds).HasColumnName("slideshow_duration_seconds");
             entity.Property(row => row.SlideshowAutoAdvance).HasColumnName("slideshow_auto_advance");

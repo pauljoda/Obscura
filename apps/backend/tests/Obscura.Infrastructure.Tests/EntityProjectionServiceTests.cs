@@ -471,8 +471,7 @@ public sealed class EntityProjectionServiceTests
         SeedEntity(db, collectionId, "collection", "Reference Set");
         db.ImageDetails.Add(new ImageDetailRow
         {
-            EntityId = imageId,
-            SortOrder = 7
+            EntityId = imageId
         });
         SeedDescription(db, imageId, "Image details");
         SeedDate(db, imageId, "captured", "2026-05-12");
@@ -482,8 +481,7 @@ public sealed class EntityProjectionServiceTests
         db.GalleryDetails.Add(new GalleryDetailRow
         {
             EntityId = galleryId,
-            GalleryType = GalleryType.Folder,
-            ImageCount = 12
+            GalleryType = GalleryType.Folder
         });
         SeedDescription(db, galleryId, "Gallery details");
         SeedDate(db, galleryId, "gallery", "2026");
@@ -492,9 +490,7 @@ public sealed class EntityProjectionServiceTests
         db.BookDetails.Add(new BookDetailRow
         {
             EntityId = bookId,
-            BookType = BookType.Comic,
-            PageCount = 42,
-            ChapterCount = 3
+            BookType = BookType.Comic
         });
         SeedDescription(db, bookId, "Book summary");
         SeedSource(db, bookId, "relative", "books/book");
@@ -511,8 +507,7 @@ public sealed class EntityProjectionServiceTests
         });
         db.AudioLibraryDetails.Add(new AudioLibraryDetailRow
         {
-            EntityId = audioLibraryId,
-            TrackCount = 9
+            EntityId = audioLibraryId
         });
         SeedDescription(db, audioLibraryId, "Album summary");
         SeedDate(db, audioLibraryId, "audio-library", "2026");
@@ -530,8 +525,7 @@ public sealed class EntityProjectionServiceTests
         db.PersonDetails.Add(new PersonDetailRow
         {
             EntityId = personId,
-            Country = "US",
-            CareerStart = 2020
+            Country = "US"
         });
         db.StudioDetails.Add(new StudioDetailRow
         {
@@ -547,9 +541,7 @@ public sealed class EntityProjectionServiceTests
         db.CollectionDetails.Add(new CollectionDetailRow
         {
             EntityId = collectionId,
-            Description = "Collection description",
             Mode = CollectionMode.Manual,
-            ItemCount = 2,
             CoverMode = CollectionCoverMode.Mosaic
         });
         SeedDescription(db, collectionId, "Collection description");
@@ -630,8 +622,7 @@ public sealed class EntityProjectionServiceTests
         {
             EntityId = chapterId,
             BookEntityId = bookId,
-            VolumeEntityId = volumeId,
-            ChapterNumber = 2
+            VolumeEntityId = volumeId
         });
         SeedSource(db, chapterId, "archive", "/media/book/chapter.cbz");
         SeedStat(db, chapterId, "pages", 30);
@@ -640,8 +631,7 @@ public sealed class EntityProjectionServiceTests
         {
             EntityId = pageId,
             BookEntityId = bookId,
-            ChapterEntityId = chapterId,
-            FilePath = "/media/book/page-001.jpg"
+            ChapterEntityId = chapterId
         });
         SeedSource(db, pageId, "file", "/media/book/page-001.jpg");
         SeedTechnical(db, pageId, width: 1200, height: 1800);

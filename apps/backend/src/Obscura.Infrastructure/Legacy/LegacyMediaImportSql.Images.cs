@@ -125,27 +125,11 @@ public static partial class LegacyMediaImportSql
                     value = EXCLUDED.value;
 
                 INSERT INTO v2.image_details (
-                    entity_id,
-                    details,
-                    date,
-                    file_path,
-                    file_size_bytes,
-                    width,
-                    height,
-                    format,
-                    sort_order
+                    entity_id
                 )
-                SELECT id, details, date, file_path, file_size::bigint, width, height, format, sort_order
+                SELECT id
                 FROM public.images
-                ON CONFLICT (entity_id) DO UPDATE SET
-                    details = EXCLUDED.details,
-                    date = EXCLUDED.date,
-                    file_path = EXCLUDED.file_path,
-                    file_size_bytes = EXCLUDED.file_size_bytes,
-                    width = EXCLUDED.width,
-                    height = EXCLUDED.height,
-                    format = EXCLUDED.format,
-                    sort_order = EXCLUDED.sort_order;
+                ON CONFLICT (entity_id) DO NOTHING;
 
                 INSERT INTO v2.entity_studio_links (entity_id, studio_id, created_at)
                 SELECT id, studio_id, updated_at

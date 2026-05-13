@@ -51,12 +51,9 @@ public static partial class LegacyMediaImportSql
 
                 INSERT INTO v2.collection_details (
                     entity_id,
-                    description,
                     mode,
                     rule_tree_json,
-                    item_count,
                     cover_mode,
-                    cover_image_path,
                     cover_item_entity_id,
                     slideshow_duration_seconds,
                     slideshow_auto_advance,
@@ -64,24 +61,18 @@ public static partial class LegacyMediaImportSql
                 )
                 SELECT
                     id,
-                    description,
                     mode,
                     rule_tree::text,
-                    item_count,
                     cover_mode,
-                    cover_image_path,
                     cover_item_id,
                     slideshow_duration_seconds,
                     slideshow_auto_advance,
                     last_refreshed_at
                 FROM public.collections
                 ON CONFLICT (entity_id) DO UPDATE SET
-                    description = EXCLUDED.description,
                     mode = EXCLUDED.mode,
                     rule_tree_json = EXCLUDED.rule_tree_json,
-                    item_count = EXCLUDED.item_count,
                     cover_mode = EXCLUDED.cover_mode,
-                    cover_image_path = EXCLUDED.cover_image_path,
                     cover_item_entity_id = EXCLUDED.cover_item_entity_id,
                     slideshow_duration_seconds = EXCLUDED.slideshow_duration_seconds,
                     slideshow_auto_advance = EXCLUDED.slideshow_auto_advance,

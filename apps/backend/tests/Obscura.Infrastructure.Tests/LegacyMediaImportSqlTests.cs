@@ -32,7 +32,7 @@ public sealed class LegacyMediaImportSqlTests
         Assert.Contains("v2.gallery_details", LegacyMediaImportSql.Import);
         Assert.Contains("v2.image_details", LegacyMediaImportSql.Import);
         Assert.Contains("v2.book_details", LegacyMediaImportSql.Import);
-        Assert.Contains("v2.book_read_progress", LegacyMediaImportSql.Import);
+        Assert.DoesNotContain("v2.book_read_progress", LegacyMediaImportSql.Import);
         Assert.Contains("v2.audio_library_details", LegacyMediaImportSql.Import);
         Assert.Contains("v2.audio_track_details", LegacyMediaImportSql.Import);
         Assert.Contains("waveform_path", LegacyMediaImportSql.Import);

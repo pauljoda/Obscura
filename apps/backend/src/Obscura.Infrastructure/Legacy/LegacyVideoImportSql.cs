@@ -237,31 +237,11 @@ public static class LegacyVideoImportSql
 
                 INSERT INTO v2.video_details (
                     entity_id,
-                    summary,
-                    release_date,
-                    content_rating,
-                    duration_ms,
-                    width,
-                    height,
-                    frame_rate,
-                    bit_rate,
-                    codec,
-                    container,
                     subtitles_extracted_at
                 )
-                SELECT id, overview, release_date, content_rating, (duration * 1000)::bigint, width, height, frame_rate, bit_rate, codec, container, subtitles_extracted_at
+                SELECT id, subtitles_extracted_at
                 FROM public.video_movies
                 ON CONFLICT (entity_id) DO UPDATE SET
-                    summary = EXCLUDED.summary,
-                    release_date = EXCLUDED.release_date,
-                    content_rating = EXCLUDED.content_rating,
-                    duration_ms = EXCLUDED.duration_ms,
-                    width = EXCLUDED.width,
-                    height = EXCLUDED.height,
-                    frame_rate = EXCLUDED.frame_rate,
-                    bit_rate = EXCLUDED.bit_rate,
-                    codec = EXCLUDED.codec,
-                    container = EXCLUDED.container,
                     subtitles_extracted_at = EXCLUDED.subtitles_extracted_at;
 
                 INSERT INTO v2.entity_flags (entity_id, is_favorite, is_nsfw, is_organized, updated_at)
@@ -460,29 +440,11 @@ public static class LegacyVideoImportSql
 
                 INSERT INTO v2.video_details (
                     entity_id,
-                    summary,
-                    release_date,
-                    duration_ms,
-                    width,
-                    height,
-                    frame_rate,
-                    bit_rate,
-                    codec,
-                    container,
                     subtitles_extracted_at
                 )
-                SELECT id, overview, air_date, (duration * 1000)::bigint, width, height, frame_rate, bit_rate, codec, container, subtitles_extracted_at
+                SELECT id, subtitles_extracted_at
                 FROM public.video_episodes
                 ON CONFLICT (entity_id) DO UPDATE SET
-                    summary = EXCLUDED.summary,
-                    release_date = EXCLUDED.release_date,
-                    duration_ms = EXCLUDED.duration_ms,
-                    width = EXCLUDED.width,
-                    height = EXCLUDED.height,
-                    frame_rate = EXCLUDED.frame_rate,
-                    bit_rate = EXCLUDED.bit_rate,
-                    codec = EXCLUDED.codec,
-                    container = EXCLUDED.container,
                     subtitles_extracted_at = EXCLUDED.subtitles_extracted_at;
 
                 INSERT INTO v2.entity_flags (entity_id, is_favorite, is_nsfw, is_organized, updated_at)
