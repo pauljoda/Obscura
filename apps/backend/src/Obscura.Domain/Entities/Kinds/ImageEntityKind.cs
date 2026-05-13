@@ -1,5 +1,7 @@
 namespace Obscura.Domain.Entities;
 
+using Obscura.Domain.Capabilities;
+
 /// <summary>Single image media entity kind.</summary>
 public sealed record ImageEntityKind()
     : IEntityKind
@@ -11,5 +13,22 @@ public sealed record ImageEntityKind()
     [
         EntityFileRole.Thumbnail,
         EntityFileRole.Source
+    ];
+    public IReadOnlyList<ICapabilityKind> SupportedCapabilities =>
+    [
+        CapabilityRegistry.Rating,
+        CapabilityRegistry.Tags,
+        CapabilityRegistry.Credits,
+        CapabilityRegistry.Studio,
+        CapabilityRegistry.Images,
+        CapabilityRegistry.Description,
+        CapabilityRegistry.Links,
+        CapabilityRegistry.Flags,
+        CapabilityRegistry.Files,
+        CapabilityRegistry.Fingerprints,
+        CapabilityRegistry.Dates,
+        CapabilityRegistry.Technical,
+        CapabilityRegistry.Source,
+        CapabilityRegistry.Position
     ];
 }

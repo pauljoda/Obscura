@@ -72,6 +72,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 .NET backend now models seasons, book volumes, chapters, and pages as first-class hierarchy entities, giving future series and reader screens one shared way to load ordered child structure.
 - The v2 .NET backend now preserves named video counters such as the legacy orgasm counter through the shared entity capability model.
 - The v2 .NET backend now exposes shared descriptions, richer image asset metadata, and preserved video hashes so migrated entities keep more of their source metadata.
+- The v2 .NET backend now declares a capability-first entity shape for the breaking migration, so shared metadata can move out of duplicated per-kind detail fields after users accept the v2 reset gate.
 
 ### Docs
 
@@ -108,6 +109,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added typed v2 .NET EF hydrators for direct video technical fields plus direct video-series, video-season, book-volume, book-chapter, and book-page fields.
 - Added a shared v2 .NET counter capability and `entity_counters` table so named per-entity counts can move across the API without becoming video-only fields.
 - Added shared v2 .NET description and fingerprint capabilities, plus per-entity-kind image asset shapes for typed generated artwork such as posters, logos, previews, sprites, and trickplay.
+- Changed v2 .NET entity kinds to declare their supported capability shape directly, allowing projection and contracts to include only capabilities that each kind intentionally supports.
 - Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.
 - Job Control failures can now be individually suppressed by error type — clicking Suppress on any failed job hides all jobs sharing the same error fingerprint until you click Show all or clear all failures.
 - Job Control completed jobs now show a duration column so you can see how long each run took, plus a retry indicator when a job needed more than one attempt.
@@ -181,6 +183,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added shared v2 URL and external-ID capability tables, projections, generated DTOs, and legacy preview-import coverage across video, book, image, gallery, and audio entities.
 - Added v2 collection DTOs, `/api/collections` list/detail endpoints, collection-item projection loading, and legacy collection import counts.
 - Added shared v2 marker and subtitle capability tables, video detail DTO projection, EF migration coverage, and legacy import coverage for video subtitles, video markers, and audio-track markers.
+- Added the v2 .NET domain capability vocabulary for markers, subtitles, stats, dates, technical metadata, source provenance, reading progress, structural positions, and classifications.
 - Added child-entity projection to v2 media details for gallery images and audio-library tracks.
 - Added configurable ASP.NET static-file hosting and client-route fallback for the future static Svelte app.
 - Added the initial v2 job-run table for the native Postgres-backed worker queue.

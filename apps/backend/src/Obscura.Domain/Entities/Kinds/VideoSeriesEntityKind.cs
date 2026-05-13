@@ -1,5 +1,7 @@
 namespace Obscura.Domain.Entities;
 
+using Obscura.Domain.Capabilities;
+
 /// <summary>Video series entity kind.</summary>
 public sealed record VideoSeriesEntityKind()
     : IEntityKind
@@ -13,5 +15,22 @@ public sealed record VideoSeriesEntityKind()
         EntityFileRole.Poster,
         EntityFileRole.Backdrop,
         EntityFileRole.Logo
+    ];
+    public IReadOnlyList<ICapabilityKind> SupportedCapabilities =>
+    [
+        CapabilityRegistry.Rating,
+        CapabilityRegistry.Tags,
+        CapabilityRegistry.Credits,
+        CapabilityRegistry.Studio,
+        CapabilityRegistry.Images,
+        CapabilityRegistry.Description,
+        CapabilityRegistry.Links,
+        CapabilityRegistry.Flags,
+        CapabilityRegistry.Files,
+        CapabilityRegistry.Fingerprints,
+        CapabilityRegistry.Stats,
+        CapabilityRegistry.Dates,
+        CapabilityRegistry.Source,
+        CapabilityRegistry.Classification
     ];
 }

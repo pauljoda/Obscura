@@ -1,5 +1,7 @@
 namespace Obscura.Domain.Entities;
 
+using Obscura.Domain.Capabilities;
+
 /// <summary>Studio taxonomy entity kind.</summary>
 public sealed record StudioEntityKind()
     : IEntityKind
@@ -11,5 +13,15 @@ public sealed record StudioEntityKind()
     [
         EntityFileRole.Thumbnail,
         EntityFileRole.Logo
+    ];
+    public IReadOnlyList<ICapabilityKind> SupportedCapabilities =>
+    [
+        CapabilityRegistry.Rating,
+        CapabilityRegistry.Tags,
+        CapabilityRegistry.Images,
+        CapabilityRegistry.Description,
+        CapabilityRegistry.Links,
+        CapabilityRegistry.Flags,
+        CapabilityRegistry.Files
     ];
 }

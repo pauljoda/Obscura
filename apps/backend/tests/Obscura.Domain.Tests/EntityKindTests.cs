@@ -1,4 +1,5 @@
 using Obscura.Domain.Entities;
+using Obscura.Domain.Capabilities;
 
 namespace Obscura.Domain.Tests;
 
@@ -77,5 +78,22 @@ public sealed class EntityKindTests
 
         Assert.Equal([EntityFileRole.Cover], EntityKindRegistry.AudioLibrary.ImageAssetRoles);
         Assert.DoesNotContain(EntityFileRole.Trickplay, EntityKindRegistry.AudioLibrary.ImageAssetRoles);
+    }
+
+    [Fact]
+    public void EntityKindsDeclareSupportedCapabilityShape()
+    {
+        Assert.Contains(CapabilityRegistry.Markers, EntityKindRegistry.Video.SupportedCapabilities);
+        Assert.Contains(CapabilityRegistry.Subtitles, EntityKindRegistry.Video.SupportedCapabilities);
+        Assert.Contains(CapabilityRegistry.Technical, EntityKindRegistry.Video.SupportedCapabilities);
+        Assert.Contains(CapabilityRegistry.Classification, EntityKindRegistry.Video.SupportedCapabilities);
+
+        Assert.Contains(CapabilityRegistry.Progress, EntityKindRegistry.Book.SupportedCapabilities);
+        Assert.Contains(CapabilityRegistry.Position, EntityKindRegistry.BookPage.SupportedCapabilities);
+        Assert.Contains(CapabilityRegistry.Stats, EntityKindRegistry.Gallery.SupportedCapabilities);
+        Assert.Contains(CapabilityRegistry.Source, EntityKindRegistry.Image.SupportedCapabilities);
+
+        Assert.DoesNotContain(CapabilityRegistry.Markers, EntityKindRegistry.Person.SupportedCapabilities);
+        Assert.DoesNotContain(CapabilityRegistry.Technical, EntityKindRegistry.Collection.SupportedCapabilities);
     }
 }

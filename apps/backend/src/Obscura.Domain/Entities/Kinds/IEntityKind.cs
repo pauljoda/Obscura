@@ -1,5 +1,7 @@
 namespace Obscura.Domain.Entities;
 
+using Obscura.Domain.Capabilities;
+
 /// <summary>
 /// Contract implemented by every code-defined entity kind.
 /// </summary>
@@ -16,4 +18,7 @@ public interface IEntityKind
 
     /// <summary>Image or generated visual asset roles this kind can expose through the image capability.</summary>
     IReadOnlyList<EntityFileRole> ImageAssetRoles => [];
+
+    /// <summary>Capability kinds this entity kind intentionally supports.</summary>
+    IReadOnlyList<ICapabilityKind> SupportedCapabilities => [];
 }

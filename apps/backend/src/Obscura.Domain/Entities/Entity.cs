@@ -46,6 +46,45 @@ public record Entity
     /// <summary>Reusable behaviors and projections attached to this entity.</summary>
     public IReadOnlyList<ICapability> Capabilities { get; init; }
 
+    /// <summary>Description text when supported by this entity.</summary>
+    public string? Description => TryGetCapability(CapabilityRegistry.Description, out var capability) ? capability.Value : null;
+
+    /// <summary>Images capability when supported by this entity.</summary>
+    public CapabilityImages? Images => TryGetCapability(CapabilityRegistry.Images, out var capability) ? capability : null;
+
+    /// <summary>Files capability when supported by this entity.</summary>
+    public CapabilityFiles? Files => TryGetCapability(CapabilityRegistry.Files, out var capability) ? capability : null;
+
+    /// <summary>Stats capability when supported by this entity.</summary>
+    public CapabilityStats? Stats => TryGetCapability(CapabilityRegistry.Stats, out var capability) ? capability : null;
+
+    /// <summary>Dates capability when supported by this entity.</summary>
+    public CapabilityDates? Dates => TryGetCapability(CapabilityRegistry.Dates, out var capability) ? capability : null;
+
+    /// <summary>Technical metadata capability when supported by this entity.</summary>
+    public CapabilityTechnical? Technical => TryGetCapability(CapabilityRegistry.Technical, out var capability) ? capability : null;
+
+    /// <summary>Source provenance capability when supported by this entity.</summary>
+    public CapabilitySource? Source => TryGetCapability(CapabilityRegistry.Source, out var capability) ? capability : null;
+
+    /// <summary>Progress capability when supported by this entity.</summary>
+    public CapabilityProgress? Progress => TryGetCapability(CapabilityRegistry.Progress, out var capability) ? capability : null;
+
+    /// <summary>Position capability when supported by this entity.</summary>
+    public CapabilityPosition? Position => TryGetCapability(CapabilityRegistry.Position, out var capability) ? capability : null;
+
+    /// <summary>Classification capability when supported by this entity.</summary>
+    public CapabilityClassification? Classification => TryGetCapability(CapabilityRegistry.Classification, out var capability) ? capability : null;
+
+    /// <summary>Marker capability when supported by this entity.</summary>
+    public CapabilityMarkers? MarkerCapability => TryGetCapability(CapabilityRegistry.Markers, out var capability) ? capability : null;
+
+    /// <summary>Subtitle capability when supported by this entity.</summary>
+    public CapabilitySubtitles? SubtitleCapability => TryGetCapability(CapabilityRegistry.Subtitles, out var capability) ? capability : null;
+
+    /// <summary>Playback capability when supported by this entity.</summary>
+    public CapabilityPlayback? PlaybackCapability => TryGetCapability(CapabilityRegistry.Playback, out var capability) ? capability : null;
+
     /// <summary>
     /// Checks whether this entity supports a capability kind.
     /// </summary>

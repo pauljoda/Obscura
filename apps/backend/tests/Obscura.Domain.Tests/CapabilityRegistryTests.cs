@@ -20,6 +20,24 @@ public sealed class CapabilityRegistryTests
             capability.Code == "description" && capability.CapabilityType == typeof(CapabilityDescription));
         Assert.Contains(CapabilityRegistry.All, capability =>
             capability.Code == "fingerprints" && capability.CapabilityType == typeof(CapabilityFingerprints));
+        Assert.Contains(CapabilityRegistry.All, capability =>
+            capability.Code == "markers" && capability.CapabilityType == typeof(CapabilityMarkers));
+        Assert.Contains(CapabilityRegistry.All, capability =>
+            capability.Code == "subtitles" && capability.CapabilityType == typeof(CapabilitySubtitles));
+        Assert.Contains(CapabilityRegistry.All, capability =>
+            capability.Code == "stats" && capability.CapabilityType == typeof(CapabilityStats));
+        Assert.Contains(CapabilityRegistry.All, capability =>
+            capability.Code == "dates" && capability.CapabilityType == typeof(CapabilityDates));
+        Assert.Contains(CapabilityRegistry.All, capability =>
+            capability.Code == "technical" && capability.CapabilityType == typeof(CapabilityTechnical));
+        Assert.Contains(CapabilityRegistry.All, capability =>
+            capability.Code == "source" && capability.CapabilityType == typeof(CapabilitySource));
+        Assert.Contains(CapabilityRegistry.All, capability =>
+            capability.Code == "progress" && capability.CapabilityType == typeof(CapabilityProgress));
+        Assert.Contains(CapabilityRegistry.All, capability =>
+            capability.Code == "position" && capability.CapabilityType == typeof(CapabilityPosition));
+        Assert.Contains(CapabilityRegistry.All, capability =>
+            capability.Code == "classification" && capability.CapabilityType == typeof(CapabilityClassification));
         Assert.All(CapabilityRegistry.All, capability =>
         {
             Assert.NotEqual(typeof(ICapabilityKind), capability.GetType());

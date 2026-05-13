@@ -74,4 +74,31 @@ public sealed class EntityCapabilityTests
         Assert.Null(rating);
         Assert.Throws<InvalidOperationException>(() => entity.GetCapability(CapabilityRegistry.Rating));
     }
+
+    [Fact]
+    public void EntityConvenienceAccessorsExposeSharedCapabilities()
+    {
+        var entity = new Entity(
+            Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"),
+            EntityKindRegistry.Video,
+            "Projected Video",
+            null,
+            [
+                new CapabilityDescription("A shared description"),
+                new CapabilityImages(
+                    [EntityFileRole.Thumbnail],
+                    [new EntityImageAsset(EntityFileRole.Thumbnail, "/thumb.jpg", "image/jpeg")],
+                    "/thumb.jpg",
+                    null),
+                new CapabilityStats([new EntityStat("images", 12)]),
+                new CapabilityTechnical(Duration: TimeSpan.FromSeconds(90), Width: 1920, Height: 1080),
+                new CapabilityClassification("R")
+            ]);
+
+        Assert.Equal("A shared description", entity.Description);
+        Assert.Equal("/thumb.jpg", entity.Images?.ThumbnailUrl);
+        Assert.Equal(12, Assert.Single(entity.Stats!.Items).Value);
+        Assert.Equal(1920, entity.Technical?.Width);
+        Assert.Equal("R", entity.Classification?.Value);
+    }
 }

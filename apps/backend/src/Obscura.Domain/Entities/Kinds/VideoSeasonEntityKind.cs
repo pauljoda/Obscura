@@ -1,5 +1,7 @@
 namespace Obscura.Domain.Entities;
 
+using Obscura.Domain.Capabilities;
+
 /// <summary>Video season structural entity kind.</summary>
 public sealed record VideoSeasonEntityKind()
     : IEntityKind
@@ -11,5 +13,13 @@ public sealed record VideoSeasonEntityKind()
     [
         EntityFileRole.Thumbnail,
         EntityFileRole.Poster
+    ];
+    public IReadOnlyList<ICapabilityKind> SupportedCapabilities =>
+    [
+        CapabilityRegistry.Images,
+        CapabilityRegistry.Description,
+        CapabilityRegistry.Dates,
+        CapabilityRegistry.Source,
+        CapabilityRegistry.Position
     ];
 }

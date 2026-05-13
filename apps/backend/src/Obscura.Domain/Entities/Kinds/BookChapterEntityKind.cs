@@ -1,5 +1,7 @@
 namespace Obscura.Domain.Entities;
 
+using Obscura.Domain.Capabilities;
+
 /// <summary>Book chapter structural entity kind.</summary>
 public sealed record BookChapterEntityKind()
     : IEntityKind
@@ -11,5 +13,15 @@ public sealed record BookChapterEntityKind()
     [
         EntityFileRole.Thumbnail,
         EntityFileRole.Cover
+    ];
+    public IReadOnlyList<ICapabilityKind> SupportedCapabilities =>
+    [
+        CapabilityRegistry.Images,
+        CapabilityRegistry.Description,
+        CapabilityRegistry.Files,
+        CapabilityRegistry.Fingerprints,
+        CapabilityRegistry.Stats,
+        CapabilityRegistry.Source,
+        CapabilityRegistry.Position
     ];
 }

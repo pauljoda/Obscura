@@ -56,6 +56,33 @@ public sealed class CapabilityRegistry : AbstractRegistry<ICapabilityKind, strin
     /// <summary>Known fingerprints capability kind.</summary>
     public static ICapabilityKind<CapabilityFingerprints> Fingerprints => Require<CapabilityFingerprints>("fingerprints");
 
+    /// <summary>Known markers capability kind.</summary>
+    public static ICapabilityKind<CapabilityMarkers> Markers => Require<CapabilityMarkers>("markers");
+
+    /// <summary>Known subtitles capability kind.</summary>
+    public static ICapabilityKind<CapabilitySubtitles> Subtitles => Require<CapabilitySubtitles>("subtitles");
+
+    /// <summary>Known stats capability kind.</summary>
+    public static ICapabilityKind<CapabilityStats> Stats => Require<CapabilityStats>("stats");
+
+    /// <summary>Known dates capability kind.</summary>
+    public static ICapabilityKind<CapabilityDates> Dates => Require<CapabilityDates>("dates");
+
+    /// <summary>Known technical capability kind.</summary>
+    public static ICapabilityKind<CapabilityTechnical> Technical => Require<CapabilityTechnical>("technical");
+
+    /// <summary>Known source capability kind.</summary>
+    public static ICapabilityKind<CapabilitySource> Source => Require<CapabilitySource>("source");
+
+    /// <summary>Known progress capability kind.</summary>
+    public static ICapabilityKind<CapabilityProgress> Progress => Require<CapabilityProgress>("progress");
+
+    /// <summary>Known position capability kind.</summary>
+    public static ICapabilityKind<CapabilityPosition> Position => Require<CapabilityPosition>("position");
+
+    /// <summary>Known classification capability kind.</summary>
+    public static ICapabilityKind<CapabilityClassification> Classification => Require<CapabilityClassification>("classification");
+
     /// <summary>
     /// Gets every known capability kind in deterministic registry order.
     /// </summary>
