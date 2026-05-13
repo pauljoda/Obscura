@@ -39,6 +39,38 @@
   const nsfw = $derived(isNsfw(card.entity.capabilities));
   const rating = $derived(getRatingValue(card.entity.capabilities));
 
+  function fitTitle(node: HTMLHeadingElement, _title: string) {
+    let frame = 0;
+    let observer: ResizeObserver | null = null;
+
+    function measure() {
+      if (typeof requestAnimationFrame === "undefined") return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        node.style.setProperty("--title-scale", "1");
+        const width = node.clientWidth;
+        const scrollWidth = node.scrollWidth;
+        if (width <= 0 || scrollWidth <= 0) return;
+        const scale = Math.max(0.78, Math.min(1, width / scrollWidth));
+        node.style.setProperty("--title-scale", String(scale));
+      });
+    }
+
+    if (typeof ResizeObserver !== "undefined") {
+      observer = new ResizeObserver(measure);
+      observer.observe(node);
+    }
+    measure();
+
+    return {
+      update: measure,
+      destroy() {
+        cancelAnimationFrame(frame);
+        observer?.disconnect();
+      },
+    };
+  }
+
   function handlePointerMove(event: PointerEvent) {
     if (!hoverable) return;
     const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
@@ -101,7 +133,7 @@
 
   <div class="details">
     <div class="copy">
-      <h3>{card.entity.title}</h3>
+      <h3 use:fitTitle={card.entity.title}>{card.entity.title}</h3>
       {#if card.entity.subtitle}
         <p>{card.entity.subtitle}</p>
       {/if}
@@ -256,17 +288,17 @@
 
   .copy {
     display: grid;
-    grid-template-rows: 2.45rem 0.95rem;
-    gap: 0.3rem;
+    grid-template-rows: 1.35rem 0.95rem;
+    gap: 0.28rem;
     min-width: 0;
   }
 
   .details {
     display: grid;
-    grid-template-rows: 3.7rem 1.3rem;
+    grid-template-rows: 2.58rem 1.3rem;
     gap: 0.55rem;
     min-width: 0;
-    block-size: 6.92rem;
+    block-size: 5.8rem;
     padding: 0.72rem 0.78rem 0.7rem;
     background:
       linear-gradient(180deg, rgb(10 12 15 / 0.94), rgb(9 10 12 / 0.98)),
@@ -284,15 +316,13 @@
 
   h3 {
     font-family: var(--font-heading, Geist, sans-serif);
-    display: -webkit-box;
-    font-size: 1.05rem;
+    display: block;
+    font-size: calc(1.05rem * var(--title-scale, 1));
     font-weight: 680;
     line-height: 1.16;
     letter-spacing: 0;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    white-space: normal;
+    white-space: nowrap;
+    transition: font-size 120ms ease;
   }
 
   p {
@@ -350,14 +380,14 @@
     }
 
     .details {
-      grid-template-rows: 3.34rem 1.22rem;
+      grid-template-rows: 2.32rem 1.22rem;
       gap: 0.46rem;
-      block-size: 6.26rem;
+      block-size: 5.38rem;
       padding: 0.62rem;
     }
 
     .copy {
-      grid-template-rows: 2.12rem 0.9rem;
+      grid-template-rows: 1.12rem 0.9rem;
       gap: 0.26rem;
     }
 
