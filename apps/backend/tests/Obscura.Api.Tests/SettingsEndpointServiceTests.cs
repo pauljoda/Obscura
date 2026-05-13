@@ -2,8 +2,8 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Obscura.Application.Settings;
 using Obscura.Contracts.Settings;
-using Obscura.Infrastructure.Settings;
 
 namespace Obscura.Api.Tests;
 

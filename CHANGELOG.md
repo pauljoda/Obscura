@@ -125,6 +125,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Split the legacy non-video media import SQL into collection, gallery, image, book, and audio fragments, and documented the public import/reset SQL holders.
 - Moved v2 API contract mapping and media/taxonomy use-case orchestration into the Application layer so API endpoints stay focused on HTTP routing and infrastructure stays below the application boundary.
 - Moved the v2 job queue port and job creation use case into the Application layer so API routes and workers depend on application queue behavior while Infrastructure only persists job rows.
+- Moved the v2 settings service contract into the Application layer so API routes depend on application settings behavior while Infrastructure only implements EF-backed persistence.
 - Updated v2 legacy import SQL to populate shared capability tables for descriptions, dates, technical metadata, sources, stats, progress, positions, classifications, fingerprints, playback, and minimal media detail rows.
 - Changed v2 media, taxonomy, and collection detail APIs to use typed aggregate hydrators so flat kind-specific fields are available alongside shared capabilities.
 - Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.

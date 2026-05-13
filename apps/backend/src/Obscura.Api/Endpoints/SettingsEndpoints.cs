@@ -1,5 +1,5 @@
+using Obscura.Application.Settings;
 using Obscura.Contracts.Settings;
-using Obscura.Infrastructure.Settings;
 
 namespace Obscura.Api.Endpoints;
 
