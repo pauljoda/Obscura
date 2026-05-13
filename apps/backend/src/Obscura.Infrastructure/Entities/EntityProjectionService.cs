@@ -223,31 +223,8 @@ public sealed partial class EntityProjectionService : IEntityCatalog, IEntityDet
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
         var card = (await BuildEntitiesAsync([entity], cancellationToken)).Single();
-        var markers = await LoadMarkersAsync(id, cancellationToken);
-        var subtitles = await LoadSubtitlesAsync(id, cancellationToken);
 
-        var videoEntity = WithDescription(card, detail?.Summary ?? TryGetDescription(card));
-        videoEntity = WithTechnical(
-            videoEntity,
-            detail?.DurationMs is null ? null : TimeSpan.FromMilliseconds(detail.DurationMs.Value),
-            detail?.Width,
-            detail?.Height,
-            detail?.FrameRate,
-            detail?.BitRate,
-            null,
-            null,
-            detail?.Codec,
-            detail?.Container,
-            null);
-        videoEntity = WithSource(videoEntity, [
-            SourceValue("library-root", detail?.LibraryRootId?.ToString()),
-        ]);
-        videoEntity = WithDates(videoEntity, [DateValue("release", detail?.ReleaseDate)]);
-        videoEntity = WithClassification(videoEntity, detail?.ContentRating);
-        videoEntity = videoEntity.WithCapability(CapabilityRegistry.Markers, new CapabilityMarkers(markers));
-        videoEntity = videoEntity.WithCapability(CapabilityRegistry.Subtitles, new CapabilitySubtitles(subtitles));
-
-        return new Video(videoEntity, detail?.SubtitlesExtractedAt);
+        return new Video(card, detail?.SubtitlesExtractedAt);
     }
 
     /// <inheritdoc />
@@ -277,18 +254,6 @@ public sealed partial class EntityProjectionService : IEntityCatalog, IEntityDet
         var renderingMode = detail?.RenderingMode ??
             (seasons.Count > 0 ? VideoSeriesRenderingMode.Seasons : VideoSeriesRenderingMode.Flat);
 
-        var seriesEntity = WithDescription(card, detail?.Overview);
-        seriesEntity = WithSource(seriesEntity, [
-            SourceValue("library-root", detail?.LibraryRootId?.ToString()),
-            SourceValue("folder", detail?.FolderPath),
-            SourceValue("relative", detail?.RelativePath)
-        ]);
-        seriesEntity = WithDates(seriesEntity, [
-            DateValue("first-air", detail?.FirstAirDate),
-            DateValue("end-air", detail?.EndAirDate)
-        ]);
-        seriesEntity = WithClassification(seriesEntity, detail?.ContentRating);
-
-        return new VideoSeries(seriesEntity, detail?.Status, renderingMode, seasons, videos);
+        return new VideoSeries(card, detail?.Status, renderingMode, seasons, videos);
     }
 }

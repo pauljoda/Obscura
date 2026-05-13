@@ -24,16 +24,6 @@ public sealed partial class EntityProjectionService
             return null;
         }
 
-        var detail = await _db.ImageDetails
-            .AsNoTracking()
-            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-
-        entity = WithDescription(entity, detail?.Details);
-        entity = WithDates(entity, [DateValue("captured", detail?.Date)]);
-        entity = WithTechnical(entity, null, detail?.Width, detail?.Height, null, null, null, null, null, null, detail?.Format);
-        entity = WithSource(entity, [SourceValue("file", detail?.FilePath)]);
-        entity = WithPosition(entity, [PositionValue("sort", detail?.SortOrder)]);
-
         return new Image(entity);
     }
 
@@ -55,14 +45,6 @@ public sealed partial class EntityProjectionService
         var detail = await _db.GalleryDetails
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-
-        entity = WithDescription(entity, detail?.Details);
-        entity = WithDates(entity, [DateValue("gallery", detail?.Date)]);
-        entity = WithSource(entity, [
-            SourceValue("folder", detail?.FolderPath),
-            SourceValue("zip", detail?.ZipFilePath)
-        ]);
-        entity = WithStats(entity, [StatValue("images", detail?.ImageCount)]);
 
         return new Gallery(
             entity,
@@ -88,34 +70,6 @@ public sealed partial class EntityProjectionService
         var detail = await _db.BookDetails
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-        var progress = await _db.BookReadProgress
-            .AsNoTracking()
-            .FirstOrDefaultAsync(row => row.BookEntityId == id, cancellationToken);
-
-        entity = WithDescription(entity, detail?.Summary);
-        entity = WithDates(entity, [DateValue("book", detail?.Date)]);
-        entity = WithSource(entity, [
-            SourceValue("library-root", detail?.LibraryRootId?.ToString()),
-            SourceValue("folder", detail?.FolderPath),
-            SourceValue("relative", detail?.RelativePath)
-        ]);
-        entity = WithStats(entity, [
-            StatValue("pages", detail?.PageCount),
-            StatValue("chapters", detail?.ChapterCount)
-        ]);
-        if (progress is not null)
-        {
-            entity = entity.WithCapability(
-                CapabilityRegistry.Progress,
-                new CapabilityProgress(
-                    progress.ChapterEntityId,
-                    "page",
-                    progress.PageIndex,
-                    progress.PageCount,
-                    progress.ReaderMode.ToCode(),
-                    progress.CompletedAt,
-                    progress.UpdatedAt));
-        }
 
         return new Book(entity, detail?.BookType ?? BookType.Book, detail?.CoverPageEntityId);
     }
@@ -139,11 +93,6 @@ public sealed partial class EntityProjectionService
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        entity = WithDescription(entity, detail?.Details);
-        entity = WithDates(entity, [DateValue("audio-library", detail?.Date)]);
-        entity = WithSource(entity, [SourceValue("folder", detail?.FolderPath)]);
-        entity = WithStats(entity, [StatValue("tracks", detail?.TrackCount)]);
-
         return new AudioLibrary(entity, detail?.ParentLibraryEntityId);
     }
 
@@ -165,22 +114,6 @@ public sealed partial class EntityProjectionService
         var detail = await _db.AudioTrackDetails
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-
-        entity = WithDescription(entity, detail?.Details);
-        entity = WithDates(entity, [DateValue("audio-track", detail?.Date)]);
-        entity = WithTechnical(
-            entity,
-            detail?.DurationSeconds is null ? null : TimeSpan.FromSeconds(detail.DurationSeconds.Value),
-            null,
-            null,
-            null,
-            detail?.BitRate,
-            detail?.SampleRate,
-            detail?.Channels,
-            detail?.Codec,
-            detail?.Container,
-            null);
-        entity = WithPosition(entity, [PositionValue("track", detail?.TrackNumber)]);
 
         return new AudioTrack(entity, detail?.EmbeddedArtist, detail?.EmbeddedAlbum);
     }
@@ -204,11 +137,10 @@ public sealed partial class EntityProjectionService
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        var personEntity = WithDescription(entity, detail?.Details);
         return new Person(
-            personEntity.Id,
-            personEntity.Title,
-            personEntity.Subtitle,
+            entity.Id,
+            entity.Title,
+            entity.Subtitle,
             Disambiguation: detail?.Disambiguation,
             Gender: detail?.Gender,
             Birthdate: detail?.Birthdate,
@@ -223,7 +155,7 @@ public sealed partial class EntityProjectionService
             Piercings: detail?.Piercings,
             CareerStart: detail?.CareerStart,
             CareerEnd: detail?.CareerEnd,
-            capabilities: personEntity.Capabilities);
+            capabilities: entity.Capabilities);
     }
 
     /// <inheritdoc />
@@ -246,7 +178,7 @@ public sealed partial class EntityProjectionService
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
         return new Studio(
-            WithDescription(entity, detail?.Description),
+            entity,
             detail?.ParentStudioEntityId);
     }
 
@@ -270,7 +202,7 @@ public sealed partial class EntityProjectionService
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
         return new Tag(
-            WithDescription(entity, detail?.Description),
+            entity,
             detail?.ParentTagEntityId,
             detail?.IgnoreAutoTag ?? false);
     }
@@ -294,9 +226,6 @@ public sealed partial class EntityProjectionService
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
         var items = await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.CollectionItem, null, cancellationToken);
-
-        entity = WithDescription(entity, detail?.Description);
-        entity = WithStats(entity, [StatValue("items", detail?.ItemCount)]);
 
         return new Collection(
             entity,
@@ -329,11 +258,6 @@ public sealed partial class EntityProjectionService
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        entity = WithDescription(entity, detail?.Overview);
-        entity = WithSource(entity, [SourceValue("folder", detail?.FolderPath)]);
-        entity = WithDates(entity, [DateValue("air", detail?.AirDate)]);
-        entity = WithPosition(entity, [PositionValue("season", detail?.SeasonNumber)]);
-
         return new VideoSeason(entity, detail?.SeriesEntityId ?? Guid.Empty);
     }
 
@@ -352,12 +276,6 @@ public sealed partial class EntityProjectionService
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        entity = WithSource(entity, [
-            SourceValue("folder", detail?.FolderPath),
-            SourceValue("relative", detail?.RelativePath)
-        ]);
-        entity = WithPosition(entity, [PositionValue("volume", detail?.VolumeNumber)]);
-
         return new BookVolume(entity, detail?.BookEntityId ?? Guid.Empty);
     }
 
@@ -375,13 +293,6 @@ public sealed partial class EntityProjectionService
         var detail = await _db.BookChapterDetails
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-
-        entity = WithSource(entity, [
-            SourceValue("archive", detail?.ArchivePath),
-            SourceValue("relative", detail?.RelativePath)
-        ]);
-        entity = WithStats(entity, [StatValue("pages", detail?.PageCount)]);
-        entity = WithPosition(entity, [PositionValue("chapter", detail?.ChapterNumber)]);
 
         return new BookChapter(
             entity,
@@ -404,10 +315,6 @@ public sealed partial class EntityProjectionService
         var detail = await _db.BookPageDetails
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-
-        entity = WithTechnical(entity, null, detail?.Width, detail?.Height, null, null, null, null, null, null, detail?.Format);
-        entity = WithSource(entity, [SourceValue("file", detail?.FilePath)]);
-        entity = WithPosition(entity, [PositionValue("sort", detail?.SortOrder)]);
 
         return new BookPage(entity, detail?.BookEntityId ?? Guid.Empty, detail?.ChapterEntityId ?? Guid.Empty);
     }

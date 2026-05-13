@@ -220,12 +220,10 @@ public sealed class EntityProjectionServiceTests
         SeedEntity(db, videoId, "video", "Feature");
         db.VideoDetails.Add(new VideoDetailRow
         {
-            EntityId = videoId,
-            Summary = "A projected video detail.",
-            DurationMs = 90_000,
-            Width = 1920,
-            Height = 1080
+            EntityId = videoId
         });
+        SeedDescription(db, videoId, "A projected video detail.");
+        SeedTechnical(db, videoId, durationSeconds: 90, width: 1920, height: 1080);
         db.EntityRatings.Add(new EntityRatingRow { EntityId = videoId, Value = 3 });
         db.EntityMarkers.Add(new EntityMarkerRow
         {
@@ -474,57 +472,61 @@ public sealed class EntityProjectionServiceTests
         db.ImageDetails.Add(new ImageDetailRow
         {
             EntityId = imageId,
-            Details = "Image details",
-            Date = "2026-05-12",
-            FilePath = "/media/still.jpg",
-            FileSizeBytes = 1234,
-            Width = 800,
-            Height = 600,
-            Format = "jpg",
             SortOrder = 7
         });
+        SeedDescription(db, imageId, "Image details");
+        SeedDate(db, imageId, "captured", "2026-05-12");
+        SeedSource(db, imageId, "file", "/media/still.jpg");
+        SeedTechnical(db, imageId, width: 800, height: 600, format: "jpg");
+        SeedPosition(db, imageId, "sort", 7);
         db.GalleryDetails.Add(new GalleryDetailRow
         {
             EntityId = galleryId,
-            Details = "Gallery details",
-            Date = "2026",
             GalleryType = GalleryType.Folder,
-            FolderPath = "/media/gallery",
             ImageCount = 12
         });
+        SeedDescription(db, galleryId, "Gallery details");
+        SeedDate(db, galleryId, "gallery", "2026");
+        SeedSource(db, galleryId, "folder", "/media/gallery");
+        SeedStat(db, galleryId, "images", 12);
         db.BookDetails.Add(new BookDetailRow
         {
             EntityId = bookId,
             BookType = BookType.Comic,
-            Summary = "Book summary",
-            RelativePath = "books/book",
             PageCount = 42,
             ChapterCount = 3
         });
-        db.BookReadProgress.Add(new BookReadProgressRow
+        SeedDescription(db, bookId, "Book summary");
+        SeedSource(db, bookId, "relative", "books/book");
+        SeedStat(db, bookId, "pages", 42);
+        SeedStat(db, bookId, "chapters", 3);
+        db.EntityProgress.Add(new EntityProgressRow
         {
-            BookEntityId = bookId,
-            PageIndex = 5,
-            PageCount = 42,
-            ReaderMode = ReaderMode.Webtoon,
+            EntityId = bookId,
+            Unit = "page",
+            Index = 5,
+            Total = 42,
+            Mode = ReaderMode.Webtoon.ToCode(),
             UpdatedAt = DateTimeOffset.UtcNow
         });
         db.AudioLibraryDetails.Add(new AudioLibraryDetailRow
         {
             EntityId = audioLibraryId,
-            Details = "Album summary",
-            Date = "2026",
-            FolderPath = "/media/audio",
             TrackCount = 9
         });
+        SeedDescription(db, audioLibraryId, "Album summary");
+        SeedDate(db, audioLibraryId, "audio-library", "2026");
+        SeedSource(db, audioLibraryId, "folder", "/media/audio");
+        SeedStat(db, audioLibraryId, "tracks", 9);
         db.AudioTrackDetails.Add(new AudioTrackDetailRow
         {
             EntityId = audioTrackId,
-            Details = "Track summary",
-            DurationSeconds = 90,
-            Codec = "flac",
-            TrackNumber = 2
+            EmbeddedArtist = "Artist",
+            EmbeddedAlbum = "Album"
         });
+        SeedDescription(db, audioTrackId, "Track summary");
+        SeedTechnical(db, audioTrackId, durationSeconds: 90, codec: "flac");
+        SeedPosition(db, audioTrackId, "track", 2);
         db.PersonDetails.Add(new PersonDetailRow
         {
             EntityId = personId,
@@ -533,15 +535,15 @@ public sealed class EntityProjectionServiceTests
         });
         db.StudioDetails.Add(new StudioDetailRow
         {
-            EntityId = studioId,
-            Description = "Studio description"
+            EntityId = studioId
         });
+        SeedDescription(db, studioId, "Studio description");
         db.TagDetails.Add(new TagDetailRow
         {
             EntityId = tagId,
-            Description = "Tag description",
             IgnoreAutoTag = true
         });
+        SeedDescription(db, tagId, "Tag description");
         db.CollectionDetails.Add(new CollectionDetailRow
         {
             EntityId = collectionId,
@@ -550,6 +552,8 @@ public sealed class EntityProjectionServiceTests
             ItemCount = 2,
             CoverMode = CollectionCoverMode.Mosaic
         });
+        SeedDescription(db, collectionId, "Collection description");
+        SeedStat(db, collectionId, "items", 2);
         await db.SaveChangesAsync();
 
         var service = new EntityProjectionService(db);
@@ -596,54 +600,52 @@ public sealed class EntityProjectionServiceTests
         SeedEntity(db, pageId, "book-page", "Page 1");
         db.VideoDetails.Add(new VideoDetailRow
         {
-            EntityId = videoId,
-            Summary = "Feature summary",
-            OriginalTitle = "Original Feature",
-            DurationMs = 1500,
-            FrameRate = 23.976,
-            Codec = "h264"
+            EntityId = videoId
         });
+        SeedDescription(db, videoId, "Feature summary");
+        SeedTechnical(db, videoId, durationSeconds: 1.5, frameRate: 23.976, codec: "h264");
         db.VideoSeriesDetails.Add(new VideoSeriesDetailRow
         {
             EntityId = seriesId,
-            Overview = "Series overview",
-            OriginalTitle = "Original Series",
             RenderingMode = VideoSeriesRenderingMode.Flat
         });
+        SeedDescription(db, seriesId, "Series overview");
         db.VideoSeasonDetails.Add(new VideoSeasonDetailRow
         {
             EntityId = seasonId,
             SeriesEntityId = seriesId,
-            SeasonNumber = 1,
-            Overview = "Season overview",
-            AirDate = "2026"
+            SeasonNumber = 1
         });
+        SeedDescription(db, seasonId, "Season overview");
+        SeedDate(db, seasonId, "air", "2026");
+        SeedPosition(db, seasonId, "season", 1);
         db.BookVolumeDetails.Add(new BookVolumeDetailRow
         {
             EntityId = volumeId,
-            BookEntityId = bookId,
-            VolumeNumber = 1,
-            RelativePath = "books/book/volume-1"
+            BookEntityId = bookId
         });
+        SeedSource(db, volumeId, "relative", "books/book/volume-1");
+        SeedPosition(db, volumeId, "volume", 1);
         db.BookChapterDetails.Add(new BookChapterDetailRow
         {
             EntityId = chapterId,
             BookEntityId = bookId,
             VolumeEntityId = volumeId,
-            ChapterNumber = 2,
-            ArchivePath = "/media/book/chapter.cbz",
-            PageCount = 30
+            ChapterNumber = 2
         });
+        SeedSource(db, chapterId, "archive", "/media/book/chapter.cbz");
+        SeedStat(db, chapterId, "pages", 30);
+        SeedPosition(db, chapterId, "chapter", 2);
         db.BookPageDetails.Add(new BookPageDetailRow
         {
             EntityId = pageId,
             BookEntityId = bookId,
             ChapterEntityId = chapterId,
-            FilePath = "/media/book/page-001.jpg",
-            Width = 1200,
-            Height = 1800,
-            SortOrder = 1
+            FilePath = "/media/book/page-001.jpg"
         });
+        SeedSource(db, pageId, "file", "/media/book/page-001.jpg");
+        SeedTechnical(db, pageId, width: 1200, height: 1800);
+        SeedPosition(db, pageId, "sort", 1);
         await db.SaveChangesAsync();
 
         var service = new EntityProjectionService(db);
@@ -681,6 +683,83 @@ public sealed class EntityProjectionServiceTests
             KindCode = kind,
             Title = title,
             CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+    }
+
+    private static void SeedDescription(ObscuraDbContext db, Guid entityId, string value)
+    {
+        db.EntityDescriptions.Add(new EntityDescriptionRow
+        {
+            EntityId = entityId,
+            Value = value,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+    }
+
+    private static void SeedTechnical(
+        ObscuraDbContext db,
+        Guid entityId,
+        double? durationSeconds = null,
+        int? width = null,
+        int? height = null,
+        double? frameRate = null,
+        string? codec = null,
+        string? format = null)
+    {
+        db.EntityTechnical.Add(new EntityTechnicalRow
+        {
+            EntityId = entityId,
+            DurationSeconds = durationSeconds,
+            Width = width,
+            Height = height,
+            FrameRate = frameRate,
+            Codec = codec,
+            Format = format,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+    }
+
+    private static void SeedSource(ObscuraDbContext db, Guid entityId, string code, string value)
+    {
+        db.EntitySources.Add(new EntitySourceRow
+        {
+            EntityId = entityId,
+            Code = code,
+            Value = value,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+    }
+
+    private static void SeedStat(ObscuraDbContext db, Guid entityId, string code, int value)
+    {
+        db.EntityStats.Add(new EntityStatRow
+        {
+            EntityId = entityId,
+            Code = code,
+            Value = value,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+    }
+
+    private static void SeedDate(ObscuraDbContext db, Guid entityId, string code, string value)
+    {
+        db.EntityDates.Add(new EntityDateRow
+        {
+            EntityId = entityId,
+            Code = code,
+            Value = value,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+    }
+
+    private static void SeedPosition(ObscuraDbContext db, Guid entityId, string code, int value)
+    {
+        db.EntityPositions.Add(new EntityPositionRow
+        {
+            EntityId = entityId,
+            Code = code,
+            Value = value,
             UpdatedAt = DateTimeOffset.UtcNow
         });
     }
