@@ -175,7 +175,7 @@ public sealed class EntityProjectionServiceTests
         Assert.Contains(files, file => file.Role == EntityFileRole.Thumbnail && file.Path == "/assets/videos/11111111-1111-1111-1111-111111111111/card");
         Assert.Contains(files, file => file.Role == EntityFileRole.Source && file.Path == "/media/videos/a-quiet-scene.mkv");
         var fingerprint = Assert.Single(card.GetCapability(CapabilityRegistry.Fingerprints).Items);
-        Assert.Equal("oshash", fingerprint.Algorithm);
+        Assert.Equal(FingerprintAlgorithm.Oshash, fingerprint.Algorithm);
         Assert.Equal("abc123", fingerprint.Value);
         var playback = card.GetCapability(CapabilityRegistry.Playback).Value;
         Assert.Equal(2, playback.PlayCount);

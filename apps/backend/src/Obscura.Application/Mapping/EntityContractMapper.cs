@@ -137,7 +137,7 @@ public static partial class ContractMapper
                 counter.Code,
                 counter.Value)).ToArray()),
             CapabilityFingerprints fingerprints => new FingerprintsCapability(fingerprints.Items.Select(fingerprint => new ContractEntityFingerprint(
-                fingerprint.Algorithm,
+                fingerprint.Algorithm.ToCode(),
                 fingerprint.Value)).ToArray()),
             CapabilityMarkers markers => new MarkersCapability(markers.Items.Select(marker => new ContractEntityMarker(
                 marker.Id,

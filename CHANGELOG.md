@@ -260,6 +260,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- Added `FingerprintAlgorithm` enum with codec for typed fingerprint algorithm references (`md5`, `oshash`, `phash`) instead of bare strings, and typed the domain `EntityFingerprint` record to use it.
 - Added `LibraryMaintenanceJobHandler` with real asset validation that checks expected cache files (thumbnails, waveforms) exist for each entity kind and removes orphaned cache directories for deleted entities.
 - Added `CollectionRuleEngine` ported from the TypeScript rule engine to evaluate dynamic collection rule trees against the v2 unified entity model using parameterized SQL, supporting all field types (title, rating, date, flags, tags, performers, studios, technical metadata, playback stats, resolution tiers, and hierarchy-based video series filtering).
 - Added `CollectionRefreshPersistenceService` for atomic dynamic collection membership replacement — deletes dynamic items, inserts resolved matches after manual items, and updates refresh timestamps within a transaction.

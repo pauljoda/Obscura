@@ -48,7 +48,7 @@ public sealed partial class EntityProjectionService
             .ToDictionary(
                 group => group.Key,
                 group => (IReadOnlyList<EntityFingerprint>)group
-                    .Select(row => new EntityFingerprint(row.Algorithm, row.Value))
+                    .Select(row => new EntityFingerprint(row.Algorithm.DecodeAs<FingerprintAlgorithm>(), row.Value))
                     .ToArray());
     }
 }
