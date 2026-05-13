@@ -335,6 +335,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Subtitle extraction no longer fails with a duplicate key violation when a video has multiple embedded subtitle streams with the same language — additional streams are now stored with a stream-index suffix (e.g., `eng.3`) to satisfy the unique constraint.
+- Entity file existence checks (`HasEntityFileAsync`) no longer fail with an EF Core LINQ translation error when the role code is a string — the method now parses to the enum before querying.
 - Accepting the v2 upgrade gate in local development now creates the required database backup through the Docker Postgres service when `pg_dump` is not installed on the host.
 - V2 entity lists no longer expose NSFW entities when the server-side hide-NSFW setting is enabled.
 - Entity Grid kind tabs now disappear when the visible result set only contains one entity kind, avoiding redundant All/type tabs on single-kind pages.

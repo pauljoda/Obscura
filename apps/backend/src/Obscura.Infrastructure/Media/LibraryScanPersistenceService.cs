@@ -382,8 +382,11 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
     public Task<bool> HasEntityFingerprintAsync(Guid entityId, string algorithm, CancellationToken cancellationToken) =>
         db.EntityFileFingerprints.AnyAsync(f => f.EntityId == entityId && f.Algorithm == algorithm, cancellationToken);
 
-    public Task<bool> HasEntityFileAsync(Guid entityId, string role, CancellationToken cancellationToken) =>
-        db.EntityFiles.AnyAsync(f => f.EntityId == entityId && f.Role.ToCode() == role, cancellationToken);
+    public Task<bool> HasEntityFileAsync(Guid entityId, string role, CancellationToken cancellationToken)
+    {
+        var roleEnum = role.DecodeAs<EntityFileRole>();
+        return db.EntityFiles.AnyAsync(f => f.EntityId == entityId && f.Role == roleEnum, cancellationToken);
+    }
 
     public async Task<bool> HasSubtitlesExtractedAsync(Guid entityId, CancellationToken cancellationToken)
     {
@@ -506,17 +509,27 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
     public async Task UpsertSubtitleAsync(Guid entityId, string language, string? label, string format,
         string source, string storagePath, string sourceFormat, int streamIndex, CancellationToken cancellationToken)
     {
+        var langKey = language;
+        var sourceEnum = EntitySubtitleSource.Embedded;
+
         var existing = await db.EntitySubtitles
-            .FirstOrDefaultAsync(s => s.EntityId == entityId && s.Language == language
-                && s.Source == EntitySubtitleSource.Embedded && s.StoragePath == storagePath, cancellationToken);
+            .FirstOrDefaultAsync(s => s.EntityId == entityId && s.Language == langKey
+                && s.Source == sourceEnum, cancellationToken);
 
         if (existing is not null)
-            return;
+        {
+            langKey = $"{language}.{streamIndex}";
+            var duplicate = await db.EntitySubtitles
+                .AnyAsync(s => s.EntityId == entityId && s.Language == langKey
+                    && s.Source == sourceEnum, cancellationToken);
+            if (duplicate)
+                return;
+        }
 
         db.EntitySubtitles.Add(new EntitySubtitleRow
         {
-            Id = Guid.NewGuid(), EntityId = entityId, Language = language, Label = label,
-            Format = format, Source = EntitySubtitleSource.Embedded, StoragePath = storagePath,
+            Id = Guid.NewGuid(), EntityId = entityId, Language = langKey, Label = label,
+            Format = format, Source = sourceEnum, StoragePath = storagePath,
             SourceFormat = sourceFormat, SourcePath = streamIndex.ToString(),
             CreatedAt = DateTimeOffset.UtcNow
         });
