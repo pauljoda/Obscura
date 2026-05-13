@@ -102,6 +102,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 entity grid toolbar now uses a polished custom sort dropdown and single-row layout matching the v1 media surface, and the multi-select bulk bar now includes a Select All action. In stacked layout (laptop and below), sort controls anchor to the left while view, filter, and preset controls anchor to the right.
 - List-view entity cards now keep consistent row height regardless of image aspect ratio — portrait, landscape, and square thumbnails all render at the same size without clipping the title or metadata chips.
 - V2 entity lists now enforce the server-side hide-NSFW setting before entity rows are projected, so hidden content is not sent to the browser.
+- V2 video and season thumbnails now reserve the bottom-left overlay for entity-specific labels such as season and episode numbers.
 
 ### Docs
 

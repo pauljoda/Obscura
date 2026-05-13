@@ -189,17 +189,59 @@ function metaForEntity(entity: EntityCard): EntityThumbnailCard["meta"] {
   const height = numberValue(technical?.height);
   const stats = getCapability(entity.capabilities, "stats")?.items ?? [];
   const positions = getCapability(entity.capabilities, "position")?.items ?? [];
+  const customOverlay = customOverlayForEntity(entity);
 
   if (duration) meta.push({ icon: "duration", label: duration });
   if (width && height) meta.push({ icon: entity.kind === "video" ? "video" : "image", label: `${width}x${height}` });
   for (const stat of stats.slice(0, 2)) {
     meta.push({ icon: statIcon(stat.code), label: statLabel(stat.code, stat.value) });
   }
-  for (const position of positions.slice(0, 1)) {
-    meta.push({ icon: iconForKind(entity.kind), label: position.label ?? `${position.code} ${position.value}` });
+  if (!customOverlay?.bottomLeft) {
+    for (const position of positions.slice(0, 1)) {
+      meta.push({ icon: iconForKind(entity.kind), label: position.label ?? `${position.code} ${position.value}` });
+    }
   }
 
   return meta.slice(0, 3);
+}
+
+function positionValue(entity: EntityCard, code: string): number | null {
+  const value = getCapability(entity.capabilities, "position")?.items.find((item) => item.code === code)?.value;
+  return numberValue(value);
+}
+
+function customOverlayForEntity(entity: EntityCard): EntityThumbnailCard["custom"] {
+  const season = positionValue(entity, "season");
+  const episode = positionValue(entity, "episode") ?? positionValue(entity, "absolute-episode");
+
+  if (entity.kind === "video" && season && episode) {
+    return {
+      bottomLeft: {
+        label: `S${season} E${episode}`,
+        title: `Season ${season}, Episode ${episode}`,
+      },
+    };
+  }
+
+  if (entity.kind === "video" && episode) {
+    return {
+      bottomLeft: {
+        label: `E${episode}`,
+        title: `Episode ${episode}`,
+      },
+    };
+  }
+
+  if (entity.kind === "video-season" && season) {
+    return {
+      bottomLeft: {
+        label: `S${season}`,
+        title: `Season ${season}`,
+      },
+    };
+  }
+
+  return undefined;
 }
 
 /**
@@ -225,6 +267,7 @@ export function entityCardToThumbnailCard(
   return {
     aspectRatio: aspectRatioForEntity(entity),
     cover: coverPath ? assetFromPath(coverPath, entity.title, "cover") : null,
+    custom: customOverlayForEntity(entity),
     entity: {
       ...entity,
       capabilities: entity.capabilities,

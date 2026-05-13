@@ -61,6 +61,13 @@ function technical(): EntityCapability {
   };
 }
 
+function position(items: { code: string; value: number; label?: string | null }[]): EntityCapability {
+  return {
+    kind: "position",
+    items: items.map((item) => ({ ...item, label: item.label ?? null })),
+  };
+}
+
 function card(id: string, kind: string, title: string, capabilities: EntityCapability[]): EntityCard {
   return { id, kind, title, capabilities };
 }
@@ -129,5 +136,22 @@ describe("entity grid helpers", () => {
     });
     expect("includeNsfw" in request).toBe(false);
     expect(request.filters.map((filter) => filter.id)).toEqual(["rating:4", "technical:duration"]);
+  });
+
+  it("maps video season and episode numbers into the bottom-left custom slot", () => {
+    const thumbnail = entityCardToThumbnailCard(card("4", "video", "Episode", [
+      flags(false),
+      technical(),
+      position([
+        { code: "season", value: 1 },
+        { code: "episode", value: 2 },
+      ]),
+    ]));
+
+    expect(thumbnail.custom?.bottomLeft).toEqual({
+      label: "S1 E2",
+      title: "Season 1, Episode 2",
+    });
+    expect(thumbnail.meta?.map((item) => item.label)).not.toContain("season 1");
   });
 });

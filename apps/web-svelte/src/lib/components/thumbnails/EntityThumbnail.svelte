@@ -43,6 +43,7 @@
   const nsfw = $derived(isNsfw(card.entity.capabilities));
   const rating = $derived(getRatingValue(card.entity.capabilities));
   const imageOnly = $derived(card.entity.kind === "book-page");
+  const bottomLeft = $derived(card.custom?.bottomLeft);
 
   function fitTitle(node: HTMLHeadingElement, _title: string) {
     let frame = 0;
@@ -169,6 +170,14 @@
         onpointerdown={stopSelectionActivation}
         onchange={handleSelectionChange}
       />
+    {/if}
+
+    {#if !imageOnly && bottomLeft}
+      <div class="custom-overlay bottom-left-overlay">
+        <span class="badge custom-badge" title={bottomLeft.title ?? bottomLeft.label}>
+          {bottomLeft.label}
+        </span>
+      </div>
     {/if}
 
     {#if !imageOnly && (nsfw || rating > 0)}
@@ -363,6 +372,19 @@
     bottom: 0.5rem;
   }
 
+  .custom-overlay {
+    position: absolute;
+    display: flex;
+    pointer-events: none;
+  }
+
+  .bottom-left-overlay {
+    bottom: 0.5rem;
+    left: 0.5rem;
+    right: 4rem;
+    justify-content: flex-start;
+  }
+
   .badge {
     display: inline-flex;
     align-items: center;
@@ -395,6 +417,17 @@
     border-color: rgb(255 92 67 / 0.42);
     background: rgb(40 13 10 / 0.76);
     box-shadow: 0 0 14px rgb(255 92 67 / 0.12);
+  }
+
+  .custom-badge {
+    border-color: rgb(196 154 90 / 0.38);
+    background: rgb(13 13 14 / 0.78);
+    color: rgb(244 239 230 / 0.92);
+    box-shadow: 0 0 14px rgb(196 154 90 / 0.1);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .icon-only {

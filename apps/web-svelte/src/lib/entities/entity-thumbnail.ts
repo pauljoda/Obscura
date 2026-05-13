@@ -51,6 +51,14 @@ export interface EntityThumbnailMetaItem {
   label: string;
 }
 
+/** Entity-specific thumbnail overlay content owned by route/entity mappers. */
+export interface EntityThumbnailCustomOverlay {
+  bottomLeft?: {
+    label: string;
+    title?: string;
+  };
+}
+
 /** Entity payload consumed by the shared thumbnail surface. */
 export interface EntityThumbnailEntity extends EntityCard {
   capabilities: EntityCapability[];
@@ -61,6 +69,7 @@ export interface EntityThumbnailCard {
   entity: EntityThumbnailEntity;
   aspectRatio: EntityThumbnailAspectRatio;
   cover: EntityThumbnailAsset | null;
+  custom?: EntityThumbnailCustomOverlay;
   fit?: "contain" | "cover";
   hover: EntityThumbnailHoverPreview;
   href?: string;

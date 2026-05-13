@@ -136,6 +136,13 @@ function position(code: string, value: number, label: string): EntityCapability 
   };
 }
 
+function positions(items: { code: string; value: number; label: string }[]): EntityCapability {
+  return {
+    kind: "position",
+    items,
+  };
+}
+
 function card(options: {
   id: string;
   kind: string;
@@ -146,6 +153,7 @@ function card(options: {
   supportedImageKinds?: string[];
   flagOptions?: Parameters<typeof flags>[0];
   capabilities?: EntityCapability[];
+  custom?: EntityThumbnailCard["custom"];
   meta?: EntityThumbnailMetaItem[];
 }): EntityThumbnailCard {
   const hover = options.hover ?? { kind: "none" };
@@ -167,6 +175,7 @@ function card(options: {
     },
     aspectRatio: options.aspectRatio,
     cover: options.cover,
+    custom: options.custom,
     hover,
     meta: options.meta,
   };
@@ -209,7 +218,15 @@ const thumbnailLabSeedRows: EntityThumbnailRow[] = [
         aspectRatio: "video",
         cover: asset("Big Buck Bunny", forest, graphite, brass, "video"),
         hover: { kind: "trickplay", assets: sequence("Trickplay", [forest, ember, indigo], 6, "video") },
-        capabilities: [rating(4), technical({ duration: "00:09:56", width: 1920, height: 1080, codec: "h264" })],
+        capabilities: [
+          rating(4),
+          technical({ duration: "00:09:56", width: 1920, height: 1080, codec: "h264" }),
+          positions([
+            { code: "season", value: 1, label: "Season 1" },
+            { code: "episode", value: 2, label: "Episode 2" },
+          ]),
+        ],
+        custom: { bottomLeft: { label: "S1 E2", title: "Season 1, Episode 2" } },
         meta: [
           { icon: "duration", label: "09:56" },
           { icon: "video", label: "1080p" },
@@ -257,6 +274,7 @@ const thumbnailLabSeedRows: EntityThumbnailRow[] = [
         aspectRatio: "poster",
         cover: asset("Season 01", indigo, graphite, brass, "poster"),
         capabilities: [position("season", 1, "Season 1"), stats([{ code: "episodes", value: 6 }])],
+        custom: { bottomLeft: { label: "S1", title: "Season 1" } },
         meta: [{ icon: "count", label: "6 episodes" }],
       }),
     ],
