@@ -3,9 +3,9 @@
   import { Users, Star, Image as ImageIcon } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import type { PageData } from "./$types";
-  import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
-  import { performersSurfaceConfig } from "$lib/media-surface/configs/performers";
-  import FilterSection from "$lib/media-surface/toolbar/FilterSection.svelte";
+  import MediaSurface from "$lib/v1/media-surface/MediaSurfaceV1.svelte";
+  import { performersSurfaceConfig } from "$lib/v1/media-surface/configs/performers-v1";
+  import FilterSection from "$lib/v1/media-surface/toolbar/FilterSectionV1.svelte";
 
   let { data }: { data: PageData } = $props();
 

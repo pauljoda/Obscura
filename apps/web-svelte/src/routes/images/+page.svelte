@@ -5,13 +5,13 @@
   import type { ImageListItemDto } from "@obscura/contracts";
   import type { PageData } from "./$types";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
-  import FilterSection from "$lib/media-surface/toolbar/FilterSection.svelte";
+  import FilterSection from "$lib/v1/media-surface/toolbar/FilterSectionV1.svelte";
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import { deleteImage } from "$lib/v1/api/media-v1";
-  import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
-  import { imagesSurfaceConfig } from "$lib/media-surface/configs/images";
+  import MediaSurface from "$lib/v1/media-surface/MediaSurfaceV1.svelte";
+  import { imagesSurfaceConfig } from "$lib/v1/media-surface/configs/images-v1";
 
   let { data }: { data: PageData } = $props();
 

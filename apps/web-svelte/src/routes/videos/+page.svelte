@@ -8,8 +8,8 @@
   import ImportButton from "$lib/components/ImportButton.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import { deleteVideo } from "$lib/v1/api/videos-v1";
-  import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
-  import { videosSurfaceConfig } from "$lib/media-surface/configs/videos";
+  import MediaSurface from "$lib/v1/media-surface/MediaSurfaceV1.svelte";
+  import { videosSurfaceConfig } from "$lib/v1/media-surface/configs/videos-v1";
 
   let { data }: { data: PageData } = $props();
 

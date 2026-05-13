@@ -11,7 +11,7 @@
     type FilterSectionKey,
     type ViewMode,
   } from "$lib/components/FilterBar.svelte";
-  import InfiniteLoadTrigger from "$lib/media-surface/pagination/InfiniteLoadTrigger.svelte";
+  import InfiniteLoadTrigger from "$lib/v1/media-surface/pagination/InfiniteLoadTriggerV1.svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import HierarchyShell from "$lib/components/shared/HierarchyShell.svelte";

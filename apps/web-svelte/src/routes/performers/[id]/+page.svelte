@@ -30,8 +30,8 @@
   import InlineRating from "$lib/components/InlineRating.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
-  import MediaTabs from "$lib/media-surface/tabs/MediaTabs.svelte";
-  import { detailTabsFor } from "$lib/media-surface/tabs/detail-tabs";
+  import MediaTabs from "$lib/v1/media-surface/tabs/MediaTabsV1.svelte";
+  import { detailTabsFor } from "$lib/v1/media-surface/tabs/detail-tabs-v1";
   import {
     DateField,
     EditFormShell,

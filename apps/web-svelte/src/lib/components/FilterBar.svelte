@@ -61,18 +61,18 @@
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { tagsVisibleInNsfwMode } from "$lib/nsfw/tags";
   import type { Snippet } from "svelte";
-  import ThumbSizeSlider from "$lib/media-surface/toolbar/ThumbSizeSlider.svelte";
-  import { type AlphabeticalFilterSectionItem } from "$lib/media-surface/toolbar/AlphabeticalFilterSection.svelte";
+  import ThumbSizeSlider from "$lib/v1/media-surface/toolbar/ThumbSizeSliderV1.svelte";
+  import { type AlphabeticalFilterSectionItem } from "$lib/v1/media-surface/toolbar/AlphabeticalFilterSectionV1.svelte";
   import PresetDropdown, {
     type FilterPreset,
-  } from "$lib/media-surface/toolbar/PresetDropdown.svelte";
-  import SearchBox from "$lib/media-surface/toolbar/SearchBox.svelte";
-  import SortControl from "$lib/media-surface/toolbar/SortControl.svelte";
-  import ViewModeToggle from "$lib/media-surface/toolbar/ViewModeToggle.svelte";
-  import ActiveFilterChips from "$lib/media-surface/toolbar/ActiveFilterChips.svelte";
+  } from "$lib/v1/media-surface/toolbar/PresetDropdownV1.svelte";
+  import SearchBox from "$lib/v1/media-surface/toolbar/SearchBoxV1.svelte";
+  import SortControl from "$lib/v1/media-surface/toolbar/SortControlV1.svelte";
+  import ViewModeToggle from "$lib/v1/media-surface/toolbar/ViewModeToggleV1.svelte";
+  import ActiveFilterChips from "$lib/v1/media-surface/toolbar/ActiveFilterChipsV1.svelte";
   import FilterDrawer, {
     type FilterSectionKey as DrawerSectionKey,
-  } from "$lib/media-surface/toolbar/FilterDrawer.svelte";
+  } from "$lib/v1/media-surface/toolbar/FilterDrawerV1.svelte";
 
   export interface ThumbSizeConfig {
     value: number;

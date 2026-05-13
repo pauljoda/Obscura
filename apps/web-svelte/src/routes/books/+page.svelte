@@ -8,8 +8,8 @@
   import ImportButton from "$lib/components/ImportButton.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import { deleteBook } from "$lib/v1/api/media-v1";
-  import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
-  import { booksSurfaceConfig } from "$lib/media-surface/configs/books";
+  import MediaSurface from "$lib/v1/media-surface/MediaSurfaceV1.svelte";
+  import { booksSurfaceConfig } from "$lib/v1/media-surface/configs/books-v1";
 
   let { data }: { data: PageData } = $props();
   const hasComics = $derived(data.total > 0);

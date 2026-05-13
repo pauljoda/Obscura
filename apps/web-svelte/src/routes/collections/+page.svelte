@@ -4,8 +4,8 @@
   import { FolderOpen, Plus } from "@lucide/svelte";
   import { Button } from "@obscura/ui-svelte";
   import type { PageData } from "./$types";
-  import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
-  import { collectionsSurfaceConfig } from "$lib/media-surface/configs/collections";
+  import MediaSurface from "$lib/v1/media-surface/MediaSurfaceV1.svelte";
+  import { collectionsSurfaceConfig } from "$lib/v1/media-surface/configs/collections-v1";
 
   let { data }: { data: PageData } = $props();
 

@@ -7,8 +7,8 @@
   import ImportButton from "$lib/components/ImportButton.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import { deleteAudioLibrary } from "$lib/v1/api/media-v1";
-  import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
-  import { audioSurfaceConfig } from "$lib/media-surface/configs/audio";
+  import MediaSurface from "$lib/v1/media-surface/MediaSurfaceV1.svelte";
+  import { audioSurfaceConfig } from "$lib/v1/media-surface/configs/audio-v1";
 
   let { data }: { data: PageData } = $props();
 

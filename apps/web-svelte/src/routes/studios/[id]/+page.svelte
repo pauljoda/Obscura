@@ -14,8 +14,8 @@
   import { toApiUrl } from "$lib/v1/api/core-v1";
   import { updateStudio } from "$lib/v1/api/entities-v1";
   import { page } from "$app/state";
-  import MediaTabs from "$lib/media-surface/tabs/MediaTabs.svelte";
-  import { detailTabsFor } from "$lib/media-surface/tabs/detail-tabs";
+  import MediaTabs from "$lib/v1/media-surface/tabs/MediaTabsV1.svelte";
+  import { detailTabsFor } from "$lib/v1/media-surface/tabs/detail-tabs-v1";
   import {
     EditFormShell,
     FormField,

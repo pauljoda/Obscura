@@ -1,5 +1,5 @@
 import { getContext, setContext } from "svelte";
-import type { MediaSurfaceSnapshot, MediaSurfaceSnapshotApi } from "$lib/media-surface/config";
+import type { MediaSurfaceSnapshot, MediaSurfaceSnapshotApi } from "$lib/v1/media-surface/config-v1";
 
 const KEY = Symbol("page-snapshots");
 

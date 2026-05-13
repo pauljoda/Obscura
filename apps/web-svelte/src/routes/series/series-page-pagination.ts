@@ -1,4 +1,4 @@
-import { mergeUniquePage } from "$lib/media-surface/pagination/load-more";
+import { mergeUniquePage } from "$lib/v1/media-surface/pagination/load-more-v1";
 
 export interface SeriesLoadedWindowArgs {
   loadedStart: number;

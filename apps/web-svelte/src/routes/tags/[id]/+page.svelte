@@ -20,8 +20,8 @@
   } from "$lib/v1/api/entities-v1";
   import { page } from "$app/state";
   import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
-  import MediaTabs from "$lib/media-surface/tabs/MediaTabs.svelte";
-  import { detailTabsFor } from "$lib/media-surface/tabs/detail-tabs";
+  import MediaTabs from "$lib/v1/media-surface/tabs/MediaTabsV1.svelte";
+  import { detailTabsFor } from "$lib/v1/media-surface/tabs/detail-tabs-v1";
   import {
     EditFormShell,
     FormField,

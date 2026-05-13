@@ -5,8 +5,8 @@
   import type { PageData } from "./$types";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import { deleteGallery } from "$lib/v1/api/media-v1";
-  import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
-  import { galleriesSurfaceConfig } from "$lib/media-surface/configs/galleries";
+  import MediaSurface from "$lib/v1/media-surface/MediaSurfaceV1.svelte";
+  import { galleriesSurfaceConfig } from "$lib/v1/media-surface/configs/galleries-v1";
 
   let { data }: { data: PageData } = $props();
 

@@ -13,8 +13,8 @@
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";
-  import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
-  import { imagesSurfaceConfig } from "$lib/media-surface/configs/images";
+  import MediaSurface from "$lib/v1/media-surface/MediaSurfaceV1.svelte";
+  import { imagesSurfaceConfig } from "$lib/v1/media-surface/configs/images-v1";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
   import {

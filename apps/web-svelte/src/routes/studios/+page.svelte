@@ -3,12 +3,12 @@
   import { Building2, Image as ImageIcon, Star } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import type { PageData } from "./$types";
-  import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
+  import MediaSurface from "$lib/v1/media-surface/MediaSurfaceV1.svelte";
   import {
     studiosSurfaceConfig,
     type StudioFilterType,
-  } from "$lib/media-surface/configs/studios";
-  import FilterSection from "$lib/media-surface/toolbar/FilterSection.svelte";
+  } from "$lib/v1/media-surface/configs/studios-v1";
+  import FilterSection from "$lib/v1/media-surface/toolbar/FilterSectionV1.svelte";
 
   let { data }: { data: PageData } = $props();
 
