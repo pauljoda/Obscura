@@ -1,5 +1,5 @@
+using Obscura.Application.Jobs;
 using Obscura.Domain.Entities;
-using Obscura.Infrastructure.Queue;
 
 namespace Obscura.Worker;
 

@@ -1,6 +1,5 @@
+using Obscura.Application.Jobs;
 using Obscura.Contracts.Jobs;
-using Obscura.Domain.Entities;
-using Obscura.Infrastructure.Queue;
 
 namespace Obscura.Api.Endpoints;
 
@@ -12,28 +11,27 @@ public static class JobEndpoints
             .WithTags("Jobs");
 
         group.MapGet("/", async (
-            IJobQueueService queue,
+            JobService jobs,
             CancellationToken cancellationToken) =>
-            new JobListResponse(await queue.ListAsync(cancellationToken)))
+            await jobs.ListAsync(cancellationToken))
             .WithName("ListJobs")
             .WithSummary("Lists Obscura background job runs for the operations dashboard.");
 
         group.MapPost("/{type}", async (
             string type,
-            IJobQueueService queue,
+            JobService jobs,
             CancellationToken cancellationToken) =>
         {
-            if (!type.TryDecodeAs<JobType>(out var jobType))
+            var result = await jobs.CreateAsync(type, cancellationToken);
+            if (result.Response is null)
             {
                 return Results.Problem(
                     title: "Unknown job type.",
-                    detail: $"'{type}' is not a supported Obscura job type.",
+                    detail: result.ErrorMessage,
                     statusCode: StatusCodes.Status400BadRequest);
             }
 
-            var job = await queue.EnqueueAsync(jobType, cancellationToken);
-
-            return Results.Accepted($"/api/jobs/{job.Id}", new JobCreateResponse(job));
+            return Results.Accepted($"/api/jobs/{result.Response.Job.Id}", result.Response);
         })
             .WithName("CreateJob")
             .WithSummary("Queues a background job run.");
