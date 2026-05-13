@@ -97,6 +97,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Legacy Svelte API client helpers now live under an explicit v1 namespace so the canonical API folder is reserved for the .NET/Orval-backed v2 surface.
 - Legacy Svelte server helpers now live under an explicit v1 namespace, making the old Drizzle-backed route support code easier to separate from v2 backend integration.
 - Legacy Svelte media browsing surfaces now live under an explicit v1 namespace, making the remaining contract-backed grids, filters, tabs, and pagination easier to review during the v2 UI migration.
+- Legacy identify and scrape review flows now live under an explicit v1 namespace, making old provider-result workflows distinct from the new capability-first UI work.
 
 ### Docs
 
@@ -171,6 +172,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Updated legacy v1 thumbnails to read asset URLs through the v1 API helper namespace instead of the canonical v2 API folder.
 - Moved legacy Svelte server helpers into `src/lib/v1/server` with `-v1` file names and updated route imports to use the v1 server namespace.
 - Moved the legacy Svelte media-surface implementation into `src/lib/v1/media-surface` with `V1`/`-v1` file names and updated existing routes to import the v1 browsing surface explicitly.
+- Moved legacy identify runners, scrape runners, review drawers, and scrape review components into `src/lib/v1` namespaces with `V1`/`-v1` file names.
 - Replaced the two-line thumbnail title slot with measured one-line title fitting, so long names scale down slightly before ellipsis.
 - Added selectable thumbnail state to the shared v2 card component and wired the lab page to track multiple selected entities.
 - Added measured title ticker behavior to the shared v2 thumbnail so overflowing names scroll in place on hover.

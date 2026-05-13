@@ -21,17 +21,17 @@
   import { fetchVideoDetail, fetchVideoSeriesLibraryDetail } from "$lib/v1/api/videos-v1";
   import { filterNsfwAware } from "$lib/nsfw/aware-providers";
   import { useNsfw } from "$lib/nsfw/store.svelte";
-  import { buildLocalSeasonsInput } from "$lib/identify/identify-video-series-runner";
-  import { BOOK_FIELDS, type BookField, type BookRow } from "$lib/identify/identify-types";
-  import { bookResult } from "$lib/identify/book-runner";
+  import { buildLocalSeasonsInput } from "$lib/v1/identify/identify-video-series-runner-v1";
+  import { BOOK_FIELDS, type BookField, type BookRow } from "$lib/v1/identify/identify-types-v1";
+  import { bookResult } from "$lib/v1/identify/book-runner-v1";
   import { portal } from "$lib/actions/portal";
   import {
     layoutPlayerMobileFlyout,
     playerFlyoutStyleToString,
   } from "$lib/player/flyout-layout";
-  import CascadeReviewDrawer from "./identify/CascadeReviewDrawer.svelte";
-  import LegacyVideoReviewDrawer from "./identify/LegacyVideoReviewDrawer.svelte";
-  import BookReviewDrawer from "./identify/BookReviewDrawer.svelte";
+  import CascadeReviewDrawer from "$lib/v1/components/identify/CascadeReviewDrawerV1.svelte";
+  import LegacyVideoReviewDrawer from "$lib/v1/components/identify/LegacyVideoReviewDrawerV1.svelte";
+  import BookReviewDrawer from "$lib/v1/components/identify/BookReviewDrawerV1.svelte";
 
   type EntityKind = "video_series" | "video_movie" | "video_episode" | "book";
   type ProviderKind = "plugin" | "stashbox" | "scraper";

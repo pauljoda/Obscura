@@ -16,8 +16,8 @@
   } from "$lib/v1/api/scrapers-v1";
   import type { ScrapeResult } from "$lib/v1/api/types-v1";
   import { entityTerms } from "$lib/terminology";
-  import CascadeReviewDrawer from "$lib/components/identify/CascadeReviewDrawer.svelte";
-  import LegacyVideoReviewDrawer from "$lib/components/identify/LegacyVideoReviewDrawer.svelte";
+  import CascadeReviewDrawer from "$lib/v1/components/identify/CascadeReviewDrawerV1.svelte";
+  import LegacyVideoReviewDrawer from "$lib/v1/components/identify/LegacyVideoReviewDrawerV1.svelte";
 
   let { data } = $props();
   let results = $state.raw<ScrapeResult[]>([]);

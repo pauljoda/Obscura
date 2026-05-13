@@ -1,5 +1,5 @@
 <script lang="ts">
-  import BulkScrape from "$lib/components/BulkScrape.svelte";
+  import BulkScrape from "$lib/v1/components/BulkScrapeV1.svelte";
 </script>
 
 <svelte:head>
