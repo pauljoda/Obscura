@@ -172,6 +172,23 @@ function card(options: {
   };
 }
 
+function withNsfw(card: EntityThumbnailCard): EntityThumbnailCard {
+  return {
+    ...card,
+    entity: {
+      ...card.entity,
+      capabilities: card.entity.capabilities.map((capability) =>
+        capability.kind === "flags"
+          ? {
+              ...capability,
+              isNsfw: true,
+            }
+          : capability,
+      ),
+    },
+  };
+}
+
 const brass = "#c49a5a";
 const forest = "#293f32";
 const burgundy = "#522b34";
@@ -195,6 +212,20 @@ const thumbnailLabSeedRows: EntityThumbnailRow[] = [
         capabilities: [rating(4), technical({ duration: "00:09:56", width: 1920, height: 1080, codec: "h264" })],
         meta: [
           { icon: "duration", label: "09:56" },
+          { icon: "video", label: "1080p" },
+        ],
+      }),
+      card({
+        id: "video-flagged",
+        kind: "video",
+        title: "Flagged Video Sample",
+        aspectRatio: "video",
+        cover: asset("Flagged Video", burgundy, graphite, brass, "video"),
+        hover: { kind: "trickplay", assets: sequence("Flagged", [burgundy, ember, graphite], 6, "video") },
+        flagOptions: { isNsfw: true },
+        capabilities: [rating(3), technical({ duration: "00:12:18", width: 1920, height: 1080, codec: "h265" })],
+        meta: [
+          { icon: "duration", label: "12:18" },
           { icon: "video", label: "1080p" },
         ],
       }),
@@ -243,6 +274,17 @@ const thumbnailLabSeedRows: EntityThumbnailRow[] = [
         hover: { kind: "image-sequence", assets: sequence("Gallery", [ember, forest, indigo], 5, "portrait") },
         capabilities: [stats([{ code: "images", value: 42 }])],
         meta: [{ icon: "gallery", label: "42 images" }],
+      }),
+      card({
+        id: "gallery-flagged",
+        kind: "gallery",
+        title: "Flagged Gallery",
+        aspectRatio: "square",
+        cover: asset("Flagged Gallery", burgundy, ember, brass, "square"),
+        hover: { kind: "image-sequence", assets: sequence("Flagged Gallery", [burgundy, forest, graphite], 5, "portrait") },
+        flagOptions: { isNsfw: true },
+        capabilities: [rating(2), stats([{ code: "images", value: 18 }])],
+        meta: [{ icon: "gallery", label: "18 images" }],
       }),
     ],
   },
@@ -437,7 +479,7 @@ function cloneCard(card: EntityThumbnailCard, index: number): EntityThumbnailCar
   const displayIndex = index + 1;
   const title = card.entity.title.replace(/\d+$/, (value) => String(Number(value) + index).padStart(value.length, "0"));
 
-  return {
+  const cloned = {
     ...card,
     entity: {
       ...card.entity,
@@ -445,6 +487,8 @@ function cloneCard(card: EntityThumbnailCard, index: number): EntityThumbnailCar
       title: title === card.entity.title ? `${card.entity.title} ${displayIndex}` : title,
     },
   };
+
+  return index % 4 === 2 ? withNsfw(cloned) : cloned;
 }
 
 function expandCards(cards: EntityThumbnailCard[], count: number): EntityThumbnailCard[] {

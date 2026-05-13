@@ -6,11 +6,11 @@
     Calendar,
     Clock3,
     Film,
+    Flame,
     Hash,
     Images,
     Layers,
     Music,
-    ShieldAlert,
     Star,
     Tag,
     User,
@@ -41,6 +41,7 @@
   const hoverable = $derived(hasHoverPreview(card));
   const nsfw = $derived(isNsfw(card.entity.capabilities));
   const rating = $derived(getRatingValue(card.entity.capabilities));
+  const imageOnly = $derived(card.entity.kind === "book-page");
 
   function fitTitle(node: HTMLHeadingElement, _title: string) {
     let frame = 0;
@@ -116,7 +117,7 @@
 
   function formatRating(value: number): string {
     if (value <= 0) return "";
-    return value <= 5 ? `${value}/5` : `${Math.round(value)}%`;
+    return String(Math.round(value));
   }
 </script>
 
@@ -127,6 +128,7 @@
   tabindex={card.href && !selectable ? undefined : 0}
   class="entity-thumbnail"
   class:is-hovering={pointerRatio !== null}
+  class:is-image-only={imageOnly}
   class:is-selected={selected}
   aria-label={card.entity.title}
   onblur={clearHover}
@@ -149,7 +151,9 @@
       </div>
     {/if}
 
-    <div class="scrim" aria-hidden="true"></div>
+    {#if !imageOnly}
+      <div class="scrim" aria-hidden="true"></div>
+    {/if}
 
     {#if selectable}
       <input
@@ -165,44 +169,48 @@
       />
     {/if}
 
-    {#if nsfw || rating > 0}
-      <div class="badges">
-        {#if nsfw}
+    {#if !imageOnly && (nsfw || rating > 0)}
+      {#if nsfw}
+        <div class="badges top-badges">
           <span class="badge danger" title="NSFW">
-            <ShieldAlert size={13} />
+            <Flame size={13} />
             NSFW
           </span>
-        {/if}
-        {#if rating > 0}
-          <span class="badge" title="Rating">
+        </div>
+      {/if}
+      {#if rating > 0}
+        <div class="badges bottom-badges">
+          <span class="badge rating" title="Rating">
             <Star size={13} />
             {formatRating(rating)}
           </span>
-        {/if}
+        </div>
+      {/if}
+    {/if}
+  </div>
+
+  {#if !imageOnly}
+    <div class="details">
+      <div class="copy">
+        <h3 class="ticker-title" use:fitTitle={card.entity.title} aria-label={card.entity.title}>
+          <span class="title-text">{card.entity.title}</span>
+        </h3>
       </div>
-    {/if}
-  </div>
 
-  <div class="details">
-    <div class="copy">
-      <h3 class="ticker-title" use:fitTitle={card.entity.title} aria-label={card.entity.title}>
-        <span class="title-text">{card.entity.title}</span>
-      </h3>
+      {#if card.meta?.length}
+        <dl class="meta">
+          {#each card.meta as item (item.icon + item.label)}
+            <div>
+              <dt>
+                {@render IconFor({ icon: item.icon })}
+              </dt>
+              <dd>{item.label}</dd>
+            </div>
+          {/each}
+        </dl>
+      {/if}
     </div>
-
-    {#if card.meta?.length}
-      <dl class="meta">
-        {#each card.meta as item (item.icon + item.label)}
-          <div>
-            <dt>
-              {@render IconFor({ icon: item.icon })}
-            </dt>
-            <dd>{item.label}</dd>
-          </div>
-        {/each}
-      </dl>
-    {/if}
-  </div>
+  {/if}
 </svelte:element>
 
 {#snippet IconFor({ icon }: { icon: EntityThumbnailMetaIcon })}
@@ -271,6 +279,10 @@
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.03);
   }
 
+  .entity-thumbnail.is-image-only .media {
+    border-bottom: 0;
+  }
+
   .media img,
   .placeholder {
     width: 100%;
@@ -311,7 +323,6 @@
 
   .badges {
     position: absolute;
-    top: 0.45rem;
     right: 0.45rem;
     left: 2.45rem;
     display: flex;
@@ -320,6 +331,15 @@
     align-items: center;
     justify-content: flex-end;
     pointer-events: none;
+  }
+
+  .top-badges {
+    top: 0.45rem;
+  }
+
+  .bottom-badges {
+    right: 0.5rem;
+    bottom: 0.5rem;
   }
 
   .badge {
@@ -342,9 +362,18 @@
     flex: 0 0 auto;
   }
 
+  .rating {
+    border-color: rgb(242 193 95 / 0.34);
+    background: rgb(32 25 13 / 0.76);
+    color: #f2c15f;
+    box-shadow: 0 0 14px rgb(242 193 95 / 0.12);
+  }
+
   .danger {
-    color: #ffb5a9;
-    border-color: rgb(255 121 97 / 0.35);
+    color: #ff806f;
+    border-color: rgb(255 92 67 / 0.42);
+    background: rgb(40 13 10 / 0.76);
+    box-shadow: 0 0 14px rgb(255 92 67 / 0.12);
   }
 
   .selection {
