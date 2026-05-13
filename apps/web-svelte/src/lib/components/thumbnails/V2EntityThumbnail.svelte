@@ -256,15 +256,17 @@
 
   .copy {
     display: grid;
-    gap: 0.28rem;
+    grid-template-rows: 2.45rem 0.95rem;
+    gap: 0.3rem;
     min-width: 0;
   }
 
   .details {
     display: grid;
-    align-content: start;
-    gap: 0.62rem;
+    grid-template-rows: 3.7rem 1.3rem;
+    gap: 0.55rem;
     min-width: 0;
+    block-size: 6.92rem;
     padding: 0.72rem 0.78rem 0.7rem;
     background:
       linear-gradient(180deg, rgb(10 12 15 / 0.94), rgb(9 10 12 / 0.98)),
@@ -297,6 +299,7 @@
     color: rgb(244 239 230 / 0.58);
     font-size: 0.76rem;
     line-height: 1.2;
+    align-self: end;
   }
 
   .meta {
@@ -304,6 +307,8 @@
     flex-wrap: wrap;
     gap: 0.28rem;
     margin: 0;
+    max-block-size: 1.3rem;
+    overflow: hidden;
   }
 
   .meta div {
@@ -311,6 +316,7 @@
     align-items: center;
     gap: 0.22rem;
     min-width: 0;
+    max-width: 100%;
     border: 1px solid rgb(255 255 255 / 0.08);
     background: rgb(255 255 255 / 0.032);
     color: rgb(244 239 230 / 0.6);
@@ -324,6 +330,9 @@
   .meta dt,
   .meta dd {
     margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .meta dt {
@@ -341,8 +350,15 @@
     }
 
     .details {
-      gap: 0.5rem;
+      grid-template-rows: 3.34rem 1.22rem;
+      gap: 0.46rem;
+      block-size: 6.26rem;
       padding: 0.62rem;
+    }
+
+    .copy {
+      grid-template-rows: 2.12rem 0.9rem;
+      gap: 0.26rem;
     }
 
     h3 {
@@ -351,6 +367,7 @@
 
     .meta div {
       font-size: 0.56rem;
+      min-height: 1.18rem;
     }
   }
 </style>

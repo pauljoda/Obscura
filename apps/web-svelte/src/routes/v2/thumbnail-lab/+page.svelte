@@ -156,7 +156,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--thumb-size)), var(--thumb-size)));
     gap: 0.9rem;
-    align-items: start;
+    align-items: stretch;
     border-top: 1px solid rgb(255 255 255 / 0.08);
     padding-top: 0.9rem;
   }
