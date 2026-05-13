@@ -794,6 +794,15 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
         var fingerprints = await LoadFingerprintsAsync(ids, cancellationToken);
         var playback = await LoadPlaybackAsync(ids, cancellationToken);
         var counters = await LoadCountersAsync(ids, cancellationToken);
+        var stats = await LoadStatsAsync(ids, cancellationToken);
+        var dates = await LoadDatesAsync(ids, cancellationToken);
+        var technical = await LoadTechnicalAsync(ids, cancellationToken);
+        var sources = await LoadSourcesAsync(ids, cancellationToken);
+        var progress = await LoadProgressAsync(ids, cancellationToken);
+        var positions = await LoadPositionsAsync(ids, cancellationToken);
+        var classifications = await LoadClassificationsAsync(ids, cancellationToken);
+        var markers = await LoadMarkersAsync(ids, cancellationToken);
+        var subtitles = await LoadSubtitlesAsync(ids, cancellationToken);
         var studios = await LoadStudioReferencesAsync(ids, cancellationToken);
         var credits = await LoadCreditReferencesAsync(ids, cancellationToken);
         var urls = await LoadUrlsAsync(ids, cancellationToken);
@@ -811,6 +820,15 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
                 fingerprints.TryGetValue(row.Id, out var fingerprintRefs);
                 playback.TryGetValue(row.Id, out var playbackState);
                 counters.TryGetValue(row.Id, out var counterRefs);
+                stats.TryGetValue(row.Id, out var statRefs);
+                dates.TryGetValue(row.Id, out var dateRefs);
+                technical.TryGetValue(row.Id, out var technicalState);
+                sources.TryGetValue(row.Id, out var sourceRefs);
+                progress.TryGetValue(row.Id, out var progressState);
+                positions.TryGetValue(row.Id, out var positionRefs);
+                classifications.TryGetValue(row.Id, out var classification);
+                markers.TryGetValue(row.Id, out var markerRefs);
+                subtitles.TryGetValue(row.Id, out var subtitleRefs);
                 studios.TryGetValue(row.Id, out var studio);
                 credits.TryGetValue(row.Id, out var creditRefs);
                 urls.TryGetValue(row.Id, out var urlRefs);
@@ -832,6 +850,15 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
                         fingerprintRefs ?? [],
                         playbackState,
                         counterRefs ?? [],
+                        statRefs ?? [],
+                        dateRefs ?? [],
+                        technicalState,
+                        sourceRefs ?? [],
+                        progressState,
+                        positionRefs ?? [],
+                        classification,
+                        markerRefs ?? [],
+                        subtitleRefs ?? [],
                         urlRefs ?? [],
                         externalIdRefs ?? [],
                         flag));
@@ -850,6 +877,15 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
         IReadOnlyList<EntityFingerprint> fingerprints,
         Playback? playback,
         IReadOnlyList<EntityCounter> counters,
+        IReadOnlyList<EntityStat> stats,
+        IReadOnlyList<EntityDate> dates,
+        CapabilityTechnical? technical,
+        IReadOnlyList<EntitySource> sources,
+        CapabilityProgress? progress,
+        IReadOnlyList<EntityPosition> positions,
+        CapabilityClassification? classification,
+        IReadOnlyList<EntityMarker> markers,
+        IReadOnlyList<EntitySubtitle> subtitles,
         IReadOnlyList<EntityUrl> urls,
         IReadOnlyList<EntityExternalId> externalIds,
         EntityFlagRow? flag)
@@ -866,39 +902,93 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             imageAssets.FirstOrDefault(asset => asset.Kind == EntityFileRole.Poster)?.Path ??
             imageAssets.FirstOrDefault(asset => asset.Kind == EntityFileRole.Thumbnail)?.Path;
 
-        var capabilities = new List<ICapability>
-        {
-            new CapabilityRating(rating),
-            new CapabilityTags(tags),
-            new CapabilityCredits(credits),
-            new CapabilityStudio(studio),
-            new CapabilityImages(kind.ImageAssetRoles, imageAssets, thumbnailUrl, coverUrl),
-            new CapabilityLinks(urls, externalIds),
-            new CapabilityFlags(flag?.IsFavorite, flag?.IsNsfw, flag?.IsOrganized),
-            new CapabilityFiles(files)
-        };
+        var capabilities = new List<ICapability>();
+        AddIfSupported(capabilities, kind, new CapabilityRating(rating));
+        AddIfSupported(capabilities, kind, new CapabilityTags(tags));
+        AddIfSupported(capabilities, kind, new CapabilityCredits(credits));
+        AddIfSupported(capabilities, kind, new CapabilityStudio(studio));
+        AddIfSupported(capabilities, kind, new CapabilityImages(kind.ImageAssetRoles, imageAssets, thumbnailUrl, coverUrl));
+        AddIfSupported(capabilities, kind, new CapabilityLinks(urls, externalIds));
+        AddIfSupported(capabilities, kind, new CapabilityFlags(flag?.IsFavorite, flag?.IsNsfw, flag?.IsOrganized));
+        AddIfSupported(capabilities, kind, new CapabilityFiles(files));
 
         if (!string.IsNullOrWhiteSpace(description))
         {
-            capabilities.Add(new CapabilityDescription(description));
+            AddIfSupported(capabilities, kind, new CapabilityDescription(description));
         }
 
         if (fingerprints.Count > 0)
         {
-            capabilities.Add(new CapabilityFingerprints(fingerprints));
+            AddIfSupported(capabilities, kind, new CapabilityFingerprints(fingerprints));
         }
 
         if (playback is not null)
         {
-            capabilities.Add(new CapabilityPlayback(playback));
+            AddIfSupported(capabilities, kind, new CapabilityPlayback(playback));
         }
 
         if (counters.Count > 0)
         {
-            capabilities.Add(new CapabilityCounters(counters));
+            AddIfSupported(capabilities, kind, new CapabilityCounters(counters));
+        }
+
+        if (stats.Count > 0)
+        {
+            AddIfSupported(capabilities, kind, new CapabilityStats(stats));
+        }
+
+        if (dates.Count > 0)
+        {
+            AddIfSupported(capabilities, kind, new CapabilityDates(dates));
+        }
+
+        if (technical is not null)
+        {
+            AddIfSupported(capabilities, kind, technical);
+        }
+
+        if (sources.Count > 0)
+        {
+            AddIfSupported(capabilities, kind, new CapabilitySource(sources));
+        }
+
+        if (progress is not null)
+        {
+            AddIfSupported(capabilities, kind, progress);
+        }
+
+        if (positions.Count > 0)
+        {
+            AddIfSupported(capabilities, kind, new CapabilityPosition(positions));
+        }
+
+        if (classification is not null)
+        {
+            AddIfSupported(capabilities, kind, classification);
+        }
+
+        if (markers.Count > 0)
+        {
+            AddIfSupported(capabilities, kind, new CapabilityMarkers(markers));
+        }
+
+        if (subtitles.Count > 0)
+        {
+            AddIfSupported(capabilities, kind, new CapabilitySubtitles(subtitles));
         }
 
         return capabilities;
+    }
+
+    private static void AddIfSupported(List<ICapability> capabilities, IEntityKind kind, ICapability capability)
+    {
+        if (kind.SupportedCapabilities.Any(supported => string.Equals(
+                supported.Code,
+                capability.Kind.Code,
+                StringComparison.OrdinalIgnoreCase)))
+        {
+            capabilities.Add(capability);
+        }
     }
 
     private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityFingerprint>>> LoadFingerprintsAsync(
@@ -936,6 +1026,184 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
                 group => group.Key,
                 group => (IReadOnlyList<EntityCounter>)group
                     .Select(row => new EntityCounter(row.Code, row.Value))
+                    .ToArray());
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityStat>>> LoadStatsAsync(
+        IReadOnlyList<Guid> entityIds,
+        CancellationToken cancellationToken)
+    {
+        var rows = await _db.EntityStats
+            .AsNoTracking()
+            .Where(row => entityIds.Contains(row.EntityId))
+            .OrderBy(row => row.Code)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(row => row.EntityId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<EntityStat>)group.Select(row => new EntityStat(row.Code, row.Value)).ToArray());
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityDate>>> LoadDatesAsync(
+        IReadOnlyList<Guid> entityIds,
+        CancellationToken cancellationToken)
+    {
+        var rows = await _db.EntityDates
+            .AsNoTracking()
+            .Where(row => entityIds.Contains(row.EntityId))
+            .OrderBy(row => row.Code)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(row => row.EntityId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<EntityDate>)group
+                    .Select(row => new EntityDate(row.Code, row.Value, row.SortableValue, row.Precision))
+                    .ToArray());
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, CapabilityTechnical>> LoadTechnicalAsync(
+        IReadOnlyList<Guid> entityIds,
+        CancellationToken cancellationToken)
+    {
+        return await _db.EntityTechnical
+            .AsNoTracking()
+            .Where(row => entityIds.Contains(row.EntityId))
+            .ToDictionaryAsync(
+                row => row.EntityId,
+                row => new CapabilityTechnical(
+                    row.DurationSeconds is null ? null : TimeSpan.FromSeconds(row.DurationSeconds.Value),
+                    row.Width,
+                    row.Height,
+                    row.FrameRate,
+                    row.BitRate,
+                    row.SampleRate,
+                    row.Channels,
+                    row.Codec,
+                    row.Container,
+                    row.Format),
+                cancellationToken);
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntitySource>>> LoadSourcesAsync(
+        IReadOnlyList<Guid> entityIds,
+        CancellationToken cancellationToken)
+    {
+        var rows = await _db.EntitySources
+            .AsNoTracking()
+            .Where(row => entityIds.Contains(row.EntityId))
+            .OrderBy(row => row.Code)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(row => row.EntityId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<EntitySource>)group.Select(row => new EntitySource(row.Code, row.Value)).ToArray());
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, CapabilityProgress>> LoadProgressAsync(
+        IReadOnlyList<Guid> entityIds,
+        CancellationToken cancellationToken)
+    {
+        return await _db.EntityProgress
+            .AsNoTracking()
+            .Where(row => entityIds.Contains(row.EntityId))
+            .ToDictionaryAsync(
+                row => row.EntityId,
+                row => new CapabilityProgress(
+                    row.CurrentEntityId,
+                    row.Unit,
+                    row.Index,
+                    row.Total,
+                    row.Mode,
+                    row.CompletedAt,
+                    row.UpdatedAt),
+                cancellationToken);
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityPosition>>> LoadPositionsAsync(
+        IReadOnlyList<Guid> entityIds,
+        CancellationToken cancellationToken)
+    {
+        var rows = await _db.EntityPositions
+            .AsNoTracking()
+            .Where(row => entityIds.Contains(row.EntityId))
+            .OrderBy(row => row.Code)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(row => row.EntityId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<EntityPosition>)group
+                    .Select(row => new EntityPosition(row.Code, row.Value, row.Label))
+                    .ToArray());
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, CapabilityClassification>> LoadClassificationsAsync(
+        IReadOnlyList<Guid> entityIds,
+        CancellationToken cancellationToken)
+    {
+        return await _db.EntityClassifications
+            .AsNoTracking()
+            .Where(row => entityIds.Contains(row.EntityId))
+            .ToDictionaryAsync(
+                row => row.EntityId,
+                row => new CapabilityClassification(row.Value, row.System),
+                cancellationToken);
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityMarker>>> LoadMarkersAsync(
+        IReadOnlyList<Guid> entityIds,
+        CancellationToken cancellationToken)
+    {
+        var rows = await _db.EntityMarkers
+            .AsNoTracking()
+            .Where(marker => entityIds.Contains(marker.EntityId))
+            .OrderBy(marker => marker.Seconds)
+            .ThenBy(marker => marker.Title)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(row => row.EntityId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<EntityMarker>)group
+                    .Select(marker => new EntityMarker(marker.Id, marker.Title, marker.Seconds, marker.EndSeconds))
+                    .ToArray());
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntitySubtitle>>> LoadSubtitlesAsync(
+        IReadOnlyList<Guid> entityIds,
+        CancellationToken cancellationToken)
+    {
+        var rows = await _db.EntitySubtitles
+            .AsNoTracking()
+            .Where(subtitle => entityIds.Contains(subtitle.EntityId))
+            .OrderByDescending(subtitle => subtitle.IsDefault)
+            .ThenBy(subtitle => subtitle.Language)
+            .ThenBy(subtitle => subtitle.Label)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(row => row.EntityId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<EntitySubtitle>)group
+                    .Select(subtitle => new EntitySubtitle(
+                        subtitle.Id,
+                        subtitle.Language,
+                        subtitle.Label,
+                        subtitle.Format,
+                        subtitle.Source,
+                        subtitle.StoragePath,
+                        subtitle.SourceFormat,
+                        subtitle.SourcePath,
+                        subtitle.IsDefault))
                     .ToArray());
     }
 

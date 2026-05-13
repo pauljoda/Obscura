@@ -47,6 +47,20 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<EntityCounterRow> EntityCounters => Set<EntityCounterRow>();
 
+    public DbSet<EntityStatRow> EntityStats => Set<EntityStatRow>();
+
+    public DbSet<EntityDateRow> EntityDates => Set<EntityDateRow>();
+
+    public DbSet<EntityTechnicalRow> EntityTechnical => Set<EntityTechnicalRow>();
+
+    public DbSet<EntitySourceRow> EntitySources => Set<EntitySourceRow>();
+
+    public DbSet<EntityProgressRow> EntityProgress => Set<EntityProgressRow>();
+
+    public DbSet<EntityPositionRow> EntityPositions => Set<EntityPositionRow>();
+
+    public DbSet<EntityClassificationRow> EntityClassifications => Set<EntityClassificationRow>();
+
     public DbSet<VideoDetailRow> VideoDetails => Set<VideoDetailRow>();
 
     public DbSet<VideoSeriesDetailRow> VideoSeriesDetails => Set<VideoSeriesDetailRow>();

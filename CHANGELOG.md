@@ -75,6 +75,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 .NET backend now declares a capability-first entity shape for the breaking migration, so shared metadata can move out of duplicated per-kind detail fields after users accept the v2 reset gate.
 - The v2 .NET backend now hydrates typed entity details from shared capabilities first, reducing duplicated summary, date, source, count, progress, marker, subtitle, and technical fields across media types.
 - The v2 .NET API contract now exposes the expanded capability union so generated clients can read markers, subtitles, stats, dates, source data, technical metadata, progress, positions, and classifications from one shared shape.
+- The v2 .NET schema now has typed capability-first tables for stats, dates, technical metadata, source provenance, progress, positions, and classifications.
 
 ### Docs
 
@@ -113,6 +114,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added a shared v2 .NET counter capability and `entity_counters` table so named per-entity counts can move across the API without becoming video-only fields.
 - Added shared v2 .NET description and fingerprint capabilities, plus per-entity-kind image asset shapes for typed generated artwork such as posters, logos, previews, sprites, and trickplay.
 - Changed v2 .NET entity kinds to declare their supported capability shape directly, allowing projection and contracts to include only capabilities that each kind intentionally supports.
+- Added typed v2 .NET EF rows, mappings, and projection hydration for the expanded capability-first tables.
 - Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.
 - Job Control failures can now be individually suppressed by error type — clicking Suppress on any failed job hides all jobs sharing the same error fingerprint until you click Show all or clear all failures.
 - Job Control completed jobs now show a duration column so you can see how long each run took, plus a retry indicator when a job needed more than one attempt.
