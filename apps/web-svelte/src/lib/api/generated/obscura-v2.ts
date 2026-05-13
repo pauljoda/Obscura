@@ -638,7 +638,7 @@ export const getListAudioLibrariesUrl = (params?: ListAudioLibrariesParams,) => 
 }
 
 /**
- * @summary Lists audio_library media entities through the application layer.
+ * @summary Lists audio-library media entities through the application layer.
  */
 export const listAudioLibraries = async (params?: ListAudioLibrariesParams, options?: RequestInit): Promise<listAudioLibrariesResponse> => {
 
@@ -681,7 +681,7 @@ export const getGetAudioLibrarieUrl = (id: string,) => {
 }
 
 /**
- * @summary Gets one audio_library media entity through the application layer.
+ * @summary Gets one audio-library media entity through the application layer.
  */
 export const getAudioLibrarie = async (id: string, options?: RequestInit): Promise<getAudioLibrarieResponse> => {
 
@@ -724,7 +724,7 @@ export const getListAudioTracksUrl = (params?: ListAudioTracksParams,) => {
 }
 
 /**
- * @summary Lists audio_track media entities through the application layer.
+ * @summary Lists audio-track media entities through the application layer.
  */
 export const listAudioTracks = async (params?: ListAudioTracksParams, options?: RequestInit): Promise<listAudioTracksResponse> => {
 
@@ -767,7 +767,7 @@ export const getGetAudioTrackUrl = (id: string,) => {
 }
 
 /**
- * @summary Gets one audio_track media entity through the application layer.
+ * @summary Gets one audio-track media entity through the application layer.
  */
 export const getAudioTrack = async (id: string, options?: RequestInit): Promise<getAudioTrackResponse> => {
 
