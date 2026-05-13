@@ -4,7 +4,8 @@ using Obscura.Domain.Entities;
 namespace Obscura.Application.Jobs.Handlers;
 
 /// <summary>
-/// Coordinates provider imports and applies metadata to entities.
+/// Coordinates provider-driven metadata imports for entities. Currently a placeholder
+/// until the provider/identify system is migrated to the .NET backend.
 /// </summary>
 public sealed class ImportMetadataJobHandler(ILogger<ImportMetadataJobHandler> logger) : IJobHandler
 {
@@ -12,7 +13,7 @@ public sealed class ImportMetadataJobHandler(ILogger<ImportMetadataJobHandler> l
 
     public async Task HandleAsync(JobContext context, CancellationToken cancellationToken)
     {
-        logger.LogInformation("ImportMetadata stub: {TargetLabel}", context.Job.TargetLabel);
-        await context.ReportProgressAsync(100, "Stub complete", cancellationToken);
+        logger.LogInformation("ImportMetadata: provider imports not yet migrated for {Label}", context.Job.TargetLabel);
+        await context.ReportProgressAsync(100, "Provider system pending migration", cancellationToken);
     }
 }

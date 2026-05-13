@@ -1,0 +1,218 @@
+using Obscura.Infrastructure.Processes;
+
+namespace Obscura.Infrastructure.Media;
+
+/// <summary>
+/// Generates thumbnails, preview clips, and trickplay sprites via ffmpeg.
+/// </summary>
+public sealed class ThumbnailService
+{
+    private readonly ProcessExecutor _processExecutor;
+
+    public ThumbnailService(ProcessExecutor processExecutor)
+    {
+        _processExecutor = processExecutor;
+    }
+
+    /// <summary>
+    /// Generates a single JPEG thumbnail from a video at the given seek time.
+    /// </summary>
+    public async Task<bool> GenerateVideoThumbnailAsync(
+        string inputPath, string outputPath, double seekSeconds,
+        int width, int height, int quality, CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+
+        var result = await _processExecutor.RunAsync("ffmpeg",
+            ["-hide_banner", "-loglevel", "error", "-y",
+             "-ss", seekSeconds.ToString("F2"),
+             "-i", inputPath,
+             "-frames:v", "1",
+             "-vf", $"scale={width}:{height}",
+             "-q:v", quality.ToString(),
+             outputPath],
+            null, cancellationToken);
+
+        return result.ExitCode == 0 && File.Exists(outputPath);
+    }
+
+    /// <summary>
+    /// Generates a short H.264 preview clip from a video.
+    /// </summary>
+    public async Task<bool> GeneratePreviewClipAsync(
+        string inputPath, string outputPath,
+        double startSeconds, int durationSeconds,
+        CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+
+        var result = await _processExecutor.RunAsync("ffmpeg",
+            ["-hide_banner", "-loglevel", "error", "-y",
+             "-ss", startSeconds.ToString("F2"),
+             "-t", durationSeconds.ToString(),
+             "-i", inputPath,
+             "-vf", "scale=960:-2",
+             "-an",
+             "-c:v", "libx264",
+             "-preset", "veryfast",
+             "-crf", "24",
+             "-movflags", "+faststart",
+             outputPath],
+            null, cancellationToken);
+
+        return result.ExitCode == 0 && File.Exists(outputPath);
+    }
+
+    /// <summary>
+    /// Extracts a single trickplay frame at the given timestamp.
+    /// </summary>
+    public async Task<bool> ExtractTrickplayFrameAsync(
+        string inputPath, string outputPath,
+        double seekSeconds, int width, int height, int jpegQuality,
+        CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+
+        var result = await _processExecutor.RunAsync("ffmpeg",
+            ["-hide_banner", "-loglevel", "error", "-y",
+             "-skip_frame", "nokey",
+             "-ss", seekSeconds.ToString("F2"),
+             "-i", inputPath,
+             "-frames:v", "1",
+             "-vf", $"scale={width}:{height}:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,format=yuvj420p",
+             "-q:v", jpegQuality.ToString(),
+             outputPath],
+            null, cancellationToken);
+
+        return result.ExitCode == 0 && File.Exists(outputPath);
+    }
+
+    /// <summary>
+    /// Generates a thumbnail from an image file, scaling to the target width.
+    /// </summary>
+    public async Task<bool> GenerateImageThumbnailAsync(
+        string inputPath, string outputPath,
+        int targetWidth, int quality,
+        CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+
+        var result = await _processExecutor.RunAsync("ffmpeg",
+            ["-hide_banner", "-loglevel", "error", "-y",
+             "-i", inputPath,
+             "-frames:v", "1",
+             "-vf", $"scale={targetWidth}:-1",
+             "-q:v", quality.ToString(),
+             "-update", "1",
+             outputPath],
+            null, cancellationToken);
+
+        return result.ExitCode == 0 && File.Exists(outputPath);
+    }
+
+    /// <summary>
+    /// Extracts embedded subtitle streams from a video to WebVTT files.
+    /// Attempts a single-pass multi-stream extraction, falling back to per-stream on failure.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> ExtractSubtitlesAsync(
+        string inputPath, string outputDir,
+        IReadOnlyList<SubtitleStreamInfo> streams,
+        CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(outputDir);
+
+        if (streams.Count == 0)
+            return [];
+
+        var outputPaths = new List<string>();
+        foreach (var stream in streams)
+        {
+            var fileName = $"embedded-{stream.Language}-{stream.StreamIndex}.vtt";
+            outputPaths.Add(Path.Combine(outputDir, fileName));
+        }
+
+        var args = new List<string> { "-y", "-v", "error", "-i", inputPath };
+        for (var i = 0; i < streams.Count; i++)
+        {
+            args.AddRange(["-map", $"0:{streams[i].StreamIndex}", "-c:s", "webvtt", outputPaths[i]]);
+        }
+
+        var result = await _processExecutor.RunAsync("ffmpeg", args, null, cancellationToken);
+        if (result.ExitCode == 0)
+        {
+            return outputPaths.Where(File.Exists).ToList();
+        }
+
+        // Fallback: extract one stream at a time
+        var succeeded = new List<string>();
+        foreach (var (stream, outputPath) in streams.Zip(outputPaths))
+        {
+            var perStreamResult = await _processExecutor.RunAsync("ffmpeg",
+                ["-y", "-v", "error", "-i", inputPath,
+                 "-map", $"0:{stream.StreamIndex}", "-c:s", "webvtt", outputPath],
+                null, cancellationToken);
+
+            if (perStreamResult.ExitCode == 0 && File.Exists(outputPath))
+            {
+                succeeded.Add(outputPath);
+            }
+        }
+
+        return succeeded;
+    }
+
+    /// <summary>
+    /// Generates audio waveform peak data via ffmpeg PCM decode.
+    /// Returns min/max pairs for the given pixels-per-second resolution.
+    /// </summary>
+    public async Task<int[]?> GenerateWaveformDataAsync(
+        string inputPath, double durationSeconds, int pixelsPerSecond,
+        CancellationToken cancellationToken)
+    {
+        const int sampleRate = 8000;
+        var result = await _processExecutor.RunAsync("ffmpeg",
+            ["-hide_banner", "-loglevel", "error",
+             "-i", inputPath,
+             "-f", "s16le", "-ac", "1", "-ar", sampleRate.ToString(),
+             "pipe:1"],
+            null, cancellationToken);
+
+        if (result.ExitCode != 0)
+            return null;
+
+        var pcmBytes = System.Text.Encoding.Latin1.GetBytes(result.StandardOutput);
+        if (pcmBytes.Length < 2)
+            return null;
+
+        var totalSamples = pcmBytes.Length / 2;
+        var totalPixels = (int)(durationSeconds * pixelsPerSecond);
+        if (totalPixels < 1)
+            totalPixels = 1;
+
+        var samplesPerPixel = totalSamples / totalPixels;
+        if (samplesPerPixel < 1)
+            samplesPerPixel = 1;
+
+        var data = new int[totalPixels * 2];
+        for (var pixel = 0; pixel < totalPixels; pixel++)
+        {
+            var startSample = pixel * samplesPerPixel;
+            var endSample = Math.Min(startSample + samplesPerPixel, totalSamples);
+            short min = 0, max = 0;
+
+            for (var s = startSample; s < endSample; s++)
+            {
+                var offset = s * 2;
+                if (offset + 1 >= pcmBytes.Length) break;
+                var sample = (short)(pcmBytes[offset] | (pcmBytes[offset + 1] << 8));
+                if (sample < min) min = sample;
+                if (sample > max) max = sample;
+            }
+
+            data[pixel * 2] = min;
+            data[pixel * 2 + 1] = max;
+        }
+
+        return data;
+    }
+}

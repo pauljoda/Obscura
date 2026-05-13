@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 
+- The v2 .NET backend now has real implementations for all library scan, probe, fingerprint, preview, and subtitle extraction job handlers — replacing stubs with working processors that discover media files, create entities, compute hashes, generate thumbnails and previews, extract subtitles, and chain downstream jobs exactly like the Node.js predecessor.
 - The v2 .NET job queue now supports all 20 media processing job types with concurrent worker processing, automatic scan scheduling, deduplication, progress reporting, job chaining, and history pruning — establishing the full infrastructure for migrating scan, probe, fingerprint, preview, and metadata processors.
 - Obscura now has the first .NET backend foundation for the v2 migration, including a runnable health endpoint, shared entity contracts, and development wiring that can run beside the current app while the migration is built out.
 - The v2 .NET backend now exposes the first stable API contract routes for entities, videos, jobs, and settings, giving the Svelte UI a typed surface to migrate toward.
@@ -257,6 +258,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- Added `FileDiscoveryService` for recursive directory walking with extension filtering for all media categories (video, image, audio, comic archive).
+- Added `MediaProbeService` wrapping ffprobe for video, audio, image, and subtitle stream metadata extraction with structured JSON parsing.
+- Added `HashingService` computing MD5 and oshash fingerprints in a single streaming pass, compatible with the Node.js OpenSubtitles hash algorithm.
+- Added `ThumbnailService` for ffmpeg-based thumbnail generation, preview clips, trickplay frame extraction, subtitle extraction, and audio waveform PCM decode.
+- Added `AssetPathService` for canonical generated-asset paths under the configured data directory.
+- Added Application-layer port interfaces (`IFileDiscovery`, `IMediaProbe`, `IMediaHashing`, `IMediaAssetGenerator`, `ILibraryScanPersistence`) with Infrastructure adapters.
+- Added `LibraryScanPersistenceService` implementing entity upsert-by-source-path, stale entity cleanup, technical metadata writes, fingerprint writes, and subtitle recording.
+- Implemented `ScanLibraryJobHandler` — discovers video files, creates/updates video entities, removes stale entries, chains probe/fingerprint/preview/subtitle jobs.
+- Implemented `ScanGalleryJobHandler` — discovers images by directory, creates gallery+image entities, chains thumbnail/fingerprint jobs.
+- Implemented `ScanAudioJobHandler` — discovers audio files by directory, creates audio-library+track entities, chains probe/fingerprint jobs.
+- Implemented `ScanBookJobHandler` — discovers CBZ/CBR/ZIP archives, creates book/chapter/page entities from zip image members, chains page thumbnail jobs.
+- Implemented `ProbeVideoJobHandler` and `ProbeAudioJobHandler` — run ffprobe and store technical metadata, audio handler also chains waveform generation.
+- Implemented `FingerprintVideoJobHandler`, `FingerprintImageJobHandler`, `FingerprintAudioJobHandler` — compute MD5+oshash and store as entity file fingerprints.
+- Implemented `GeneratePreviewJobHandler` — generates video thumbnails, H.264 preview clips, and trickplay sprite frames with WebVTT.
+- Implemented `GenerateImageThumbnailJobHandler` and `GenerateBookPageThumbnailJobHandler` — generate JPEG thumbnails via ffmpeg scaling.
+- Implemented `GenerateAudioWaveformJobHandler` — generates waveform peak JSON from PCM-decoded audio.
+- Implemented `ExtractSubtitlesJobHandler` — probes subtitle streams, extracts text-based streams to WebVTT, records in entity subtitles table.
 - Added the initial .NET 10 backend solution with API, contracts, domain, infrastructure, and test projects for the global entity migration.
 - Added initial v2 API route groups and DTOs for global entities, video facades, job operations, and settings.
 - Added the first EF Core v2 global entity migration with seeded entity kinds and shared capability tables.

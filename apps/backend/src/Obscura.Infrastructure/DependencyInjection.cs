@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Obscura.Application.Jobs;
+using Obscura.Application.Jobs.Ports;
 using Obscura.Application.Migrations;
 using Obscura.Application.Settings;
 using Obscura.Application.Videos;
@@ -49,6 +50,23 @@ public static class DependencyInjection
         services.AddSingleton(new DatabaseBackupServiceOptions(connectionString, dataDir));
         services.AddSingleton<ProcessExecutor>();
         services.AddSingleton<MediaToolService>();
+        services.AddSingleton<FileDiscoveryService>();
+        services.AddSingleton(new AssetPathService(dataDir));
+        services.AddSingleton(provider => new MediaProbeService(provider.GetRequiredService<ProcessExecutor>()));
+        services.AddSingleton(provider => new ThumbnailService(provider.GetRequiredService<ProcessExecutor>()));
+        services.AddSingleton<HashingService>();
+
+        services.AddSingleton<IFileDiscovery>(provider =>
+            new FileDiscoveryAdapter(provider.GetRequiredService<FileDiscoveryService>()));
+        services.AddSingleton<IMediaProbe>(provider =>
+            new MediaProbeAdapter(provider.GetRequiredService<MediaProbeService>()));
+        services.AddSingleton<IMediaHashing>(provider =>
+            new MediaHashingAdapter(provider.GetRequiredService<HashingService>()));
+        services.AddSingleton<IMediaAssetGenerator>(provider =>
+            new MediaAssetGeneratorAdapter(
+                provider.GetRequiredService<ThumbnailService>(),
+                provider.GetRequiredService<AssetPathService>()));
+        services.AddScoped<ILibraryScanPersistence, LibraryScanPersistenceService>();
         services.AddScoped<DatabaseBackupService>();
         services.AddScoped<IV2FreshStartService, V2FreshStartService>();
         services.AddScoped<ILegacyMediaImportService, LegacyMediaImportService>();
