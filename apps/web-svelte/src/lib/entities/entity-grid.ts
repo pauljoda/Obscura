@@ -61,7 +61,6 @@ export interface EntityGridState {
 
 export interface EntityGridRequest {
   filters: EntityGridFilterOption[];
-  includeNsfw: boolean;
   kind?: string;
   query?: string;
   sortBy: EntityGridSort;
@@ -245,9 +244,13 @@ export function entityCardToThumbnailCard(
  * Counts are intentionally local to the returned collection so mixed surfaces
  * can render their own scoped tabs.
  */
-export function buildEntityKindTabs(cards: EntityThumbnailCard[]): EntityGridKindTab[] {
+export function buildEntityKindTabs(
+  cards: EntityThumbnailCard[],
+  options: { includeNsfw?: boolean } = {},
+): EntityGridKindTab[] {
   const counts = new Map<string, number>();
   for (const card of cards) {
+    if (options.includeNsfw === false && isNsfw(card.entity.capabilities)) continue;
     counts.set(card.entity.kind, (counts.get(card.entity.kind) ?? 0) + 1);
   }
 
@@ -599,8 +602,9 @@ function entityMatchesFilter(capabilities: EntityCapability[], filter: EntityGri
 
 /**
  * Applies the client-side version of EntityGrid state for lab and optimistic UI
- * paths. Real endpoints receive the same state through {@link EntityGridRequest}
- * so filtering can move server-side without changing the component contract.
+ * paths. Server-backed endpoints own privacy filtering from server-side
+ * settings, so this helper is only a local display fallback for cards the
+ * client already has.
  */
 export function applyEntityGridState(
   cards: EntityThumbnailCard[],
@@ -632,8 +636,8 @@ export function applyEntityGridState(
 }
 
 /**
- * Serializes the current grid controls into the request shape expected by v2
- * list endpoints and by the thumbnail lab state preview.
+ * Serializes the current grid controls into the non-privacy request shape
+ * expected by v2 list endpoints and by the thumbnail lab state preview.
  */
 export function entityGridRequestFromState(
   state: EntityGridState,
@@ -643,7 +647,6 @@ export function entityGridRequestFromState(
     filters: state.filterIds
       .map((id) => entityGridFilterFromId(id, filterOptions))
       .filter((option): option is EntityGridFilterOption => Boolean(option)),
-    includeNsfw: state.includeNsfw,
     kind: state.activeKind === ENTITY_GRID_ALL_KINDS ? undefined : state.activeKind,
     query: state.query.trim() || undefined,
     sortBy: state.sortBy,

@@ -216,6 +216,7 @@ public sealed class ApiSurfaceTests
             IEntityKind? kind,
             string? query,
             string? cursor,
+            bool hideNsfw,
             CancellationToken cancellationToken)
         {
             return Task.FromResult(new DomainEntityPage([], null));
@@ -253,7 +254,7 @@ public sealed class ApiSurfaceTests
             return Task.FromResult<DomainEntity?>(null);
         }
 
-        public Task<DomainEntityPage> ListVideosAsync(CancellationToken cancellationToken)
+        public Task<DomainEntityPage> ListVideosAsync(bool hideNsfw, CancellationToken cancellationToken)
         {
             return Task.FromResult(new DomainEntityPage([], null));
         }
@@ -263,7 +264,7 @@ public sealed class ApiSurfaceTests
             return Task.FromResult<DomainVideo?>(null);
         }
 
-        public Task<DomainEntityPage> ListSeriesAsync(CancellationToken cancellationToken)
+        public Task<DomainEntityPage> ListSeriesAsync(bool hideNsfw, CancellationToken cancellationToken)
         {
             return Task.FromResult(new DomainEntityPage([], null));
         }

@@ -1,4 +1,5 @@
 using Obscura.Application.Mapping;
+using Obscura.Application.Settings;
 using Obscura.Contracts.Series;
 using Obscura.Contracts.Videos;
 using Obscura.Domain.Entities;
@@ -12,14 +13,17 @@ namespace Obscura.Application.Videos;
 public sealed class VideoService
 {
     private readonly IVideoLibrary _videos;
+    private readonly ISettingsService _settings;
 
     /// <summary>
     /// Creates a video service over the domain video library port.
     /// </summary>
     /// <param name="videos">Video library used to project video aggregates.</param>
-    public VideoService(IVideoLibrary videos)
+    /// <param name="settings">Server-side settings used to enforce visibility before contracts are serialized.</param>
+    public VideoService(IVideoLibrary videos, ISettingsService settings)
     {
         _videos = videos;
+        _settings = settings;
     }
 
     /// <summary>
@@ -29,7 +33,8 @@ public sealed class VideoService
     /// <returns>API-ready video list response.</returns>
     public async Task<VideoListResponse> ListVideosAsync(CancellationToken cancellationToken)
     {
-        var page = await _videos.ListVideosAsync(cancellationToken);
+        var settings = await _settings.GetAsync(cancellationToken);
+        var page = await _videos.ListVideosAsync(settings.HideNsfw, cancellationToken);
         return ContractMapper.ToVideoListResponse(page);
     }
 
@@ -52,7 +57,8 @@ public sealed class VideoService
     /// <returns>API-ready video-series list response.</returns>
     public async Task<VideoSeriesListResponse> ListSeriesAsync(CancellationToken cancellationToken)
     {
-        var page = await _videos.ListSeriesAsync(cancellationToken);
+        var settings = await _settings.GetAsync(cancellationToken);
+        var page = await _videos.ListSeriesAsync(settings.HideNsfw, cancellationToken);
         return ContractMapper.ToVideoSeriesListResponse(page);
     }
 

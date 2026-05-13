@@ -1,5 +1,6 @@
 using Obscura.Application.Entities;
 using Obscura.Application.Mapping;
+using Obscura.Application.Settings;
 using Obscura.Contracts.Taxonomy;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Interfaces;
@@ -13,16 +14,19 @@ public sealed class TaxonomyService
 {
     private readonly IEntityCatalog _entities;
     private readonly IEntityDetails _details;
+    private readonly ISettingsService _settings;
 
     /// <summary>
     /// Creates a taxonomy service over shared entity read ports.
     /// </summary>
     /// <param name="entities">Catalog used to list taxonomy entities.</param>
     /// <param name="details">Detail reader used to hydrate typed taxonomy aggregates.</param>
-    public TaxonomyService(IEntityCatalog entities, IEntityDetails details)
+    /// <param name="settings">Server-side settings used to enforce visibility before contracts are serialized.</param>
+    public TaxonomyService(IEntityCatalog entities, IEntityDetails details, ISettingsService settings)
     {
         _entities = entities;
         _details = details;
+        _settings = settings;
     }
 
     /// <summary>
@@ -93,7 +97,8 @@ public sealed class TaxonomyService
         EntityListQuery query,
         CancellationToken cancellationToken)
     {
-        var page = await _entities.ListAsync(kind, query.Search, query.Cursor, cancellationToken);
+        var settings = await _settings.GetAsync(cancellationToken);
+        var page = await _entities.ListAsync(kind, query.Search, query.Cursor, settings.HideNsfw, cancellationToken);
         return ContractMapper.ToTaxonomyListResponse(page);
     }
 }

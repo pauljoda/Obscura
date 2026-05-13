@@ -1,5 +1,6 @@
 using Obscura.Application.Entities;
 using Obscura.Application.Mapping;
+using Obscura.Application.Settings;
 using Obscura.Contracts.Media;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Interfaces;
@@ -13,16 +14,19 @@ public sealed class MediaService
 {
     private readonly IEntityCatalog _entities;
     private readonly IEntityDetails _details;
+    private readonly ISettingsService _settings;
 
     /// <summary>
     /// Creates a media service over shared entity read ports.
     /// </summary>
     /// <param name="entities">Catalog used to list media entities and ordered child links.</param>
     /// <param name="details">Detail reader used to hydrate typed media aggregates.</param>
-    public MediaService(IEntityCatalog entities, IEntityDetails details)
+    /// <param name="settings">Server-side settings used to enforce visibility before contracts are serialized.</param>
+    public MediaService(IEntityCatalog entities, IEntityDetails details, ISettingsService settings)
     {
         _entities = entities;
         _details = details;
+        _settings = settings;
     }
 
     /// <summary>
@@ -155,7 +159,8 @@ public sealed class MediaService
         EntityListQuery query,
         CancellationToken cancellationToken)
     {
-        var page = await _entities.ListAsync(kind, query.Search, query.Cursor, cancellationToken);
+        var settings = await _settings.GetAsync(cancellationToken);
+        var page = await _entities.ListAsync(kind, query.Search, query.Cursor, settings.HideNsfw, cancellationToken);
         return ContractMapper.ToMediaListResponse(page);
     }
 }

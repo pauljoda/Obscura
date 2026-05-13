@@ -4,7 +4,9 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Obscura.Application.Settings;
 using Obscura.Contracts.Entities;
+using Obscura.Contracts.Settings;
 using Obscura.Contracts.Series;
 using Obscura.Contracts.Videos;
 using Obscura.Domain.Entities;
@@ -81,6 +83,18 @@ public sealed class EntityVideoEndpointServiceTests
     }
 
     [Fact]
+    public async Task EntityListEndpointUsesServerHideNsfwSetting()
+    {
+        using var factory = CreateFactory(hideNsfw: true);
+        using var client = factory.CreateClient();
+
+        var entities = await client.GetFromJsonAsync<EntityListResponse>("/api/entities?kind=video");
+
+        Assert.NotNull(entities);
+        Assert.Empty(entities.Items);
+    }
+
+    [Fact]
     public async Task MissingProjectedVideoUsesProblemDetailsShape()
     {
         using var factory = CreateFactory();
@@ -92,7 +106,7 @@ public sealed class EntityVideoEndpointServiceTests
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
     }
 
-    private static WebApplicationFactory<Program> CreateFactory()
+    private static WebApplicationFactory<Program> CreateFactory(bool hideNsfw = false)
     {
         return new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
@@ -104,6 +118,7 @@ public sealed class EntityVideoEndpointServiceTests
                     services.AddScoped<IEntityDetails>(provider => provider.GetRequiredService<FakeEntityProjectionService>());
                     services.AddScoped<IRatingService>(provider => provider.GetRequiredService<FakeEntityProjectionService>());
                     services.AddScoped<IVideoLibrary>(provider => provider.GetRequiredService<FakeEntityProjectionService>());
+                    services.AddSingleton<ISettingsService>(new FakeSettingsService(hideNsfw));
                 });
             });
     }
@@ -138,9 +153,10 @@ public sealed class EntityVideoEndpointServiceTests
             IEntityKind? kind,
             string? query,
             string? cursor,
+            bool hideNsfw,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult(new DomainEntityPage([Card(null)], null));
+            return Task.FromResult(new DomainEntityPage(hideNsfw ? [] : [Card(null)], null));
         }
 
         public Task<DomainEntity?> GetAsync(Guid id, CancellationToken cancellationToken)
@@ -175,9 +191,9 @@ public sealed class EntityVideoEndpointServiceTests
             return Task.FromResult<DomainEntity?>(id == VideoId ? Card(null) : null);
         }
 
-        public Task<DomainEntityPage> ListVideosAsync(CancellationToken cancellationToken)
+        public Task<DomainEntityPage> ListVideosAsync(bool hideNsfw, CancellationToken cancellationToken)
         {
-            return Task.FromResult(new DomainEntityPage([Card(null)], null));
+            return Task.FromResult(new DomainEntityPage(hideNsfw ? [] : [Card(null)], null));
         }
 
         public Task<DomainVideo?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
@@ -198,7 +214,7 @@ public sealed class EntityVideoEndpointServiceTests
                 SubtitlesExtractedAt: null));
         }
 
-        public Task<DomainEntityPage> ListSeriesAsync(CancellationToken cancellationToken)
+        public Task<DomainEntityPage> ListSeriesAsync(bool hideNsfw, CancellationToken cancellationToken)
         {
             return Task.FromResult(new DomainEntityPage([], null));
         }
@@ -322,5 +338,21 @@ public sealed class EntityVideoEndpointServiceTests
                 EntityKindRegistry.Collection,
                 "Projected Collection",
                 []);
+    }
+
+    private sealed class FakeSettingsService : ISettingsService
+    {
+        private readonly bool _hideNsfw;
+
+        public FakeSettingsService(bool hideNsfw)
+        {
+            _hideNsfw = hideNsfw;
+        }
+
+        public Task<SettingsResponse> GetAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new SettingsResponse(_hideNsfw, EnableCastControls: true));
+
+        public Task<SettingsResponse> UpdateAsync(SettingsUpdateRequest request, CancellationToken cancellationToken) =>
+            GetAsync(cancellationToken);
     }
 }

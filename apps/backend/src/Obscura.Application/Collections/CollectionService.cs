@@ -1,5 +1,6 @@
 using Obscura.Application.Entities;
 using Obscura.Application.Mapping;
+using Obscura.Application.Settings;
 using Obscura.Contracts.Collections;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Interfaces;
@@ -13,15 +14,19 @@ public sealed class CollectionService
 {
     private readonly IEntityCatalog _entities;
     private readonly IEntityDetails _details;
+    private readonly ISettingsService _settings;
 
     /// <summary>
     /// Creates a collection service over the shared entity catalog.
     /// </summary>
     /// <param name="entities">Catalog used to read collection entities and membership links.</param>
-    public CollectionService(IEntityCatalog entities, IEntityDetails details)
+    /// <param name="details">Detail reader used to hydrate typed collection aggregates.</param>
+    /// <param name="settings">Server-side settings used to enforce visibility before contracts are serialized.</param>
+    public CollectionService(IEntityCatalog entities, IEntityDetails details, ISettingsService settings)
     {
         _entities = entities;
         _details = details;
+        _settings = settings;
     }
 
     /// <summary>
@@ -32,7 +37,13 @@ public sealed class CollectionService
     /// <returns>API-ready collection list response.</returns>
     public async Task<CollectionListResponse> ListAsync(EntityListQuery query, CancellationToken cancellationToken)
     {
-        var page = await _entities.ListAsync(EntityKindRegistry.Collection, query.Search, query.Cursor, cancellationToken);
+        var settings = await _settings.GetAsync(cancellationToken);
+        var page = await _entities.ListAsync(
+            EntityKindRegistry.Collection,
+            query.Search,
+            query.Cursor,
+            settings.HideNsfw,
+            cancellationToken);
         return ContractMapper.ToCollectionListResponse(page);
     }
 

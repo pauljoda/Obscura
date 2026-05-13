@@ -31,6 +31,7 @@ public sealed partial class EntityProjectionService : IEntityCatalog, IEntityDet
         IEntityKind? kind,
         string? query,
         string? cursor,
+        bool hideNsfw,
         CancellationToken cancellationToken)
     {
         var skip = int.TryParse(cursor, out var parsedCursor) && parsedCursor > 0
@@ -50,6 +51,12 @@ public sealed partial class EntityProjectionService : IEntityCatalog, IEntityDet
         {
             var normalizedQuery = query.ToLower();
             entityQuery = entityQuery.Where(entity => entity.Title.ToLower().Contains(normalizedQuery));
+        }
+
+        if (hideNsfw)
+        {
+            entityQuery = entityQuery.Where(entity =>
+                !_db.EntityFlags.Any(flag => flag.EntityId == entity.Id && flag.IsNsfw));
         }
 
         var rows = await entityQuery
@@ -202,8 +209,8 @@ public sealed partial class EntityProjectionService : IEntityCatalog, IEntityDet
     }
 
     /// <inheritdoc />
-    public Task<EntityPage> ListVideosAsync(CancellationToken cancellationToken) =>
-        ListAsync(EntityKindRegistry.Video, null, null, cancellationToken);
+    public Task<EntityPage> ListVideosAsync(bool hideNsfw, CancellationToken cancellationToken) =>
+        ListAsync(EntityKindRegistry.Video, null, null, hideNsfw, cancellationToken);
 
     /// <inheritdoc />
     public async Task<Video?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
@@ -228,8 +235,8 @@ public sealed partial class EntityProjectionService : IEntityCatalog, IEntityDet
     }
 
     /// <inheritdoc />
-    public Task<EntityPage> ListSeriesAsync(CancellationToken cancellationToken) =>
-        ListAsync(EntityKindRegistry.VideoSeries, null, null, cancellationToken);
+    public Task<EntityPage> ListSeriesAsync(bool hideNsfw, CancellationToken cancellationToken) =>
+        ListAsync(EntityKindRegistry.VideoSeries, null, null, hideNsfw, cancellationToken);
 
     /// <inheritdoc />
     public async Task<VideoSeries?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)

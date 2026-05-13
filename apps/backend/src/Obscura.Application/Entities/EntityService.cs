@@ -1,4 +1,5 @@
 using Obscura.Application.Mapping;
+using Obscura.Application.Settings;
 using Obscura.Contracts.Entities;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Interfaces;
@@ -12,16 +13,19 @@ public sealed class EntityService
 {
     private readonly IEntityCatalog _entities;
     private readonly IRatingService _ratings;
+    private readonly ISettingsService _settings;
 
     /// <summary>
     /// Creates an entity service over read and write domain ports.
     /// </summary>
     /// <param name="entities">Catalog used for entity read projections.</param>
     /// <param name="ratings">Capability writer used for rating and flag changes.</param>
-    public EntityService(IEntityCatalog entities, IRatingService ratings)
+    /// <param name="settings">Server-side settings used to enforce visibility before contracts are serialized.</param>
+    public EntityService(IEntityCatalog entities, IRatingService ratings, ISettingsService settings)
     {
         _entities = entities;
         _ratings = ratings;
+        _settings = settings;
     }
 
     /// <summary>
@@ -32,7 +36,13 @@ public sealed class EntityService
     /// <returns>API-ready entity list response.</returns>
     public async Task<EntityListResponse> ListAsync(EntityListQuery query, CancellationToken cancellationToken)
     {
-        var page = await _entities.ListAsync(query.Kind, query.Search, query.Cursor, cancellationToken);
+        var settings = await _settings.GetAsync(cancellationToken);
+        var page = await _entities.ListAsync(
+            query.Kind,
+            query.Search,
+            query.Cursor,
+            settings.HideNsfw,
+            cancellationToken);
         return ContractMapper.ToEntityListResponse(page);
     }
 

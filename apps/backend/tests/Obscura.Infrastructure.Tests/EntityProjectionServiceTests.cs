@@ -139,7 +139,7 @@ public sealed class EntityProjectionServiceTests
         await db.SaveChangesAsync();
 
         var service = new EntityProjectionService(db);
-        var response = await service.ListVideosAsync(CancellationToken.None);
+        var response = await service.ListVideosAsync(hideNsfw: false, CancellationToken.None);
 
         var card = Assert.Single(response.Items);
         Assert.Equal(videoId, card.Id);
@@ -210,6 +210,42 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal(5, rated?.GetCapability(CapabilityRegistry.Rating).Value?.Value);
         Assert.Null(cleared?.GetCapability(CapabilityRegistry.Rating).Value);
         Assert.Empty(db.EntityRatings);
+    }
+
+    [Fact]
+    public async Task ListHidesNsfwEntitiesWhenRequested()
+    {
+        await using var db = CreateContext();
+        var safeId = Guid.Parse("37373737-3737-3737-3737-373737373737");
+        var nsfwId = Guid.Parse("38383838-3838-3838-3838-383838383838");
+        SeedEntity(db, safeId, "video", "Safe Feature");
+        SeedEntity(db, nsfwId, "video", "Hidden Feature");
+        db.EntityFlags.Add(new EntityFlagRow
+        {
+            EntityId = safeId,
+            IsFavorite = false,
+            IsNsfw = false,
+            IsOrganized = false
+        });
+        db.EntityFlags.Add(new EntityFlagRow
+        {
+            EntityId = nsfwId,
+            IsFavorite = false,
+            IsNsfw = true,
+            IsOrganized = false
+        });
+        await db.SaveChangesAsync();
+
+        var service = new EntityProjectionService(db);
+        var response = await service.ListAsync(
+            EntityKindRegistry.Video,
+            query: null,
+            cursor: null,
+            hideNsfw: true,
+            CancellationToken.None);
+
+        var card = Assert.Single(response.Items);
+        Assert.Equal(safeId, card.Id);
     }
 
     [Fact]
@@ -287,7 +323,7 @@ public sealed class EntityProjectionServiceTests
         await db.SaveChangesAsync();
 
         var service = new EntityProjectionService(db);
-        var list = await service.ListSeriesAsync(CancellationToken.None);
+        var list = await service.ListSeriesAsync(hideNsfw: false, CancellationToken.None);
         var detail = await service.GetSeriesAsync(seriesId, CancellationToken.None);
 
         var card = Assert.Single(list.Items);

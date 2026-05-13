@@ -92,7 +92,7 @@
     sortBy,
     sortDir,
   });
-  const tabs = $derived(buildEntityKindTabs(cards));
+  const tabs = $derived(buildEntityKindTabs(cards, { includeNsfw: gridState.includeNsfw }));
   const filterOptions = $derived(buildCapabilityFilterOptions(cards));
   const visibleCards = $derived(applyEntityGridState(cards, gridState, filterOptions));
   const selectedCount = $derived(selectedIds.length);

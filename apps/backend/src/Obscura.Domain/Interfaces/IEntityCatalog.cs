@@ -13,12 +13,14 @@ public interface IEntityCatalog
     /// <param name="kind">Optional typed entity kind to restrict the list.</param>
     /// <param name="query">Optional case-insensitive title search.</param>
     /// <param name="cursor">Opaque cursor from a previous page.</param>
+    /// <param name="hideNsfw">True to exclude entities flagged as NSFW before projection.</param>
     /// <param name="cancellationToken">Token used to cancel the query.</param>
     /// <returns>A page of projected domain entities.</returns>
     Task<EntityPage> ListAsync(
         IEntityKind? kind,
         string? query,
         string? cursor,
+        bool hideNsfw,
         CancellationToken cancellationToken);
 
     /// <summary>

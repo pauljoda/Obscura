@@ -11,9 +11,10 @@ public interface IVideoLibrary
     /// <summary>
     /// Lists video entities for browsing surfaces.
     /// </summary>
+    /// <param name="hideNsfw">True to exclude videos flagged as NSFW before projection.</param>
     /// <param name="cancellationToken">Token used to cancel the query.</param>
     /// <returns>A page of video entity roots.</returns>
-    Task<EntityPage> ListVideosAsync(CancellationToken cancellationToken);
+    Task<EntityPage> ListVideosAsync(bool hideNsfw, CancellationToken cancellationToken);
 
     /// <summary>
     /// Gets one video with video-specific playback detail, markers, subtitles, and shared capabilities.
@@ -26,9 +27,10 @@ public interface IVideoLibrary
     /// <summary>
     /// Lists video series entities for side-by-side v2 route testing.
     /// </summary>
+    /// <param name="hideNsfw">True to exclude series flagged as NSFW before projection.</param>
     /// <param name="cancellationToken">Token used to cancel the query.</param>
     /// <returns>A page of video series entity roots.</returns>
-    Task<EntityPage> ListSeriesAsync(CancellationToken cancellationToken);
+    Task<EntityPage> ListSeriesAsync(bool hideNsfw, CancellationToken cancellationToken);
 
     /// <summary>
     /// Gets one video series with projected child video links.

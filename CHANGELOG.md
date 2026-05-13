@@ -101,6 +101,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 thumbnail lab now uses the first shared Entity Grid surface, including the ported media-surface toolbar, capability filter drawer, presets, kind tabs, selection, scaling, NSFW visibility, and loading/empty/hydrated states.
 - The v2 entity grid toolbar now uses a polished custom sort dropdown and single-row layout matching the v1 media surface, and the multi-select bulk bar now includes a Select All action. In stacked layout (laptop and below), sort controls anchor to the left while view, filter, and preset controls anchor to the right.
 - List-view entity cards now keep consistent row height regardless of image aspect ratio — portrait, landscape, and square thumbnails all render at the same size without clipping the title or metadata chips.
+- V2 entity lists now enforce the server-side hide-NSFW setting before entity rows are projected, so hidden content is not sent to the browser.
 
 ### Docs
 
@@ -292,6 +293,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- V2 entity lists no longer expose NSFW entities when the server-side hide-NSFW setting is enabled.
+- Entity Grid kind tabs now disappear when the visible result set only contains one entity kind, avoiding redundant All/type tabs on single-kind pages.
 - Accepted book metadata no longer creates duplicated on-disk volume folder names such as `Volume 01 - Volume 1`, and book scans repair already-created duplicate volume folders while preserving existing chapter/page records.
 - Identify provider flyouts now close as soon as a provider is selected, so the disabled Identify button prevents repeat submissions while the lookup is running.
 - Accepted plugin metadata results now mark series, books, galleries, images, albums, and tracks as organized, even when the accepted fields only update artwork or linked metadata.

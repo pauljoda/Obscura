@@ -80,6 +80,13 @@ describe("entity grid helpers", () => {
     ]);
   });
 
+  it("builds tabs from SFW-visible cards only", () => {
+    expect(buildEntityKindTabs(cards, { includeNsfw: false })).toEqual([
+      { kind: "book", label: "Books", count: 1 },
+      { kind: "video", label: "Videos", count: 1 },
+    ]);
+  });
+
   it("derives capability filters from returned entities", () => {
     const options = buildCapabilityFilterOptions(cards);
 
@@ -115,12 +122,12 @@ describe("entity grid helpers", () => {
     }, options);
 
     expect(request).toMatchObject({
-      includeNsfw: false,
       kind: "video",
       query: "bunny",
       sortBy: "rating",
       sortDir: "desc",
     });
+    expect("includeNsfw" in request).toBe(false);
     expect(request.filters.map((filter) => filter.id)).toEqual(["rating:4", "technical:duration"]);
   });
 });
