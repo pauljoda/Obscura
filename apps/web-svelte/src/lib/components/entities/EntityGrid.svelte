@@ -10,10 +10,12 @@
     buildCapabilityFilterOptions,
     buildEntityKindTabs,
     entityGridRequestFromState,
+    entityGridFilterFromId,
     type EntityGridRequest,
     type EntityGridSort,
     type EntityGridSortDir,
     type EntityGridViewMode,
+    type EntityGridBulkAction,
   } from "$lib/entities/entity-grid";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
   import EntityGridFilterDrawer from "./EntityGridFilterDrawer.svelte";
@@ -21,6 +23,7 @@
   import EntityGridToolbar from "./EntityGridToolbar.svelte";
 
   interface Props {
+    bulkActions?: EntityGridBulkAction[];
     cards: EntityThumbnailCard[];
     emptyMessage?: string;
     emptyTitle?: string;
@@ -35,6 +38,7 @@
   }
 
   let {
+    bulkActions = [],
     cards,
     emptyMessage = "Try adjusting your search or filters.",
     emptyTitle = "Nothing present",
@@ -153,7 +157,7 @@
   }
 
   function filterToPresetEntry(id: string) {
-    const option = filterOptions.find((candidate) => candidate.id === id);
+    const option = entityGridFilterFromId(id, filterOptions);
     return {
       label: option?.label ?? id,
       type: option?.capabilityKind ?? "capability",
@@ -172,10 +176,9 @@
   }
 
   function applyPreset(preset: FilterPreset) {
-    const knownFilterIds = new Set(filterOptions.map((option) => option.id));
     filterIds = preset.filters
       .map((filter) => filter.value)
-      .filter((id) => knownFilterIds.has(id));
+      .filter((id) => Boolean(entityGridFilterFromId(id, filterOptions)));
     sortBy = preset.sortBy === "kind" || preset.sortBy === "rating" ? preset.sortBy : "title";
     sortDir = preset.sortDir;
     activePresetId = preset.id;
@@ -275,6 +278,29 @@
     {tabs}
     totalCount={cards.length}
   />
+
+  {#if selectedIds.length > 0}
+    <div class="bulk-bar" role="status" aria-live="polite">
+      <span>{selectedIds.length} selected</span>
+      <div class="bulk-actions">
+        {#each bulkActions as action (action.id)}
+          <button
+            type="button"
+            class:danger={action.tone === "danger"}
+            onclick={() => action.onRun(selectedIds)}
+          >
+            {action.label}
+          </button>
+        {/each}
+        <button type="button" onclick={() => {
+          selectedIds = [];
+          onSelectionChange?.(selectedIds);
+        }}>
+          Clear selection
+        </button>
+      </div>
+    </div>
+  {/if}
 
   {#if loading}
     <div class="loading-grid" aria-label="Loading entities" aria-busy="true">
@@ -419,6 +445,53 @@
   .empty-icon :global(svg) {
     width: 100%;
     height: 100%;
+  }
+
+  .bulk-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+    box-shadow: inset 0 2px 8px rgb(0 0 0 / 0.3);
+    color: var(--color-text-muted);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.7rem;
+    padding: 0.55rem 0.7rem;
+  }
+
+  .bulk-bar > span {
+    color: var(--color-text-accent);
+    text-transform: uppercase;
+  }
+
+  .bulk-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: flex-end;
+  }
+
+  .bulk-actions button {
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-2);
+    color: var(--color-text-muted);
+    font-size: 0.68rem;
+    padding: 0.32rem 0.5rem;
+    transition:
+      border-color var(--duration-fast) var(--ease-default),
+      color var(--duration-fast) var(--ease-default);
+  }
+
+  .bulk-actions button:hover {
+    border-color: var(--color-border-accent);
+    color: var(--color-text-accent);
+  }
+
+  .bulk-actions button.danger:hover {
+    border-color: var(--color-error-border, rgb(179 79 86 / 0.5));
+    color: var(--color-error-text);
   }
 
   .empty strong {

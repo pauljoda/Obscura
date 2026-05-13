@@ -7,6 +7,10 @@
   type LabState = "hydrated" | "loading" | "empty";
 
   const hydratedCards: EntityThumbnailCard[] = thumbnailLabRows.flatMap((row) => row.cards);
+  const bulkActions = [
+    { id: "review", label: "Mark reviewed", onRun: () => undefined },
+    { id: "queue", label: "Queue preview", onRun: () => undefined },
+  ];
 
   let labState = $state<LabState>("hydrated");
   let selectedIds = $state<string[]>([]);
@@ -62,6 +66,7 @@
 
   <EntityGrid
     {cards}
+    {bulkActions}
     loading={isLoading}
     prefsKey="thumbnail-lab-entity-grid-surface"
     minScale={2}

@@ -14,6 +14,7 @@
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import type { FilterPreset } from "$lib/filter-presets";
+  import { entityGridFilterFromId } from "$lib/entities/entity-grid";
   import type {
     EntityGridFilterOption,
     EntityGridSort,
@@ -86,7 +87,7 @@
 
   const activeFilters = $derived(
     activeFilterIds
-      .map((id) => filterOptions.find((option) => option.id === id))
+      .map((id) => entityGridFilterFromId(id, filterOptions))
       .filter((option): option is EntityGridFilterOption => Boolean(option)),
   );
 
@@ -280,7 +281,7 @@
     display: flex;
     align-items: center;
     gap: 0.45rem;
-    height: 1.9rem;
+    height: 1.8rem;
     min-width: 0;
     border: 1px solid var(--color-border-subtle);
     background: var(--color-surface-1);
@@ -294,7 +295,7 @@
     border: 0;
     background: transparent;
     color: var(--color-text-primary);
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     outline: 0;
   }
 
@@ -332,11 +333,10 @@
     background: transparent;
     color: inherit;
     font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.68rem;
+    font-size: 0.64rem;
     letter-spacing: 0.04em;
     outline: 0;
     padding: 0 1.1rem 0 0.4rem;
-    text-transform: uppercase;
   }
 
   .sort-control {
