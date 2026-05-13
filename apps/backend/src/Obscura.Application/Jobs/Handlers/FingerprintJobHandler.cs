@@ -26,8 +26,8 @@ public sealed class FingerprintJobHandler(
 
         await context.ReportProgressAsync(80, "Storing fingerprints", cancellationToken);
 
-        await Persistence.UpsertEntityFingerprintAsync(entityId, "md5", hashes.Md5, sourceFileId, cancellationToken);
-        await Persistence.UpsertEntityFingerprintAsync(entityId, "oshash", hashes.Oshash, sourceFileId, cancellationToken);
+        await Persistence.UpsertEntityFingerprintAsync(entityId, FingerprintAlgorithm.Md5, hashes.Md5, sourceFileId, cancellationToken);
+        await Persistence.UpsertEntityFingerprintAsync(entityId, FingerprintAlgorithm.Oshash, hashes.Oshash, sourceFileId, cancellationToken);
 
         logger.LogInformation("{JobType}: {Label} — md5={Md5}", Type.ToCode(), context.Job.TargetLabel, hashes.Md5[..8]);
 

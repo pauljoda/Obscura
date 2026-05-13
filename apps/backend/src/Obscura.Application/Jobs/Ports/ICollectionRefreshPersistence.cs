@@ -1,3 +1,5 @@
+using Obscura.Domain.Entities;
+
 namespace Obscura.Application.Jobs.Ports;
 
 /// <summary>
@@ -31,5 +33,5 @@ public interface ICollectionRefreshPersistence
 public sealed record CollectionRefreshData(
     Guid EntityId,
     string Title,
-    string Mode,
+    CollectionMode Mode,
     string RuleTreeJson);

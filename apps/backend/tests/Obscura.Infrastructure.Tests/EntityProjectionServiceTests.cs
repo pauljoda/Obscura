@@ -132,7 +132,7 @@ public sealed class EntityProjectionServiceTests
         {
             Id = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
             EntityId = videoId,
-            Algorithm = "oshash",
+            Algorithm = FingerprintAlgorithm.Oshash,
             Value = "abc123",
             CreatedAt = DateTimeOffset.UtcNow
         });

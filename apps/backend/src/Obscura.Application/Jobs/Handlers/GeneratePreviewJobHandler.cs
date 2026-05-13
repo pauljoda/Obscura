@@ -55,7 +55,7 @@ public sealed class GeneratePreviewJobHandler(
         if (success)
         {
             var size = new FileInfo(thumbPath).Length;
-            await Persistence.UpsertEntityFileAsync(entityId, "thumbnail", thumbPath, "image/jpeg", size, cancellationToken);
+            await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Thumbnail, thumbPath, "image/jpeg", size, cancellationToken);
         }
     }
 
@@ -72,7 +72,7 @@ public sealed class GeneratePreviewJobHandler(
         if (success)
         {
             var size = new FileInfo(previewPath).Length;
-            await Persistence.UpsertEntityFileAsync(entityId, "preview", previewPath, "video/mp4", size, cancellationToken);
+            await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Preview, previewPath, "video/mp4", size, cancellationToken);
         }
     }
 
@@ -108,7 +108,7 @@ public sealed class GeneratePreviewJobHandler(
         var vttPath = assets.VideoTrickplayVttPath(entityId);
         await WriteTrickplayVttAsync(entityId, vttPath, frameCount, interval, frameWidth, frameHeight, cancellationToken);
 
-        await Persistence.UpsertEntityFileAsync(entityId, "trickplay", vttPath, "text/vtt", null, cancellationToken);
+        await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Trickplay, vttPath, "text/vtt", null, cancellationToken);
     }
 
     private static async Task WriteTrickplayVttAsync(

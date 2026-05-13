@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using NpgsqlTypes;
 using Obscura.Application.Jobs.Ports;
+using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
 
 namespace Obscura.Infrastructure.Collections;
@@ -22,8 +23,8 @@ public sealed class CollectionRuleEngine(ObscuraDbContext db) : ICollectionRuleE
         ["480p"] = (0, 719)
     };
 
-    private static readonly string[] TargetKindCodes =
-        ["video", "gallery", "image", "book", "audio-track"];
+    private static readonly IEntityKind[] TargetKinds =
+        [EntityKindRegistry.Video, EntityKindRegistry.Gallery, EntityKindRegistry.Image, EntityKindRegistry.Book, EntityKindRegistry.AudioTrack];
 
     public async Task<IReadOnlyList<CollectionRuleMatch>> EvaluateAsync(
         string ruleTreeJson, CancellationToken cancellationToken)
@@ -33,8 +34,9 @@ public sealed class CollectionRuleEngine(ObscuraDbContext db) : ICollectionRuleE
 
         var results = new List<CollectionRuleMatch>();
 
-        foreach (var kindCode in TargetKindCodes)
+        foreach (var kind in TargetKinds)
         {
+            var kindCode = kind.Code;
             var ctx = new SqlBuildContext();
             var whereFragment = TranslateNode(group, kindCode, ctx);
             if (whereFragment is null) continue;
@@ -43,7 +45,7 @@ public sealed class CollectionRuleEngine(ObscuraDbContext db) : ICollectionRuleE
             var ids = await ExecuteQueryAsync(sql, ctx.Parameters, cancellationToken);
 
             foreach (var id in ids)
-                results.Add(new CollectionRuleMatch(kindCode, id));
+                results.Add(new CollectionRuleMatch(kind, id));
         }
 
         return results;

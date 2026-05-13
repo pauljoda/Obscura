@@ -41,7 +41,7 @@ public sealed class GenerateAudioWaveformJobHandler(
         await File.WriteAllTextAsync(outputPath, json, cancellationToken);
 
         var size = new FileInfo(outputPath).Length;
-        await Persistence.UpsertEntityFileAsync(entityId, "waveform", outputPath, "application/json", size, cancellationToken);
+        await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Waveform, outputPath, "application/json", size, cancellationToken);
 
         logger.LogInformation("GenerateAudioWaveform: created waveform for {Label} ({Pixels} pixels)",
             context.Job.TargetLabel, waveformData.Length / 2);

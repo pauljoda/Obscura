@@ -15,12 +15,12 @@ public sealed class LibraryMaintenanceJobHandler(
 {
     public JobType Type => JobType.LibraryMaintenance;
 
-    private static readonly (string KindCode, string CacheSubdir)[] AssetKinds =
+    private static readonly (IEntityKind Kind, string CacheSubdir)[] AssetKinds =
     [
-        ("video", "videos"),
-        ("image", "images"),
-        ("book-page", "book-pages"),
-        ("audio-track", "audio-tracks")
+        (EntityKindRegistry.Video, "videos"),
+        (EntityKindRegistry.Image, "images"),
+        (EntityKindRegistry.BookPage, "book-pages"),
+        (EntityKindRegistry.AudioTrack, "audio-tracks")
     ];
 
     public async Task HandleAsync(JobContext context, CancellationToken cancellationToken)
@@ -33,12 +33,12 @@ public sealed class LibraryMaintenanceJobHandler(
 
         for (var i = 0; i < AssetKinds.Length; i++)
         {
-            var (kindCode, cacheSubdir) = AssetKinds[i];
+            var (kind, cacheSubdir) = AssetKinds[i];
 
-            var entityIds = await persistence.GetActiveEntityIdsByKindAsync(kindCode, cancellationToken);
+            var entityIds = await persistence.GetActiveEntityIdsByKindAsync(kind, cancellationToken);
             var activeIdSet = new HashSet<string>(entityIds.Select(id => id.ToString()), StringComparer.OrdinalIgnoreCase);
 
-            var missing = ValidateAssets(kindCode, entityIds);
+            var missing = ValidateAssets(kind, entityIds);
             totalMissingAssets += missing;
 
             var orphans = CleanOrphanedCacheDirs(cacheSubdir, activeIdSet);
@@ -46,7 +46,7 @@ public sealed class LibraryMaintenanceJobHandler(
 
             var progress = 5 + ((i + 1) * progressPerKind);
             await context.ReportProgressAsync(progress,
-                $"{kindCode}: {entityIds.Count} entities, {missing} missing assets, {orphans} orphans cleaned",
+                $"{kind.Code}: {entityIds.Count} entities, {missing} missing assets, {orphans} orphans cleaned",
                 cancellationToken);
         }
 
@@ -59,19 +59,19 @@ public sealed class LibraryMaintenanceJobHandler(
             cancellationToken);
     }
 
-    private int ValidateAssets(string kindCode, IReadOnlyList<Guid> entityIds)
+    private int ValidateAssets(IEntityKind kind, IReadOnlyList<Guid> entityIds)
     {
         var missing = 0;
 
         foreach (var id in entityIds)
         {
-            var expectedPaths = GetExpectedAssetPaths(kindCode, id);
+            var expectedPaths = GetExpectedAssetPaths(kind, id);
             foreach (var path in expectedPaths)
             {
                 if (!File.Exists(path))
                 {
                     missing++;
-                    logger.LogDebug("Missing asset for {Kind} {EntityId}: {Path}", kindCode, id, path);
+                    logger.LogDebug("Missing asset for {Kind} {EntityId}: {Path}", kind.Code, id, path);
                 }
             }
         }
@@ -79,15 +79,14 @@ public sealed class LibraryMaintenanceJobHandler(
         return missing;
     }
 
-    private IReadOnlyList<string> GetExpectedAssetPaths(string kindCode, Guid entityId) =>
-        kindCode switch
-        {
-            "video" => [assets.VideoThumbnailPath(entityId)],
-            "image" => [assets.ImageThumbnailPath(entityId)],
-            "book-page" => [assets.BookPageThumbnailPath(entityId)],
-            "audio-track" => [assets.AudioWaveformPath(entityId)],
-            _ => []
-        };
+    private IReadOnlyList<string> GetExpectedAssetPaths(IEntityKind kind, Guid entityId)
+    {
+        if (ReferenceEquals(kind, EntityKindRegistry.Video)) return [assets.VideoThumbnailPath(entityId)];
+        if (ReferenceEquals(kind, EntityKindRegistry.Image)) return [assets.ImageThumbnailPath(entityId)];
+        if (ReferenceEquals(kind, EntityKindRegistry.BookPage)) return [assets.BookPageThumbnailPath(entityId)];
+        if (ReferenceEquals(kind, EntityKindRegistry.AudioTrack)) return [assets.AudioWaveformPath(entityId)];
+        return [];
+    }
 
     private int CleanOrphanedCacheDirs(string cacheSubdir, HashSet<string> activeIdSet)
     {

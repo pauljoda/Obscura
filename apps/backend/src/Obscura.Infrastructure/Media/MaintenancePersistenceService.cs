@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Obscura.Application.Jobs.Ports;
+using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
 
 namespace Obscura.Infrastructure.Media;
@@ -9,9 +10,9 @@ namespace Obscura.Infrastructure.Media;
 /// </summary>
 public sealed class MaintenancePersistenceService(ObscuraDbContext db, string dataDir) : IMaintenancePersistence
 {
-    public async Task<IReadOnlyList<Guid>> GetActiveEntityIdsByKindAsync(string kindCode, CancellationToken cancellationToken) =>
+    public async Task<IReadOnlyList<Guid>> GetActiveEntityIdsByKindAsync(IEntityKind kind, CancellationToken cancellationToken) =>
         await db.Entities
-            .Where(e => e.KindCode == kindCode && e.DeletedAt == null)
+            .Where(e => e.KindCode == kind.Code && e.DeletedAt == null)
             .Select(e => e.Id)
             .ToListAsync(cancellationToken);
 

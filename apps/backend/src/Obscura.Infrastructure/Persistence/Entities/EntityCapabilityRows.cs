@@ -1,3 +1,5 @@
+using Obscura.Domain.Entities;
+
 namespace Obscura.Infrastructure.Persistence.Entities;
 
 public sealed class EntityAliasRow
@@ -112,7 +114,7 @@ public sealed class EntityFileFingerprintRow
     public Guid Id { get; set; }
     public Guid EntityId { get; set; }
     public Guid? EntityFileId { get; set; }
-    public string Algorithm { get; set; } = string.Empty;
+    public FingerprintAlgorithm Algorithm { get; set; }
     public string Value { get; set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; set; }
 }

@@ -160,7 +160,8 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
             entity.Property(row => row.EntityFileId).HasColumnName("entity_file_id");
-            entity.Property(row => row.Algorithm).HasColumnName("algorithm").HasMaxLength(64).IsRequired();
+            entity.Property(row => row.Algorithm).HasColumnName("algorithm").HasMaxLength(64).IsRequired()
+                .HasConversion(value => value.ToCode(), value => value.DecodeAs<FingerprintAlgorithm>());
             entity.Property(row => row.Value).HasColumnName("value").IsRequired();
             entity.Property(row => row.CreatedAt).HasColumnName("created_at");
             entity.HasIndex(row => new { row.EntityId, row.Algorithm }).IsUnique();

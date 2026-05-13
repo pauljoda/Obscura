@@ -254,6 +254,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video series pagination and bulk-selection logic now lives in focused helpers, keeping the hierarchy page behavior unchanged while making future maintenance safer.
 - Extracted shared job handler scaffolding into `EntityFileJobHandler` (entity ID parsing, source file validation) and `ScanJobHandler` (root ID parsing, root iteration with progress) base classes, reducing boilerplate across 11 handlers.
 - Collapsed three identical fingerprint handlers (`FingerprintVideoJobHandler`, `FingerprintImageJobHandler`, `FingerprintAudioJobHandler`) into one `FingerprintJobHandler` registered per media type via factory DI.
+- Replaced ~60 raw string literals (`"thumbnail"`, `"md5"`, `"video"`, etc.) in Application port interfaces, job handlers, and Infrastructure adapters with typed domain values (`EntityFileRole.Thumbnail`, `FingerprintAlgorithm.Md5`, `EntityKindRegistry.Video.Code`) so string-based typing errors are caught at compile time instead of at runtime.
+- Changed `EntityFileFingerprintRow.Algorithm` from an untyped string to a `FingerprintAlgorithm` enum with EF `HasConversion`, matching the codec pattern used by other persisted enums.
+- Changed `AddIfSupported` capability filtering from case-insensitive string comparison to `ReferenceEquals` on singleton capability kinds, eliminating allocation during entity projection.
 
 ### Removed
 

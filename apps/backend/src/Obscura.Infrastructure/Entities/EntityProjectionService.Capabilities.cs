@@ -227,10 +227,7 @@ public sealed partial class EntityProjectionService
 
     private static void AddIfSupported(List<ICapability> capabilities, IEntityKind kind, ICapability capability)
     {
-        if (kind.SupportedCapabilities.Any(supported => string.Equals(
-                supported.Code,
-                capability.Kind.Code,
-                StringComparison.OrdinalIgnoreCase)))
+        if (kind.SupportedCapabilities.Any(supported => ReferenceEquals(supported, capability.Kind)))
         {
             capabilities.Add(capability);
         }

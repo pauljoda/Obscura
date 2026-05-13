@@ -1,3 +1,5 @@
+using Obscura.Domain.Entities;
+
 namespace Obscura.Application.Jobs.Ports;
 
 /// <summary>
@@ -7,9 +9,9 @@ namespace Obscura.Application.Jobs.Ports;
 public interface IMaintenancePersistence
 {
     /// <summary>
-    /// Returns all non-deleted entity IDs for a given kind code (e.g. "video", "image", "audio-track", "book-page").
+    /// Returns all non-deleted entity IDs for the given entity kind.
     /// </summary>
-    Task<IReadOnlyList<Guid>> GetActiveEntityIdsByKindAsync(string kindCode, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Guid>> GetActiveEntityIdsByKindAsync(IEntityKind kind, CancellationToken cancellationToken);
 
     /// <summary>
     /// Returns the base cache directory path (e.g. /data/cache).

@@ -33,7 +33,7 @@ public sealed class CollectionRefreshPersistenceService(ObscuraDbContext db) : I
         return new CollectionRefreshData(
             row.EntityId,
             entity,
-            row.Mode.ToCode(),
+            row.Mode,
             row.RuleTreeJson);
     }
 

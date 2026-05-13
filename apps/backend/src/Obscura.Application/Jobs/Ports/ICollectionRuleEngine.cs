@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Obscura.Domain.Entities;
 
 namespace Obscura.Application.Jobs.Ports;
 
@@ -17,9 +18,9 @@ public interface ICollectionRuleEngine
 /// <summary>
 /// A single entity matched by collection rule evaluation.
 /// </summary>
-/// <param name="EntityKindCode">The v2 entity kind code (e.g. "video", "gallery").</param>
+/// <param name="EntityKind">The matched entity's kind.</param>
 /// <param name="EntityId">The matched entity's ID.</param>
-public sealed record CollectionRuleMatch(string EntityKindCode, Guid EntityId);
+public sealed record CollectionRuleMatch(IEntityKind EntityKind, Guid EntityId);
 
 // ── Rule tree types matching the TypeScript contracts ──
 

@@ -1,3 +1,5 @@
+using Obscura.Domain.Entities;
+
 namespace Obscura.Application.Jobs.Ports;
 
 /// <summary>
@@ -37,8 +39,8 @@ public interface ILibraryScanPersistence
     // ── Reads for downstream chaining decisions ──
 
     Task<bool> HasEntityTechnicalAsync(Guid entityId, CancellationToken cancellationToken);
-    Task<bool> HasEntityFingerprintAsync(Guid entityId, string algorithm, CancellationToken cancellationToken);
-    Task<bool> HasEntityFileAsync(Guid entityId, string role, CancellationToken cancellationToken);
+    Task<bool> HasEntityFingerprintAsync(Guid entityId, FingerprintAlgorithm algorithm, CancellationToken cancellationToken);
+    Task<bool> HasEntityFileAsync(Guid entityId, EntityFileRole role, CancellationToken cancellationToken);
     Task<bool> HasSubtitlesExtractedAsync(Guid entityId, CancellationToken cancellationToken);
 
     // ── Entity technical / file / fingerprint writes ──
@@ -47,9 +49,9 @@ public interface ILibraryScanPersistence
         double? frameRate, int? bitRate, int? sampleRate, int? channels,
         string? codec, string? container, string? format, CancellationToken cancellationToken);
 
-    Task UpsertEntityFileAsync(Guid entityId, string role, string path, string? mimeType, long? sizeBytes, CancellationToken cancellationToken);
+    Task UpsertEntityFileAsync(Guid entityId, EntityFileRole role, string path, string? mimeType, long? sizeBytes, CancellationToken cancellationToken);
 
-    Task UpsertEntityFingerprintAsync(Guid entityId, string algorithm, string value, Guid? entityFileId, CancellationToken cancellationToken);
+    Task UpsertEntityFingerprintAsync(Guid entityId, FingerprintAlgorithm algorithm, string value, Guid? entityFileId, CancellationToken cancellationToken);
 
     Task<Guid?> GetSourceFileIdAsync(Guid entityId, CancellationToken cancellationToken);
 
@@ -58,7 +60,7 @@ public interface ILibraryScanPersistence
     Task MarkSubtitlesExtractedAsync(Guid entityId, CancellationToken cancellationToken);
 
     Task UpsertSubtitleAsync(Guid entityId, string language, string? label, string format,
-        string source, string storagePath, string sourceFormat, int streamIndex, CancellationToken cancellationToken);
+        EntitySubtitleSource source, string storagePath, string sourceFormat, int streamIndex, CancellationToken cancellationToken);
 
     Task UpsertAudioTrackTagsAsync(Guid entityId, string? artist, string? album, CancellationToken cancellationToken);
 

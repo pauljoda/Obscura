@@ -59,7 +59,7 @@ public sealed class ScanBookJobHandler(
 
                 var pageId = await Persistence.UpsertBookPageAsync(pagePath, pageTitle, bookId, chapterId, i, cancellationToken);
 
-                if (settings.AutoGeneratePreview && !await Persistence.HasEntityFileAsync(pageId, "thumbnail", cancellationToken))
+                if (settings.AutoGeneratePreview && !await Persistence.HasEntityFileAsync(pageId, EntityFileRole.Thumbnail, cancellationToken))
                 {
                     await context.EnqueueIfNeededAsync(new EnqueueJobRequest(
                         JobType.GenerateBookPageThumbnail, TargetEntityKind: "book-page",

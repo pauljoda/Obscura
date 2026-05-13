@@ -50,14 +50,14 @@ public sealed class ScanGalleryJobHandler(
 
                 var imageId = await Persistence.UpsertImageAsync(filePath, title, galleryId, size, i, cancellationToken);
 
-                if (settings.AutoGeneratePreview && !await Persistence.HasEntityFileAsync(imageId, "thumbnail", cancellationToken))
+                if (settings.AutoGeneratePreview && !await Persistence.HasEntityFileAsync(imageId, EntityFileRole.Thumbnail, cancellationToken))
                 {
                     await context.EnqueueIfNeededAsync(new EnqueueJobRequest(
                         JobType.GenerateImageThumbnail, TargetEntityKind: "image",
                         TargetEntityId: imageId.ToString(), TargetLabel: title), cancellationToken);
                 }
 
-                if (settings.AutoGenerateFingerprints && !await Persistence.HasEntityFingerprintAsync(imageId, "md5", cancellationToken))
+                if (settings.AutoGenerateFingerprints && !await Persistence.HasEntityFingerprintAsync(imageId, FingerprintAlgorithm.Md5, cancellationToken))
                 {
                     await context.EnqueueIfNeededAsync(new EnqueueJobRequest(
                         JobType.FingerprintImage, TargetEntityKind: "image",

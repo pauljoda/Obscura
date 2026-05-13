@@ -64,13 +64,13 @@ public sealed class ScanLibraryJobHandler(
                 JobType.ProbeVideo, TargetEntityKind: "video", TargetEntityId: entityIdStr, TargetLabel: label), cancellationToken);
         }
 
-        if (settings.AutoGenerateFingerprints && !await Persistence.HasEntityFingerprintAsync(entityId, "md5", cancellationToken))
+        if (settings.AutoGenerateFingerprints && !await Persistence.HasEntityFingerprintAsync(entityId, FingerprintAlgorithm.Md5, cancellationToken))
         {
             await context.EnqueueIfNeededAsync(new EnqueueJobRequest(
                 JobType.FingerprintVideo, TargetEntityKind: "video", TargetEntityId: entityIdStr, TargetLabel: label), cancellationToken);
         }
 
-        if (settings.AutoGeneratePreview && !await Persistence.HasEntityFileAsync(entityId, "thumbnail", cancellationToken))
+        if (settings.AutoGeneratePreview && !await Persistence.HasEntityFileAsync(entityId, EntityFileRole.Thumbnail, cancellationToken))
         {
             await context.EnqueueIfNeededAsync(new EnqueueJobRequest(
                 JobType.GeneratePreview, TargetEntityKind: "video", TargetEntityId: entityIdStr, TargetLabel: label), cancellationToken);

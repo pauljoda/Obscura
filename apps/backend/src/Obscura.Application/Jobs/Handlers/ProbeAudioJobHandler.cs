@@ -38,7 +38,7 @@ public sealed class ProbeAudioJobHandler(
         }
 
         var settings = await Persistence.GetSettingsAsync(cancellationToken);
-        if (settings.AutoGeneratePreview && !await Persistence.HasEntityFileAsync(entityId, "waveform", cancellationToken))
+        if (settings.AutoGeneratePreview && !await Persistence.HasEntityFileAsync(entityId, EntityFileRole.Waveform, cancellationToken))
         {
             await context.EnqueueIfNeededAsync(new EnqueueJobRequest(
                 JobType.GenerateAudioWaveform, TargetEntityKind: "audio-track",
