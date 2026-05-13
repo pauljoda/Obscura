@@ -24,6 +24,7 @@ test-results
 .cache/
 .obscura-cache/
 .obscura-dev/
+apps/backend/data/
 
 # OS
 .DS_Store

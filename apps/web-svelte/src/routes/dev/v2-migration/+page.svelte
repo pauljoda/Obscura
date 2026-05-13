@@ -34,8 +34,8 @@
       <h1>v2 Migration Control</h1>
     </div>
     <div class="gate-state">
-      <span class={data.gate?.awaitingConsent ? "led led-warn" : "led led-idle"}></span>
-      <span>{data.gate?.awaitingConsent ? "Gate waiting" : "Gate clear"}</span>
+      <span class={data.gate?.awaitingBreakingConsent ? "led led-warn" : "led led-idle"}></span>
+      <span>{data.gate?.awaitingBreakingConsent ? "Gate waiting" : "Gate clear"}</span>
     </div>
   </header>
 
@@ -62,10 +62,10 @@
       <dl>
         <div>
           <dt>Status</dt>
-          <dd>{data.gate?.reason ?? "Unavailable"}</dd>
+          <dd>{data.gate ? (data.gate.accepted ? "Accepted" : "Awaiting consent") : "Unavailable"}</dd>
         </div>
         <div>
-          <dt>Marker</dt>
+          <dt>Gate</dt>
           <dd>{data.gateMarkerPath}</dd>
         </div>
       </dl>

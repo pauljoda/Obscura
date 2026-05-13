@@ -1,5 +1,6 @@
 export interface SystemStatus {
   awaitingBreakingConsent: boolean;
+  gateId?: string;
 }
 
 export async function fetchSystemStatus(): Promise<SystemStatus> {
@@ -15,6 +16,6 @@ export async function acceptBreakingGate(): Promise<void> {
     method: "POST",
   });
   if (!res.ok) {
-    throw new Error(`breaking gate accept ${res.status}`);
+    throw new Error(`v2 upgrade gate accept ${res.status}`);
   }
 }

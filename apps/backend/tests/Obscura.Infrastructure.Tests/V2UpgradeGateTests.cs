@@ -28,6 +28,18 @@ public sealed class V2UpgradeGateTests : IDisposable
         Assert.True(File.Exists(Path.Combine(_tempDir, "upgrade-markers", "v2-global-entities.accepted")));
     }
 
+    [Fact]
+    public void PromptRemovesConsentMarker()
+    {
+        var gate = new V2UpgradeGate(new V2UpgradeGateOptions(_tempDir));
+        gate.Accept();
+
+        var status = gate.Prompt();
+
+        Assert.False(status.Accepted);
+        Assert.False(File.Exists(Path.Combine(_tempDir, "upgrade-markers", "v2-global-entities.accepted")));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

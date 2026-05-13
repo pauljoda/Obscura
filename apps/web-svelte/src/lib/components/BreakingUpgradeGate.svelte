@@ -13,32 +13,24 @@
 
   let { awaitingConsent, children }: Props = $props();
 
-  type State = "ready" | "accepting" | "restarting";
+  type State = "ready" | "preparing" | "entering";
   let phase: State = $state("ready");
   let error: string | null = $state(null);
 
   const GITHUB_URL = "https://github.com/pauljoda/obscura";
 
   async function handleAccept() {
-    phase = "accepting";
+    phase = "preparing";
     error = null;
     try {
       await acceptBreakingGate();
-      phase = "restarting";
-      const deadline = Date.now() + 60_000;
-      while (Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 2000));
-        try {
-          const s = await fetchSystemStatus();
-          if (!s.awaitingBreakingConsent) {
-            window.location.reload();
-            return;
-          }
-        } catch {
-          // API still restarting
-        }
+      phase = "entering";
+      const s = await fetchSystemStatus();
+      if (!s.awaitingBreakingConsent) {
+        window.location.reload();
+        return;
       }
-      error = "Upgrade took longer than expected. Refresh the page in a minute.";
+      error = "Upgrade consent is still required. Refresh the page and try again.";
     } catch (err) {
       phase = "ready";
       error = err instanceof Error ? err.message : String(err);
@@ -55,18 +47,19 @@
         Thank you for being an early supporter of Obscura.
       </div>
       <p class="leading-relaxed mb-4">
-        This upgrade includes a one-time breaking change: the
-        <strong>Scenes</strong> section has been replaced with a richer
-        <strong>Videos</strong> model (series, seasons, episodes, and movies).
+        This upgrade moves Obscura to the new v2 global entity model. Videos,
+        images, galleries, books, audio, people, studios, tags, and collections
+        now share one metadata foundation instead of each library type carrying
+        its own isolated shape.
       </p>
       <p class="leading-relaxed mb-4">
-        Your video files on disk are untouched. The old
-        <code class="px-1 mx-1 bg-white/5 font-mono">scenes</code> database rows
-        (including custom metadata, tags, and markers) will be dropped — after
-        continuing, rescan your library roots to rebuild the new video entries.
+        Your media files on disk are untouched. Before continuing, Obscura will
+        create a database backup, reset the v2 media tables, and preserve your
+        library roots and application settings so the new migration can rebuild
+        cleanly.
       </p>
       <p class="leading-relaxed mb-6 opacity-80">
-        Future updates are unlikely to require this kind of break.
+        This is a one-time early-access migration gate for the v2 rebuild.
       </p>
       {#if error}
         <div class="text-error-text mb-4">{error}</div>
@@ -75,15 +68,15 @@
         <button
           type="button"
           onclick={handleAccept}
-          disabled={phase === "accepting" || phase === "restarting"}
+          disabled={phase === "preparing" || phase === "entering"}
           class="px-4 py-2 border border-border-accent bg-gradient-to-r from-accent-900 to-accent-800 text-accent-100 font-medium disabled:opacity-40 transition-all duration-fast"
         >
-          {#if phase === "accepting"}
-            Applying…
-          {:else if phase === "restarting"}
-            Restarting API…
+          {#if phase === "preparing"}
+            Backing up &amp; preparing…
+          {:else if phase === "entering"}
+            Entering app…
           {:else}
-            Continue &amp; rebuild library
+            Continue with v2 upgrade
           {/if}
         </button>
         <a

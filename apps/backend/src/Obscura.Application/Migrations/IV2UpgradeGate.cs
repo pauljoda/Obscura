@@ -16,4 +16,10 @@ public interface IV2UpgradeGate
     /// </summary>
     /// <returns>The accepted upgrade-gate status.</returns>
     V2UpgradeGateStatus Accept();
+
+    /// <summary>
+    /// Removes recorded consent so the upgrade gate will prompt again.
+    /// </summary>
+    /// <returns>The current upgrade-gate status after re-arming.</returns>
+    V2UpgradeGateStatus Prompt();
 }

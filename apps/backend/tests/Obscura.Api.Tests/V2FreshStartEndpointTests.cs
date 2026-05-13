@@ -96,6 +96,11 @@ public sealed class V2FreshStartEndpointTests
         {
             return Check();
         }
+
+        public V2UpgradeGateStatus Prompt()
+        {
+            return new V2UpgradeGateStatus("v2-global-entities", false, "/tmp/accepted");
+        }
     }
 
     private sealed class FakeFreshStartService : IV2FreshStartService

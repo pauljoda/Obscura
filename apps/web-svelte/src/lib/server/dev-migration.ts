@@ -1,9 +1,8 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readdir, stat, unlink } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkBreakingGate, getGateMarkerPath } from "@obscura/app-core";
 
 export const DEV_BACKUP_DIR = ".obscura-dev/backups";
 
@@ -142,19 +141,4 @@ export async function restoreBackupAndClearV2(
   ]);
   const clear = await clearV2Data(repoRoot);
   return [restore, clear];
-}
-
-export async function promptBreakingUpgradeGate(databaseUrl: string) {
-  const markerPath = getGateMarkerPath();
-  try {
-    await unlink(markerPath);
-  } catch {
-    // Missing marker means the gate is already armed or not applicable.
-  }
-
-  const status = await checkBreakingGate(databaseUrl);
-  return {
-    markerPath,
-    ...status,
-  };
 }

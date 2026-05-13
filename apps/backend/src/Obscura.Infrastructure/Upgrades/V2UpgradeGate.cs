@@ -26,4 +26,14 @@ public sealed class V2UpgradeGate : IV2UpgradeGate
 
         return Check();
     }
+
+    public V2UpgradeGateStatus Prompt()
+    {
+        if (File.Exists(_markerPath))
+        {
+            File.Delete(_markerPath);
+        }
+
+        return Check();
+    }
 }

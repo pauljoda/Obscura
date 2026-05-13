@@ -30,6 +30,22 @@ public sealed class V2UpgradeGateEndpointTests : IDisposable
         Assert.True(after.Accepted);
     }
 
+    [Fact]
+    public async Task PromptEndpointRearmsConsentGate()
+    {
+        using var client = _factory.CreateClient();
+
+        using var acceptedResponse = await client.PostAsync("/api/system/v2-upgrade-gate/accept", null);
+        var accepted = await acceptedResponse.Content.ReadFromJsonAsync<GateResponse>();
+        using var promptedResponse = await client.PostAsync("/api/system/v2-upgrade-gate/prompt", null);
+        var prompted = await promptedResponse.Content.ReadFromJsonAsync<GateResponse>();
+
+        Assert.NotNull(accepted);
+        Assert.True(accepted.Accepted);
+        Assert.NotNull(prompted);
+        Assert.False(prompted.Accepted);
+    }
+
     public void Dispose()
     {
         _factory.Dispose();

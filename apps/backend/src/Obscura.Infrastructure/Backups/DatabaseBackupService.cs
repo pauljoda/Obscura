@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
@@ -54,11 +55,13 @@ public sealed class DatabaseBackupService
         await _db.SaveChangesAsync(cancellationToken);
 
         var environment = PostgresEnvironment.FromConnectionString(_connectionString);
-        var process = await _processExecutor.RunAsync(plan.FileName, plan.Arguments, environment, cancellationToken);
+        var process = await RunBackupProcessAsync(plan, environment, cancellationToken);
 
         row.CompletedAt = DateTimeOffset.UtcNow;
         row.Status = process.ExitCode == 0 ? DatabaseBackupStatus.Completed : DatabaseBackupStatus.Failed;
-        row.Error = process.ExitCode == 0 ? null : $"pg_dump exited with code {process.ExitCode}.";
+        row.Error = process.ExitCode == 0
+            ? null
+            : $"Database backup exited with code {process.ExitCode}. {process.StandardError}".Trim();
         await _db.SaveChangesAsync(cancellationToken);
 
         if (process.ExitCode != 0)
@@ -67,5 +70,53 @@ public sealed class DatabaseBackupService
         }
 
         return new DatabaseBackupResult(plan.BackupPath);
+    }
+
+    private async Task<ProcessExecutionResult> RunBackupProcessAsync(
+        PostgresBackupPlan plan,
+        IReadOnlyDictionary<string, string> environment,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _processExecutor.RunAsync(plan.FileName, plan.Arguments, environment, cancellationToken);
+        }
+        catch (Exception ex) when (IsMissingExecutable(ex))
+        {
+            var repoRoot = FindRepoRoot(Directory.GetCurrentDirectory());
+            var dockerPlan = PostgresBackupPlan.CreateDockerFallback(
+                plan.BackupPath,
+                _connectionString,
+                repoRoot);
+            return await _processExecutor.RunToFileAsync(
+                dockerPlan.FileName,
+                dockerPlan.Arguments,
+                environment: null,
+                dockerPlan.BackupPath,
+                cancellationToken);
+        }
+    }
+
+    private static bool IsMissingExecutable(Exception ex)
+    {
+        return ex is FileNotFoundException ||
+            ex is Win32Exception { NativeErrorCode: 2 };
+    }
+
+    private static string FindRepoRoot(string start)
+    {
+        var current = new DirectoryInfo(start);
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "infra", "docker", "docker-compose.yml")))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new DirectoryNotFoundException(
+            "Could not find infra/docker/docker-compose.yml for local pg_dump Docker fallback.");
     }
 }

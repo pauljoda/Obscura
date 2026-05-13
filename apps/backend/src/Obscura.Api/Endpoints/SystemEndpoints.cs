@@ -1,5 +1,6 @@
 using Obscura.Application.Migrations;
 using Obscura.Contracts.System;
+using Microsoft.Extensions.Hosting;
 
 namespace Obscura.Api.Endpoints;
 
@@ -19,6 +20,13 @@ public static class SystemEndpoints
             migrations.AcceptUpgradeGate())
             .WithName("AcceptV2UpgradeGate")
             .WithSummary("Records consent for the v2 global entity upgrade.");
+
+        group.MapPost("/v2-upgrade-gate/prompt", (SystemMigrationService migrations, IHostEnvironment env) =>
+            env.IsDevelopment()
+                ? Results.Ok(migrations.PromptUpgradeGate())
+                : Results.NotFound())
+            .WithName("PromptV2UpgradeGate")
+            .WithSummary("Re-arms the v2 global entity upgrade gate for local migration testing.");
 
         group.MapPost("/v2-fresh-start/prepare", async (
             SystemMigrationService migrations,

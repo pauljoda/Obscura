@@ -105,6 +105,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - V2 video and season thumbnails now reserve the bottom-left overlay for entity-specific labels such as season and episode numbers.
 - Local development now has database backup and restore scripts for repeatedly testing v2 migration mappings against the same data set.
 - Local development now has a sidebar-linked v2 migration control page for prompting the upgrade gate, creating backups, restoring a dump, and clearing v2 data before another import pass.
+- The upgrade gate now reflects the v2 global entity migration, including backup and fresh-start preparation, instead of the older scenes-to-videos transition.
 
 ### Docs
 
@@ -155,6 +156,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Changed v2 .NET entity kinds to declare their supported capability shape directly, allowing projection and contracts to include only capabilities that each kind intentionally supports.
 - Added typed v2 .NET EF rows, mappings, and projection hydration for the expanded capability-first tables.
 - Updated the v2 fresh-start reset to clear the expanded capability-first tables before preserving settings and library roots.
+- Changed the app-level breaking upgrade gate to read and accept the .NET v2 global entity gate, then run fresh-start preparation before entering the app.
 - Changed v2 entity detail hydration to read shared descriptions, dates, sources, stats, technical metadata, progress, positions, markers, subtitles, and classifications from capability tables instead of duplicated per-kind detail fields.
 - Slimmed the v2 detail tables to keep only kind-specific fields, with shared metadata now stored in capability tables and old book read progress replaced by the shared progress capability.
 - Removed obsolete v2 projection helpers that previously rebuilt shared capabilities from per-kind detail rows.
@@ -242,6 +244,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Removed
 
+- Removed the obsolete TypeScript scenes-to-videos breaking gate from the Drizzle migrator; the current one-time gate is owned by the .NET v2 migration system.
 - Removed the legacy v2 gallery photographer metadata field so gallery details no longer preserve Stash-parity-only data.
 
 ### Added
@@ -297,6 +300,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Accepting the v2 upgrade gate in local development now creates the required database backup through the Docker Postgres service when `pg_dump` is not installed on the host.
 - V2 entity lists no longer expose NSFW entities when the server-side hide-NSFW setting is enabled.
 - Entity Grid kind tabs now disappear when the visible result set only contains one entity kind, avoiding redundant All/type tabs on single-kind pages.
 - Accepted book metadata no longer creates duplicated on-disk volume folder names such as `Volume 01 - Volume 1`, and book scans repair already-created duplicate volume folders while preserving existing chapter/page records.

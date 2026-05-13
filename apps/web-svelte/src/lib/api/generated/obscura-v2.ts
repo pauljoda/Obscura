@@ -1298,6 +1298,42 @@ export const acceptV2UpgradeGate = async ( options?: RequestInit): Promise<accep
 
 
 
+export type promptV2UpgradeGateResponse200 = {
+  data: void
+  status: 200
+}
+
+export type promptV2UpgradeGateResponseSuccess = (promptV2UpgradeGateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type promptV2UpgradeGateResponse = (promptV2UpgradeGateResponseSuccess)
+
+export const getPromptV2UpgradeGateUrl = () => {
+
+
+
+
+  return `/api/system/v2-upgrade-gate/prompt`
+}
+
+/**
+ * @summary Re-arms the v2 global entity upgrade gate for local migration testing.
+ */
+export const promptV2UpgradeGate = async ( options?: RequestInit): Promise<promptV2UpgradeGateResponse> => {
+
+  return orvalFetch<promptV2UpgradeGateResponse>(getPromptV2UpgradeGateUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
 export type prepareV2FreshStartResponse200 = {
   data: V2FreshStartPrepareResponse
   status: 200

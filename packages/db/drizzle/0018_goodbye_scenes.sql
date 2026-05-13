@@ -1,8 +1,6 @@
 -- Remove obsolete scene tables and the unused migration ledger.
 --
--- Some installs already have these tables removed. On installs that still
--- have them, the one-time breaking gate (packages/db/src/breaking-gate.ts)
--- can require consent before this migration executes. IF EXISTS keeps both
+-- Some installs already have these tables removed. IF EXISTS keeps both
 -- paths safe.
 DROP TABLE IF EXISTS "scene_folder_performers" CASCADE;--> statement-breakpoint
 DROP TABLE IF EXISTS "scene_folder_tags" CASCADE;--> statement-breakpoint

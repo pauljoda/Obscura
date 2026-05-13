@@ -3,7 +3,6 @@
 // media-query-helpers and upload-utils are deliberately not re-exported —
 // they are SQL/upload primitives meant for use inside this package only.
 
-export * from "./breaking-gate";
 export * from "./changelog";
 export * from "./collections";
 export * from "./errors";
