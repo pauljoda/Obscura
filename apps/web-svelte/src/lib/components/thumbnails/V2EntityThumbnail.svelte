@@ -99,67 +99,69 @@
     {/if}
   </div>
 
-  <div class="copy">
-    <h3>{card.entity.title}</h3>
-    {#if card.entity.subtitle}
-      <p>{card.entity.subtitle}</p>
+  <div class="details">
+    <div class="copy">
+      <h3>{card.entity.title}</h3>
+      {#if card.entity.subtitle}
+        <p>{card.entity.subtitle}</p>
+      {/if}
+    </div>
+
+    {#if card.meta?.length}
+      <dl class="meta">
+        {#each card.meta as item (item.icon + item.label)}
+          <div>
+            <dt>
+              {@render IconFor({ icon: item.icon })}
+            </dt>
+            <dd>{item.label}</dd>
+          </div>
+        {/each}
+      </dl>
     {/if}
   </div>
-
-  {#if card.meta?.length}
-    <dl class="meta">
-      {#each card.meta as item (item.icon + item.label)}
-        <div>
-          <dt>
-            {@render IconFor({ icon: item.icon })}
-          </dt>
-          <dd>{item.label}</dd>
-        </div>
-      {/each}
-    </dl>
-  {/if}
 </svelte:element>
 
 {#snippet IconFor({ icon }: { icon: EntityThumbnailMetaIcon })}
   {#if icon === "audio"}
-    <Music size={14} />
+    <Music size={12} />
   {:else if icon === "book"}
-    <BookOpen size={14} />
+    <BookOpen size={12} />
   {:else if icon === "calendar"}
-    <Calendar size={14} />
+    <Calendar size={12} />
   {:else if icon === "chapter"}
-    <Album size={14} />
+    <Album size={12} />
   {:else if icon === "collection"}
-    <Layers size={14} />
+    <Layers size={12} />
   {:else if icon === "duration"}
-    <Clock3 size={14} />
+    <Clock3 size={12} />
   {:else if icon === "gallery"}
-    <Images size={14} />
+    <Images size={12} />
   {:else if icon === "image"}
-    <Images size={14} />
+    <Images size={12} />
   {:else if icon === "person"}
-    <User size={14} />
+    <User size={12} />
   {:else if icon === "studio"}
-    <Building2 size={14} />
+    <Building2 size={12} />
   {:else if icon === "tag"}
-    <Tag size={14} />
+    <Tag size={12} />
   {:else if icon === "video"}
-    <Film size={14} />
+    <Film size={12} />
   {:else}
-    <Hash size={14} />
+    <Hash size={12} />
   {/if}
 {/snippet}
 
 <style>
   .entity-thumbnail {
     display: grid;
-    gap: 0.65rem;
+    grid-template-rows: auto 1fr;
+    overflow: hidden;
     border: 1px solid rgb(255 255 255 / 0.12);
     background:
       linear-gradient(180deg, rgb(255 255 255 / 0.055), rgb(255 255 255 / 0.018)),
       rgb(12 12 13 / 0.92);
     color: var(--color-text, #f4efe6);
-    padding: 0.55rem;
     text-decoration: none;
     min-width: 0;
     box-shadow:
@@ -170,7 +172,7 @@
   .media {
     position: relative;
     overflow: hidden;
-    border: 1px solid rgb(255 255 255 / 0.1);
+    border-bottom: 1px solid rgb(255 255 255 / 0.1);
     background:
       radial-gradient(circle at 50% 45%, rgb(255 255 255 / 0.08), transparent 34%),
       linear-gradient(135deg, rgb(15 16 18 / 0.96), rgb(28 25 20 / 0.92)),
@@ -254,8 +256,19 @@
 
   .copy {
     display: grid;
-    gap: 0.2rem;
+    gap: 0.28rem;
     min-width: 0;
+  }
+
+  .details {
+    display: grid;
+    align-content: start;
+    gap: 0.62rem;
+    min-width: 0;
+    padding: 0.72rem 0.78rem 0.7rem;
+    background:
+      linear-gradient(180deg, rgb(10 12 15 / 0.94), rgb(9 10 12 / 0.98)),
+      #0a0b0d;
   }
 
   h3,
@@ -269,37 +282,43 @@
 
   h3 {
     font-family: var(--font-heading, Geist, sans-serif);
-    font-size: 0.96rem;
-    font-weight: 650;
-    line-height: 1.2;
+    display: -webkit-box;
+    font-size: 1.05rem;
+    font-weight: 680;
+    line-height: 1.16;
     letter-spacing: 0;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
   }
 
   p {
     color: rgb(244 239 230 / 0.58);
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     line-height: 1.2;
   }
 
   .meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
+    gap: 0.28rem;
     margin: 0;
   }
 
   .meta div {
     display: inline-flex;
     align-items: center;
-    gap: 0.28rem;
+    gap: 0.22rem;
     min-width: 0;
     border: 1px solid rgb(255 255 255 / 0.08);
-    background: rgb(255 255 255 / 0.045);
-    color: rgb(244 239 230 / 0.68);
+    background: rgb(255 255 255 / 0.032);
+    color: rgb(244 239 230 / 0.6);
     font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.68rem;
+    font-size: 0.6rem;
     line-height: 1;
-    padding: 0.28rem 0.38rem;
+    min-height: 1.25rem;
+    padding: 0.2rem 0.3rem;
   }
 
   .meta dt,
@@ -321,8 +340,17 @@
       font-size: 0.61rem;
     }
 
+    .details {
+      gap: 0.5rem;
+      padding: 0.62rem;
+    }
+
     h3 {
-      font-size: 0.9rem;
+      font-size: 0.92rem;
+    }
+
+    .meta div {
+      font-size: 0.56rem;
     }
   }
 </style>
