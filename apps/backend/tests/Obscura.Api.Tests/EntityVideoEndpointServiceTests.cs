@@ -22,6 +22,9 @@ using DomainCapabilityDescription = Obscura.Domain.Capabilities.CapabilityDescri
 using DomainCapabilityTechnical = Obscura.Domain.Capabilities.CapabilityTechnical;
 using DomainEntity = Obscura.Domain.Entities.Entity;
 using DomainEntityPage = Obscura.Domain.Entities.EntityPage;
+using DomainCollection = Obscura.Domain.Media.Collection;
+using DomainGallery = Obscura.Domain.Media.Gallery;
+using DomainTag = Obscura.Domain.Taxonomy.Tag;
 using DomainRating = Obscura.Domain.Capabilities.Rating;
 using DomainVideo = Obscura.Domain.Media.Video;
 using DomainVideoSeries = Obscura.Domain.Media.VideoSeries;
@@ -98,15 +101,38 @@ public sealed class EntityVideoEndpointServiceTests
                 {
                     services.AddScoped<FakeEntityProjectionService>();
                     services.AddScoped<IEntityCatalog>(provider => provider.GetRequiredService<FakeEntityProjectionService>());
+                    services.AddScoped<IEntityDetails>(provider => provider.GetRequiredService<FakeEntityProjectionService>());
                     services.AddScoped<IRatingService>(provider => provider.GetRequiredService<FakeEntityProjectionService>());
                     services.AddScoped<IVideoLibrary>(provider => provider.GetRequiredService<FakeEntityProjectionService>());
                 });
             });
     }
 
-    private sealed class FakeEntityProjectionService : IEntityCatalog, IRatingService, IVideoLibrary
+    [Fact]
+    public async Task DetailEndpointsUseTypedAggregateHydrators()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        var galleryJson = await client.GetStringAsync($"/api/galleries/{FakeEntityProjectionService.GalleryId}");
+        var tagJson = await client.GetStringAsync($"/api/tags/{FakeEntityProjectionService.TagId}");
+        var collectionJson = await client.GetStringAsync($"/api/collections/{FakeEntityProjectionService.CollectionId}");
+
+        using var gallery = JsonDocument.Parse(galleryJson);
+        using var tag = JsonDocument.Parse(tagJson);
+        using var collection = JsonDocument.Parse(collectionJson);
+
+        Assert.Equal("folder", gallery.RootElement.GetProperty("galleryType").GetString());
+        Assert.True(tag.RootElement.GetProperty("ignoreAutoTag").GetBoolean());
+        Assert.Equal("dynamic", collection.RootElement.GetProperty("mode").GetString());
+    }
+
+    private sealed class FakeEntityProjectionService : IEntityCatalog, IEntityDetails, IRatingService, IVideoLibrary
     {
         public static readonly Guid VideoId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        public static readonly Guid GalleryId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        public static readonly Guid TagId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        public static readonly Guid CollectionId = Guid.Parse("44444444-4444-4444-4444-444444444444");
 
         public Task<DomainEntityPage> ListAsync(
             IEntityKind? kind,
@@ -182,6 +208,81 @@ public sealed class EntityVideoEndpointServiceTests
             return Task.FromResult<DomainVideoSeries?>(null);
         }
 
+        public Task<Obscura.Domain.Media.Image?> GetImageAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<Obscura.Domain.Media.Image?>(null);
+        }
+
+        public Task<DomainGallery?> GetGalleryAsync(Guid id, CancellationToken cancellationToken)
+        {
+            if (id != GalleryId)
+            {
+                return Task.FromResult<DomainGallery?>(null);
+            }
+
+            return Task.FromResult<DomainGallery?>(new DomainGallery(
+                GalleryCard(),
+                GalleryType.Folder,
+                CoverImageId: null));
+        }
+
+        public Task<Obscura.Domain.Media.Book?> GetBookAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<Obscura.Domain.Media.Book?>(null);
+        }
+
+        public Task<Obscura.Domain.Media.AudioLibrary?> GetAudioLibraryAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<Obscura.Domain.Media.AudioLibrary?>(null);
+        }
+
+        public Task<Obscura.Domain.Media.AudioTrack?> GetAudioTrackAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<Obscura.Domain.Media.AudioTrack?>(null);
+        }
+
+        public Task<Obscura.Domain.Taxonomy.Person?> GetPersonAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<Obscura.Domain.Taxonomy.Person?>(null);
+        }
+
+        public Task<Obscura.Domain.Taxonomy.Studio?> GetStudioAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<Obscura.Domain.Taxonomy.Studio?>(null);
+        }
+
+        public Task<DomainTag?> GetTagAsync(Guid id, CancellationToken cancellationToken)
+        {
+            if (id != TagId)
+            {
+                return Task.FromResult<DomainTag?>(null);
+            }
+
+            return Task.FromResult<DomainTag?>(new DomainTag(
+                TagCard(),
+                ParentTagId: null,
+                IgnoreAutoTag: true));
+        }
+
+        public Task<DomainCollection?> GetCollectionAsync(Guid id, CancellationToken cancellationToken)
+        {
+            if (id != CollectionId)
+            {
+                return Task.FromResult<DomainCollection?>(null);
+            }
+
+            return Task.FromResult<DomainCollection?>(new DomainCollection(
+                CollectionCard(),
+                CollectionMode.Dynamic,
+                RuleTreeJson: null,
+                CollectionCoverMode.Mosaic,
+                CoverItemId: null,
+                TimeSpan.FromSeconds(5),
+                SlideshowAutoAdvance: true,
+                LastRefreshedAt: null,
+                items: []));
+        }
+
         private static DomainEntity Card(int? rating)
         {
             return new DomainEntity(
@@ -201,5 +302,29 @@ public sealed class EntityVideoEndpointServiceTests
                     DomainCapabilityFiles.Empty
                 ]);
         }
+
+        private static DomainEntity GalleryCard() =>
+            new(
+                GalleryId,
+                EntityKindRegistry.Gallery,
+                "Projected Gallery",
+                null,
+                []);
+
+        private static DomainEntity TagCard() =>
+            new(
+                TagId,
+                EntityKindRegistry.Tag,
+                "Projected Tag",
+                null,
+                []);
+
+        private static DomainEntity CollectionCard() =>
+            new(
+                CollectionId,
+                EntityKindRegistry.Collection,
+                "Projected Collection",
+                null,
+                []);
     }
 }

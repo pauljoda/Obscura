@@ -17,6 +17,15 @@ using Obscura.Infrastructure.Queue;
 using Obscura.Infrastructure.Settings;
 using DomainEntity = Obscura.Domain.Entities.Entity;
 using DomainEntityPage = Obscura.Domain.Entities.EntityPage;
+using DomainAudioLibrary = Obscura.Domain.Media.AudioLibrary;
+using DomainAudioTrack = Obscura.Domain.Media.AudioTrack;
+using DomainBook = Obscura.Domain.Media.Book;
+using DomainCollection = Obscura.Domain.Media.Collection;
+using DomainGallery = Obscura.Domain.Media.Gallery;
+using DomainImage = Obscura.Domain.Media.Image;
+using DomainPerson = Obscura.Domain.Taxonomy.Person;
+using DomainStudio = Obscura.Domain.Taxonomy.Studio;
+using DomainTag = Obscura.Domain.Taxonomy.Tag;
 using DomainVideo = Obscura.Domain.Media.Video;
 using DomainVideoSeries = Obscura.Domain.Media.VideoSeries;
 
@@ -35,6 +44,7 @@ public sealed class ApiSurfaceTests
                 {
                     services.AddScoped<EmptyEntityProjectionService>();
                     services.AddScoped<IEntityCatalog>(provider => provider.GetRequiredService<EmptyEntityProjectionService>());
+                    services.AddScoped<IEntityDetails>(provider => provider.GetRequiredService<EmptyEntityProjectionService>());
                     services.AddScoped<IRatingService>(provider => provider.GetRequiredService<EmptyEntityProjectionService>());
                     services.AddScoped<IVideoLibrary>(provider => provider.GetRequiredService<EmptyEntityProjectionService>());
                     services.AddScoped<IJobQueueService, EmptyJobQueueService>();
@@ -200,7 +210,7 @@ public sealed class ApiSurfaceTests
         }
     }
 
-    private sealed class EmptyEntityProjectionService : IEntityCatalog, IRatingService, IVideoLibrary
+    private sealed class EmptyEntityProjectionService : IEntityCatalog, IEntityDetails, IRatingService, IVideoLibrary
     {
         public Task<DomainEntityPage> ListAsync(
             IEntityKind? kind,
@@ -261,6 +271,51 @@ public sealed class ApiSurfaceTests
         public Task<DomainVideoSeries?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
         {
             return Task.FromResult<DomainVideoSeries?>(null);
+        }
+
+        public Task<DomainImage?> GetImageAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<DomainImage?>(null);
+        }
+
+        public Task<DomainGallery?> GetGalleryAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<DomainGallery?>(null);
+        }
+
+        public Task<DomainBook?> GetBookAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<DomainBook?>(null);
+        }
+
+        public Task<DomainAudioLibrary?> GetAudioLibraryAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<DomainAudioLibrary?>(null);
+        }
+
+        public Task<DomainAudioTrack?> GetAudioTrackAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<DomainAudioTrack?>(null);
+        }
+
+        public Task<DomainPerson?> GetPersonAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<DomainPerson?>(null);
+        }
+
+        public Task<DomainStudio?> GetStudioAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<DomainStudio?>(null);
+        }
+
+        public Task<DomainTag?> GetTagAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<DomainTag?>(null);
+        }
+
+        public Task<DomainCollection?> GetCollectionAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<DomainCollection?>(null);
         }
     }
 

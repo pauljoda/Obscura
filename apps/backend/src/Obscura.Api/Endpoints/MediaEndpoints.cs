@@ -44,10 +44,11 @@ public static class MediaEndpoints
         group.MapGet("/{id:guid}", async (
             Guid id,
             IEntityCatalog entities,
+            IEntityDetails details,
             CancellationToken cancellationToken) =>
         {
-            var entity = await entities.GetAsync(id, cancellationToken);
-            if (entity is null || !string.Equals(entity.Kind.Code, kind.Code, StringComparison.OrdinalIgnoreCase))
+            var entity = await GetTypedMediaDetailAsync(id, kind, details, cancellationToken);
+            if (entity is null)
             {
                 return Results.NotFound(new ApiProblem(
                     $"{kind.Code}_not_found",
@@ -64,5 +65,39 @@ public static class MediaEndpoints
             .WithSummary($"Gets one {kind.Code} media entity.")
             .Produces<MediaDetail>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
+    }
+
+    private static async Task<Entity?> GetTypedMediaDetailAsync(
+        Guid id,
+        IEntityKind kind,
+        IEntityDetails details,
+        CancellationToken cancellationToken)
+    {
+        if (kind == EntityKindRegistry.Image)
+        {
+            return await details.GetImageAsync(id, cancellationToken);
+        }
+
+        if (kind == EntityKindRegistry.Gallery)
+        {
+            return await details.GetGalleryAsync(id, cancellationToken);
+        }
+
+        if (kind == EntityKindRegistry.Book)
+        {
+            return await details.GetBookAsync(id, cancellationToken);
+        }
+
+        if (kind == EntityKindRegistry.AudioLibrary)
+        {
+            return await details.GetAudioLibraryAsync(id, cancellationToken);
+        }
+
+        if (kind == EntityKindRegistry.AudioTrack)
+        {
+            return await details.GetAudioTrackAsync(id, cancellationToken);
+        }
+
+        return null;
     }
 }

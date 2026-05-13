@@ -27,6 +27,14 @@ using DomainMarker = Obscura.Domain.Capabilities.EntityMarker;
 using DomainSubtitle = Obscura.Domain.Capabilities.EntitySubtitle;
 using DomainVideo = Obscura.Domain.Media.Video;
 using DomainVideoSeries = Obscura.Domain.Media.VideoSeries;
+using DomainAudioLibrary = Obscura.Domain.Media.AudioLibrary;
+using DomainAudioTrack = Obscura.Domain.Media.AudioTrack;
+using DomainBook = Obscura.Domain.Media.Book;
+using DomainCollection = Obscura.Domain.Media.Collection;
+using DomainGallery = Obscura.Domain.Media.Gallery;
+using DomainPerson = Obscura.Domain.Taxonomy.Person;
+using DomainStudio = Obscura.Domain.Taxonomy.Studio;
+using DomainTag = Obscura.Domain.Taxonomy.Tag;
 
 namespace Obscura.Api.Mapping;
 
@@ -116,7 +124,14 @@ public static class ContractMapper
             entity.Kind.Code,
             entity.Title,
             ToEntityCapabilities(entity.Capabilities),
-            ToEntityCards(children));
+            ToEntityCards(children),
+            GalleryType: entity is DomainGallery gallery ? gallery.GalleryType.ToCode() : null,
+            CoverImageId: entity is DomainGallery galleryWithCover ? galleryWithCover.CoverImageId : null,
+            BookType: entity is DomainBook book ? book.BookType.ToCode() : null,
+            CoverPageId: entity is DomainBook bookWithCover ? bookWithCover.CoverPageId : null,
+            ParentLibraryId: entity is DomainAudioLibrary library ? library.ParentLibraryId : null,
+            EmbeddedArtist: entity is DomainAudioTrack track ? track.EmbeddedArtist : null,
+            EmbeddedAlbum: entity is DomainAudioTrack trackWithAlbum ? trackWithAlbum.EmbeddedAlbum : null);
 
     /// <summary>
     /// Converts a generic entity library aggregate into the collection detail contract.
@@ -132,6 +147,26 @@ public static class ContractMapper
             ToEntityCards(library.Children));
 
     /// <summary>
+    /// Converts a typed collection aggregate into the collection detail contract.
+    /// </summary>
+    /// <param name="collection">Collection aggregate with ordered member entities.</param>
+    /// <returns>Collection detail contract with collection-specific fields.</returns>
+    public static CollectionDetail ToCollectionDetail(DomainCollection collection) =>
+        new(
+            collection.Id,
+            collection.Kind.Code,
+            collection.Title,
+            ToEntityCapabilities(collection.Capabilities),
+            ToEntityCards(collection.Items),
+            collection.Mode.ToCode(),
+            collection.RuleTreeJson,
+            collection.CoverMode.ToCode(),
+            collection.CoverItemId,
+            collection.SlideshowDuration,
+            collection.SlideshowAutoAdvance,
+            collection.LastRefreshedAt);
+
+    /// <summary>
     /// Converts a taxonomy entity into its detail contract.
     /// </summary>
     /// <param name="entity">Domain entity root for the taxonomy item.</param>
@@ -141,7 +176,24 @@ public static class ContractMapper
             entity.Id,
             entity.Kind.Code,
             entity.Title,
-            ToEntityCapabilities(entity.Capabilities));
+            ToEntityCapabilities(entity.Capabilities),
+            Disambiguation: entity is DomainPerson person ? person.Disambiguation : null,
+            Gender: entity is DomainPerson genderedPerson ? genderedPerson.Gender : null,
+            Birthdate: entity is DomainPerson birthdatedPerson ? birthdatedPerson.Birthdate : null,
+            Country: entity is DomainPerson countryPerson ? countryPerson.Country : null,
+            Ethnicity: entity is DomainPerson ethnicityPerson ? ethnicityPerson.Ethnicity : null,
+            EyeColor: entity is DomainPerson eyeColorPerson ? eyeColorPerson.EyeColor : null,
+            HairColor: entity is DomainPerson hairColorPerson ? hairColorPerson.HairColor : null,
+            Height: entity is DomainPerson heightPerson ? heightPerson.Height : null,
+            Weight: entity is DomainPerson weightPerson ? weightPerson.Weight : null,
+            Measurements: entity is DomainPerson measurementsPerson ? measurementsPerson.Measurements : null,
+            Tattoos: entity is DomainPerson tattooedPerson ? tattooedPerson.Tattoos : null,
+            Piercings: entity is DomainPerson piercedPerson ? piercedPerson.Piercings : null,
+            CareerStart: entity is DomainPerson careerStartPerson ? careerStartPerson.CareerStart : null,
+            CareerEnd: entity is DomainPerson careerEndPerson ? careerEndPerson.CareerEnd : null,
+            ParentStudioId: entity is DomainStudio studio ? studio.ParentStudioId : null,
+            ParentTagId: entity is DomainTag tag ? tag.ParentTagId : null,
+            IgnoreAutoTag: entity is DomainTag tagWithAutomation ? tagWithAutomation.IgnoreAutoTag : null);
 
     /// <summary>
     /// Converts a video aggregate into the video detail contract.

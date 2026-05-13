@@ -12,7 +12,7 @@ namespace Obscura.Infrastructure.Entities;
 /// <summary>
 /// Projects v2 PostgreSQL entity rows into Domain objects used by application services.
 /// </summary>
-public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, IRatingService, IVideoLibrary
+public sealed class EntityProjectionService : IEntityCatalog, IEntityDetails, IEntityHierarchy, IRatingService, IVideoLibrary
 {
     private const int PageSize = 50;
     private readonly ObscuraDbContext _db;
@@ -316,6 +316,10 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
         return new Image(entity);
     }
 
+    /// <inheritdoc />
+    public Task<Image?> GetImageAsync(Guid id, CancellationToken cancellationToken) =>
+        GetImageAggregateAsync(id, cancellationToken);
+
     /// <summary>
     /// Gets one gallery aggregate with gallery-specific detail fields hydrated from v2 storage.
     /// </summary>
@@ -344,6 +348,10 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             detail?.GalleryType ?? GalleryType.Virtual,
             detail?.CoverImageEntityId);
     }
+
+    /// <inheritdoc />
+    public Task<Gallery?> GetGalleryAsync(Guid id, CancellationToken cancellationToken) =>
+        GetGalleryAggregateAsync(id, cancellationToken);
 
     /// <summary>
     /// Gets one book aggregate with book details and single-user read progress.
@@ -391,6 +399,10 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
         return new Book(entity, detail?.BookType ?? BookType.Book, detail?.CoverPageEntityId);
     }
 
+    /// <inheritdoc />
+    public Task<Book?> GetBookAsync(Guid id, CancellationToken cancellationToken) =>
+        GetBookAggregateAsync(id, cancellationToken);
+
     /// <summary>
     /// Gets one audio library aggregate with audio-library-specific detail fields.
     /// </summary>
@@ -413,6 +425,10 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
 
         return new AudioLibrary(entity, detail?.ParentLibraryEntityId);
     }
+
+    /// <inheritdoc />
+    public Task<AudioLibrary?> GetAudioLibraryAsync(Guid id, CancellationToken cancellationToken) =>
+        GetAudioLibraryAggregateAsync(id, cancellationToken);
 
     /// <summary>
     /// Gets one audio track aggregate with technical probe details and playback capability state.
@@ -447,6 +463,10 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
 
         return new AudioTrack(entity, detail?.EmbeddedArtist, detail?.EmbeddedAlbum);
     }
+
+    /// <inheritdoc />
+    public Task<AudioTrack?> GetAudioTrackAsync(Guid id, CancellationToken cancellationToken) =>
+        GetAudioTrackAggregateAsync(id, cancellationToken);
 
     /// <summary>
     /// Gets one person taxonomy aggregate with person-specific descriptive detail fields.
@@ -485,6 +505,10 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             capabilities: personEntity.Capabilities);
     }
 
+    /// <inheritdoc />
+    public Task<Person?> GetPersonAsync(Guid id, CancellationToken cancellationToken) =>
+        GetPersonAggregateAsync(id, cancellationToken);
+
     /// <summary>
     /// Gets one studio taxonomy aggregate with hierarchy metadata.
     /// </summary>
@@ -504,6 +528,10 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             WithDescription(entity, detail?.Description),
             detail?.ParentStudioEntityId);
     }
+
+    /// <inheritdoc />
+    public Task<Studio?> GetStudioAsync(Guid id, CancellationToken cancellationToken) =>
+        GetStudioAggregateAsync(id, cancellationToken);
 
     /// <summary>
     /// Gets one tag taxonomy aggregate with hierarchy and automation metadata.
@@ -525,6 +553,10 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             detail?.ParentTagEntityId,
             detail?.IgnoreAutoTag ?? false);
     }
+
+    /// <inheritdoc />
+    public Task<Tag?> GetTagAsync(Guid id, CancellationToken cancellationToken) =>
+        GetTagAggregateAsync(id, cancellationToken);
 
     /// <summary>
     /// Gets one collection aggregate with collection-specific detail fields and ordered member projections.
@@ -556,6 +588,10 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             detail?.LastRefreshedAt,
             items);
     }
+
+    /// <inheritdoc />
+    public Task<Collection?> GetCollectionAsync(Guid id, CancellationToken cancellationToken) =>
+        GetCollectionAggregateAsync(id, cancellationToken);
 
     /// <summary>
     /// Gets one structural video-season aggregate with season-specific detail fields.

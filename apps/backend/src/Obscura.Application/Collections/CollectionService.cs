@@ -11,14 +11,16 @@ namespace Obscura.Application.Collections;
 public sealed class CollectionService
 {
     private readonly IEntityCatalog _entities;
+    private readonly IEntityDetails _details;
 
     /// <summary>
     /// Creates a collection service over the shared entity catalog.
     /// </summary>
     /// <param name="entities">Catalog used to read collection entities and membership links.</param>
-    public CollectionService(IEntityCatalog entities)
+    public CollectionService(IEntityCatalog entities, IEntityDetails details)
     {
         _entities = entities;
+        _details = details;
     }
 
     /// <summary>
@@ -36,16 +38,8 @@ public sealed class CollectionService
     /// <param name="id">Collection entity identifier.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>The collection aggregate, or null when the entity is missing or not a collection.</returns>
-    public async Task<EntityLibrary?> GetAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<Collection?> GetAsync(Guid id, CancellationToken cancellationToken)
     {
-        var entity = await _entities.GetAsync(id, cancellationToken);
-        if (entity is null || !string.Equals(entity.Kind.Code, EntityKindRegistry.Collection.Code, StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        var items = await _entities.ListChildrenAsync(id, EntityRelationshipRegistry.CollectionItem, null, cancellationToken);
-
-        return new EntityLibrary(entity, items, EntityRelationshipRegistry.CollectionItem, null);
+        return await _details.GetCollectionAsync(id, cancellationToken);
     }
 }

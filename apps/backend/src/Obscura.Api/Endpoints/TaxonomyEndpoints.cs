@@ -40,11 +40,11 @@ public static class TaxonomyEndpoints
 
         group.MapGet("/{id:guid}", async (
             Guid id,
-            IEntityCatalog entities,
+            IEntityDetails details,
             CancellationToken cancellationToken) =>
         {
-            var entity = await entities.GetAsync(id, cancellationToken);
-            if (entity is null || !string.Equals(entity.Kind.Code, kind.Code, StringComparison.OrdinalIgnoreCase))
+            var entity = await GetTypedTaxonomyDetailAsync(id, kind, details, cancellationToken);
+            if (entity is null)
             {
                 return Results.NotFound(new ApiProblem(
                     $"{kind.Code}_not_found",
@@ -57,5 +57,29 @@ public static class TaxonomyEndpoints
             .WithSummary($"Gets one {kind.Code} entity.")
             .Produces<TaxonomyDetail>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
+    }
+
+    private static async Task<Entity?> GetTypedTaxonomyDetailAsync(
+        Guid id,
+        IEntityKind kind,
+        IEntityDetails details,
+        CancellationToken cancellationToken)
+    {
+        if (kind == EntityKindRegistry.Person)
+        {
+            return await details.GetPersonAsync(id, cancellationToken);
+        }
+
+        if (kind == EntityKindRegistry.Studio)
+        {
+            return await details.GetStudioAsync(id, cancellationToken);
+        }
+
+        if (kind == EntityKindRegistry.Tag)
+        {
+            return await details.GetTagAsync(id, cancellationToken);
+        }
+
+        return null;
     }
 }
