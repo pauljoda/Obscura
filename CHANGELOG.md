@@ -99,7 +99,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Legacy Svelte media browsing surfaces now live under an explicit v1 namespace, making the remaining contract-backed grids, filters, tabs, and pagination easier to review during the v2 UI migration.
 - Legacy identify and scrape review flows now live under an explicit v1 namespace, making old provider-result workflows distinct from the new capability-first UI work.
 - The v2 thumbnail lab now uses the first shared Entity Grid surface, including the ported media-surface toolbar, capability filter drawer, presets, kind tabs, selection, scaling, NSFW visibility, and loading/empty/hydrated states.
-- The v2 entity grid toolbar now uses a polished custom sort dropdown and single-row layout matching the v1 media surface, and the multi-select bulk bar now includes a Select All action.
+- The v2 entity grid toolbar now uses a polished custom sort dropdown and single-row layout matching the v1 media surface, and the multi-select bulk bar now includes a Select All action. In stacked layout (laptop and below), sort controls anchor to the left while view, filter, and preset controls anchor to the right.
 - List-view entity cards now keep consistent row height regardless of image aspect ratio — portrait, landscape, and square thumbnails all render at the same size without clipping the title or metadata chips.
 
 ### Docs

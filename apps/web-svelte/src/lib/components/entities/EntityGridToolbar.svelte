@@ -206,90 +206,92 @@
         <ChevronDown class={cn("h-3.5 w-3.5", sortDir === "asc" && "rotate-180")} />
       </button>
 
-      <div class="hidden items-center border-l border-border-subtle pl-1 sm:flex">
-        <label class="thumb-size-control" title="Drag to change thumbnail size">
-          <Grid2x2 class="h-3.5 w-3.5 shrink-0 text-text-disabled" />
-          <span class="sr-only">Thumbnail columns</span>
-          <input
-            type="range"
-            aria-label="Thumbnail columns"
-            min={minScale}
-            max={maxScale}
-            step="1"
-            value={scale}
-            oninput={parseScale}
-          />
-          <Grid3x3 class="h-3 w-3 shrink-0 rotate-180 text-text-disabled" />
-        </label>
-      </div>
+      <div class="ml-auto flex items-center gap-2">
+        <div class="hidden items-center border-l border-border-subtle pl-1 sm:flex">
+          <label class="thumb-size-control" title="Drag to change thumbnail size">
+            <Grid2x2 class="h-3.5 w-3.5 shrink-0 text-text-disabled" />
+            <span class="sr-only">Thumbnail columns</span>
+            <input
+              type="range"
+              aria-label="Thumbnail columns"
+              min={minScale}
+              max={maxScale}
+              step="1"
+              value={scale}
+              oninput={parseScale}
+            />
+            <Grid3x3 class="h-3 w-3 shrink-0 rotate-180 text-text-disabled" />
+          </label>
+        </div>
 
-      <div class="view-toggle" aria-label="View mode">
+        <div class="view-toggle" aria-label="View mode">
+          <button
+            type="button"
+            class:is-active={viewMode === "grid"}
+            title="Grid view"
+            aria-label="Grid view"
+            aria-pressed={viewMode === "grid"}
+            onclick={() => onViewModeChange("grid")}
+          >
+            <LayoutGrid class="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            class:is-active={viewMode === "list"}
+            title="List view"
+            aria-label="List view"
+            aria-pressed={viewMode === "list"}
+            onclick={() => onViewModeChange("list")}
+          >
+            <List class="h-3.5 w-3.5" />
+          </button>
+        </div>
+
         <button
           type="button"
-          class:is-active={viewMode === "grid"}
-          title="Grid view"
-          aria-label="Grid view"
-          aria-pressed={viewMode === "grid"}
-          onclick={() => onViewModeChange("grid")}
+          class={cn(
+            "flex items-center gap-1.5 px-2 py-1.5 text-[0.72rem] transition-colors duration-fast",
+            drawerOpen
+              ? "bg-accent-950 text-text-accent"
+              : "text-text-muted hover:bg-surface-2 hover:text-text-primary",
+          )}
+          aria-expanded={drawerOpen}
+          onclick={() => onDrawerOpenChange(!drawerOpen)}
         >
-          <LayoutGrid class="h-3.5 w-3.5" />
+          <SlidersHorizontal class="h-3.5 w-3.5" />
+          <span class="hidden sm:inline">Filters</span>
+          {#if activeFilterIds.length > 0}
+            <span class="filter-count">{activeFilterIds.length}</span>
+          {/if}
         </button>
-        <button
-          type="button"
-          class:is-active={viewMode === "list"}
-          title="List view"
-          aria-label="List view"
-          aria-pressed={viewMode === "list"}
-          onclick={() => onViewModeChange("list")}
-        >
-          <List class="h-3.5 w-3.5" />
-        </button>
-      </div>
 
-      <button
-        type="button"
-        class={cn(
-          "flex items-center gap-1.5 px-2 py-1.5 text-[0.72rem] transition-colors duration-fast",
-          drawerOpen
-            ? "bg-accent-950 text-text-accent"
-            : "text-text-muted hover:bg-surface-2 hover:text-text-primary",
-        )}
-        aria-expanded={drawerOpen}
-        onclick={() => onDrawerOpenChange(!drawerOpen)}
-      >
-        <SlidersHorizontal class="h-3.5 w-3.5" />
-        <span class="hidden sm:inline">Filters</span>
-        {#if activeFilterIds.length > 0}
-          <span class="filter-count">{activeFilterIds.length}</span>
+        <EntityGridPresetDropdown
+          {activePresetId}
+          {presets}
+          {onApplyPreset}
+          {onSavePreset}
+          {onOverwritePreset}
+          {onDeletePreset}
+        />
+
+        {#if canClearFiltersAndSort}
+          <button
+            type="button"
+            title="Clear filters, sort, search, and saved preferences"
+            class="flex items-center gap-1 px-2 py-1.5 text-[0.72rem] text-text-muted transition-colors duration-fast hover:bg-surface-2 hover:text-text-primary"
+            onclick={onClearFiltersAndSort}
+          >
+            <RotateCcw class="h-3.5 w-3.5 shrink-0" />
+            <span class="hidden sm:inline">Clear</span>
+          </button>
         {/if}
-      </button>
 
-      <EntityGridPresetDropdown
-        {activePresetId}
-        {presets}
-        {onApplyPreset}
-        {onSavePreset}
-        {onOverwritePreset}
-        {onDeletePreset}
-      />
-
-      {#if canClearFiltersAndSort}
-        <button
-          type="button"
-          title="Clear filters, sort, search, and saved preferences"
-          class="flex items-center gap-1 px-2 py-1.5 text-[0.72rem] text-text-muted transition-colors duration-fast hover:bg-surface-2 hover:text-text-primary"
-          onclick={onClearFiltersAndSort}
-        >
-          <RotateCcw class="h-3.5 w-3.5 shrink-0" />
-          <span class="hidden sm:inline">Clear</span>
-        </button>
-      {/if}
-
-      <div class="ml-auto hidden items-center gap-1.5 font-mono text-[0.68rem] text-text-disabled lg:flex">
-        <span>{visibleCount}/{totalCount}</span>
-        {#if selectedCount > 0}
-          <span class="text-text-accent">{selectedCount} selected</span>
-        {/if}
+        <div class="hidden items-center gap-1.5 font-mono text-[0.68rem] text-text-disabled lg:flex">
+          <span>{visibleCount}/{totalCount}</span>
+          {#if selectedCount > 0}
+            <span class="text-text-accent">{selectedCount} selected</span>
+          {/if}
+        </div>
       </div>
     </div>
 
