@@ -80,6 +80,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 .NET video and series detail APIs now keep shared metadata inside capabilities instead of duplicating description, technical, marker, and subtitle fields at the top level.
 - The generated Svelte v2 API client now matches the capability-first .NET OpenAPI surface, and the v2 video and series detail pages read shared metadata through capability helpers.
 - The generated Svelte v2 API client now reflects canonical hyphenated .NET entity kind codes in media endpoint summaries.
+- The Svelte app now includes a v2 thumbnail lab that exercises one shared entity-card thumbnail path across every current entity kind before the main UI is rewired.
 
 ### Docs
 
@@ -218,6 +219,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added a legacy media import endpoint and Svelte API wrapper coverage for testing the remaining v2 media facades with real local metadata.
 - Added v2 worker handlers for `legacy-video-import` and `legacy-media-import` jobs.
 - Added shared v2 URL and external-ID capability tables, projections, generated DTOs, and legacy preview-import coverage across video, book, image, gallery, and audio entities.
+- Added a v2 thumbnail lab page with safe dummy entity cards, shared capability chips, aspect-ratio shaping, and hover preview modes for trickplay and image-sequence thumbnails.
 - Added v2 collection DTOs, `/api/collections` list/detail endpoints, collection-item projection loading, and legacy collection import counts.
 - Added shared v2 marker and subtitle capability tables, video detail DTO projection, EF migration coverage, and legacy import coverage for video subtitles, video markers, and audio-track markers.
 - Added the v2 .NET domain capability vocabulary for markers, subtitles, stats, dates, technical metadata, source provenance, reading progress, structural positions, and classifications.
