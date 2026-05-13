@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Media;
@@ -123,6 +124,16 @@ public sealed class ObscuraDbContextModelTests
 
         Assert.NotNull(modelEntity);
         Assert.DoesNotContain(modelEntity!.GetProperties(), property => property.GetColumnName() == "photographer");
+    }
+
+    [Fact]
+    public void CapabilityFirstMigrationIsDiscoverableByEfMigrator()
+    {
+        using var db = CreateContext();
+        var migrations = db.GetService<IMigrationsAssembly>().Migrations.Keys;
+
+        Assert.Contains("20260513001500_AddCapabilityFirstTables", migrations);
+        Assert.Contains("20260513002000_RemoveGalleryPhotographer", migrations);
     }
 
     [Theory]

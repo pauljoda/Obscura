@@ -195,6 +195,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added shared v2 marker and subtitle capability tables, video detail DTO projection, EF migration coverage, and legacy import coverage for video subtitles, video markers, and audio-track markers.
 - Added the v2 .NET domain capability vocabulary for markers, subtitles, stats, dates, technical metadata, source provenance, reading progress, structural positions, and classifications.
 - Added API-facing v2 capability contracts for the expanded capability-first entity model.
+- Added EF migration discovery coverage for the expanded v2 capability tables so backend upgrades apply the capability-first schema consistently.
 - Added child-entity projection to v2 media details for gallery images and audio-library tracks.
 - Added configurable ASP.NET static-file hosting and client-route fallback for the future static Svelte app.
 - Added the initial v2 job-run table for the native Postgres-backed worker queue.
