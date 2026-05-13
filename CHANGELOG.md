@@ -74,6 +74,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 .NET backend now exposes shared descriptions, richer image asset metadata, and preserved video hashes so migrated entities keep more of their source metadata.
 - The v2 .NET backend now declares a capability-first entity shape for the breaking migration, so shared metadata can move out of duplicated per-kind detail fields after users accept the v2 reset gate.
 - The v2 .NET backend now hydrates typed entity details from shared capabilities first, reducing duplicated summary, date, source, count, progress, marker, subtitle, and technical fields across media types.
+- The v2 .NET API contract now exposes the expanded capability union so generated clients can read markers, subtitles, stats, dates, source data, technical metadata, progress, positions, and classifications from one shared shape.
 
 ### Docs
 
@@ -186,6 +187,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added v2 collection DTOs, `/api/collections` list/detail endpoints, collection-item projection loading, and legacy collection import counts.
 - Added shared v2 marker and subtitle capability tables, video detail DTO projection, EF migration coverage, and legacy import coverage for video subtitles, video markers, and audio-track markers.
 - Added the v2 .NET domain capability vocabulary for markers, subtitles, stats, dates, technical metadata, source provenance, reading progress, structural positions, and classifications.
+- Added API-facing v2 capability contracts for the expanded capability-first entity model.
 - Added child-entity projection to v2 media details for gallery images and audio-library tracks.
 - Added configurable ASP.NET static-file hosting and client-route fallback for the future static Svelte app.
 - Added the initial v2 job-run table for the native Postgres-backed worker queue.

@@ -15,6 +15,12 @@ using ContractEntityFile = Obscura.Contracts.Entities.EntityFile;
 using ContractEntityCounter = Obscura.Contracts.Entities.EntityCounter;
 using ContractEntityFingerprint = Obscura.Contracts.Entities.EntityFingerprint;
 using ContractEntityImageAsset = Obscura.Contracts.Entities.EntityImageAsset;
+using ContractEntityMarker = Obscura.Contracts.Entities.EntityMarker;
+using ContractEntityPosition = Obscura.Contracts.Entities.EntityPosition;
+using ContractEntitySource = Obscura.Contracts.Entities.EntitySource;
+using ContractEntityStat = Obscura.Contracts.Entities.EntityStat;
+using ContractEntityDate = Obscura.Contracts.Entities.EntityDate;
+using ContractEntitySubtitle = Obscura.Contracts.Entities.EntitySubtitle;
 using ContractEntityUrl = Obscura.Contracts.Entities.EntityUrl;
 using ContractRating = Obscura.Contracts.Entities.Rating;
 using DomainMarker = Obscura.Domain.Capabilities.EntityMarker;
@@ -211,6 +217,58 @@ public static class ContractMapper
             CapabilityFingerprints fingerprints => new FingerprintsCapability(fingerprints.Items.Select(fingerprint => new ContractEntityFingerprint(
                 fingerprint.Algorithm,
                 fingerprint.Value)).ToArray()),
+            CapabilityMarkers markers => new MarkersCapability(markers.Items.Select(marker => new ContractEntityMarker(
+                marker.Id,
+                marker.Title,
+                marker.Seconds,
+                marker.EndSeconds)).ToArray()),
+            CapabilitySubtitles subtitles => new SubtitlesCapability(subtitles.Items.Select(subtitle => new ContractEntitySubtitle(
+                subtitle.Id,
+                subtitle.Language,
+                subtitle.Label,
+                subtitle.Format,
+                subtitle.Source.ToCode(),
+                subtitle.StoragePath,
+                subtitle.SourceFormat,
+                subtitle.SourcePath,
+                subtitle.IsDefault)).ToArray()),
+            CapabilityStats stats => new StatsCapability(stats.Items.Select(stat => new ContractEntityStat(
+                stat.Code,
+                stat.Value)).ToArray()),
+            CapabilityDates dates => new DatesCapability(dates.Items.Select(date => new ContractEntityDate(
+                date.Code,
+                date.Value,
+                date.SortableValue,
+                date.Precision)).ToArray()),
+            CapabilityTechnical technical => new TechnicalCapability(
+                technical.Duration,
+                technical.Width,
+                technical.Height,
+                technical.FrameRate,
+                technical.BitRate,
+                technical.SampleRate,
+                technical.Channels,
+                technical.Codec,
+                technical.Container,
+                technical.Format),
+            CapabilitySource source => new SourceCapability(source.Items.Select(item => new ContractEntitySource(
+                item.Code,
+                item.Value)).ToArray()),
+            CapabilityProgress progress => new ProgressCapability(
+                progress.CurrentEntityId,
+                progress.Unit,
+                progress.Index,
+                progress.Total,
+                progress.Mode,
+                progress.CompletedAt,
+                progress.UpdatedAt),
+            CapabilityPosition position => new PositionCapability(position.Items.Select(item => new ContractEntityPosition(
+                item.Code,
+                item.Value,
+                item.Label)).ToArray()),
+            CapabilityClassification classification => new ClassificationCapability(
+                classification.Value,
+                classification.System),
             _ => null
         };
 
