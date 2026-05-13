@@ -26,12 +26,13 @@
 
   interface Props {
     card: EntityThumbnailCard;
+    layout?: "grid" | "list";
     onSelectedChange?: (selected: boolean) => void;
     selectable?: boolean;
     selected?: boolean;
   }
 
-  let { card, onSelectedChange, selectable = false, selected = false }: Props = $props();
+  let { card, layout = "grid", onSelectedChange, selectable = false, selected = false }: Props = $props();
 
   let pointerRatio = $state<number | null>(null);
 
@@ -129,6 +130,7 @@
   class="entity-thumbnail"
   class:is-hovering={pointerRatio !== null}
   class:is-image-only={imageOnly}
+  class:is-list={layout === "list"}
   class:is-selected={selected}
   aria-label={card.entity.title}
   onblur={clearHover}
@@ -267,6 +269,13 @@
       0 14px 28px rgb(0 0 0 / 0.24);
   }
 
+  .entity-thumbnail.is-list {
+    grid-template-columns: minmax(5.5rem, 7.5rem) minmax(0, 1fr);
+    grid-template-rows: none;
+    inline-size: 100%;
+    min-block-size: 5.25rem;
+  }
+
   .media {
     position: relative;
     overflow: hidden;
@@ -279,6 +288,13 @@
   }
 
   .entity-thumbnail.is-image-only .media {
+    border-bottom: 0;
+  }
+
+  .entity-thumbnail.is-list .media {
+    block-size: 100%;
+    min-block-size: 5.25rem;
+    border-right: 1px solid rgb(255 255 255 / 0.1);
     border-bottom: 0;
   }
 
@@ -463,6 +479,23 @@
     background:
       linear-gradient(180deg, rgb(10 12 15 / 0.94), rgb(9 10 12 / 0.98)),
       #0a0b0d;
+  }
+
+  .entity-thumbnail.is-list .details {
+    align-content: center;
+    block-size: auto;
+    min-block-size: 5.25rem;
+    padding: 0.72rem 0.9rem;
+  }
+
+  .entity-thumbnail.is-list .selection {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .entity-thumbnail.is-list .badges {
+    right: 0.38rem;
+    left: 2.2rem;
   }
 
   h3 {

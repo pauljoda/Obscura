@@ -1,73 +1,83 @@
 <script lang="ts">
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
+  import type { EntityGridRequest } from "$lib/entities/entity-grid";
+  import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
   import { thumbnailLabRows } from "$lib/entities/thumbnail-lab-data";
 
-  let thumbnailScale = $state(14);
+  type LabState = "hydrated" | "loading" | "empty";
+
+  const hydratedCards: EntityThumbnailCard[] = thumbnailLabRows.flatMap((row) => row.cards);
+
+  let labState = $state<LabState>("hydrated");
   let selectedIds = $state<string[]>([]);
+  let lastRequest = $state<EntityGridRequest | null>(null);
 
-  const selectedCount = $derived(selectedIds.length);
-
-  function updateSelection(id: string, selected: boolean) {
-    selectedIds = selected
-      ? Array.from(new Set([...selectedIds, id]))
-      : selectedIds.filter((selectedId) => selectedId !== id);
-  }
+  const cards = $derived(labState === "empty" ? [] : hydratedCards);
+  const isLoading = $derived(labState === "loading");
 </script>
 
 <svelte:head>
-  <title>Thumbnail Lab | Obscura v2</title>
+  <title>Entity Grid Lab | Obscura v2</title>
 </svelte:head>
 
-<main class="thumbnail-lab">
+<main class="entity-grid-lab">
   <header>
     <div>
       <p>v2 entity surface</p>
-      <h1>Thumbnail Lab</h1>
+      <h1>Entity Grid Lab</h1>
     </div>
-    <div class="controls">
-      <label for="thumbnail-scale">
-        <span>Scale</span>
-        <strong>{thumbnailScale}rem</strong>
-      </label>
-      <input id="thumbnail-scale" type="range" min="9" max="21" step="1" bind:value={thumbnailScale} />
-      <span>{selectedCount} selected</span>
-      <span>{thumbnailLabRows.length} entity kinds</span>
+    <div class="state-switch" aria-label="Server state">
+      <button
+        type="button"
+        class={labState === "hydrated" ? "is-active" : undefined}
+        onclick={() => (labState = "hydrated")}
+      >
+        Hydrated
+      </button>
+      <button
+        type="button"
+        class={labState === "loading" ? "is-active" : undefined}
+        onclick={() => (labState = "loading")}
+      >
+        Loading
+      </button>
+      <button
+        type="button"
+        class={labState === "empty" ? "is-active" : undefined}
+        onclick={() => (labState = "empty")}
+      >
+        Empty
+      </button>
     </div>
   </header>
 
-  <div class="rows" style={`--thumb-size: ${thumbnailScale}rem;`}>
-    {#each thumbnailLabRows as row (row.kind)}
-      <section class="kind-row" aria-labelledby={`${row.kind}-heading`}>
-        <div class="row-heading">
-          <div>
-            <p>{row.kind}</p>
-            <h2 id={`${row.kind}-heading`}>{row.label}</h2>
-          </div>
-          <span>{row.cards.length} sample{row.cards.length === 1 ? "" : "s"}</span>
-        </div>
+  <section class="status-strip" aria-label="Grid state">
+    <span>{hydratedCards.length} fixture entities</span>
+    <span>{thumbnailLabRows.length} entity kinds</span>
+    <span>{selectedIds.length} selected</span>
+    {#if lastRequest}
+      <span>{lastRequest.kind ?? "all"} · {lastRequest.sortBy} {lastRequest.sortDir}</span>
+    {/if}
+  </section>
 
-        <div class="strip">
-          {#each row.cards as card (card.entity.id)}
-            <EntityThumbnail
-              {card}
-              selectable
-              selected={selectedIds.includes(card.entity.id)}
-              onSelectedChange={(selected) => updateSelection(card.entity.id, selected)}
-            />
-          {/each}
-        </div>
-      </section>
-    {/each}
-  </div>
+  <EntityGrid
+    {cards}
+    loading={isLoading}
+    prefsKey="thumbnail-lab-entity-grid-surface"
+    minScale={2}
+    maxScale={12}
+    emptyTitle="Nothing present"
+    emptyMessage={labState === "empty" ? "There are no items to show." : "Try adjusting your search or filters."}
+    onRequestChange={(request) => (lastRequest = request)}
+    onSelectionChange={(ids) => (selectedIds = ids)}
+  />
 </main>
 
 <style>
-  .thumbnail-lab {
+  .entity-grid-lab {
     min-height: 100vh;
-    background:
-      linear-gradient(180deg, rgb(10 10 11 / 0.96), rgb(19 18 16 / 0.98)),
-      #080808;
-    color: #f4efe6;
+    background: var(--color-bg);
+    color: var(--color-text-primary);
     padding: clamp(1rem, 3vw, 2rem);
   }
 
@@ -76,124 +86,89 @@
     align-items: end;
     justify-content: space-between;
     gap: 1rem;
-    border-bottom: 1px solid rgb(255 255 255 / 0.1);
-    padding-bottom: 1rem;
+    padding-bottom: 0.75rem;
   }
 
-  header p,
-  .row-heading p {
+  header p {
     margin: 0;
-    color: rgb(196 154 90 / 0.9);
+    color: var(--color-text-accent);
     font-family: var(--font-mono, "JetBrains Mono", monospace);
     font-size: 0.72rem;
     letter-spacing: 0;
     text-transform: uppercase;
   }
 
-  h1,
-  h2 {
-    margin: 0;
+  h1 {
+    margin: 0.2rem 0 0;
     font-family: var(--font-heading, Geist, sans-serif);
+    font-size: clamp(1.7rem, 3vw, 2.5rem);
+    line-height: 1;
     letter-spacing: 0;
   }
 
-  h1 {
-    margin-top: 0.2rem;
-    font-size: clamp(2rem, 5vw, 4.25rem);
-    line-height: 0.96;
+  .state-switch {
+    display: inline-flex;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+    box-shadow: inset 0 2px 8px rgb(0 0 0 / 0.3);
   }
 
-  .controls > span,
-  .row-heading > span {
-    border: 1px solid rgb(255 255 255 / 0.12);
-    background: rgb(255 255 255 / 0.045);
-    color: rgb(244 239 230 / 0.7);
+  .state-switch button {
+    border: 0;
+    border-right: 1px solid var(--color-border-subtle);
+    background: transparent;
+    color: var(--color-text-muted);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.72rem;
+    padding: 0.58rem 0.72rem;
+    text-transform: uppercase;
+  }
+
+  .state-switch button:last-child {
+    border-right: 0;
+  }
+
+  .state-switch button:hover {
+    color: var(--color-text-primary);
+  }
+
+  .state-switch button.is-active {
+    background: var(--color-accent-950);
+    color: var(--color-text-accent);
+    box-shadow: inset 0 0 0 1px rgb(196 154 90 / 0.32);
+  }
+
+  .status-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.7rem 0 1rem;
+  }
+
+  .status-strip span {
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+    color: var(--color-text-muted);
     font-family: var(--font-mono, "JetBrains Mono", monospace);
     font-size: 0.72rem;
     padding: 0.45rem 0.58rem;
     white-space: nowrap;
   }
 
-  .controls {
-    display: grid;
-    grid-template-columns: auto minmax(9rem, 14rem) auto auto;
-    gap: 0.7rem;
-    align-items: center;
-  }
-
-  .controls label {
-    display: grid;
-    gap: 0.15rem;
-    color: rgb(244 239 230 / 0.6);
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.68rem;
-    line-height: 1;
-    text-transform: uppercase;
-  }
-
-  .controls strong {
-    color: rgb(244 239 230 / 0.82);
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-transform: none;
-  }
-
-  .controls input {
-    accent-color: #c49a5a;
-    inline-size: 100%;
-  }
-
-  .rows {
-    display: grid;
-    gap: 1.25rem;
-    padding-top: 1.25rem;
-  }
-
-  .kind-row {
-    display: grid;
-    gap: 0.8rem;
-  }
-
-  .row-heading {
-    display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  h2 {
-    margin-top: 0.15rem;
-    font-size: clamp(1.05rem, 2vw, 1.35rem);
-    line-height: 1.05;
-  }
-
-  .strip {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--thumb-size)), var(--thumb-size)));
-    gap: 0.9rem;
-    align-items: stretch;
-    border-top: 1px solid rgb(255 255 255 / 0.08);
-    padding-top: 0.9rem;
-  }
-
   @media (max-width: 640px) {
-    .thumbnail-lab {
+    .entity-grid-lab {
       padding: 0.9rem;
     }
 
-    header,
-    .row-heading {
+    header {
       align-items: start;
       flex-direction: column;
     }
 
-    .controls {
-      grid-template-columns: 1fr;
-      inline-size: 100%;
-    }
-
-    .strip {
-      grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--thumb-size)), 1fr));
+    .state-switch {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      width: 100%;
     }
   }
 </style>
