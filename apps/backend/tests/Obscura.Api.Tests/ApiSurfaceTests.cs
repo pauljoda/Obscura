@@ -180,17 +180,17 @@ public sealed class ApiSurfaceTests
 
     private sealed class EmptyJobQueueService : IJobQueueService
     {
-        public Task<IReadOnlyList<JobRun>> ListAsync(CancellationToken cancellationToken)
+        public Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult<IReadOnlyList<JobRun>>([]);
+            return Task.FromResult<IReadOnlyList<JobRunSnapshot>>([]);
         }
 
-        public Task<JobRun> EnqueueAsync(JobType type, CancellationToken cancellationToken)
+        public Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken)
         {
             throw new NotSupportedException("The API surface smoke test does not create jobs.");
         }
 
-        public Task<JobRun?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
+        public Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
         {
             throw new NotSupportedException("The API surface smoke test does not claim jobs.");
         }

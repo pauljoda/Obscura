@@ -69,22 +69,22 @@ public sealed class JobEndpointServiceTests
         private static readonly Guid ExistingJobId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         private static readonly Guid CreatedJobId = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
-        public Task<IReadOnlyList<JobRun>> ListAsync(CancellationToken cancellationToken)
+        public Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken)
         {
-            IReadOnlyList<JobRun> jobs =
+            IReadOnlyList<JobRunSnapshot> jobs =
             [
-                new JobRun(ExistingJobId, "scan-library", "queued", 0, null, DateTimeOffset.UnixEpoch, null, null)
+                new JobRunSnapshot(ExistingJobId, JobType.ScanLibrary, JobRunStatus.Queued, 0, null, DateTimeOffset.UnixEpoch, null, null)
             ];
 
             return Task.FromResult(jobs);
         }
 
-        public Task<JobRun> EnqueueAsync(JobType type, CancellationToken cancellationToken)
+        public Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken)
         {
-            return Task.FromResult(new JobRun(
+            return Task.FromResult(new JobRunSnapshot(
                 CreatedJobId,
-                type.ToCode(),
-                "queued",
+                type,
+                JobRunStatus.Queued,
                 0,
                 null,
                 DateTimeOffset.UnixEpoch,
@@ -92,7 +92,7 @@ public sealed class JobEndpointServiceTests
                 null));
         }
 
-        public Task<JobRun?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
+        public Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
         {
             throw new NotSupportedException("The API endpoint tests do not claim jobs.");
         }

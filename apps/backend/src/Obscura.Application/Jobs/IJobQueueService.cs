@@ -1,4 +1,3 @@
-using Obscura.Contracts.Jobs;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Application.Jobs;
@@ -13,7 +12,7 @@ public interface IJobQueueService
     /// </summary>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>Recent job runs ordered newest first.</returns>
-    Task<IReadOnlyList<JobRun>> ListAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Enqueues a new background job run.
@@ -21,7 +20,7 @@ public interface IJobQueueService
     /// <param name="type">Typed job kind to run.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>The persisted job run.</returns>
-    Task<JobRun> EnqueueAsync(JobType type, CancellationToken cancellationToken);
+    Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken);
 
     /// <summary>
     /// Claims the next available queued job for one worker.
@@ -29,7 +28,7 @@ public interface IJobQueueService
     /// <param name="workerId">Stable worker identifier used for the queue lock.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>The claimed job run, or null when no jobs are available.</returns>
-    Task<JobRun?> ClaimNextAsync(string workerId, CancellationToken cancellationToken);
+    Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken);
 
     /// <summary>
     /// Marks a running job complete.

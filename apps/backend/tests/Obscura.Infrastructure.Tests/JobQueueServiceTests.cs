@@ -18,8 +18,8 @@ public sealed class JobQueueServiceTests
         var second = await service.EnqueueAsync(JobType.ProbeVideo, CancellationToken.None);
         var jobs = await service.ListAsync(CancellationToken.None);
 
-        Assert.Equal("queued", first.Status);
-        Assert.Equal("probe-video", second.Type);
+        Assert.Equal(JobRunStatus.Queued, first.Status);
+        Assert.Equal(JobType.ProbeVideo, second.Type);
         Assert.Equal(2, jobs.Count);
         Assert.Equal(second.Id, jobs[0].Id);
         Assert.Equal(first.Id, jobs[1].Id);
@@ -38,7 +38,7 @@ public sealed class JobQueueServiceTests
 
         Assert.NotNull(claimed);
         Assert.Equal(created.Id, claimed.Id);
-        Assert.Equal("running", claimed.Status);
+        Assert.Equal(JobRunStatus.Running, claimed.Status);
         Assert.NotNull(completed);
         Assert.Equal(JobRunStatus.Completed, completed.Status);
         Assert.Equal(100, completed.Progress);

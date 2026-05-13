@@ -1,4 +1,3 @@
-using Obscura.Contracts.Jobs;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Application.Jobs;
@@ -12,7 +11,7 @@ public sealed class NoOpJobHandler : IJobHandler
     public JobType Type => JobType.Noop;
 
     /// <inheritdoc />
-    public Task HandleAsync(JobRun job, CancellationToken cancellationToken)
+    public Task HandleAsync(JobRunSnapshot job, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }

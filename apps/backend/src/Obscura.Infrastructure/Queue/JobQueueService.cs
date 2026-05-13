@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Obscura.Application.Jobs;
-using Obscura.Contracts.Jobs;
 using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
@@ -16,16 +15,16 @@ public sealed class JobQueueService : IJobQueueService
         _db = db;
     }
 
-    public async Task<IReadOnlyList<JobRun>> ListAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken)
     {
         return await _db.JobRuns
             .AsNoTracking()
             .OrderByDescending(row => row.CreatedAt)
             .Take(100)
-            .Select(row => new JobRun(
+            .Select(row => new JobRunSnapshot(
                 row.Id,
-                row.Type.ToCode(),
-                row.Status.ToCode(),
+                row.Type,
+                row.Status,
                 row.Progress,
                 row.Message,
                 row.CreatedAt,
@@ -34,7 +33,7 @@ public sealed class JobQueueService : IJobQueueService
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<JobRun> EnqueueAsync(JobType type, CancellationToken cancellationToken)
+    public async Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
         var row = new JobRunRow
@@ -57,7 +56,7 @@ public sealed class JobQueueService : IJobQueueService
         return ToContract(row);
     }
 
-    public async Task<JobRun?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
+    public async Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workerId);
 
@@ -123,12 +122,12 @@ public sealed class JobQueueService : IJobQueueService
         await _db.SaveChangesAsync(cancellationToken);
     }
 
-    private static JobRun ToContract(JobRunRow row)
+    private static JobRunSnapshot ToContract(JobRunRow row)
     {
-        return new JobRun(
+        return new JobRunSnapshot(
             row.Id,
-            row.Type.ToCode(),
-            row.Status.ToCode(),
+            row.Type,
+            row.Status,
             row.Progress,
             row.Message,
             row.CreatedAt,

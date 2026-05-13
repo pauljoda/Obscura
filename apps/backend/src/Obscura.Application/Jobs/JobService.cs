@@ -25,45 +25,28 @@ public sealed class JobService
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>API-ready job list response.</returns>
     public async Task<JobListResponse> ListAsync(CancellationToken cancellationToken) =>
-        new(await _queue.ListAsync(cancellationToken));
+        new((await _queue.ListAsync(cancellationToken)).Select(ToContract).ToArray());
 
     /// <summary>
-    /// Creates a job from the route job-type code.
+    /// Creates a job from a typed queue operation.
     /// </summary>
-    /// <param name="typeCode">Stable job type code supplied by an API caller.</param>
+    /// <param name="type">Typed job operation supplied by the API boundary.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>A create result containing either the queued job response or an unknown-type error.</returns>
-    public async Task<CreateJobResult> CreateAsync(string typeCode, CancellationToken cancellationToken)
+    /// <returns>API-ready create response for the queued job.</returns>
+    public async Task<JobCreateResponse> CreateAsync(JobType type, CancellationToken cancellationToken)
     {
-        if (!typeCode.TryDecodeAs<JobType>(out var jobType))
-        {
-            return CreateJobResult.UnknownType(typeCode);
-        }
-
-        var job = await _queue.EnqueueAsync(jobType, cancellationToken);
-        return CreateJobResult.Created(new JobCreateResponse(job));
+        var job = await _queue.EnqueueAsync(type, cancellationToken);
+        return new JobCreateResponse(ToContract(job));
     }
-}
 
-/// <summary>
-/// Application result for creating a background job from an external type code.
-/// </summary>
-/// <param name="Response">Created job response when the type code is valid.</param>
-/// <param name="ErrorMessage">User-facing error when the type code is invalid.</param>
-public sealed record CreateJobResult(JobCreateResponse? Response, string? ErrorMessage)
-{
-    /// <summary>
-    /// Creates a successful job-create result.
-    /// </summary>
-    /// <param name="response">API-ready created job response.</param>
-    /// <returns>Successful create result.</returns>
-    public static CreateJobResult Created(JobCreateResponse response) => new(response, null);
-
-    /// <summary>
-    /// Creates an unknown-type job-create result.
-    /// </summary>
-    /// <param name="typeCode">Unsupported job type code.</param>
-    /// <returns>Failed create result with a user-facing message.</returns>
-    public static CreateJobResult UnknownType(string typeCode) =>
-        new(null, $"'{typeCode}' is not a supported Obscura job type.");
+    private static JobRun ToContract(JobRunSnapshot job) =>
+        new(
+            job.Id,
+            job.Type.ToCode(),
+            job.Status.ToCode(),
+            job.Progress,
+            job.Message,
+            job.CreatedAt,
+            job.StartedAt,
+            job.FinishedAt);
 }

@@ -1,5 +1,4 @@
 using Obscura.Application.Migrations;
-using Obscura.Contracts.Jobs;
 using Obscura.Domain.Entities;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,7 +24,7 @@ public sealed class LegacyMediaImportJobHandler : IJobHandler
     public JobType Type => JobType.LegacyMediaImport;
 
     /// <inheritdoc />
-    public async Task HandleAsync(JobRun job, CancellationToken cancellationToken)
+    public async Task HandleAsync(JobRunSnapshot job, CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
         var legacyImport = scope.ServiceProvider.GetRequiredService<ILegacyMediaImportService>();

@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Obscura.Contracts.Jobs;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Application.Jobs;
@@ -39,7 +38,7 @@ public sealed class QueueWorker(
                 continue;
             }
 
-            if (!job.Type.TryDecodeAs<JobType>(out var jobType) || !_handlers.TryGetValue(jobType, out var handler))
+            if (!_handlers.TryGetValue(job.Type, out var handler))
             {
                 await queue.FailAsync(
                     job.Id,
@@ -60,7 +59,7 @@ public sealed class QueueWorker(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Job {JobId} of type {JobType} failed.", job.Id, job.Type);
+                logger.LogError(ex, "Job {JobId} of type {JobType} failed.", job.Id, job.Type.ToCode());
                 await queue.FailAsync(job.Id, ex.Message, RetryDelay, stoppingToken);
             }
         }
