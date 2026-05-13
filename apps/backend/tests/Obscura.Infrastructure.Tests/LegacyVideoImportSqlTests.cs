@@ -20,6 +20,11 @@ public sealed class LegacyVideoImportSqlTests
         Assert.Contains("v2.entity_descriptions", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_playback", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_file_fingerprints", LegacyVideoImportSql.Import);
+        Assert.Contains("v2.entity_dates", LegacyVideoImportSql.Import);
+        Assert.Contains("v2.entity_technical", LegacyVideoImportSql.Import);
+        Assert.Contains("v2.entity_sources", LegacyVideoImportSql.Import);
+        Assert.Contains("v2.entity_positions", LegacyVideoImportSql.Import);
+        Assert.Contains("v2.entity_classifications", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_markers", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_subtitles", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_counters", LegacyVideoImportSql.Import);

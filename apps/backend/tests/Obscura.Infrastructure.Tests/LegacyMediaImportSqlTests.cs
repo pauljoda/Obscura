@@ -20,6 +20,22 @@ public sealed class LegacyMediaImportSqlTests
         Assert.Contains("v2.entity_external_ids", LegacyMediaImportSql.Import);
         Assert.Contains("v2.entity_urls", LegacyMediaImportSql.Import);
         Assert.Contains("v2.entity_markers", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.entity_descriptions", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.entity_file_fingerprints", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.entity_dates", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.entity_technical", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.entity_sources", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.entity_stats", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.entity_progress", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.entity_positions", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.entity_playback", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.gallery_details", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.image_details", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.book_details", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.book_read_progress", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.audio_library_details", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.audio_track_details", LegacyMediaImportSql.Import);
+        Assert.Contains("waveform_path", LegacyMediaImportSql.Import);
     }
 
     [Fact]

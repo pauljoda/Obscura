@@ -167,6 +167,42 @@ public static class LegacyVideoImportSql
                     value = EXCLUDED.value,
                     updated_at = EXCLUDED.updated_at;
 
+                INSERT INTO v2.entity_dates (entity_id, code, value, sortable_value, precision, updated_at)
+                SELECT series.id, date_value.code, date_value.value, NULL, NULL, series.updated_at
+                FROM public.video_series series
+                CROSS JOIN LATERAL (VALUES
+                    ('first-air', series.first_air_date),
+                    ('end-air', series.end_air_date)
+                ) AS date_value(code, value)
+                WHERE date_value.value IS NOT NULL
+                ON CONFLICT (entity_id, code) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    sortable_value = EXCLUDED.sortable_value,
+                    precision = EXCLUDED.precision,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_sources (entity_id, code, value, updated_at)
+                SELECT series.id, source.code, source.value, series.updated_at
+                FROM public.video_series series
+                CROSS JOIN LATERAL (VALUES
+                    ('library-root', series.library_root_id::text),
+                    ('folder', series.folder_path),
+                    ('relative', series.relative_path)
+                ) AS source(code, value)
+                WHERE source.value IS NOT NULL
+                ON CONFLICT (entity_id, code) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_classifications (entity_id, value, system, updated_at)
+                SELECT id, content_rating, 'content-rating', updated_at
+                FROM public.video_series
+                WHERE content_rating IS NOT NULL
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    system = EXCLUDED.system,
+                    updated_at = EXCLUDED.updated_at;
+
                 INSERT INTO v2.entity_studio_links (entity_id, studio_id, created_at)
                 SELECT id, studio_id, updated_at
                 FROM public.video_series
@@ -277,6 +313,73 @@ public static class LegacyVideoImportSql
                 WHERE overview IS NOT NULL
                 ON CONFLICT (entity_id) DO UPDATE SET
                     value = EXCLUDED.value,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_dates (entity_id, code, value, sortable_value, precision, updated_at)
+                SELECT id, 'release', release_date, NULL, NULL, updated_at
+                FROM public.video_movies
+                WHERE release_date IS NOT NULL
+                ON CONFLICT (entity_id, code) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    sortable_value = EXCLUDED.sortable_value,
+                    precision = EXCLUDED.precision,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_technical (
+                    entity_id,
+                    duration_seconds,
+                    width,
+                    height,
+                    frame_rate,
+                    bit_rate,
+                    sample_rate,
+                    channels,
+                    codec,
+                    container,
+                    format,
+                    updated_at
+                )
+                SELECT id, duration, width, height, frame_rate, bit_rate, NULL, NULL, codec, container, NULL, updated_at
+                FROM public.video_movies
+                WHERE duration IS NOT NULL
+                   OR width IS NOT NULL
+                   OR height IS NOT NULL
+                   OR frame_rate IS NOT NULL
+                   OR bit_rate IS NOT NULL
+                   OR codec IS NOT NULL
+                   OR container IS NOT NULL
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    duration_seconds = EXCLUDED.duration_seconds,
+                    width = EXCLUDED.width,
+                    height = EXCLUDED.height,
+                    frame_rate = EXCLUDED.frame_rate,
+                    bit_rate = EXCLUDED.bit_rate,
+                    sample_rate = EXCLUDED.sample_rate,
+                    channels = EXCLUDED.channels,
+                    codec = EXCLUDED.codec,
+                    container = EXCLUDED.container,
+                    format = EXCLUDED.format,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_sources (entity_id, code, value, updated_at)
+                SELECT movie.id, source.code, source.value, movie.updated_at
+                FROM public.video_movies movie
+                CROSS JOIN LATERAL (VALUES
+                    ('library-root', movie.library_root_id::text),
+                    ('file', movie.file_path)
+                ) AS source(code, value)
+                WHERE source.value IS NOT NULL
+                ON CONFLICT (entity_id, code) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_classifications (entity_id, value, system, updated_at)
+                SELECT id, content_rating, 'content-rating', updated_at
+                FROM public.video_movies
+                WHERE content_rating IS NOT NULL
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    system = EXCLUDED.system,
                     updated_at = EXCLUDED.updated_at;
 
                 INSERT INTO v2.entity_playback (entity_id, play_count, play_duration_seconds, resume_seconds, last_played_at, completed_at, updated_at)
@@ -429,6 +532,74 @@ public static class LegacyVideoImportSql
                 WHERE overview IS NOT NULL
                 ON CONFLICT (entity_id) DO UPDATE SET
                     value = EXCLUDED.value,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_dates (entity_id, code, value, sortable_value, precision, updated_at)
+                SELECT id, 'air', air_date, NULL, NULL, updated_at
+                FROM public.video_episodes
+                WHERE air_date IS NOT NULL
+                ON CONFLICT (entity_id, code) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    sortable_value = EXCLUDED.sortable_value,
+                    precision = EXCLUDED.precision,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_technical (
+                    entity_id,
+                    duration_seconds,
+                    width,
+                    height,
+                    frame_rate,
+                    bit_rate,
+                    sample_rate,
+                    channels,
+                    codec,
+                    container,
+                    format,
+                    updated_at
+                )
+                SELECT id, duration, width, height, frame_rate, bit_rate, NULL, NULL, codec, container, NULL, updated_at
+                FROM public.video_episodes
+                WHERE duration IS NOT NULL
+                   OR width IS NOT NULL
+                   OR height IS NOT NULL
+                   OR frame_rate IS NOT NULL
+                   OR bit_rate IS NOT NULL
+                   OR codec IS NOT NULL
+                   OR container IS NOT NULL
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    duration_seconds = EXCLUDED.duration_seconds,
+                    width = EXCLUDED.width,
+                    height = EXCLUDED.height,
+                    frame_rate = EXCLUDED.frame_rate,
+                    bit_rate = EXCLUDED.bit_rate,
+                    sample_rate = EXCLUDED.sample_rate,
+                    channels = EXCLUDED.channels,
+                    codec = EXCLUDED.codec,
+                    container = EXCLUDED.container,
+                    format = EXCLUDED.format,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_sources (entity_id, code, value, updated_at)
+                SELECT id, 'file', file_path, updated_at
+                FROM public.video_episodes
+                WHERE file_path IS NOT NULL
+                ON CONFLICT (entity_id, code) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_positions (entity_id, code, value, label, updated_at)
+                SELECT episode.id, position.code, position.value, position.label, episode.updated_at
+                FROM public.video_episodes episode
+                CROSS JOIN LATERAL (VALUES
+                    ('season', episode.season_number, episode.season_number::text),
+                    ('episode', episode.episode_number, episode.episode_number::text),
+                    ('absolute-episode', episode.absolute_episode_number, episode.absolute_episode_number::text)
+                ) AS position(code, value, label)
+                WHERE position.value IS NOT NULL
+                ON CONFLICT (entity_id, code) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    label = EXCLUDED.label,
                     updated_at = EXCLUDED.updated_at;
 
                 INSERT INTO v2.entity_playback (entity_id, play_count, play_duration_seconds, resume_seconds, last_played_at, completed_at, updated_at)
