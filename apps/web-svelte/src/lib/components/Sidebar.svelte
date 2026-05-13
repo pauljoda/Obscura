@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { BookOpen, PanelLeftClose, PanelLeftOpen } from "@lucide/svelte";
+  import { BookOpen, PanelLeftClose, PanelLeftOpen, Wrench } from "@lucide/svelte";
+  import { dev } from "$app/environment";
   import { page } from "$app/state";
   import { appShellSections, cn } from "@obscura/ui-svelte";
   import { appShellNavIconMap } from "./app-shell-nav-icon-map";
@@ -145,6 +146,28 @@
 
   <!-- Footer actions -->
   <div class="shrink-0 space-y-1 border-t border-border-subtle px-3 py-3">
+    {#if dev}
+      <a
+        href="/dev/v2-migration"
+        aria-label="Open v2 migration dev tools"
+        title={!isExpanded ? "Migration Dev" : undefined}
+        class="group flex h-8 items-center overflow-hidden whitespace-nowrap text-text-muted transition-colors duration-fast hover:bg-surface-2 hover:text-text-primary"
+      >
+        <div class="flex w-8 shrink-0 items-center justify-center">
+          <Wrench class="h-4 w-4 transition-colors group-hover:text-text-accent" />
+        </div>
+        <div
+          class={cn(
+            "overflow-hidden transition-[max-width,opacity] duration-moderate",
+            isExpanded ? "max-w-[160px] opacity-100 ml-1" : "max-w-0 opacity-0 ml-0",
+          )}
+        >
+          <span class="text-mono-sm text-text-disabled transition-colors group-hover:text-text-accent">
+            Migration Dev
+          </span>
+        </div>
+      </a>
+    {/if}
     <ChangelogDialog version={APP_VERSION}>
       <div
         class="group flex h-8 items-center overflow-hidden whitespace-nowrap text-text-muted transition-colors duration-fast hover:bg-surface-2 hover:text-text-primary"

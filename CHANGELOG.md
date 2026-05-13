@@ -104,6 +104,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - V2 entity lists now enforce the server-side hide-NSFW setting before entity rows are projected, so hidden content is not sent to the browser.
 - V2 video and season thumbnails now reserve the bottom-left overlay for entity-specific labels such as season and episode numbers.
 - Local development now has database backup and restore scripts for repeatedly testing v2 migration mappings against the same data set.
+- Local development now has a sidebar-linked v2 migration control page for prompting the upgrade gate, creating backups, restoring a dump, and clearing v2 data before another import pass.
 
 ### Docs
 
@@ -281,6 +282,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added a safe HLS asset resolver for the .NET backend with traversal protection, MIME types, and cache headers.
 - Added the first .NET worker job-handler contract and a no-op handler for validating queue execution end to end.
 - Added `/v2/videos` and `/v2/videos/[id]` Svelte routes as the first client-rendered video UI slice for the .NET backend.
+- Added a dev-only `/dev/v2-migration` page and `dev:db:clear-v2` script for repeating the v2 upgrade-gate, restore, and migration reset flow locally.
 - Added a reusable .NET process executor and media tool status service for ffmpeg/ffprobe-backed jobs.
 - Added development CORS for localhost .NET API comparisons and automatic EF migration startup for the API and worker.
 - Added Books as a first-class library category with library-root scan toggles, book/chapter/page tables, Books API routes, search and collection support, a `/books` Comics tab, and series-style book detail pages with chapter reading progress.
