@@ -100,6 +100,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Legacy identify and scrape review flows now live under an explicit v1 namespace, making old provider-result workflows distinct from the new capability-first UI work.
 - The v2 thumbnail lab now uses the first shared Entity Grid surface, including the ported media-surface toolbar, capability filter drawer, presets, kind tabs, selection, scaling, NSFW visibility, and loading/empty/hydrated states.
 - The v2 entity grid toolbar now uses a polished custom sort dropdown and single-row layout matching the v1 media surface, and the multi-select bulk bar now includes a Select All action.
+- List-view entity cards now keep consistent row height regardless of image aspect ratio — portrait, landscape, and square thumbnails all render at the same size without clipping the title or metadata chips.
 
 ### Docs
 

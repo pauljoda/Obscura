@@ -141,7 +141,7 @@
   <div
     class="media"
     role="presentation"
-    style:aspect-ratio={aspectRatio}
+    style:aspect-ratio={layout === "list" ? undefined : aspectRatio}
     onpointermove={handlePointerMove}
     onpointerleave={clearHover}
   >
@@ -292,10 +292,16 @@
   }
 
   .entity-thumbnail.is-list .media {
-    block-size: 100%;
     min-block-size: 5.25rem;
     border-right: 1px solid rgb(255 255 255 / 0.1);
     border-bottom: 0;
+  }
+
+  .entity-thumbnail.is-list .media img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
   }
 
   .media img,
