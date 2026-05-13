@@ -86,6 +86,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Organized the v2 .NET domain and contract entity-kind, codec, and capability files into relation-based folders so backend model types are easier to find without changing their public namespaces.
 - Added typed v2 .NET domain models for people, studios, tags, galleries, images, audio libraries, and audio tracks so domain-specific state and mutators live beside each entity type instead of in generic services.
 - Expanded the v2 .NET data model with typed domain-specific tables for taxonomy details, media details, playback/progress, provider identity, UI preferences, and richer book metadata while keeping shared capabilities on the global entity root.
 - Replaced fixed-choice v2 .NET type, mode, role, source, and status strings with enums while preserving stable database/API text codes for OpenAPI and Orval clients.
