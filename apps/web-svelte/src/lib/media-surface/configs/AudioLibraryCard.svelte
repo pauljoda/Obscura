@@ -2,7 +2,7 @@
   import { Badge, Checkbox } from "@obscura/ui-svelte";
   import type { AudioLibraryListItemDto } from "@obscura/contracts";
   import type { CardProps } from "$lib/media-surface/config";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
 
   let {
     item,

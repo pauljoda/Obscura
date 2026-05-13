@@ -34,7 +34,7 @@
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { entityTerms } from "$lib/terminology";
   import NsfwTagLabel from "./nsfw/NsfwTagLabel.svelte";
-  import EntityThumbnail from "./thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import {
     DateField,

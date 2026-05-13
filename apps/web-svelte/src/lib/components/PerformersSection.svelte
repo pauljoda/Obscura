@@ -1,6 +1,6 @@
 <script lang="ts">
   import { User, Star } from "@lucide/svelte";
-  import EntityThumbnail from "./thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import { entityTerms } from "$lib/terminology";
 
   export interface PerformerEmbed {

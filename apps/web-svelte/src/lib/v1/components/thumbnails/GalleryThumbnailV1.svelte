@@ -7,10 +7,10 @@
   import { cn } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
-  import NsfwBlur from "../nsfw/NsfwBlur.svelte";
-  import NsfwShowModeChip from "../nsfw/NsfwShowModeChip.svelte";
-  import ThumbnailRatingChip from "./ThumbnailRatingChip.svelte";
-  import { scrubIndexFromClientX } from "./gallery-thumbnail-scrub";
+  import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
+  import NsfwShowModeChip from "$lib/components/nsfw/NsfwShowModeChip.svelte";
+  import ThumbnailRatingChip from "./ThumbnailRatingChipV1.svelte";
+  import { scrubIndexFromClientX } from "./gallery-thumbnail-scrub-v1";
 
   interface Props {
     title?: string;

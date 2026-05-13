@@ -7,7 +7,7 @@
     uploadBookChapterCover,
   } from "$lib/api/media";
   import { toApiUrl } from "$lib/api/core";
-  import EntityThumbnail from "./thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import NsfwBlur from "./nsfw/NsfwBlur.svelte";
 
   interface Props {

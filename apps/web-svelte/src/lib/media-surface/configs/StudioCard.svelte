@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Badge, Checkbox, cn } from "@obscura/ui-svelte";
   import type { CardProps } from "$lib/media-surface/config";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import type { StudioItem } from "$lib/api/types";
 
   let {

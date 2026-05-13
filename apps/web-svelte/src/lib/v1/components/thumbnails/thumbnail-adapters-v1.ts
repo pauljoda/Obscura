@@ -4,7 +4,7 @@ import type {
 } from "@obscura/contracts";
 import { toApiUrl } from "$lib/api/core";
 import { videoListItemToCardData, type VideoCardData } from "$lib/video-card-data";
-import type { EntityThumbnailProps } from "./thumbnail-types";
+import type { EntityThumbnailProps } from "./thumbnail-types-v1";
 
 type UnknownRecord = Record<string, unknown>;
 

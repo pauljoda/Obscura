@@ -93,6 +93,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - V2 thumbnail title hover no longer shows the browser tooltip, and compressed titles now move visibly when the ticker starts.
 - V2 entity cards now use a canonical title plus capability-driven metadata instead of an unused global subtitle, keeping thumbnails aligned with the new backend data shape.
 - V2 thumbnail chips now reserve the top-right and bottom-right corners for compact rating and icon-only NSFW badges, while page thumbnails render as image-only cards.
+- The shared entity thumbnail is now the canonical thumbnail component, while legacy thumbnail components live under an explicit v1 namespace for migration review.
 
 ### Docs
 
@@ -162,6 +163,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Standardized v2 thumbnail body sizing so rows stay aligned while long titles and metadata clamp within fixed slots.
 - Removed the unused v2 entity-card subtitle field from the .NET domain model, API contract, generated Svelte model, and thumbnail lab fixtures.
 - Tuned shared v2 thumbnail capability chips so ratings show as a single star value, NSFW state uses an icon-only red fire chip, and book-page entities omit the detail footer.
+- Moved legacy thumbnail components and adapters into `src/lib/v1/components/thumbnails` with `V1` file names, leaving the new shared entity thumbnail at the canonical component path.
 - Replaced the two-line thumbnail title slot with measured one-line title fitting, so long names scale down slightly before ellipsis.
 - Added selectable thumbnail state to the shared v2 card component and wired the lab page to track multiple selected entities.
 - Added measured title ticker behavior to the shared v2 thumbnail so overflowing names scroll in place on hover.

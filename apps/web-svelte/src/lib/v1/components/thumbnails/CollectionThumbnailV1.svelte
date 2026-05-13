@@ -7,8 +7,8 @@
   import { cn } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
-  import NsfwBlur from "../nsfw/NsfwBlur.svelte";
-  import NsfwShowModeChip from "../nsfw/NsfwShowModeChip.svelte";
+  import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
+  import NsfwShowModeChip from "$lib/components/nsfw/NsfwShowModeChip.svelte";
 
   interface CollectionThumbLike {
     name: string;

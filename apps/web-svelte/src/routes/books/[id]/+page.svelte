@@ -14,7 +14,7 @@
   import IdentifyButton from "$lib/components/IdentifyButton.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import NsfwTagLabel from "$lib/components/nsfw/NsfwTagLabel.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import { toApiUrl } from "$lib/api/core";

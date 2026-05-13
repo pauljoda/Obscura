@@ -9,7 +9,7 @@
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";
   import GalleryEdit from "$lib/components/GalleryEdit.svelte";
   import ChildGalleryGrid from "$lib/components/galleries/ChildGalleryGrid.svelte";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";

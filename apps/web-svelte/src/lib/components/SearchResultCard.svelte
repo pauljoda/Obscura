@@ -5,8 +5,8 @@
 <script lang="ts">
   import type { SearchResultItem } from "@obscura/contracts";
   import { cn } from "@obscura/ui-svelte";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
-  import { searchResultToThumbnailProps } from "$lib/components/thumbnails/thumbnail-adapters";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
+  import { searchResultToThumbnailProps } from "$lib/v1/components/thumbnails/thumbnail-adapters-v1";
   import { buildHrefWithFrom } from "$lib/back-navigation";
   import { SEARCH_KIND_CONFIG } from "./search-kind-config";
 

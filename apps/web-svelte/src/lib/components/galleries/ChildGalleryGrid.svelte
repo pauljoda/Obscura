@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Images, Layers } from "@lucide/svelte";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import ThumbSizeSlider from "$lib/media-surface/toolbar/ThumbSizeSlider.svelte";
 
   export interface ChildGalleryGridItem {

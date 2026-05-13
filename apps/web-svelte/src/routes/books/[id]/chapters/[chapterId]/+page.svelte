@@ -8,7 +8,7 @@
   import HierarchyBreadcrumbs from "$lib/components/shared/HierarchyBreadcrumbs.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import HierarchyShell from "$lib/components/shared/HierarchyShell.svelte";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import { getChapterProgressDisplay } from "$lib/book-progress";
   import { useAppChrome, type AppBreadcrumb } from "$lib/stores/app-chrome.svelte";
 

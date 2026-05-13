@@ -2,7 +2,7 @@
   import { BookOpen, Loader2, Upload, X } from "@lucide/svelte";
   import type { BookDetailDto } from "@obscura/contracts";
   import { deleteBookCover, uploadBookCover } from "$lib/api/media";
-  import EntityThumbnail from "./thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
 
   interface Props {
     book: BookDetailDto;

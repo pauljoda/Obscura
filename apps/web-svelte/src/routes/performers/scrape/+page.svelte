@@ -23,7 +23,7 @@
   } from "$lib/api/types";
   import { entityTerms } from "$lib/terminology";
   import ProviderSelector from "$lib/components/ProviderSelector.svelte";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
 
   interface PerformerRow {
     performer: PerformerItem;

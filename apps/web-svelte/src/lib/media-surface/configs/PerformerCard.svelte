@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Checkbox } from "@obscura/ui-svelte";
   import type { CardProps } from "$lib/media-surface/config";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import type { PerformerItem } from "$lib/api/types";
 

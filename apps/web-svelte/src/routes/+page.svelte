@@ -16,7 +16,7 @@
   import NsfwShowModeChip from "$lib/components/nsfw/NsfwShowModeChip.svelte";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import { useNsfw } from "$lib/nsfw/store.svelte";
 

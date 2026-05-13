@@ -3,7 +3,7 @@
   import { receiveThumb, sendThumb } from "@obscura/ui-svelte";
   import type { ImageListItemDto } from "@obscura/contracts";
   import type { CardProps } from "$lib/media-surface/config";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
 
   interface ImageCardItem extends ImageListItemDto {
     /** Set when this card is the source of an open lightbox so the

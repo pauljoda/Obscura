@@ -6,7 +6,7 @@
     ChevronDown,
   } from "@lucide/svelte";
   import { Badge, cn } from "@obscura/ui-svelte";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import { entityTerms } from "$lib/terminology";
   import type { PerformerRow } from "$lib/identify/scrape-types";
   import StatusDot from "./StatusDot.svelte";

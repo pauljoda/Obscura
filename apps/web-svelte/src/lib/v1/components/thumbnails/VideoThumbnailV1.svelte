@@ -5,10 +5,10 @@
 <script lang="ts">
   import { Captions, Clock, Film } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-  import NsfwShowModeChip from "../nsfw/NsfwShowModeChip.svelte";
+  import NsfwShowModeChip from "$lib/components/nsfw/NsfwShowModeChip.svelte";
   import type { VideoCardData } from "$lib/video-card-data";
   import { createTrickplayScrub } from "$lib/player/trickplay-scrub.svelte";
-  import ThumbnailRatingChip from "./ThumbnailRatingChip.svelte";
+  import ThumbnailRatingChip from "./ThumbnailRatingChipV1.svelte";
 
   interface Props {
     video: VideoCardData;

@@ -30,7 +30,7 @@
   import { deleteCollection, fetchCollectionItems, refreshCollection, removeCollectionItems } from "$lib/api/media";
   import { toApiUrl } from "$lib/api/core";
   import CollectionItemCard from "$lib/components/collections/CollectionItemCard.svelte";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
 
   type ViewMode = "mixed" | "by-type";

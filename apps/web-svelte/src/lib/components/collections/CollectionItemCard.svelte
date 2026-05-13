@@ -1,8 +1,8 @@
 <script lang="ts">
   import { BookOpen, Film, Images, Layers, Music, Hand, Zap } from "@lucide/svelte";
   import type { CollectionItemDto, CollectionEntityType } from "@obscura/contracts";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
-  import { collectionItemToThumbnailProps } from "$lib/components/thumbnails/thumbnail-adapters";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
+  import { collectionItemToThumbnailProps } from "$lib/v1/components/thumbnails/thumbnail-adapters-v1";
   import {
     getEntityHref,
     getEntityTitle,

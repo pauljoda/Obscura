@@ -3,7 +3,7 @@ import type { CollectionItemDto, SearchResultItem } from "@obscura/contracts";
 import {
   collectionItemToThumbnailProps,
   searchResultToThumbnailProps,
-} from "./thumbnail-adapters";
+} from "./thumbnail-adapters-v1";
 
 describe("thumbnail adapters", () => {
   it("maps comic gallery search results to gallery thumbnail props", () => {

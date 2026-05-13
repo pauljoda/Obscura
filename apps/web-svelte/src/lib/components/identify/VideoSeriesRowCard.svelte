@@ -8,7 +8,7 @@
     X,
   } from "@lucide/svelte";
   import { Badge, cn } from "@obscura/ui-svelte";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import type { VideoSeriesRow } from "$lib/identify/identify-types";
   import StatusDot from "../scrape/StatusDot.svelte";
 

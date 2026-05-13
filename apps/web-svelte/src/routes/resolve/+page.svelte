@@ -29,7 +29,7 @@
   } from "$lib/api/types";
   import { entityTerms } from "$lib/terminology";
   import ProviderSelector from "$lib/components/ProviderSelector.svelte";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
 
   interface ScrapeState {

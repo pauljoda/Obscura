@@ -8,7 +8,7 @@
     Layers,
   } from "@lucide/svelte";
   import { Badge, cn } from "@obscura/ui-svelte";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import type { VideoRow } from "$lib/identify/scrape-types";
   import StatusDot from "./StatusDot.svelte";

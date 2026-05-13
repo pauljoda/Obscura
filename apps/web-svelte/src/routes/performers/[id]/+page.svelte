@@ -29,7 +29,7 @@
   import { page } from "$app/state";
   import InlineRating from "$lib/components/InlineRating.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import MediaTabs from "$lib/media-surface/tabs/MediaTabs.svelte";
   import { detailTabsFor } from "$lib/media-surface/tabs/detail-tabs";
   import {

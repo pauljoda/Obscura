@@ -26,7 +26,7 @@
     uploadSeriesCover,
   } from "$lib/api/videos";
   import { useNsfw } from "$lib/nsfw/store.svelte";
-  import EntityThumbnail from "./thumbnails/EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import StarRatingPicker from "./StarRatingPicker.svelte";
   import {
     DateField,

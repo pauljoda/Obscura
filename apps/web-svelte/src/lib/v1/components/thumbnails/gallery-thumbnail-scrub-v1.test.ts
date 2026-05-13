@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scrubIndexFromClientX } from "./gallery-thumbnail-scrub";
+import { scrubIndexFromClientX } from "./gallery-thumbnail-scrub-v1";
 
 describe("gallery-thumbnail-scrub", () => {
   it("maps pointer or touch position to the bounded preview index", () => {

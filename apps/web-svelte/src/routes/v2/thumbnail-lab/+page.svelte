@@ -1,5 +1,5 @@
 <script lang="ts">
-  import V2EntityThumbnail from "$lib/components/thumbnails/V2EntityThumbnail.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import { thumbnailLabRows } from "$lib/entities/thumbnail-lab-data";
 
   let thumbnailScale = $state(14);
@@ -48,7 +48,7 @@
 
         <div class="strip">
           {#each row.cards as card (card.entity.id)}
-            <V2EntityThumbnail
+            <EntityThumbnail
               {card}
               selectable
               selected={selectedIds.includes(card.entity.id)}
