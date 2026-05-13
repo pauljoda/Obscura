@@ -50,12 +50,22 @@
       if (typeof requestAnimationFrame === "undefined") return;
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
+        const text = node.querySelector<HTMLElement>(".title-text");
+        if (!text) return;
+
         node.style.setProperty("--title-scale", "1");
+        node.style.setProperty("--title-travel", "0px");
+        node.dataset.overflow = "false";
+
         const width = node.clientWidth;
-        const scrollWidth = node.scrollWidth;
+        const scrollWidth = text.scrollWidth;
         if (width <= 0 || scrollWidth <= 0) return;
         const scale = Math.max(0.78, Math.min(1, width / scrollWidth));
+        const travel = Math.max(0, scrollWidth * scale - width);
+
         node.style.setProperty("--title-scale", String(scale));
+        node.style.setProperty("--title-travel", `${travel}px`);
+        node.dataset.overflow = travel > 1 ? "true" : "false";
       });
     }
 
@@ -160,7 +170,9 @@
 
   <div class="details">
     <div class="copy">
-      <h3 use:fitTitle={card.entity.title}>{card.entity.title}</h3>
+      <h3 class="ticker-title" use:fitTitle={card.entity.title} title={card.entity.title}>
+        <span class="title-text">{card.entity.title}</span>
+      </h3>
       {#if card.entity.subtitle}
         <p>{card.entity.subtitle}</p>
       {/if}
@@ -419,6 +431,7 @@
   }
 
   h3 {
+    position: relative;
     font-family: var(--font-heading, Geist, sans-serif);
     display: block;
     font-size: calc(1.05rem * var(--title-scale, 1));
@@ -429,11 +442,69 @@
     transition: font-size 120ms ease;
   }
 
+  :global(.ticker-title[data-overflow="true"]) {
+    padding-right: 1.05rem;
+  }
+
+  :global(.ticker-title[data-overflow="true"])::after {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    align-items: center;
+    width: 1.1rem;
+    background: linear-gradient(to right, rgb(10 12 15 / 0), #0a0b0d 42%);
+    color: rgb(244 239 230 / 0.9);
+    content: "...";
+    font-size: inherit;
+    line-height: inherit;
+    pointer-events: none;
+  }
+
+  .title-text {
+    display: inline-block;
+    min-width: 0;
+    transform: translateX(0);
+    transition: transform 160ms ease;
+    will-change: transform;
+  }
+
+  :global(.ticker-title[data-overflow="true"]:hover)::after {
+    opacity: 0;
+  }
+
+  :global(.ticker-title[data-overflow="true"]:hover) .title-text {
+    animation: title-ticker 7s linear infinite;
+  }
+
+  @keyframes title-ticker {
+    0%,
+    12% {
+      transform: translateX(0);
+    }
+
+    46%,
+    62% {
+      transform: translateX(calc(-1 * var(--title-travel, 0px)));
+    }
+
+    100% {
+      transform: translateX(0);
+    }
+  }
+
   p {
     color: rgb(244 239 230 / 0.58);
     font-size: 0.76rem;
     line-height: 1.2;
     align-self: end;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(.ticker-title[data-overflow="true"]:hover) .title-text {
+      animation: none;
+    }
   }
 
   .meta {
