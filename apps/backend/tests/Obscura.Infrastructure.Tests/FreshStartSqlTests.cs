@@ -13,6 +13,13 @@ public sealed class FreshStartSqlTests
         Assert.Contains("FROM public.library_settings", sql);
         Assert.Contains("INSERT INTO v2.library_roots", sql);
         Assert.Contains("FROM public.library_roots", sql);
+        Assert.Contains("v2.entity_stats", sql);
+        Assert.Contains("v2.entity_dates", sql);
+        Assert.Contains("v2.entity_technical", sql);
+        Assert.Contains("v2.entity_sources", sql);
+        Assert.Contains("v2.entity_progress", sql);
+        Assert.Contains("v2.entity_positions", sql);
+        Assert.Contains("v2.entity_classifications", sql);
         Assert.DoesNotContain("public.videos", sql);
         Assert.DoesNotContain("public.images", sql);
         Assert.DoesNotContain("public.galleries", sql);

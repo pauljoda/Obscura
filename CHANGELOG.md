@@ -115,6 +115,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added shared v2 .NET description and fingerprint capabilities, plus per-entity-kind image asset shapes for typed generated artwork such as posters, logos, previews, sprites, and trickplay.
 - Changed v2 .NET entity kinds to declare their supported capability shape directly, allowing projection and contracts to include only capabilities that each kind intentionally supports.
 - Added typed v2 .NET EF rows, mappings, and projection hydration for the expanded capability-first tables.
+- Updated the v2 fresh-start reset to clear the expanded capability-first tables before preserving settings and library roots.
 - Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.
 - Job Control failures can now be individually suppressed by error type — clicking Suppress on any failed job hides all jobs sharing the same error fingerprint until you click Show all or clear all failures.
 - Job Control completed jobs now show a duration column so you can see how long each run took, plus a retry indicator when a job needed more than one attempt.
