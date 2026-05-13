@@ -166,6 +166,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Tuned shared v2 thumbnail capability chips so ratings show as a single star value, NSFW state uses an icon-only red fire chip, and book-page entities omit the detail footer.
 - Moved legacy thumbnail components and adapters into `src/lib/v1/components/thumbnails` with `V1` file names, leaving the new shared entity thumbnail at the canonical component path.
 - Moved legacy Svelte API helpers into `src/lib/v1/api` with `-v1` file names, while keeping generated v2 API helpers in `src/lib/api`.
+- Updated legacy v1 thumbnails to read asset URLs through the v1 API helper namespace instead of the canonical v2 API folder.
 - Replaced the two-line thumbnail title slot with measured one-line title fitting, so long names scale down slightly before ellipsis.
 - Added selectable thumbnail state to the shared v2 card component and wired the lab page to track multiple selected entities.
 - Added measured title ticker behavior to the shared v2 thumbnail so overflowing names scroll in place on hover.

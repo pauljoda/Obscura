@@ -5,7 +5,7 @@
 <script lang="ts">
   import { Images, Layers } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/api/core";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
   import NsfwShowModeChip from "$lib/components/nsfw/NsfwShowModeChip.svelte";

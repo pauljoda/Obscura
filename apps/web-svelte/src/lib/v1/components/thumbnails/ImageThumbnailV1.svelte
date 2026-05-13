@@ -5,7 +5,7 @@
 <script lang="ts">
   import { Image as ImageIcon, Video as VideoIcon } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/api/core";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
   import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
   import NsfwShowModeChip from "$lib/components/nsfw/NsfwShowModeChip.svelte";
   import ThumbnailRatingChip from "./ThumbnailRatingChipV1.svelte";
