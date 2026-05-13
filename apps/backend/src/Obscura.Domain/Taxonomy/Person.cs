@@ -6,9 +6,6 @@ namespace Obscura.Domain.Taxonomy;
 /// <summary>
 /// Domain model for a person taxonomy entity; UI contexts decide whether to label this as actor, artist, author, or another role.
 /// </summary>
-/// <param name="Id">Shared global entity identifier.</param>
-/// <param name="Title">Display title inherited from the shared entity root.</param>
-/// <param name="Subtitle">Optional display subtitle inherited from the shared entity root.</param>
 public sealed record Person(
     Guid Id,
     string Title,
@@ -27,12 +24,13 @@ public sealed record Person(
     string? Piercings,
     int? CareerStart,
     int? CareerEnd,
-    string? Description)
+    IReadOnlyList<ICapability>? capabilities = null)
     : Entity(
         Id,
         EntityKindRegistry.Person,
         Title,
         Subtitle,
+        capabilities ??
         [
             new CapabilityRating(null),
             CapabilityTags.Empty,
@@ -60,8 +58,7 @@ public sealed record Person(
         string? Tattoos,
         string? Piercings,
         int? CareerStart,
-        int? CareerEnd,
-        string? Description)
+        int? CareerEnd)
         : this(
             entity.Id,
             entity.Title,
@@ -80,8 +77,7 @@ public sealed record Person(
             Piercings,
             CareerStart,
             CareerEnd,
-            Description)
+            entity.Capabilities)
     {
-        Capabilities = entity.Capabilities;
     }
 }

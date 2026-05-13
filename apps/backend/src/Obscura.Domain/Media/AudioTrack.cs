@@ -6,74 +6,52 @@ namespace Obscura.Domain.Media;
 /// <summary>
 /// Domain model for a playable audio track.
 /// </summary>
-public sealed record AudioTrack(
-    Guid Id,
-    string Title,
-    string? Subtitle,
-    string? Summary,
-    string? Date,
-    TimeSpan? Duration,
-    int? BitRate,
-    int? SampleRate,
-    int? Channels,
-    string? Codec,
-    string? Container,
-    string? EmbeddedArtist,
-    string? EmbeddedAlbum,
-    int? TrackNumber,
-    string? WaveformPath)
-    : Entity(
-        Id,
-        EntityKindRegistry.AudioTrack,
-        Title,
-        Subtitle,
-        [
-            new CapabilityRating(null),
-            CapabilityTags.Empty,
-            CapabilityCredits.Empty,
-            new CapabilityStudio(null),
-            CapabilityImages.Empty,
-            CapabilityLinks.Empty,
-            CapabilityFlags.Empty,
-            CapabilityFiles.Empty,
-            CapabilityPlayback.Empty
-        ])
+public sealed record AudioTrack : Entity
 {
+    /// <summary>
+    /// Creates an audio track with explicit shared capabilities and source tag metadata.
+    /// </summary>
+    public AudioTrack(
+        Guid Id,
+        string Title,
+        string? Subtitle,
+        string? EmbeddedArtist,
+        string? EmbeddedAlbum,
+        IReadOnlyList<ICapability>? capabilities = null)
+        : base(
+            Id,
+            EntityKindRegistry.AudioTrack,
+            Title,
+            Subtitle,
+            capabilities ??
+            [
+                new CapabilityRating(null),
+                CapabilityTags.Empty,
+                CapabilityCredits.Empty,
+                new CapabilityStudio(null),
+                CapabilityImages.Empty,
+                CapabilityLinks.Empty,
+                CapabilityFlags.Empty,
+                CapabilityFiles.Empty,
+                CapabilityPlayback.Empty
+            ])
+    {
+        this.EmbeddedArtist = EmbeddedArtist;
+        this.EmbeddedAlbum = EmbeddedAlbum;
+    }
+
+    /// <summary>Artist value read from embedded audio tags, when known.</summary>
+    public string? EmbeddedArtist { get; init; }
+
+    /// <summary>Album value read from embedded audio tags, when known.</summary>
+    public string? EmbeddedAlbum { get; init; }
+
     /// <summary>
     /// Creates an audio track from an already hydrated entity root.
     /// </summary>
-    public AudioTrack(
-        Entity entity,
-        string? Summary,
-        string? Date,
-        TimeSpan? Duration,
-        int? BitRate,
-        int? SampleRate,
-        int? Channels,
-        string? Codec,
-        string? Container,
-        string? EmbeddedArtist,
-        string? EmbeddedAlbum,
-        int? TrackNumber,
-        string? WaveformPath)
-        : this(
-            entity.Id,
-            entity.Title,
-            entity.Subtitle,
-            Summary,
-            Date,
-            Duration,
-            BitRate,
-            SampleRate,
-            Channels,
-            Codec,
-            Container,
-            EmbeddedArtist,
-            EmbeddedAlbum,
-            TrackNumber,
-            WaveformPath)
+    public AudioTrack(Entity entity, string? embeddedArtist, string? embeddedAlbum)
+        : this(entity.Id, entity.Title, entity.Subtitle, embeddedArtist, embeddedAlbum, entity.Capabilities)
     {
-        Capabilities = entity.Capabilities;
     }
 
     /// <summary>

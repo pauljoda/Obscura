@@ -18,11 +18,11 @@ using DomainCapabilityLinks = Obscura.Domain.Capabilities.CapabilityLinks;
 using DomainCapabilityRating = Obscura.Domain.Capabilities.CapabilityRating;
 using DomainCapabilityStudio = Obscura.Domain.Capabilities.CapabilityStudio;
 using DomainCapabilityTags = Obscura.Domain.Capabilities.CapabilityTags;
+using DomainCapabilityDescription = Obscura.Domain.Capabilities.CapabilityDescription;
+using DomainCapabilityTechnical = Obscura.Domain.Capabilities.CapabilityTechnical;
 using DomainEntity = Obscura.Domain.Entities.Entity;
 using DomainEntityPage = Obscura.Domain.Entities.EntityPage;
-using DomainMarkers = Obscura.Domain.Capabilities.Markers;
 using DomainRating = Obscura.Domain.Capabilities.Rating;
-using DomainSubtitles = Obscura.Domain.Capabilities.Subtitles;
 using DomainVideo = Obscura.Domain.Media.Video;
 using DomainVideoSeries = Obscura.Domain.Media.VideoSeries;
 
@@ -162,24 +162,14 @@ public sealed class EntityVideoEndpointServiceTests
             }
 
             return Task.FromResult<DomainVideo?>(new DomainVideo(
-                Card(null),
-                Summary: "Detail from projection service.",
-                SortTitle: null,
-                OriginalTitle: null,
-                Tagline: null,
-                ReleaseDate: null,
-                ContentRating: null,
-                Duration: TimeSpan.FromMinutes(2),
-                Width: 1280,
-                Height: 720,
-                FrameRate: null,
-                BitRate: null,
-                Codec: null,
-                Container: null,
-                LibraryRootId: null,
-                SubtitlesExtractedAt: null,
-                markers: DomainMarkers.Empty,
-                subtitles: DomainSubtitles.Empty));
+                Card(null)
+                    .WithCapability(
+                        Obscura.Domain.Capabilities.CapabilityRegistry.Description,
+                        new DomainCapabilityDescription("Detail from projection service."))
+                    .WithCapability(
+                        Obscura.Domain.Capabilities.CapabilityRegistry.Technical,
+                        new DomainCapabilityTechnical(Duration: TimeSpan.FromMinutes(2), Width: 1280, Height: 720)),
+                SubtitlesExtractedAt: null));
         }
 
         public Task<DomainEntityPage> ListSeriesAsync(CancellationToken cancellationToken)

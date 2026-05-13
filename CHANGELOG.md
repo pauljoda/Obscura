@@ -73,6 +73,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 .NET backend now preserves named video counters such as the legacy orgasm counter through the shared entity capability model.
 - The v2 .NET backend now exposes shared descriptions, richer image asset metadata, and preserved video hashes so migrated entities keep more of their source metadata.
 - The v2 .NET backend now declares a capability-first entity shape for the breaking migration, so shared metadata can move out of duplicated per-kind detail fields after users accept the v2 reset gate.
+- The v2 .NET backend now hydrates typed entity details from shared capabilities first, reducing duplicated summary, date, source, count, progress, marker, subtitle, and technical fields across media types.
 
 ### Docs
 
@@ -103,6 +104,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Merged v2 .NET gallery and audio-library hierarchy variants into one aggregate relationship code each, so nested children and direct media children are reviewed from the same relationship class.
 - Updated the v2 .NET hierarchy-link uniqueness filter in the database migration model to match the merged aggregate relationship codes.
 - Corrected v2 .NET media, taxonomy, collection, and structural hierarchy models to inherit from the shared `Entity` root, added playback as an explicit reusable capability, and removed the stale Domain-to-Contracts project reference.
+- Flattened v2 .NET typed aggregates around explicit capability construction, keeping only kind-specific fields direct while shared metadata is exposed through the inherited `Entity` root.
 - Expanded v2 .NET tag and credit capabilities to keep entity references and role metadata, and hydrated file/playback capabilities from their EF rows instead of returning empty placeholders.
 - Simplified the v2 .NET rating model so `Rating` owns the integer value, clamps it to the shared zero-through-five scale, and replaces the extra `RatingValue` wrapper.
 - Added typed v2 .NET EF hydrators for media, taxonomy, collection, and hierarchy entities so each root entity loads its kind-specific fields directly without changing the public API yet.

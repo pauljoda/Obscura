@@ -6,52 +6,66 @@ namespace Obscura.Domain.Media;
 /// <summary>
 /// Domain aggregate for a user collection plus its ordered member entities.
 /// </summary>
-/// <param name="Id">Shared global entity identifier.</param>
-/// <param name="Title">Display title inherited from the shared entity root.</param>
-/// <param name="Subtitle">Optional display subtitle inherited from the shared entity root.</param>
-/// <param name="Items">Projected collection members in relationship order.</param>
-public sealed record Collection(
-    Guid Id,
-    string Title,
-    string? Subtitle,
-    string? Description,
-    CollectionMode Mode,
-    string? RuleTreeJson,
-    int ItemCount,
-    CollectionCoverMode CoverMode,
-    string? CoverImagePath,
-    Guid? CoverItemId,
-    TimeSpan SlideshowDuration,
-    bool SlideshowAutoAdvance,
-    DateTimeOffset? LastRefreshedAt,
-    IReadOnlyList<Entity> Items)
-    : Entity(
-        Id,
-        EntityKindRegistry.Collection,
-        Title,
-        Subtitle,
-        [
-            new CapabilityRating(null),
-            CapabilityTags.Empty,
-            CapabilityCredits.Empty,
-            new CapabilityStudio(null),
-            CapabilityImages.Empty,
-            CapabilityLinks.Empty,
-            CapabilityFlags.Empty,
-            CapabilityFiles.Empty
-        ])
+public sealed record Collection : Entity
 {
+    /// <summary>
+    /// Creates a collection with explicit shared capabilities and collection-only behavior.
+    /// </summary>
+    public Collection(
+        Guid Id,
+        string Title,
+        string? Subtitle,
+        CollectionMode Mode,
+        string? RuleTreeJson,
+        CollectionCoverMode CoverMode,
+        Guid? CoverItemId,
+        TimeSpan SlideshowDuration,
+        bool SlideshowAutoAdvance,
+        DateTimeOffset? LastRefreshedAt,
+        IReadOnlyList<Entity> Items,
+        IReadOnlyList<ICapability>? capabilities = null)
+        : base(
+            Id,
+            EntityKindRegistry.Collection,
+            Title,
+            Subtitle,
+            capabilities ??
+            [
+                new CapabilityRating(null),
+                CapabilityTags.Empty,
+                CapabilityImages.Empty,
+                CapabilityLinks.Empty,
+                CapabilityFlags.Empty,
+                CapabilityFiles.Empty
+            ])
+    {
+        this.Mode = Mode;
+        this.RuleTreeJson = RuleTreeJson;
+        this.CoverMode = CoverMode;
+        this.CoverItemId = CoverItemId;
+        this.SlideshowDuration = SlideshowDuration;
+        this.SlideshowAutoAdvance = SlideshowAutoAdvance;
+        this.LastRefreshedAt = LastRefreshedAt;
+        this.Items = Items;
+    }
+
+    public CollectionMode Mode { get; init; }
+    public string? RuleTreeJson { get; init; }
+    public CollectionCoverMode CoverMode { get; init; }
+    public Guid? CoverItemId { get; init; }
+    public TimeSpan SlideshowDuration { get; init; }
+    public bool SlideshowAutoAdvance { get; init; }
+    public DateTimeOffset? LastRefreshedAt { get; init; }
+    public IReadOnlyList<Entity> Items { get; init; }
+
     /// <summary>
     /// Creates a collection from an already hydrated entity root.
     /// </summary>
     public Collection(
         Entity entity,
-        string? Description,
         CollectionMode Mode,
         string? RuleTreeJson,
-        int ItemCount,
         CollectionCoverMode CoverMode,
-        string? CoverImagePath,
         Guid? CoverItemId,
         TimeSpan SlideshowDuration,
         bool SlideshowAutoAdvance,
@@ -61,18 +75,15 @@ public sealed record Collection(
             entity.Id,
             entity.Title,
             entity.Subtitle,
-            Description,
             Mode,
             RuleTreeJson,
-            ItemCount,
             CoverMode,
-            CoverImagePath,
             CoverItemId,
             SlideshowDuration,
             SlideshowAutoAdvance,
             LastRefreshedAt,
-            items)
+            items,
+            entity.Capabilities)
     {
-        Capabilities = entity.Capabilities;
     }
 }

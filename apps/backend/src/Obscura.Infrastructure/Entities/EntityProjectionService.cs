@@ -226,25 +226,28 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
         var markers = await LoadMarkersAsync(id, cancellationToken);
         var subtitles = await LoadSubtitlesAsync(id, cancellationToken);
 
-        return new Video(
-            card,
-            Summary: detail?.Summary ?? TryGetDescription(card),
-            SortTitle: detail?.SortTitle,
-            OriginalTitle: detail?.OriginalTitle,
-            Tagline: detail?.Tagline,
-            ReleaseDate: detail?.ReleaseDate,
-            ContentRating: detail?.ContentRating,
-            Duration: detail?.DurationMs is null ? null : TimeSpan.FromMilliseconds(detail.DurationMs.Value),
-            Width: detail?.Width,
-            Height: detail?.Height,
-            FrameRate: detail?.FrameRate,
-            BitRate: detail?.BitRate,
-            Codec: detail?.Codec,
-            Container: detail?.Container,
-            LibraryRootId: detail?.LibraryRootId,
-            SubtitlesExtractedAt: detail?.SubtitlesExtractedAt,
-            markers: new Markers(markers),
-            subtitles: new Subtitles(subtitles));
+        var videoEntity = WithDescription(card, detail?.Summary ?? TryGetDescription(card));
+        videoEntity = WithTechnical(
+            videoEntity,
+            detail?.DurationMs is null ? null : TimeSpan.FromMilliseconds(detail.DurationMs.Value),
+            detail?.Width,
+            detail?.Height,
+            detail?.FrameRate,
+            detail?.BitRate,
+            null,
+            null,
+            detail?.Codec,
+            detail?.Container,
+            null);
+        videoEntity = WithSource(videoEntity, [
+            SourceValue("library-root", detail?.LibraryRootId?.ToString()),
+        ]);
+        videoEntity = WithDates(videoEntity, [DateValue("release", detail?.ReleaseDate)]);
+        videoEntity = WithClassification(videoEntity, detail?.ContentRating);
+        videoEntity = videoEntity.WithCapability(CapabilityRegistry.Markers, new CapabilityMarkers(markers));
+        videoEntity = videoEntity.WithCapability(CapabilityRegistry.Subtitles, new CapabilitySubtitles(subtitles));
+
+        return new Video(videoEntity, detail?.SubtitlesExtractedAt);
     }
 
     /// <inheritdoc />
@@ -274,22 +277,19 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
         var renderingMode = detail?.RenderingMode ??
             (seasons.Count > 0 ? VideoSeriesRenderingMode.Seasons : VideoSeriesRenderingMode.Flat);
 
-        return new VideoSeries(
-            card,
-            LibraryRootId: detail?.LibraryRootId,
-            FolderPath: detail?.FolderPath,
-            RelativePath: detail?.RelativePath,
-            SortTitle: detail?.SortTitle,
-            OriginalTitle: detail?.OriginalTitle,
-            Summary: detail?.Overview,
-            Tagline: detail?.Tagline,
-            Status: detail?.Status,
-            FirstAirDate: detail?.FirstAirDate,
-            EndAirDate: detail?.EndAirDate,
-            ContentRating: detail?.ContentRating,
-            RenderingMode: renderingMode,
-            seasons,
-            videos);
+        var seriesEntity = WithDescription(card, detail?.Overview);
+        seriesEntity = WithSource(seriesEntity, [
+            SourceValue("library-root", detail?.LibraryRootId?.ToString()),
+            SourceValue("folder", detail?.FolderPath),
+            SourceValue("relative", detail?.RelativePath)
+        ]);
+        seriesEntity = WithDates(seriesEntity, [
+            DateValue("first-air", detail?.FirstAirDate),
+            DateValue("end-air", detail?.EndAirDate)
+        ]);
+        seriesEntity = WithClassification(seriesEntity, detail?.ContentRating);
+
+        return new VideoSeries(seriesEntity, detail?.Status, renderingMode, seasons, videos);
     }
 
     /// <summary>
@@ -307,16 +307,13 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new Image(
-            entity,
-            Summary: detail?.Details,
-            Date: detail?.Date,
-            FilePath: detail?.FilePath,
-            FileSizeBytes: detail?.FileSizeBytes,
-            Width: detail?.Width,
-            Height: detail?.Height,
-            Format: detail?.Format,
-            SortOrder: detail?.SortOrder ?? 0);
+        entity = WithDescription(entity, detail?.Details);
+        entity = WithDates(entity, [DateValue("captured", detail?.Date)]);
+        entity = WithTechnical(entity, null, detail?.Width, detail?.Height, null, null, null, null, null, null, detail?.Format);
+        entity = WithSource(entity, [SourceValue("file", detail?.FilePath)]);
+        entity = WithPosition(entity, [PositionValue("sort", detail?.SortOrder)]);
+
+        return new Image(entity);
     }
 
     /// <summary>
@@ -334,16 +331,19 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
+        entity = WithDescription(entity, detail?.Details);
+        entity = WithDates(entity, [DateValue("gallery", detail?.Date)]);
+        entity = WithSource(entity, [
+            SourceValue("folder", detail?.FolderPath),
+            SourceValue("zip", detail?.ZipFilePath)
+        ]);
+        entity = WithStats(entity, [StatValue("images", detail?.ImageCount)]);
+
         return new Gallery(
             entity,
-            Summary: detail?.Details,
-            Date: detail?.Date,
-            GalleryType: detail?.GalleryType ?? GalleryType.Virtual,
-            FolderPath: detail?.FolderPath,
-            ZipFilePath: detail?.ZipFilePath,
-            Photographer: detail?.Photographer,
-            CoverImageId: detail?.CoverImageEntityId,
-            ImageCount: detail?.ImageCount ?? 0);
+            detail?.GalleryType ?? GalleryType.Virtual,
+            detail?.Photographer,
+            detail?.CoverImageEntityId);
     }
 
     /// <summary>
@@ -364,23 +364,32 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.BookEntityId == id, cancellationToken);
 
-        return new Book(
-            entity,
-            BookType: detail?.BookType ?? BookType.Book,
-            SortTitle: detail?.SortTitle,
-            Summary: detail?.Summary,
-            Date: detail?.Date,
-            FolderPath: detail?.FolderPath,
-            RelativePath: detail?.RelativePath,
-            CoverPageId: detail?.CoverPageEntityId,
-            CoverImagePath: detail?.CoverImagePath,
-            PageCount: detail?.PageCount ?? 0,
-            ChapterCount: detail?.ChapterCount ?? 0,
-            CurrentChapterId: progress?.ChapterEntityId,
-            CurrentPageIndex: progress?.PageIndex ?? 0,
-            CurrentChapterPageCount: progress?.PageCount ?? 0,
-            ReaderMode: progress?.ReaderMode ?? ReaderMode.Paged,
-            CompletedAt: progress?.CompletedAt);
+        entity = WithDescription(entity, detail?.Summary);
+        entity = WithDates(entity, [DateValue("book", detail?.Date)]);
+        entity = WithSource(entity, [
+            SourceValue("library-root", detail?.LibraryRootId?.ToString()),
+            SourceValue("folder", detail?.FolderPath),
+            SourceValue("relative", detail?.RelativePath)
+        ]);
+        entity = WithStats(entity, [
+            StatValue("pages", detail?.PageCount),
+            StatValue("chapters", detail?.ChapterCount)
+        ]);
+        if (progress is not null)
+        {
+            entity = entity.WithCapability(
+                CapabilityRegistry.Progress,
+                new CapabilityProgress(
+                    progress.ChapterEntityId,
+                    "page",
+                    progress.PageIndex,
+                    progress.PageCount,
+                    progress.ReaderMode.ToCode(),
+                    progress.CompletedAt,
+                    progress.UpdatedAt));
+        }
+
+        return new Book(entity, detail?.BookType ?? BookType.Book, detail?.CoverPageEntityId);
     }
 
     /// <summary>
@@ -398,13 +407,12 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new AudioLibrary(
-            entity,
-            Summary: detail?.Details,
-            Date: detail?.Date,
-            FolderPath: detail?.FolderPath,
-            ParentLibraryId: detail?.ParentLibraryEntityId,
-            TrackCount: detail?.TrackCount ?? 0);
+        entity = WithDescription(entity, detail?.Details);
+        entity = WithDates(entity, [DateValue("audio-library", detail?.Date)]);
+        entity = WithSource(entity, [SourceValue("folder", detail?.FolderPath)]);
+        entity = WithStats(entity, [StatValue("tracks", detail?.TrackCount)]);
+
+        return new AudioLibrary(entity, detail?.ParentLibraryEntityId);
     }
 
     /// <summary>
@@ -422,20 +430,23 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new AudioTrack(
+        entity = WithDescription(entity, detail?.Details);
+        entity = WithDates(entity, [DateValue("audio-track", detail?.Date)]);
+        entity = WithTechnical(
             entity,
-            Summary: detail?.Details,
-            Date: detail?.Date,
-            Duration: detail?.DurationSeconds is null ? null : TimeSpan.FromSeconds(detail.DurationSeconds.Value),
-            BitRate: detail?.BitRate,
-            SampleRate: detail?.SampleRate,
-            Channels: detail?.Channels,
-            Codec: detail?.Codec,
-            Container: detail?.Container,
-            EmbeddedArtist: detail?.EmbeddedArtist,
-            EmbeddedAlbum: detail?.EmbeddedAlbum,
-            TrackNumber: detail?.TrackNumber,
-            WaveformPath: detail?.WaveformPath);
+            detail?.DurationSeconds is null ? null : TimeSpan.FromSeconds(detail.DurationSeconds.Value),
+            null,
+            null,
+            null,
+            detail?.BitRate,
+            detail?.SampleRate,
+            detail?.Channels,
+            detail?.Codec,
+            detail?.Container,
+            null);
+        entity = WithPosition(entity, [PositionValue("track", detail?.TrackNumber)]);
+
+        return new AudioTrack(entity, detail?.EmbeddedArtist, detail?.EmbeddedAlbum);
     }
 
     /// <summary>
@@ -453,8 +464,11 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
+        var personEntity = WithDescription(entity, detail?.Details);
         return new Person(
-            entity,
+            personEntity.Id,
+            personEntity.Title,
+            personEntity.Subtitle,
             Disambiguation: detail?.Disambiguation,
             Gender: detail?.Gender,
             Birthdate: detail?.Birthdate,
@@ -469,7 +483,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             Piercings: detail?.Piercings,
             CareerStart: detail?.CareerStart,
             CareerEnd: detail?.CareerEnd,
-            Description: detail?.Details);
+            capabilities: personEntity.Capabilities);
     }
 
     /// <summary>
@@ -488,9 +502,8 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
         return new Studio(
-            entity,
-            Description: detail?.Description,
-            ParentStudioId: detail?.ParentStudioEntityId);
+            WithDescription(entity, detail?.Description),
+            detail?.ParentStudioEntityId);
     }
 
     /// <summary>
@@ -509,10 +522,9 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
         return new Tag(
-            entity,
-            Description: detail?.Description,
-            ParentTagId: detail?.ParentTagEntityId,
-            IgnoreAutoTag: detail?.IgnoreAutoTag ?? false);
+            WithDescription(entity, detail?.Description),
+            detail?.ParentTagEntityId,
+            detail?.IgnoreAutoTag ?? false);
     }
 
     /// <summary>
@@ -531,18 +543,18 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
         var items = await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.CollectionItem, null, cancellationToken);
 
+        entity = WithDescription(entity, detail?.Description);
+        entity = WithStats(entity, [StatValue("items", detail?.ItemCount)]);
+
         return new Collection(
             entity,
-            Description: detail?.Description,
-            Mode: detail?.Mode ?? CollectionMode.Manual,
-            RuleTreeJson: detail?.RuleTreeJson,
-            ItemCount: detail?.ItemCount ?? 0,
-            CoverMode: detail?.CoverMode ?? CollectionCoverMode.Mosaic,
-            CoverImagePath: detail?.CoverImagePath,
-            CoverItemId: detail?.CoverItemEntityId,
-            SlideshowDuration: TimeSpan.FromSeconds(detail?.SlideshowDurationSeconds ?? 5),
-            SlideshowAutoAdvance: detail?.SlideshowAutoAdvance ?? true,
-            LastRefreshedAt: detail?.LastRefreshedAt,
+            detail?.Mode ?? CollectionMode.Manual,
+            detail?.RuleTreeJson,
+            detail?.CoverMode ?? CollectionCoverMode.Mosaic,
+            detail?.CoverItemEntityId,
+            TimeSpan.FromSeconds(detail?.SlideshowDurationSeconds ?? 5),
+            detail?.SlideshowAutoAdvance ?? true,
+            detail?.LastRefreshedAt,
             items);
     }
 
@@ -561,13 +573,12 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new VideoSeason(
-            entity,
-            SeriesId: detail?.SeriesEntityId ?? Guid.Empty,
-            SeasonNumber: detail?.SeasonNumber ?? 0,
-            FolderPath: detail?.FolderPath,
-            Overview: detail?.Overview,
-            AirDate: detail?.AirDate);
+        entity = WithDescription(entity, detail?.Overview);
+        entity = WithSource(entity, [SourceValue("folder", detail?.FolderPath)]);
+        entity = WithDates(entity, [DateValue("air", detail?.AirDate)]);
+        entity = WithPosition(entity, [PositionValue("season", detail?.SeasonNumber)]);
+
+        return new VideoSeason(entity, detail?.SeriesEntityId ?? Guid.Empty);
     }
 
     /// <summary>
@@ -585,13 +596,13 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new BookVolume(
-            entity,
-            BookId: detail?.BookEntityId ?? Guid.Empty,
-            VolumeNumber: detail?.VolumeNumber,
-            FolderPath: detail?.FolderPath,
-            RelativePath: detail?.RelativePath,
-            CoverImagePath: detail?.CoverImagePath);
+        entity = WithSource(entity, [
+            SourceValue("folder", detail?.FolderPath),
+            SourceValue("relative", detail?.RelativePath)
+        ]);
+        entity = WithPosition(entity, [PositionValue("volume", detail?.VolumeNumber)]);
+
+        return new BookVolume(entity, detail?.BookEntityId ?? Guid.Empty);
     }
 
     /// <summary>
@@ -609,15 +620,18 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
+        entity = WithSource(entity, [
+            SourceValue("archive", detail?.ArchivePath),
+            SourceValue("relative", detail?.RelativePath)
+        ]);
+        entity = WithStats(entity, [StatValue("pages", detail?.PageCount)]);
+        entity = WithPosition(entity, [PositionValue("chapter", detail?.ChapterNumber)]);
+
         return new BookChapter(
             entity,
-            BookId: detail?.BookEntityId ?? Guid.Empty,
-            VolumeId: detail?.VolumeEntityId,
-            ChapterNumber: detail?.ChapterNumber ?? 0,
-            ArchivePath: detail?.ArchivePath,
-            RelativePath: detail?.RelativePath,
-            PageCount: detail?.PageCount ?? 0,
-            CoverPageId: detail?.CoverPageEntityId);
+            detail?.BookEntityId ?? Guid.Empty,
+            detail?.VolumeEntityId,
+            detail?.CoverPageEntityId);
     }
 
     /// <summary>
@@ -635,16 +649,11 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new BookPage(
-            entity,
-            BookId: detail?.BookEntityId ?? Guid.Empty,
-            ChapterId: detail?.ChapterEntityId ?? Guid.Empty,
-            FilePath: detail?.FilePath ?? string.Empty,
-            FileSizeBytes: detail?.FileSizeBytes,
-            Width: detail?.Width,
-            Height: detail?.Height,
-            Format: detail?.Format,
-            SortOrder: detail?.SortOrder ?? 0);
+        entity = WithTechnical(entity, null, detail?.Width, detail?.Height, null, null, null, null, null, null, detail?.Format);
+        entity = WithSource(entity, [SourceValue("file", detail?.FilePath)]);
+        entity = WithPosition(entity, [PositionValue("sort", detail?.SortOrder)]);
+
+        return new BookPage(entity, detail?.BookEntityId ?? Guid.Empty, detail?.ChapterEntityId ?? Guid.Empty);
     }
 
     private async Task<EntityHierarchyNode> BuildHierarchyNodeAsync(
@@ -1156,6 +1165,92 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
         entity.TryGetCapability(CapabilityRegistry.Description, out var description)
             ? description.Value
             : null;
+
+    private static Entity WithDescription(Entity entity, string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? entity
+            : entity.WithCapability(CapabilityRegistry.Description, new CapabilityDescription(value));
+
+    private static Entity WithClassification(Entity entity, string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? entity
+            : entity.WithCapability(CapabilityRegistry.Classification, new CapabilityClassification(value));
+
+    private static Entity WithTechnical(
+        Entity entity,
+        TimeSpan? duration,
+        int? width,
+        int? height,
+        double? frameRate,
+        int? bitRate,
+        int? sampleRate,
+        int? channels,
+        string? codec,
+        string? container,
+        string? format)
+    {
+        if (duration is null &&
+            width is null &&
+            height is null &&
+            frameRate is null &&
+            bitRate is null &&
+            sampleRate is null &&
+            channels is null &&
+            string.IsNullOrWhiteSpace(codec) &&
+            string.IsNullOrWhiteSpace(container) &&
+            string.IsNullOrWhiteSpace(format))
+        {
+            return entity;
+        }
+
+        return entity.WithCapability(
+            CapabilityRegistry.Technical,
+            new CapabilityTechnical(duration, width, height, frameRate, bitRate, sampleRate, channels, codec, container, format));
+    }
+
+    private static Entity WithStats(Entity entity, IReadOnlyList<EntityStat?> stats)
+    {
+        var values = stats.Where(stat => stat is not null).Select(stat => stat!).ToArray();
+        return values.Length == 0
+            ? entity
+            : entity.WithCapability(CapabilityRegistry.Stats, new CapabilityStats(values));
+    }
+
+    private static Entity WithDates(Entity entity, IReadOnlyList<EntityDate?> dates)
+    {
+        var values = dates.Where(date => date is not null).Select(date => date!).ToArray();
+        return values.Length == 0
+            ? entity
+            : entity.WithCapability(CapabilityRegistry.Dates, new CapabilityDates(values));
+    }
+
+    private static Entity WithSource(Entity entity, IReadOnlyList<EntitySource?> sources)
+    {
+        var values = sources.Where(source => source is not null).Select(source => source!).ToArray();
+        return values.Length == 0
+            ? entity
+            : entity.WithCapability(CapabilityRegistry.Source, new CapabilitySource(values));
+    }
+
+    private static Entity WithPosition(Entity entity, IReadOnlyList<EntityPosition?> positions)
+    {
+        var values = positions.Where(position => position is not null).Select(position => position!).ToArray();
+        return values.Length == 0
+            ? entity
+            : entity.WithCapability(CapabilityRegistry.Position, new CapabilityPosition(values));
+    }
+
+    private static EntityStat? StatValue(string code, int? value) =>
+        value is null ? null : new EntityStat(code, Math.Max(0, value.Value));
+
+    private static EntityDate? DateValue(string code, string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : new EntityDate(code, value);
+
+    private static EntitySource? SourceValue(string code, string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : new EntitySource(code, value);
+
+    private static EntityPosition? PositionValue(string code, int? value) =>
+        value is null ? null : new EntityPosition(code, value.Value);
 
     private static IEntityKind ResolveKind(string code) => EntityKindRegistry.Require(code);
 

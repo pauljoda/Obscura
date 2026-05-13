@@ -6,49 +6,55 @@ namespace Obscura.Domain.Media;
 /// <summary>
 /// Domain model for an image gallery.
 /// </summary>
-public sealed record Gallery(
-    Guid Id,
-    string Title,
-    string? Subtitle,
-    string? Summary,
-    string? Date,
-    GalleryType GalleryType,
-    string? FolderPath,
-    string? ZipFilePath,
-    string? Photographer,
-    Guid? CoverImageId,
-    int ImageCount)
-    : Entity(
-        Id,
-        EntityKindRegistry.Gallery,
-        Title,
-        Subtitle,
-        [
-            new CapabilityRating(null),
-            CapabilityTags.Empty,
-            CapabilityCredits.Empty,
-            new CapabilityStudio(null),
-            CapabilityImages.Empty,
-            CapabilityLinks.Empty,
-            CapabilityFlags.Empty,
-            CapabilityFiles.Empty
-        ])
+public sealed record Gallery : Entity
 {
+    /// <summary>
+    /// Creates a gallery with explicit shared capabilities and gallery-only fields.
+    /// </summary>
+    public Gallery(
+        Guid Id,
+        string Title,
+        string? Subtitle,
+        GalleryType GalleryType,
+        string? Photographer,
+        Guid? CoverImageId,
+        IReadOnlyList<ICapability>? capabilities = null)
+        : base(
+            Id,
+            EntityKindRegistry.Gallery,
+            Title,
+            Subtitle,
+            capabilities ??
+            [
+                new CapabilityRating(null),
+                CapabilityTags.Empty,
+                CapabilityCredits.Empty,
+                new CapabilityStudio(null),
+                CapabilityImages.Empty,
+                CapabilityLinks.Empty,
+                CapabilityFlags.Empty,
+                CapabilityFiles.Empty
+            ])
+    {
+        this.GalleryType = GalleryType;
+        this.Photographer = Photographer;
+        this.CoverImageId = CoverImageId;
+    }
+
+    /// <summary>Gallery storage shape.</summary>
+    public GalleryType GalleryType { get; init; }
+
+    /// <summary>Optional photographer value when not represented as a person credit.</summary>
+    public string? Photographer { get; init; }
+
+    /// <summary>Optional image entity selected as the gallery cover.</summary>
+    public Guid? CoverImageId { get; init; }
+
     /// <summary>
     /// Creates a gallery from an already hydrated entity root.
     /// </summary>
-    public Gallery(
-        Entity entity,
-        string? Summary,
-        string? Date,
-        GalleryType GalleryType,
-        string? FolderPath,
-        string? ZipFilePath,
-        string? Photographer,
-        Guid? CoverImageId,
-        int ImageCount)
-        : this(entity.Id, entity.Title, entity.Subtitle, Summary, Date, GalleryType, FolderPath, ZipFilePath, Photographer, CoverImageId, ImageCount)
+    public Gallery(Entity entity, GalleryType GalleryType, string? Photographer, Guid? CoverImageId)
+        : this(entity.Id, entity.Title, entity.Subtitle, GalleryType, Photographer, CoverImageId, entity.Capabilities)
     {
-        Capabilities = entity.Capabilities;
     }
 }

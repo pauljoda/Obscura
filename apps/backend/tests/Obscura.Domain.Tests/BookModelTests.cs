@@ -1,3 +1,4 @@
+using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Media;
 
@@ -13,25 +14,19 @@ public sealed class BookModelTests
             "The Brass Archive",
             null,
             BookType: BookType.Comic,
-            SortTitle: "Brass Archive",
-            Summary: null,
-            Date: null,
-            FolderPath: null,
-            RelativePath: null,
             CoverPageId: null,
-            CoverImagePath: null,
-            PageCount: 120,
-            ChapterCount: 6,
-            CurrentChapterId: null,
-            CurrentPageIndex: 0,
-            CurrentChapterPageCount: 0,
-            ReaderMode: ReaderMode.Paged,
-            CompletedAt: null);
+            capabilities:
+            [
+                new CapabilityStats([
+                    new EntityStat("pages", 120),
+                    new EntityStat("chapters", 6)
+                ])
+            ]);
 
         Assert.Equal("book", book.Kind.Code);
         Assert.Equal("The Brass Archive", book.Title);
         Assert.Equal(BookType.Comic, book.BookType);
-        Assert.Equal(120, book.PageCount);
+        Assert.Equal(120, book.Stats?.Items.Single(stat => stat.Code == "pages").Value);
     }
 
     [Fact]
@@ -42,30 +37,22 @@ public sealed class BookModelTests
             "Draft Book",
             null,
             BookType: BookType.Book,
-            SortTitle: null,
-            Summary: null,
-            Date: null,
-            FolderPath: null,
-            RelativePath: null,
             CoverPageId: null,
-            CoverImagePath: null,
-            PageCount: 0,
-            ChapterCount: 0,
-            CurrentChapterId: null,
-            CurrentPageIndex: 0,
-            CurrentChapterPageCount: 0,
-            ReaderMode: ReaderMode.Paged,
-            CompletedAt: null);
+            capabilities:
+            [
+                CapabilityProgress.Empty,
+                new CapabilityDescription("Initial")
+            ]);
 
-        var updated = book
-            with { Summary = "Updated from metadata.", PageCount = 12 };
-        updated = updated
+        var entityWithDescription = book.WithCapability(
+            CapabilityRegistry.Description,
+            new CapabilityDescription("Updated from metadata."));
+        var updated = (book with { Capabilities = entityWithDescription.Capabilities })
             .MoveReaderToChapter(Guid.Parse("33333333-3333-3333-3333-333333333333"), 4, 12, ReaderMode.Paged);
 
-        Assert.Equal("Updated from metadata.", updated.Summary);
-        Assert.Equal(12, updated.PageCount);
-        Assert.Equal(Guid.Parse("33333333-3333-3333-3333-333333333333"), updated.CurrentChapterId);
-        Assert.Equal(4, updated.CurrentPageIndex);
-        Assert.Null(updated.CompletedAt);
+        Assert.Equal("Updated from metadata.", updated.Description);
+        Assert.Equal(Guid.Parse("33333333-3333-3333-3333-333333333333"), updated.Progress?.CurrentEntityId);
+        Assert.Equal(4, updated.Progress?.Index);
+        Assert.Null(updated.Progress?.CompletedAt);
     }
 }

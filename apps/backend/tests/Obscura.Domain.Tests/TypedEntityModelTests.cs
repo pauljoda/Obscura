@@ -51,7 +51,7 @@ public sealed class TypedEntityModelTests
             Piercings: null,
             CareerStart: null,
             CareerEnd: null,
-            Description: null);
+            capabilities: [new CapabilityDescription("Profile")]);
 
         var updated = person with { Country = "US", CareerStart = 2020 };
 
@@ -67,23 +67,18 @@ public sealed class TypedEntityModelTests
             Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
             "Main Theme",
             null,
-            Summary: null,
-            Date: null,
-            Duration: TimeSpan.FromSeconds(90),
-            BitRate: null,
-            SampleRate: null,
-            Channels: null,
-            Codec: "flac",
-            Container: null,
             EmbeddedArtist: null,
             EmbeddedAlbum: null,
-            TrackNumber: null,
-            WaveformPath: null);
+            capabilities:
+            [
+                CapabilityPlayback.Empty,
+                new CapabilityTechnical(Duration: TimeSpan.FromSeconds(90), Codec: "flac")
+            ]);
 
         var played = track.MarkPlayed(TimeSpan.FromSeconds(45), DateTimeOffset.Parse("2026-05-12T12:00:00Z"));
 
         Assert.Equal("audio-track", played.Kind.Code);
-        Assert.Equal("flac", played.Codec);
+        Assert.Equal("flac", played.Technical?.Codec);
         var playback = played.GetCapability(CapabilityRegistry.Playback);
         Assert.Equal(1, playback.Value.PlayCount);
         Assert.Equal(TimeSpan.FromSeconds(45), playback.Value.ResumeTime);
@@ -96,32 +91,27 @@ public sealed class TypedEntityModelTests
             Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
             "Feature",
             null,
-            Summary: "Direct summary",
-            SortTitle: "Feature",
-            OriginalTitle: "Original Feature",
-            Tagline: "A tiny test.",
-            ReleaseDate: "2026-05-12",
-            ContentRating: "PG",
-            Duration: TimeSpan.FromMinutes(2),
-            Width: 1920,
-            Height: 1080,
-            FrameRate: 23.976,
-            BitRate: 8_000,
-            Codec: "h264",
-            Container: "mkv",
-            LibraryRootId: null,
             SubtitlesExtractedAt: null,
-            Markers: Markers.Empty,
-            Subtitles: Subtitles.Empty);
+            capabilities:
+            [
+                new CapabilityDescription("Direct description"),
+                new CapabilityTechnical(Duration: TimeSpan.FromMinutes(2), Width: 1920, Height: 1080),
+                new CapabilityClassification("PG"),
+                CapabilityPlayback.Empty,
+                CapabilityMarkers.Empty,
+                CapabilitySubtitles.Empty
+            ]);
 
         Entity entity = video;
 
         Assert.Equal(video.Id, entity.Id);
         Assert.Equal("video", entity.Kind.Code);
-        Assert.Equal("Direct summary", video.Summary);
-        Assert.Equal("Original Feature", video.OriginalTitle);
-        Assert.Equal(TimeSpan.FromMinutes(2), video.Duration);
+        Assert.Equal("Direct description", video.Description);
+        Assert.Equal(TimeSpan.FromMinutes(2), video.Technical?.Duration);
+        Assert.Equal("PG", video.Classification?.Value);
         Assert.Null(typeof(Video).GetProperty("Details"));
+        Assert.Null(typeof(Video).GetProperty("Summary"));
+        Assert.Null(typeof(Video).GetProperty("OriginalTitle"));
         Assert.True(video.HasCapability(CapabilityRegistry.Playback));
     }
 }

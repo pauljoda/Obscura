@@ -147,12 +147,12 @@ public static class ContractMapper
             video.Id,
             video.Kind.Code,
             video.Title,
-            video.Summary,
-            video.Duration,
-            video.Width,
-            video.Height,
-            video.Markers.Items.Select(ToVideoMarker).ToArray(),
-            video.Subtitles.Items.Select(ToVideoSubtitle).ToArray(),
+            video.Description,
+            video.Technical?.Duration,
+            video.Technical?.Width,
+            video.Technical?.Height,
+            video.MarkerCapability?.Items.Select(ToVideoMarker).ToArray() ?? [],
+            video.SubtitleCapability?.Items.Select(ToVideoSubtitle).ToArray() ?? [],
             ToEntityCapabilities(video.Capabilities));
 
     /// <summary>
@@ -165,7 +165,7 @@ public static class ContractMapper
             series.Id,
             series.Kind.Code,
             series.Title,
-            series.Summary,
+            series.Description,
             ToEntityCapabilities(series.Capabilities),
             ToEntityCards(series.Children),
             ToEntityCards(series.Videos),

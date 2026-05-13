@@ -257,14 +257,14 @@ public sealed class EntityProjectionServiceTests
 
         Assert.NotNull(detail);
         Assert.Equal("Feature", detail.Title);
-        Assert.Equal(TimeSpan.FromSeconds(90), detail.Duration);
-        Assert.Equal(1920, detail.Width);
-        Assert.Equal(1080, detail.Height);
+        Assert.Equal(TimeSpan.FromSeconds(90), detail.Technical?.Duration);
+        Assert.Equal(1920, detail.Technical?.Width);
+        Assert.Equal(1080, detail.Technical?.Height);
         Assert.Equal(3, detail.GetCapability(CapabilityRegistry.Rating).Value?.Value);
-        var marker = Assert.Single(detail.Markers.Items);
+        var marker = Assert.Single(detail.MarkerCapability!.Items);
         Assert.Equal("Opening", marker.Title);
         Assert.Equal(12.5, marker.Seconds);
-        var subtitle = Assert.Single(detail.Subtitles.Items);
+        var subtitle = Assert.Single(detail.SubtitleCapability!.Items);
         Assert.Equal("en", subtitle.Language);
         Assert.Equal("English", subtitle.Label);
         Assert.True(subtitle.IsDefault);
@@ -565,12 +565,12 @@ public sealed class EntityProjectionServiceTests
         var tag = await service.GetTagAggregateAsync(tagId, CancellationToken.None);
         var collection = await service.GetCollectionAggregateAsync(collectionId, CancellationToken.None);
 
-        Assert.Equal("/media/still.jpg", image?.FilePath);
+        Assert.Equal("/media/still.jpg", image?.Source?.Items.Single(source => source.Code == "file").Value);
         Assert.Equal(GalleryType.Folder, gallery?.GalleryType);
         Assert.Equal(BookType.Comic, book?.BookType);
-        Assert.Equal(ReaderMode.Webtoon, book?.ReaderMode);
-        Assert.Equal(9, audioLibrary?.TrackCount);
-        Assert.Equal("flac", audioTrack?.Codec);
+        Assert.Equal(ReaderMode.Webtoon.ToCode(), book?.Progress?.Mode);
+        Assert.Equal(9, audioLibrary?.Stats?.Items.Single(stat => stat.Code == "tracks").Value);
+        Assert.Equal("flac", audioTrack?.Technical?.Codec);
         Assert.Equal("US", person?.Country);
         Assert.Equal("Studio description", studio?.Description);
         Assert.True(tag?.IgnoreAutoTag);
@@ -656,14 +656,13 @@ public sealed class EntityProjectionServiceTests
         var chapter = await service.GetBookChapterAggregateAsync(chapterId, CancellationToken.None);
         var page = await service.GetBookPageAggregateAsync(pageId, CancellationToken.None);
 
-        Assert.Equal("Original Feature", video?.OriginalTitle);
-        Assert.Equal(TimeSpan.FromMilliseconds(1500), video?.Duration);
-        Assert.Equal("Series overview", series?.Summary);
+        Assert.Equal(TimeSpan.FromMilliseconds(1500), video?.Technical?.Duration);
+        Assert.Equal("Series overview", series?.Description);
         Assert.Equal(VideoSeriesRenderingMode.Flat, series?.RenderingMode);
-        Assert.Equal(1, season?.SeasonNumber);
-        Assert.Equal(1, volume?.VolumeNumber);
-        Assert.Equal(30, chapter?.PageCount);
-        Assert.Equal("/media/book/page-001.jpg", page?.FilePath);
+        Assert.Equal(1, season?.Position?.Items.Single(position => position.Code == "season").Value);
+        Assert.Equal(1, volume?.Position?.Items.Single(position => position.Code == "volume").Value);
+        Assert.Equal(30, chapter?.Stats?.Items.Single(stat => stat.Code == "pages").Value);
+        Assert.Equal("/media/book/page-001.jpg", page?.Source?.Items.Single(source => source.Code == "file").Value);
     }
 
     private static ObscuraDbContext CreateContext()

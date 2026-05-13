@@ -11,4 +11,7 @@ public sealed record CapabilityDescription(string Value) : ICapability<Capabilit
 
     /// <inheritdoc />
     public ICapabilityKind Kind => CapabilityKind;
+
+    /// <summary>A reusable empty description capability.</summary>
+    public static CapabilityDescription Empty { get; } = new(string.Empty);
 }
