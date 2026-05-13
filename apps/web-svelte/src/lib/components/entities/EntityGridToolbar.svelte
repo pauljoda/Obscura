@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
-    ArrowDownAZ,
-    ArrowUpAZ,
+    ArrowUpDown,
+    Check,
     ChevronDown,
     Grid2x2,
     Grid3x3,
@@ -85,6 +85,20 @@
     viewMode,
   }: Props = $props();
 
+  const SORT_LABELS: Record<EntityGridSort, string> = {
+    title: "Title",
+    kind: "Kind",
+    rating: "Rating",
+  };
+
+  const SORT_OPTIONS: { value: EntityGridSort; label: string }[] = [
+    { value: "title", label: "Title" },
+    { value: "kind", label: "Kind" },
+    { value: "rating", label: "Rating" },
+  ];
+
+  let sortOpen = $state(false);
+
   const activeFilters = $derived(
     activeFilterIds
       .map((id) => entityGridFilterFromId(id, filterOptions))
@@ -101,20 +115,34 @@
 </script>
 
 <div class="space-y-0">
-  <div class="surface-well space-y-2 px-3 py-2">
-    <div>
-      <label class="search-box">
-        <Search class="h-3.5 w-3.5 text-text-disabled" />
+  <div class="surface-well px-3 py-2 space-y-2 sm:space-y-0">
+    <!-- Mobile: search on its own row -->
+    <div class="sm:hidden">
+      <label class="search-box w-full">
+        <Search class="h-3.5 w-3.5 text-text-disabled shrink-0" />
         <input
           type="search"
-          placeholder="Search entities..."
+          placeholder="Search..."
           value={query}
           oninput={(event) => onQueryChange((event.currentTarget as HTMLInputElement).value)}
         />
       </label>
     </div>
 
-    <div class="flex items-center gap-2 overflow-x-auto">
+    <div class="flex items-center gap-2">
+      <!-- Desktop: search inline -->
+      <div class="hidden sm:block flex-1 min-w-0">
+        <label class="search-box w-full">
+          <Search class="h-3.5 w-3.5 text-text-disabled shrink-0" />
+          <input
+            type="search"
+            placeholder="Search..."
+            value={query}
+            oninput={(event) => onQueryChange((event.currentTarget as HTMLInputElement).value)}
+          />
+        </label>
+      </div>
+
       <div class="hidden min-w-0 items-center gap-1 xl:flex">
         {#each activeFilters.slice(0, 3) as option (option.id)}
           <button type="button" class="filter-chip" onclick={() => removeFilter(option.id)}>
@@ -131,31 +159,51 @@
         <div class="hidden h-5 w-px bg-border-subtle sm:block"></div>
       {/if}
 
-      <label class="sort-control">
-        <span class="sr-only">Sort</span>
-        <select
-          value={sortBy}
-          onchange={(event) => onSortByChange((event.currentTarget as HTMLSelectElement).value as EntityGridSort)}
+      <!-- Custom sort dropdown -->
+      <div class="relative">
+        <button
+          type="button"
+          class="sort-btn"
+          onclick={() => (sortOpen = !sortOpen)}
         >
-          <option value="title">Title</option>
-          <option value="kind">Kind</option>
-          <option value="rating">Rating</option>
-        </select>
-        <ChevronDown class="sort-chevron h-3.5 w-3.5" aria-hidden="true" />
-      </label>
+          <ArrowUpDown class="h-3.5 w-3.5" />
+          <span class="hidden sm:inline">{SORT_LABELS[sortBy]}</span>
+          <ChevronDown class="h-3 w-3 text-text-disabled" />
+        </button>
+
+        {#if sortOpen}
+          <button
+            type="button"
+            class="fixed inset-0 z-40"
+            aria-label="Close sort menu"
+            onclick={() => (sortOpen = false)}
+          ></button>
+          <div class="sort-menu">
+            {#each SORT_OPTIONS as opt (opt.value)}
+              <button
+                type="button"
+                class={cn("sort-menu-item", sortBy === opt.value && "is-active")}
+                onclick={() => {
+                  onSortByChange(opt.value);
+                  sortOpen = false;
+                }}
+              >
+                <Check class={cn("h-3 w-3", sortBy === opt.value ? "opacity-100" : "opacity-0")} />
+                {opt.label}
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </div>
 
       <button
         type="button"
         class="icon-control"
-        title={sortDir === "asc" ? "Sort ascending" : "Sort descending"}
-        aria-label={sortDir === "asc" ? "Sort ascending" : "Sort descending"}
+        title={sortDir === "asc" ? "Ascending — click to reverse" : "Descending — click to reverse"}
+        aria-label={`Sort direction: ${sortDir}`}
         onclick={() => onSortDirChange(sortDir === "asc" ? "desc" : "asc")}
       >
-        {#if sortDir === "asc"}
-          <ArrowDownAZ class="h-3.5 w-3.5" />
-        {:else}
-          <ArrowUpAZ class="h-3.5 w-3.5" />
-        {/if}
+        <ChevronDown class={cn("h-3.5 w-3.5", sortDir === "asc" && "rotate-180")} />
       </button>
 
       <div class="hidden items-center border-l border-border-subtle pl-1 sm:flex">
@@ -303,57 +351,71 @@
     color: var(--color-text-disabled);
   }
 
-  .sort-control,
+  .sort-btn,
   .icon-control {
     display: inline-flex;
     align-items: center;
+    gap: 0.35rem;
     min-height: 1.85rem;
     border: 1px solid transparent;
     background: transparent;
     color: var(--color-text-muted);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
     font-size: 0.72rem;
+    padding: 0 0.4rem;
     transition:
       background-color var(--duration-fast) var(--ease-default),
-      border-color var(--duration-fast) var(--ease-default),
       color var(--duration-fast) var(--ease-default);
   }
 
-  .sort-control:hover,
-  .icon-control:hover,
+  .sort-btn:hover,
   .icon-control:hover {
     background: var(--color-surface-2);
     color: var(--color-text-primary);
   }
 
-  .sort-control select {
-    height: 1.85rem;
-    border: 0;
-    appearance: none;
-    -webkit-appearance: none;
-    background: transparent;
-    color: inherit;
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.64rem;
-    letter-spacing: 0.04em;
-    outline: 0;
-    padding: 0 1.1rem 0 0.4rem;
-  }
-
-  .sort-control {
-    position: relative;
-    flex: 0 0 auto;
-  }
-
-  .sort-chevron {
-    position: absolute;
-    right: 0.2rem;
-    color: currentColor;
-    pointer-events: none;
-  }
-
   .icon-control {
     justify-content: center;
     width: 1.85rem;
+    padding: 0;
+  }
+
+  .sort-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.25rem);
+    z-index: 50;
+    min-width: 10rem;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-3);
+    box-shadow:
+      0 4px 16px rgb(0 0 0 / 0.45),
+      0 1px 4px rgb(0 0 0 / 0.2);
+    padding: 0.25rem 0;
+  }
+
+  .sort-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.38rem 0.75rem;
+    color: var(--color-text-muted);
+    font-size: 0.72rem;
+    text-align: left;
+    transition:
+      background-color var(--duration-fast) var(--ease-default),
+      color var(--duration-fast) var(--ease-default);
+  }
+
+  .sort-menu-item:hover {
+    background: var(--color-surface-4, var(--color-surface-3));
+    color: var(--color-text-primary);
+  }
+
+  .sort-menu-item.is-active {
+    background: var(--color-accent-950);
+    color: var(--color-text-accent);
   }
 
   .filter-count {

@@ -283,6 +283,15 @@
     <div class="bulk-bar" role="status" aria-live="polite">
       <span>{selectedIds.length} selected</span>
       <div class="bulk-actions">
+        <button
+          type="button"
+          onclick={() => {
+            selectedIds = visibleCards.map((c) => c.entity.id);
+            onSelectionChange?.(selectedIds);
+          }}
+        >
+          Select all
+        </button>
         {#each bulkActions as action (action.id)}
           <button
             type="button"
