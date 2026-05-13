@@ -172,9 +172,8 @@
     {#if !imageOnly && (nsfw || rating > 0)}
       {#if nsfw}
         <div class="badges top-badges">
-          <span class="badge danger" title="NSFW">
+          <span class="badge danger icon-only" title="NSFW" aria-label="NSFW">
             <Flame size={13} />
-            NSFW
           </span>
         </div>
       {/if}
@@ -374,6 +373,12 @@
     border-color: rgb(255 92 67 / 0.42);
     background: rgb(40 13 10 / 0.76);
     box-shadow: 0 0 14px rgb(255 92 67 / 0.12);
+  }
+
+  .icon-only {
+    justify-content: center;
+    inline-size: 1.35rem;
+    padding-inline: 0;
   }
 
   .selection {
