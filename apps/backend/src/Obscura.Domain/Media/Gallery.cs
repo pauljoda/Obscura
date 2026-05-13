@@ -14,7 +14,6 @@ public sealed record Gallery : Entity
     public Gallery(
         Guid Id,
         string Title,
-        string? Subtitle,
         GalleryType GalleryType,
         Guid? CoverImageId,
         IReadOnlyList<ICapability>? capabilities = null)
@@ -22,7 +21,6 @@ public sealed record Gallery : Entity
             Id,
             EntityKindRegistry.Gallery,
             Title,
-            Subtitle,
             capabilities ??
             [
                 new CapabilityRating(null),
@@ -49,7 +47,7 @@ public sealed record Gallery : Entity
     /// Creates a gallery from an already hydrated entity root.
     /// </summary>
     public Gallery(Entity entity, GalleryType GalleryType, Guid? CoverImageId)
-        : this(entity.Id, entity.Title, entity.Subtitle, GalleryType, CoverImageId, entity.Capabilities)
+        : this(entity.Id, entity.Title, GalleryType, CoverImageId, entity.Capabilities)
     {
     }
 }

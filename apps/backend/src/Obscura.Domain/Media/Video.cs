@@ -14,14 +14,12 @@ public sealed record Video : Entity
     public Video(
         Guid Id,
         string Title,
-        string? Subtitle,
         DateTimeOffset? SubtitlesExtractedAt,
         IReadOnlyList<ICapability>? capabilities = null)
         : base(
             Id,
             EntityKindRegistry.Video,
             Title,
-            Subtitle,
             capabilities ??
             [
                 new CapabilityRating(null),
@@ -48,7 +46,7 @@ public sealed record Video : Entity
     /// Creates a video from an already hydrated entity root.
     /// </summary>
     public Video(Entity entity, DateTimeOffset? SubtitlesExtractedAt)
-        : this(entity.Id, entity.Title, entity.Subtitle, SubtitlesExtractedAt, entity.Capabilities)
+        : this(entity.Id, entity.Title, SubtitlesExtractedAt, entity.Capabilities)
     {
     }
 }

@@ -10,7 +10,5 @@ export interface EntityCard {
   id: string;
   kind: string;
   title: string;
-  /** @nullable */
-  subtitle: string | null;
   capabilities: EntityCapability[];
 }

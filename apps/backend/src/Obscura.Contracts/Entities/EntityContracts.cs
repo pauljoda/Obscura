@@ -35,13 +35,11 @@ public sealed record EntityExternalId(string Provider, string Value, string? Url
 /// <param name="Id">Global entity identifier.</param>
 /// <param name="Kind">Entity kind code.</param>
 /// <param name="Title">Primary display title.</param>
-/// <param name="Subtitle">Optional secondary display text.</param>
 /// <param name="Capabilities">Shared capabilities already projected for the card.</param>
 public sealed record EntityCard(
     Guid Id,
     string Kind,
     string Title,
-    string? Subtitle,
     IReadOnlyList<EntityCapability> Capabilities);
 
 /// <summary>

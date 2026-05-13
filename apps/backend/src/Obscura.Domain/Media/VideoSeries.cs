@@ -11,7 +11,6 @@ public sealed record VideoSeries : Entity
     public VideoSeries(
         Guid Id,
         string Title,
-        string? Subtitle,
         string? Status,
         VideoSeriesRenderingMode RenderingMode,
         IReadOnlyList<Entity> Children,
@@ -21,7 +20,6 @@ public sealed record VideoSeries : Entity
             Id,
             EntityKindRegistry.VideoSeries,
             Title,
-            Subtitle,
             capabilities ??
             [
                 new CapabilityRating(null),
@@ -51,7 +49,7 @@ public sealed record VideoSeries : Entity
         VideoSeriesRenderingMode RenderingMode,
         IReadOnlyList<Entity> children,
         IReadOnlyList<Entity> videos)
-        : this(entity.Id, entity.Title, entity.Subtitle, Status, RenderingMode, children, videos, entity.Capabilities)
+        : this(entity.Id, entity.Title, Status, RenderingMode, children, videos, entity.Capabilities)
     {
     }
 }
@@ -64,14 +62,12 @@ public sealed record VideoSeason : Entity
     public VideoSeason(
         Guid Id,
         string Title,
-        string? Subtitle,
         Guid SeriesId,
         IReadOnlyList<ICapability>? capabilities = null)
         : base(
             Id,
             EntityKindRegistry.VideoSeason,
             Title,
-            Subtitle,
             capabilities ?? [CapabilityImages.Empty, CapabilityDescription.Empty, CapabilityDates.Empty, CapabilitySource.Empty, CapabilityPosition.Empty])
     {
         this.SeriesId = SeriesId;
@@ -80,7 +76,7 @@ public sealed record VideoSeason : Entity
     public Guid SeriesId { get; init; }
 
     public VideoSeason(Entity entity, Guid SeriesId)
-        : this(entity.Id, entity.Title, entity.Subtitle, SeriesId, entity.Capabilities)
+        : this(entity.Id, entity.Title, SeriesId, entity.Capabilities)
     {
     }
 }

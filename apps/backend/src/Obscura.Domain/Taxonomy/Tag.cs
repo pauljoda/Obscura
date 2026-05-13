@@ -14,7 +14,6 @@ public sealed record Tag : Entity
     public Tag(
         Guid Id,
         string Title,
-        string? Subtitle,
         Guid? ParentTagId,
         bool IgnoreAutoTag,
         IReadOnlyList<ICapability>? capabilities = null)
@@ -22,7 +21,6 @@ public sealed record Tag : Entity
             Id,
             EntityKindRegistry.Tag,
             Title,
-            Subtitle,
             capabilities ??
             [
                 new CapabilityRating(null),
@@ -47,7 +45,7 @@ public sealed record Tag : Entity
     /// Creates a tag from an already hydrated entity root.
     /// </summary>
     public Tag(Entity entity, Guid? ParentTagId, bool IgnoreAutoTag)
-        : this(entity.Id, entity.Title, entity.Subtitle, ParentTagId, IgnoreAutoTag, entity.Capabilities)
+        : this(entity.Id, entity.Title, ParentTagId, IgnoreAutoTag, entity.Capabilities)
     {
     }
 }

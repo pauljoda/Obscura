@@ -84,7 +84,6 @@ public sealed partial class EntityProjectionService
                     row.Id,
                     kind,
                     row.Title,
-                    null,
                     BuildExplicitCapabilities(
                         kind,
                         description,

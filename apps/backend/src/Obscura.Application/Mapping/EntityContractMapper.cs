@@ -89,7 +89,6 @@ public static partial class ContractMapper
             entity.Id,
             entity.Kind.Code,
             entity.Title,
-            entity.Subtitle,
             ToEntityCapabilities(entity.Capabilities));
 
     /// <summary>

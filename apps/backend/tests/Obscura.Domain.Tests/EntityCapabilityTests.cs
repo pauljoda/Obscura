@@ -17,7 +17,6 @@ public sealed class EntityCapabilityTests
             Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
             EntityKindRegistry.Video,
             "Projected Video",
-            null,
             [
                 new CapabilityRating(new Rating(4)),
                 new CapabilityTags([
@@ -50,7 +49,6 @@ public sealed class EntityCapabilityTests
             Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
             EntityKindRegistry.Video,
             "Projected Video",
-            null,
             [
                 new CapabilityTags(["One"]),
                 new CapabilityTags(["Two"])
@@ -66,7 +64,6 @@ public sealed class EntityCapabilityTests
             Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
             EntityKindRegistry.Video,
             "Projected Video",
-            null,
             [CapabilityTags.Empty]);
 
         Assert.False(entity.HasCapability(CapabilityRegistry.Rating));
@@ -82,7 +79,6 @@ public sealed class EntityCapabilityTests
             Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"),
             EntityKindRegistry.Video,
             "Projected Video",
-            null,
             [
                 new CapabilityDescription("A shared description"),
                 new CapabilityImages(

@@ -42,7 +42,6 @@ public sealed class TypedEntityModelTests
         var person = new Person(
             Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
             "Ada Person",
-            null,
             Disambiguation: null,
             Gender: null,
             Birthdate: null,
@@ -72,7 +71,6 @@ public sealed class TypedEntityModelTests
         var track = new AudioTrack(
             Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
             "Main Theme",
-            null,
             EmbeddedArtist: null,
             EmbeddedAlbum: null,
             capabilities:
@@ -96,7 +94,6 @@ public sealed class TypedEntityModelTests
         var video = new Video(
             Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
             "Feature",
-            null,
             SubtitlesExtractedAt: null,
             capabilities:
             [

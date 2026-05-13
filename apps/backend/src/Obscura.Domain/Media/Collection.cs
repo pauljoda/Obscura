@@ -14,7 +14,6 @@ public sealed record Collection : Entity
     public Collection(
         Guid Id,
         string Title,
-        string? Subtitle,
         CollectionMode Mode,
         string? RuleTreeJson,
         CollectionCoverMode CoverMode,
@@ -28,7 +27,6 @@ public sealed record Collection : Entity
             Id,
             EntityKindRegistry.Collection,
             Title,
-            Subtitle,
             capabilities ??
             [
                 new CapabilityRating(null),
@@ -74,7 +72,6 @@ public sealed record Collection : Entity
         : this(
             entity.Id,
             entity.Title,
-            entity.Subtitle,
             Mode,
             RuleTreeJson,
             CoverMode,

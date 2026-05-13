@@ -14,13 +14,11 @@ public sealed record Image : Entity
     public Image(
         Guid Id,
         string Title,
-        string? Subtitle,
         IReadOnlyList<ICapability>? capabilities = null)
         : base(
             Id,
             EntityKindRegistry.Image,
             Title,
-            Subtitle,
             capabilities ??
             [
                 new CapabilityRating(null),
@@ -39,7 +37,7 @@ public sealed record Image : Entity
     /// Creates an image from an already hydrated entity root.
     /// </summary>
     public Image(Entity entity)
-        : this(entity.Id, entity.Title, entity.Subtitle, entity.Capabilities)
+        : this(entity.Id, entity.Title, entity.Capabilities)
     {
     }
 }

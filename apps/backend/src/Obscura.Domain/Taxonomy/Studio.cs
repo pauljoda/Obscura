@@ -14,14 +14,12 @@ public sealed record Studio : Entity
     public Studio(
         Guid Id,
         string Title,
-        string? Subtitle,
         Guid? ParentStudioId,
         IReadOnlyList<ICapability>? capabilities = null)
         : base(
             Id,
             EntityKindRegistry.Studio,
             Title,
-            Subtitle,
             capabilities ??
             [
                 new CapabilityRating(null),
@@ -42,7 +40,7 @@ public sealed record Studio : Entity
     /// Creates a studio from an already hydrated entity root.
     /// </summary>
     public Studio(Entity entity, Guid? ParentStudioId)
-        : this(entity.Id, entity.Title, entity.Subtitle, ParentStudioId, entity.Capabilities)
+        : this(entity.Id, entity.Title, ParentStudioId, entity.Capabilities)
     {
     }
 }

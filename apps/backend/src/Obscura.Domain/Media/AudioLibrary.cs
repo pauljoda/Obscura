@@ -14,14 +14,12 @@ public sealed record AudioLibrary : Entity
     public AudioLibrary(
         Guid Id,
         string Title,
-        string? Subtitle,
         Guid? ParentLibraryId,
         IReadOnlyList<ICapability>? capabilities = null)
         : base(
             Id,
             EntityKindRegistry.AudioLibrary,
             Title,
-            Subtitle,
             capabilities ??
             [
                 new CapabilityRating(null),
@@ -44,7 +42,7 @@ public sealed record AudioLibrary : Entity
     /// Creates an audio library from an already hydrated entity root.
     /// </summary>
     public AudioLibrary(Entity entity, Guid? ParentLibraryId)
-        : this(entity.Id, entity.Title, entity.Subtitle, ParentLibraryId, entity.Capabilities)
+        : this(entity.Id, entity.Title, ParentLibraryId, entity.Capabilities)
     {
     }
 }

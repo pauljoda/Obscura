@@ -138,9 +138,7 @@ public sealed partial class EntityProjectionService
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
         return new Person(
-            entity.Id,
-            entity.Title,
-            entity.Subtitle,
+            entity,
             Disambiguation: detail?.Disambiguation,
             Gender: detail?.Gender,
             Birthdate: null,
@@ -154,8 +152,7 @@ public sealed partial class EntityProjectionService
             Tattoos: detail?.Tattoos,
             Piercings: detail?.Piercings,
             CareerStart: null,
-            CareerEnd: null,
-            capabilities: entity.Capabilities);
+            CareerEnd: null);
     }
 
     /// <inheritdoc />

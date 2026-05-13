@@ -14,7 +14,6 @@ public sealed record AudioTrack : Entity
     public AudioTrack(
         Guid Id,
         string Title,
-        string? Subtitle,
         string? EmbeddedArtist,
         string? EmbeddedAlbum,
         IReadOnlyList<ICapability>? capabilities = null)
@@ -22,7 +21,6 @@ public sealed record AudioTrack : Entity
             Id,
             EntityKindRegistry.AudioTrack,
             Title,
-            Subtitle,
             capabilities ??
             [
                 new CapabilityRating(null),
@@ -50,7 +48,7 @@ public sealed record AudioTrack : Entity
     /// Creates an audio track from an already hydrated entity root.
     /// </summary>
     public AudioTrack(Entity entity, string? embeddedArtist, string? embeddedAlbum)
-        : this(entity.Id, entity.Title, entity.Subtitle, embeddedArtist, embeddedAlbum, entity.Capabilities)
+        : this(entity.Id, entity.Title, embeddedArtist, embeddedAlbum, entity.Capabilities)
     {
     }
 

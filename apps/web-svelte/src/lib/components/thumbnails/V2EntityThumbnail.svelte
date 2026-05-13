@@ -188,9 +188,6 @@
       <h3 class="ticker-title" use:fitTitle={card.entity.title} aria-label={card.entity.title}>
         <span class="title-text">{card.entity.title}</span>
       </h3>
-      {#if card.entity.subtitle}
-        <p>{card.entity.subtitle}</p>
-      {/if}
     </div>
 
     {#if card.meta?.length}
@@ -418,33 +415,27 @@
   }
 
   .copy {
-    display: grid;
-    grid-template-rows: 1.35rem 0.95rem;
-    gap: 0.28rem;
+    display: block;
     min-width: 0;
   }
 
   .details {
     display: grid;
-    grid-template-rows: 2.58rem 1.3rem;
+    grid-template-rows: 1.35rem 1.3rem;
     gap: 0.55rem;
     min-width: 0;
-    block-size: 5.8rem;
+    block-size: 4.55rem;
     padding: 0.72rem 0.78rem 0.7rem;
     background:
       linear-gradient(180deg, rgb(10 12 15 / 0.94), rgb(9 10 12 / 0.98)),
       #0a0b0d;
   }
 
-  h3,
-  p {
+  h3 {
     margin: 0;
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
-  }
-
-  h3 {
     position: relative;
     font-family: var(--font-heading, Geist, sans-serif);
     display: block;
@@ -507,14 +498,6 @@
     }
   }
 
-  p {
-    color: rgb(244 239 230 / 0.58);
-    font-size: 0.76rem;
-    line-height: 1.2;
-    align-self: end;
-    text-overflow: ellipsis;
-  }
-
   @media (prefers-reduced-motion: reduce) {
     :global(.ticker-title[data-overflow="true"]:is(:hover, :focus-visible)) .title-text {
       animation: none;
@@ -569,15 +552,10 @@
     }
 
     .details {
-      grid-template-rows: 2.32rem 1.22rem;
+      grid-template-rows: 1.12rem 1.18rem;
       gap: 0.46rem;
-      block-size: 5.38rem;
+      block-size: 4.18rem;
       padding: 0.62rem;
-    }
-
-    .copy {
-      grid-template-rows: 1.12rem 0.9rem;
-      gap: 0.26rem;
     }
 
     h3 {

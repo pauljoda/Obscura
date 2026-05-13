@@ -14,20 +14,17 @@ public record Entity
     /// <param name="id">Stable global entity identifier.</param>
     /// <param name="kind">Code-defined entity kind that determines broad behavior and routing.</param>
     /// <param name="title">Primary user-facing title.</param>
-    /// <param name="subtitle">Optional secondary text for cards and detail headers.</param>
     /// <param name="capabilities">Reusable behaviors and projections attached to this entity.</param>
     /// <exception cref="ArgumentException">Thrown when more than one capability has the same kind code.</exception>
     public Entity(
         Guid id,
         IEntityKind kind,
         string title,
-        string? subtitle,
         IReadOnlyList<ICapability> capabilities)
     {
         Id = id;
         Kind = kind;
         Title = title;
-        Subtitle = subtitle;
         Capabilities = NormalizeCapabilities(capabilities);
     }
 
@@ -39,9 +36,6 @@ public record Entity
 
     /// <summary>Primary user-facing title.</summary>
     public string Title { get; init; }
-
-    /// <summary>Optional secondary text for cards and detail headers.</summary>
-    public string? Subtitle { get; init; }
 
     /// <summary>Reusable behaviors and projections attached to this entity.</summary>
     public IReadOnlyList<ICapability> Capabilities { get; init; }

@@ -9,7 +9,6 @@ namespace Obscura.Domain.Taxonomy;
 public sealed record Person(
     Guid Id,
     string Title,
-    string? Subtitle,
     string? Disambiguation,
     string? Gender,
     string? Birthdate,
@@ -29,7 +28,6 @@ public sealed record Person(
         Id,
         EntityKindRegistry.Person,
         Title,
-        Subtitle,
         capabilities ??
         [
             new CapabilityRating(null),
@@ -62,7 +60,6 @@ public sealed record Person(
         : this(
             entity.Id,
             entity.Title,
-            entity.Subtitle,
             Disambiguation,
             Gender,
             Birthdate,

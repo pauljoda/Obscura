@@ -289,7 +289,6 @@ public sealed class EntityVideoEndpointServiceTests
                 VideoId,
                 EntityKindRegistry.Video,
                 "Projected Video",
-                null,
                 [
                     new DomainCapabilityRating(
                         rating is null ? null : new DomainRating(rating.Value)),
@@ -308,7 +307,6 @@ public sealed class EntityVideoEndpointServiceTests
                 GalleryId,
                 EntityKindRegistry.Gallery,
                 "Projected Gallery",
-                null,
                 []);
 
         private static DomainEntity TagCard() =>
@@ -316,7 +314,6 @@ public sealed class EntityVideoEndpointServiceTests
                 TagId,
                 EntityKindRegistry.Tag,
                 "Projected Tag",
-                null,
                 []);
 
         private static DomainEntity CollectionCard() =>
@@ -324,7 +321,6 @@ public sealed class EntityVideoEndpointServiceTests
                 CollectionId,
                 EntityKindRegistry.Collection,
                 "Projected Collection",
-                null,
                 []);
     }
 }

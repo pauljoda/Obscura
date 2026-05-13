@@ -19,7 +19,6 @@ public sealed class ContractMapperTests
                 Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
                 EntityKindRegistry.Video,
                 "Mapped Video",
-                null,
                 [
                     new CapabilityDescription("Capability description")
                 ]),
@@ -47,7 +46,6 @@ public sealed class ContractMapperTests
                 Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
                 EntityKindRegistry.VideoSeries,
                 "Mapped Series",
-                null,
                 [
                     new CapabilityDescription("Series description")
                 ]),
@@ -78,7 +76,6 @@ public sealed class ContractMapperTests
                 Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
                 EntityKindRegistry.Gallery,
                 "Mapped Gallery",
-                null,
                 []),
             GalleryType.Folder,
             Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"));
@@ -99,7 +96,6 @@ public sealed class ContractMapperTests
                 Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
                 EntityKindRegistry.Tag,
                 "Mapped Tag",
-                null,
                 []),
             Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
             IgnoreAutoTag: true);
@@ -120,7 +116,6 @@ public sealed class ContractMapperTests
                 Guid.Parse("99999999-9999-9999-9999-999999999999"),
                 EntityKindRegistry.Collection,
                 "Mapped Collection",
-                null,
                 []),
             CollectionMode.Dynamic,
             "{\"rules\":[]}",

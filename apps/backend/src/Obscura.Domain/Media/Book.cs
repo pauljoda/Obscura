@@ -14,7 +14,6 @@ public sealed record Book : Entity
     public Book(
         Guid Id,
         string Title,
-        string? Subtitle,
         BookType BookType,
         Guid? CoverPageId,
         IReadOnlyList<ICapability>? capabilities = null)
@@ -22,7 +21,6 @@ public sealed record Book : Entity
             Id,
             EntityKindRegistry.Book,
             Title,
-            Subtitle,
             capabilities ??
             [
                 new CapabilityRating(null),
@@ -50,7 +48,7 @@ public sealed record Book : Entity
     /// Creates a book from an already hydrated entity root.
     /// </summary>
     public Book(Entity entity, BookType BookType, Guid? CoverPageId)
-        : this(entity.Id, entity.Title, entity.Subtitle, BookType, CoverPageId, entity.Capabilities)
+        : this(entity.Id, entity.Title, BookType, CoverPageId, entity.Capabilities)
     {
     }
 

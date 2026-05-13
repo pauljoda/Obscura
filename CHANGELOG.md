@@ -84,13 +84,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 thumbnail lab now shows denser rows, adjustable thumbnail scale, cleaner shared chips, and fit-within image rendering so card sizing can be tuned before the main UI migration.
 - The v2 thumbnail lab now uses a media-first card layout with artwork on top and quieter attached details below, matching the intended thumbnail hierarchy before the broader UI migration.
 - The v2 thumbnail lab now uses more realistic per-entity labels, including poster-shaped seasons and quieter page cards without redundant page metadata.
-- The v2 thumbnail lab now keeps card heights consistent by reserving fixed title, subtitle, and metadata slots instead of letting wrapped titles stretch individual cards.
+- The v2 thumbnail lab now keeps card heights consistent by reserving fixed title and metadata slots instead of letting wrapped titles stretch individual cards.
 - The v2 thumbnail lab now shrinks long card titles within a readable range before truncating, keeping row heights even without oversized title slots.
 - The v2 thumbnail lab now supports multi-select cards with a top-left checkbox that appears on hover, focus, or selected state.
 - The v2 thumbnail lab now animates overflowing card titles on hover so users can read the full title without expanding the card.
 - Overflowing v2 thumbnail titles now show a clearer brass ticker indicator and reliably measure the full title before starting the hover animation.
 - V2 thumbnail title hover now uses a subtler overflow edge and keeps scrub handling inside the image area so title ticker hover is not intercepted.
 - V2 thumbnail title hover no longer shows the browser tooltip, and compressed titles now move visibly when the ticker starts.
+- V2 entity cards now use a canonical title plus capability-driven metadata instead of an unused global subtitle, keeping thumbnails aligned with the new backend data shape.
 
 ### Docs
 
@@ -155,9 +156,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Updated v2 legacy import SQL to populate shared capability tables for descriptions, dates, technical metadata, sources, stats, progress, positions, classifications, fingerprints, playback, and minimal media detail rows.
 - Changed v2 media, taxonomy, and collection detail APIs to use typed aggregate hydrators so flat kind-specific fields are available alongside shared capabilities.
 - Refined the v2 thumbnail lab by removing non-user-facing kind and hover labels, adding outer card borders, expanding each entity row to five samples, and adding a scale slider.
-- Refined the v2 thumbnail card hierarchy so the image area, title, subtitle, and metadata chips read in descending visual priority.
+- Refined the v2 thumbnail card hierarchy so the image area, title, and metadata chips read in descending visual priority.
 - Updated v2 thumbnail lab fixtures so row samples better match actual entity cards instead of internal entity-type descriptions.
 - Standardized v2 thumbnail body sizing so rows stay aligned while long titles and metadata clamp within fixed slots.
+- Removed the unused v2 entity-card subtitle field from the .NET domain model, API contract, generated Svelte model, and thumbnail lab fixtures.
 - Replaced the two-line thumbnail title slot with measured one-line title fitting, so long names scale down slightly before ellipsis.
 - Added selectable thumbnail state to the shared v2 card component and wired the lab page to track multiple selected entities.
 - Added measured title ticker behavior to the shared v2 thumbnail so overflowing names scroll in place on hover.

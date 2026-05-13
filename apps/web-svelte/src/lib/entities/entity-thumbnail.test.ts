@@ -11,7 +11,6 @@ const card: EntityThumbnailCard = {
     id: "video-1",
     kind: "video",
     title: "Sample Video",
-    subtitle: "A safe sample",
     capabilities: [],
   },
   aspectRatio: "video",

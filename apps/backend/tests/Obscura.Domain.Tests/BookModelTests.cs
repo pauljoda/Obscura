@@ -12,7 +12,6 @@ public sealed class BookModelTests
         var book = new Book(
             Guid.Parse("11111111-1111-1111-1111-111111111111"),
             "The Brass Archive",
-            null,
             BookType: BookType.Comic,
             CoverPageId: null,
             capabilities:
@@ -35,7 +34,6 @@ public sealed class BookModelTests
         var book = new Book(
             Guid.Parse("22222222-2222-2222-2222-222222222222"),
             "Draft Book",
-            null,
             BookType: BookType.Book,
             CoverPageId: null,
             capabilities:
