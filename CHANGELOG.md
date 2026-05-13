@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 
+- The v2 library maintenance job now validates that expected cache assets exist on disk and removes orphaned cache directories for deleted entities, replacing the placeholder with real asset hygiene.
+- The v2 dynamic collection refresh job now evaluates stored rule trees against the unified entity model, replacing dynamic membership atomically while preserving manual items — a full port of the Node.js collection rule engine to the .NET backend.
 - The v2 .NET backend now has real implementations for all library scan, probe, fingerprint, preview, and subtitle extraction job handlers — replacing stubs with working processors that discover media files, create entities, compute hashes, generate thumbnails and previews, extract subtitles, and chain downstream jobs exactly like the Node.js predecessor.
 - The v2 .NET job queue now supports all 20 media processing job types with concurrent worker processing, automatic scan scheduling, deduplication, progress reporting, job chaining, and history pruning — establishing the full infrastructure for migrating scan, probe, fingerprint, preview, and metadata processors.
 - Obscura now has the first .NET backend foundation for the v2 migration, including a runnable health endpoint, shared entity contracts, and development wiring that can run beside the current app while the migration is built out.
@@ -258,6 +260,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- Added `LibraryMaintenanceJobHandler` with real asset validation that checks expected cache files (thumbnails, waveforms) exist for each entity kind and removes orphaned cache directories for deleted entities.
+- Added `CollectionRuleEngine` ported from the TypeScript rule engine to evaluate dynamic collection rule trees against the v2 unified entity model using parameterized SQL, supporting all field types (title, rating, date, flags, tags, performers, studios, technical metadata, playback stats, resolution tiers, and hierarchy-based video series filtering).
+- Added `CollectionRefreshPersistenceService` for atomic dynamic collection membership replacement — deletes dynamic items, inserts resolved matches after manual items, and updates refresh timestamps within a transaction.
+- Added `ICollectionRuleEngine`, `ICollectionRefreshPersistence`, and `IMaintenancePersistence` application port interfaces for the remaining job handler implementations.
+- Added `CollectionRuleNode` polymorphic types (`CollectionRuleGroup`, `CollectionRuleCondition`) with `System.Text.Json` discriminator support matching the TypeScript contracts.
 - Added `FileDiscoveryService` for recursive directory walking with extension filtering for all media categories (video, image, audio, comic archive).
 - Added `MediaProbeService` wrapping ffprobe for video, audio, image, and subtitle stream metadata extraction with structured JSON parsing.
 - Added `HashingService` computing MD5 and oshash fingerprints in a single streaming pass, compatible with the Node.js OpenSubtitles hash algorithm.

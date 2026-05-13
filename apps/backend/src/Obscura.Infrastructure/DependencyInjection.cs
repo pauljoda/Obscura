@@ -8,6 +8,7 @@ using Obscura.Application.Migrations;
 using Obscura.Application.Settings;
 using Obscura.Application.Videos;
 using Obscura.Infrastructure.Backups;
+using Obscura.Infrastructure.Collections;
 using Obscura.Infrastructure.Database;
 using Obscura.Domain.Interfaces;
 using Obscura.Infrastructure.Entities;
@@ -67,6 +68,10 @@ public static class DependencyInjection
                 provider.GetRequiredService<ThumbnailService>(),
                 provider.GetRequiredService<AssetPathService>()));
         services.AddScoped<ILibraryScanPersistence, LibraryScanPersistenceService>();
+        services.AddScoped<IMaintenancePersistence>(provider =>
+            new MaintenancePersistenceService(provider.GetRequiredService<ObscuraDbContext>(), dataDir));
+        services.AddScoped<ICollectionRuleEngine, CollectionRuleEngine>();
+        services.AddScoped<ICollectionRefreshPersistence, CollectionRefreshPersistenceService>();
         services.AddScoped<DatabaseBackupService>();
         services.AddScoped<IV2FreshStartService, V2FreshStartService>();
         services.AddScoped<ILegacyMediaImportService, LegacyMediaImportService>();
