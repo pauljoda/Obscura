@@ -115,10 +115,10 @@
 </script>
 
 <div class="space-y-0">
-  <div class="surface-well px-3 py-2 space-y-2 sm:space-y-0">
-    <!-- Mobile: search on its own row -->
-    <div class="sm:hidden">
-      <label class="search-box w-full">
+  <div class="surface-well px-3 py-2 toolbar-root">
+    <!-- Stacked search: shown when toolbar container is narrow -->
+    <div class="search-stacked">
+      <label class="search-box">
         <Search class="h-3.5 w-3.5 text-text-disabled shrink-0" />
         <input
           type="search"
@@ -130,9 +130,9 @@
     </div>
 
     <div class="flex items-center gap-2">
-      <!-- Desktop: search inline -->
-      <div class="hidden sm:block flex-1 min-w-0">
-        <label class="search-box w-full">
+      <!-- Inline search: shown when toolbar container is wide enough -->
+      <div class="search-inline">
+        <label class="search-box">
           <Search class="h-3.5 w-3.5 text-text-disabled shrink-0" />
           <input
             type="search"
@@ -325,6 +325,31 @@
 </div>
 
 <style>
+  .toolbar-root {
+    container-type: inline-size;
+  }
+
+  .search-stacked {
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  .search-inline {
+    display: none;
+    flex: 1;
+    min-width: 0;
+  }
+
+  @container (min-width: 1000px) {
+    .search-stacked {
+      display: none;
+    }
+
+    .search-inline {
+      display: block;
+    }
+  }
+
   .search-box {
     display: flex;
     align-items: center;
