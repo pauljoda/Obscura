@@ -1,4 +1,4 @@
-using Obscura.Infrastructure.Media;
+using Obscura.Infrastructure.Media.Processing;
 using Obscura.Infrastructure.Processes;
 
 namespace Obscura.Infrastructure.Tests;

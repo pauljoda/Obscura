@@ -1,0 +1,42 @@
+using Obscura.Infrastructure.Media.Processing;
+using Obscura.Application.Jobs.Ports;
+
+namespace Obscura.Infrastructure.Media.Adapters;
+
+/// <summary>
+/// Adapts the Infrastructure MediaProbeService to the Application port interface.
+/// </summary>
+public sealed class MediaProbeAdapter(MediaProbeService inner) : IMediaProbe
+{
+    public async Task<VideoProbeData?> ProbeVideoAsync(string filePath, CancellationToken cancellationToken)
+    {
+        var result = await inner.ProbeVideoAsync(filePath, cancellationToken);
+        if (result is null) return null;
+        return new VideoProbeData(result.DurationSeconds, result.FileSize, result.Width, result.Height,
+            result.FrameRate, result.BitRate, result.Codec, result.Container,
+            result.SampleRate, result.Channels, result.AudioCodec);
+    }
+
+    public async Task<AudioProbeData?> ProbeAudioAsync(string filePath, CancellationToken cancellationToken)
+    {
+        var result = await inner.ProbeAudioAsync(filePath, cancellationToken);
+        if (result is null) return null;
+        return new AudioProbeData(result.DurationSeconds, result.FileSize, result.BitRate, result.Codec,
+            result.Container, result.SampleRate, result.Channels,
+            result.Artist, result.Album, result.Title, result.TrackNumber);
+    }
+
+    public async Task<ImageProbeData?> ProbeImageAsync(string filePath, CancellationToken cancellationToken)
+    {
+        var result = await inner.ProbeImageAsync(filePath, cancellationToken);
+        if (result is null) return null;
+        return new ImageProbeData(result.Width, result.Height, result.Codec);
+    }
+
+    public async Task<IReadOnlyList<SubtitleStreamData>> ProbeSubtitleStreamsAsync(
+        string filePath, CancellationToken cancellationToken)
+    {
+        var results = await inner.ProbeSubtitleStreamsAsync(filePath, cancellationToken);
+        return results.Select(s => new SubtitleStreamData(s.StreamIndex, s.CodecName, s.Language, s.Title)).ToList();
+    }
+}

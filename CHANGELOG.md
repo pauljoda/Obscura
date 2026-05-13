@@ -257,6 +257,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Replaced ~60 raw string literals (`"thumbnail"`, `"md5"`, `"video"`, etc.) in Application port interfaces, job handlers, and Infrastructure adapters with typed domain values (`EntityFileRole.Thumbnail`, `FingerprintAlgorithm.Md5`, `EntityKindRegistry.Video.Code`) so string-based typing errors are caught at compile time instead of at runtime.
 - Changed `EntityFileFingerprintRow.Algorithm` from an untyped string to a `FingerprintAlgorithm` enum with EF `HasConversion`, matching the codec pattern used by other persisted enums.
 - Changed `AddIfSupported` capability filtering from case-insensitive string comparison to `ReferenceEquals` on singleton capability kinds, eliminating allocation during entity projection.
+- Organized v2 job handlers into pipeline-stage subfolders (`Scan/`, `Probe/`, `Generate/`, `Identity/`, `Maintenance/`, `Import/`) and moved stray handlers from the Jobs root into the Handlers directory.
+- Organized v2 Infrastructure media services into concern-based subfolders (`Adapters/`, `Processing/`, `Persistence/`) so port adapters, media processing services, and persistence implementations are easier to find.
 
 ### Removed
 
