@@ -101,6 +101,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Moved v2 migration gate, fresh-start, and legacy import orchestration behind the .NET Application layer so API routes and worker handlers no longer depend on infrastructure migration ports directly.
 - Moved v2 direct video streaming and cached HLS lookup ports into the .NET Application layer so API routes depend on playback use-case boundaries instead of infrastructure services.
 - Moved the v2 queue worker dispatch loop and registered job handlers into the .NET Application layer so the worker executable now only composes application services and infrastructure adapters.
+- Split the v2 EF base entity table mapping out of the main DbContext so infrastructure persistence configuration is easier to review in focused files.
 - Restructured the v2 .NET backend core so infrastructure now projects PostgreSQL rows into first-class Domain entities, capabilities, and media aggregates before API endpoints map them back to OpenAPI/Orval contracts.
 - The v2 .NET backend now has an `Obscura.Application` boundary for API-facing service interfaces, starting with a cleaner `IEntityCatalog` abstraction over the entity projection implementation.
 - Renamed the v2 .NET API contract records and generated Orval models to remove `Dto` suffixes, keeping request/response names only where they describe API direction.

@@ -4,8 +4,15 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Persistence;
 
+/// <summary>
+/// Entity Framework context for the v2 Obscura persistence model.
+/// </summary>
 public sealed class ObscuraDbContext : DbContext
 {
+    /// <summary>
+    /// Creates the context with provider-specific options supplied by dependency injection.
+    /// </summary>
+    /// <param name="options">EF Core context options, including the PostgreSQL connection and provider configuration.</param>
     public ObscuraDbContext(DbContextOptions<ObscuraDbContext> options)
         : base(options)
     {
@@ -117,86 +124,7 @@ public sealed class ObscuraDbContext : DbContext
     {
         modelBuilder.HasDefaultSchema("v2");
 
-        modelBuilder.Entity<EntityKindRow>(entity =>
-        {
-            entity.ToTable("entity_kinds");
-            entity.HasKey(row => row.Code);
-            entity.Property(row => row.Code).HasColumnName("code").HasMaxLength(64);
-            entity.Property(row => row.DisplayName).HasColumnName("display_name").HasMaxLength(128).IsRequired();
-            entity.Property(row => row.Category).HasColumnName("category").HasMaxLength(64).IsRequired();
-            entity.HasData(Obscura.Domain.Entities.EntityKindRegistry.All.Select(kind => new EntityKindRow
-            {
-                Code = kind.Code,
-                DisplayName = kind.DisplayName,
-                Category = kind.Category.ToString()
-            }));
-        });
-
-        modelBuilder.Entity<EntityRow>(entity =>
-        {
-            entity.ToTable("entities");
-            entity.HasKey(row => row.Id);
-            entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
-            entity.Property(row => row.KindCode).HasColumnName("kind_code").HasMaxLength(64).IsRequired();
-            entity.Property(row => row.Title).HasColumnName("title").HasMaxLength(512).IsRequired();
-            entity.Property(row => row.CreatedAt).HasColumnName("created_at");
-            entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
-            entity.Property(row => row.DeletedAt).HasColumnName("deleted_at");
-            entity.HasIndex(row => new { row.KindCode, row.Title });
-            entity.HasOne<EntityKindRow>()
-                .WithMany()
-                .HasForeignKey(row => row.KindCode)
-                .OnDelete(DeleteBehavior.Restrict);
-        });
-
-        modelBuilder.Entity<EntityRatingRow>(entity =>
-        {
-            entity.ToTable("entity_ratings");
-            entity.HasKey(row => row.EntityId);
-            entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.Value).HasColumnName("value");
-            entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
-            entity.HasOne<EntityRow>()
-                .WithOne()
-                .HasForeignKey<EntityRatingRow>(row => row.EntityId)
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.ToTable(table => table.HasCheckConstraint(
-                "ck_entity_ratings_value",
-                "value >= 0 AND value <= 5"));
-        });
-
-        modelBuilder.Entity<EntityFlagRow>(entity =>
-        {
-            entity.ToTable("entity_flags");
-            entity.HasKey(row => row.EntityId);
-            entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.IsFavorite).HasColumnName("is_favorite");
-            entity.Property(row => row.IsNsfw).HasColumnName("is_nsfw");
-            entity.Property(row => row.IsOrganized).HasColumnName("is_organized");
-            entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
-            entity.HasOne<EntityRow>()
-                .WithOne()
-                .HasForeignKey<EntityFlagRow>(row => row.EntityId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<EntityTagLinkRow>(entity =>
-        {
-            entity.ToTable("entity_tag_links");
-            entity.HasKey(row => new { row.EntityId, row.TagId });
-            entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.TagId).HasColumnName("tag_id");
-            entity.Property(row => row.CreatedAt).HasColumnName("created_at");
-            entity.HasOne<EntityRow>()
-                .WithMany()
-                .HasForeignKey(row => row.EntityId)
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne<EntityRow>()
-                .WithMany()
-                .HasForeignKey(row => row.TagId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
+        modelBuilder.ConfigureBaseEntityModel();
         modelBuilder.ConfigureExpandedV2Model();
 
         modelBuilder.Entity<EntityHierarchyLinkRow>(entity =>
