@@ -1,3 +1,5 @@
+using Obscura.Application.Mapping;
+using Obscura.Contracts.Entities;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Interfaces;
 
@@ -27,18 +29,24 @@ public sealed class EntityService
     /// </summary>
     /// <param name="query">Entity list filters and cursor.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>A page of domain entities.</returns>
-    public Task<EntityPage> ListAsync(EntityListQuery query, CancellationToken cancellationToken) =>
-        _entities.ListAsync(query.Kind, query.Search, query.Cursor, cancellationToken);
+    /// <returns>API-ready entity list response.</returns>
+    public async Task<EntityListResponse> ListAsync(EntityListQuery query, CancellationToken cancellationToken)
+    {
+        var page = await _entities.ListAsync(query.Kind, query.Search, query.Cursor, cancellationToken);
+        return ContractMapper.ToEntityListResponse(page);
+    }
 
     /// <summary>
     /// Gets one entity by global identifier.
     /// </summary>
     /// <param name="id">Entity identifier.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>The entity projection, or null when it is missing.</returns>
-    public Task<Entity?> GetAsync(Guid id, CancellationToken cancellationToken) =>
-        _entities.GetAsync(id, cancellationToken);
+    /// <returns>API-ready entity card, or null when it is missing.</returns>
+    public async Task<EntityCard?> GetAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await _entities.GetAsync(id, cancellationToken);
+        return entity is null ? null : ContractMapper.ToEntityCard(entity);
+    }
 
     /// <summary>
     /// Lists related child entities for use cases that need hierarchy or membership expansion.
@@ -47,34 +55,43 @@ public sealed class EntityService
     /// <param name="relationship">Typed relationship to traverse.</param>
     /// <param name="childKind">Optional typed child kind filter.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>Child entities in relationship order.</returns>
-    public Task<IReadOnlyList<Entity>> ListChildrenAsync(
+    /// <returns>API-ready child entity cards in relationship order.</returns>
+    public async Task<IReadOnlyList<EntityCard>> ListChildrenAsync(
         Guid parentId,
         IEntityRelationship relationship,
         IEntityKind? childKind,
-        CancellationToken cancellationToken) =>
-        _entities.ListChildrenAsync(parentId, relationship, childKind, cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        var children = await _entities.ListChildrenAsync(parentId, relationship, childKind, cancellationToken);
+        return ContractMapper.ToEntityCards(children);
+    }
 
     /// <summary>
     /// Applies a rating command and returns the updated entity projection.
     /// </summary>
     /// <param name="command">Rating command from the application boundary.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>The updated entity, or null when the entity is missing.</returns>
-    public Task<Entity?> SetRatingAsync(SetEntityRatingCommand command, CancellationToken cancellationToken) =>
-        _ratings.UpdateRatingAsync(command.EntityId, command.Value, cancellationToken);
+    /// <returns>API-ready updated entity card, or null when the entity is missing.</returns>
+    public async Task<EntityCard?> SetRatingAsync(SetEntityRatingCommand command, CancellationToken cancellationToken)
+    {
+        var entity = await _ratings.UpdateRatingAsync(command.EntityId, command.Value, cancellationToken);
+        return entity is null ? null : ContractMapper.ToEntityCard(entity);
+    }
 
     /// <summary>
     /// Applies a partial flag update and returns the updated entity projection.
     /// </summary>
     /// <param name="command">Flag update command from the application boundary.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>The updated entity, or null when the entity is missing.</returns>
-    public Task<Entity?> UpdateFlagsAsync(UpdateEntityFlagsCommand command, CancellationToken cancellationToken) =>
-        _ratings.UpdateFlagsAsync(
+    /// <returns>API-ready updated entity card, or null when the entity is missing.</returns>
+    public async Task<EntityCard?> UpdateFlagsAsync(UpdateEntityFlagsCommand command, CancellationToken cancellationToken)
+    {
+        var entity = await _ratings.UpdateFlagsAsync(
             command.EntityId,
             command.IsFavorite,
             command.IsNsfw,
             command.IsOrganized,
             cancellationToken);
+        return entity is null ? null : ContractMapper.ToEntityCard(entity);
+    }
 }

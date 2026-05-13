@@ -1,9 +1,7 @@
-using Obscura.Api.Mapping;
+using Obscura.Application.Entities;
+using Obscura.Application.Media;
 using Obscura.Contracts.Media;
 using Obscura.Contracts.System;
-using Obscura.Domain.Entities;
-using Obscura.Domain.Interfaces;
-using Obscura.Domain.Media;
 
 namespace Obscura.Api.Endpoints;
 
@@ -15,37 +13,37 @@ public static class MediaEndpoints
             routes,
             "/api/images",
             "Images",
-            EntityKindRegistry.Image,
-            null,
-            (entity, _) => ContractMapper.ToImageDetail((Image)entity));
+            "image",
+            (media, query, cancellationToken) => media.ListImagesAsync(query, cancellationToken),
+            (media, id, cancellationToken) => media.GetImageAsync(id, cancellationToken));
         MapMediaGroup<GalleryDetail>(
             routes,
             "/api/galleries",
             "Galleries",
-            EntityKindRegistry.Gallery,
-            (EntityRelationshipRegistry.Gallery, EntityKindRegistry.Image),
-            (entity, childItems) => ContractMapper.ToGalleryDetail((Gallery)entity, childItems));
+            "gallery",
+            (media, query, cancellationToken) => media.ListGalleriesAsync(query, cancellationToken),
+            (media, id, cancellationToken) => media.GetGalleryAsync(id, cancellationToken));
         MapMediaGroup<BookDetail>(
             routes,
             "/api/books",
             "Books",
-            EntityKindRegistry.Book,
-            null,
-            (entity, _) => ContractMapper.ToBookDetail((Book)entity));
+            "book",
+            (media, query, cancellationToken) => media.ListBooksAsync(query, cancellationToken),
+            (media, id, cancellationToken) => media.GetBookAsync(id, cancellationToken));
         MapMediaGroup<AudioLibraryDetail>(
             routes,
             "/api/audio-libraries",
             "AudioLibraries",
-            EntityKindRegistry.AudioLibrary,
-            (EntityRelationshipRegistry.AudioLibrary, EntityKindRegistry.AudioTrack),
-            (entity, childItems) => ContractMapper.ToAudioLibraryDetail((AudioLibrary)entity, childItems));
+            "audio_library",
+            (media, query, cancellationToken) => media.ListAudioLibrariesAsync(query, cancellationToken),
+            (media, id, cancellationToken) => media.GetAudioLibraryAsync(id, cancellationToken));
         MapMediaGroup<AudioTrackDetail>(
             routes,
             "/api/audio-tracks",
             "AudioTracks",
-            EntityKindRegistry.AudioTrack,
-            null,
-            (entity, _) => ContractMapper.ToAudioTrackDetail((AudioTrack)entity));
+            "audio_track",
+            (media, query, cancellationToken) => media.ListAudioTracksAsync(query, cancellationToken),
+            (media, id, cancellationToken) => media.GetAudioTrackAsync(id, cancellationToken));
 
         return routes;
     }
@@ -54,9 +52,9 @@ public static class MediaEndpoints
         IEndpointRouteBuilder routes,
         string path,
         string tag,
-        IEntityKind kind,
-        (IEntityRelationship Relationship, IEntityKind ChildKind)? children,
-        Func<Entity, IReadOnlyList<Entity>, TDetail> toDetailContract)
+        string kindCode,
+        Func<MediaService, EntityListQuery, CancellationToken, Task<MediaListResponse>> list,
+        Func<MediaService, Guid, CancellationToken, Task<TDetail?>> get)
         where TDetail : class
     {
         var group = routes.MapGroup(path)
@@ -65,72 +63,29 @@ public static class MediaEndpoints
         group.MapGet("/", async (
             string? query,
             string? cursor,
-            IEntityCatalog entities,
+            MediaService media,
             CancellationToken cancellationToken) =>
         {
-            var response = await entities.ListAsync(kind, query, cursor, cancellationToken);
-            return ContractMapper.ToMediaListResponse(response);
+            return await list(media, new EntityListQuery(null, query, cursor), cancellationToken);
         })
             .WithName($"List{tag}")
-            .WithSummary($"Lists {kind.Code} media entities through the global entity projection.");
+            .WithSummary($"Lists {kindCode} media entities through the application layer.");
 
         group.MapGet("/{id:guid}", async (
             Guid id,
-            IEntityCatalog entities,
-            IEntityDetails details,
+            MediaService media,
             CancellationToken cancellationToken) =>
         {
-            var entity = await GetTypedMediaDetailAsync(id, kind, details, cancellationToken);
-            if (entity is null)
-            {
-                return Results.NotFound(new ApiProblem(
-                    $"{kind.Code}_not_found",
-                    $"{tag} item '{id}' was not found."));
-            }
-
-            var childItems = children is null
-                ? []
-                : await entities.ListChildrenAsync(id, children.Value.Relationship, children.Value.ChildKind, cancellationToken);
-
-            return Results.Ok(toDetailContract(entity, childItems));
+            var detail = await get(media, id, cancellationToken);
+            return detail is null
+                ? Results.NotFound(new ApiProblem(
+                    $"{kindCode}_not_found",
+                    $"{tag} item '{id}' was not found."))
+                : Results.Ok(detail);
         })
             .WithName($"Get{tag.TrimEnd('s')}")
-            .WithSummary($"Gets one {kind.Code} media entity.")
+            .WithSummary($"Gets one {kindCode} media entity through the application layer.")
             .Produces<TDetail>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
-    }
-
-    private static async Task<Entity?> GetTypedMediaDetailAsync(
-        Guid id,
-        IEntityKind kind,
-        IEntityDetails details,
-        CancellationToken cancellationToken)
-    {
-        if (kind == EntityKindRegistry.Image)
-        {
-            return await details.GetImageAsync(id, cancellationToken);
-        }
-
-        if (kind == EntityKindRegistry.Gallery)
-        {
-            return await details.GetGalleryAsync(id, cancellationToken);
-        }
-
-        if (kind == EntityKindRegistry.Book)
-        {
-            return await details.GetBookAsync(id, cancellationToken);
-        }
-
-        if (kind == EntityKindRegistry.AudioLibrary)
-        {
-            return await details.GetAudioLibraryAsync(id, cancellationToken);
-        }
-
-        if (kind == EntityKindRegistry.AudioTrack)
-        {
-            return await details.GetAudioTrackAsync(id, cancellationToken);
-        }
-
-        return null;
     }
 }

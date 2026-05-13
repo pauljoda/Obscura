@@ -1,4 +1,3 @@
-using Obscura.Api.Mapping;
 using Obscura.Application.Entities;
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.System;
@@ -25,8 +24,7 @@ public static class EntityEndpoints
                     return Results.BadRequest(problem);
                 }
 
-                var response = await entities.ListAsync(new EntityListQuery(entityKind, query, cursor), cancellationToken);
-                return Results.Ok(ContractMapper.ToEntityListResponse(response));
+                return Results.Ok(await entities.ListAsync(new EntityListQuery(entityKind, query, cursor), cancellationToken));
             })
             .WithName("ListEntities")
             .WithSummary("Lists global entities with optional kind, search, and cursor filters.")
@@ -44,7 +42,7 @@ public static class EntityEndpoints
                     ? Results.NotFound(new ApiProblem(
                         "entity_not_found",
                         $"Entity '{id}' was not found."))
-                    : Results.Ok(ContractMapper.ToEntityCard(entity));
+                    : Results.Ok(entity);
             })
             .WithName("GetEntity")
             .WithSummary("Gets one global entity by id.")
@@ -65,7 +63,7 @@ public static class EntityEndpoints
                     ? Results.NotFound(new ApiProblem(
                         "entity_not_found",
                         $"Entity '{id}' was not found."))
-                    : Results.Ok(ContractMapper.ToEntityCard(entity));
+                    : Results.Ok(entity);
             })
             .WithName("UpdateEntityRating")
             .WithSummary("Updates the shared rating capability for one entity.")
@@ -90,7 +88,7 @@ public static class EntityEndpoints
                     ? Results.NotFound(new ApiProblem(
                         "entity_not_found",
                         $"Entity '{id}' was not found."))
-                    : Results.Ok(ContractMapper.ToEntityCard(entity));
+                    : Results.Ok(entity);
             })
             .WithName("UpdateEntityFlags")
             .WithSummary("Updates shared boolean flags for one entity.")

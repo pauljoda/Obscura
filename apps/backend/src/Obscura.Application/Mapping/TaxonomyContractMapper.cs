@@ -3,7 +3,7 @@ using DomainPerson = Obscura.Domain.Taxonomy.Person;
 using DomainStudio = Obscura.Domain.Taxonomy.Studio;
 using DomainTag = Obscura.Domain.Taxonomy.Tag;
 
-namespace Obscura.Api.Mapping;
+namespace Obscura.Application.Mapping;
 
 /// <summary>
 /// Contains taxonomy-specific detail contract mapping for v2 person, studio, and tag routes.

@@ -1,9 +1,7 @@
-using Obscura.Api.Mapping;
+using Obscura.Application.Entities;
+using Obscura.Application.Taxonomy;
 using Obscura.Contracts.System;
 using Obscura.Contracts.Taxonomy;
-using Obscura.Domain.Entities;
-using Obscura.Domain.Interfaces;
-using Obscura.Domain.Taxonomy;
 
 namespace Obscura.Api.Endpoints;
 
@@ -15,20 +13,23 @@ public static class TaxonomyEndpoints
             routes,
             "/api/people",
             "People",
-            EntityKindRegistry.Person,
-            entity => ContractMapper.ToPersonDetail((Person)entity));
+            "person",
+            (taxonomy, query, cancellationToken) => taxonomy.ListPeopleAsync(query, cancellationToken),
+            (taxonomy, id, cancellationToken) => taxonomy.GetPersonAsync(id, cancellationToken));
         MapTaxonomyGroup<StudioDetail>(
             routes,
             "/api/studios",
             "Studios",
-            EntityKindRegistry.Studio,
-            entity => ContractMapper.ToStudioDetail((Studio)entity));
+            "studio",
+            (taxonomy, query, cancellationToken) => taxonomy.ListStudiosAsync(query, cancellationToken),
+            (taxonomy, id, cancellationToken) => taxonomy.GetStudioAsync(id, cancellationToken));
         MapTaxonomyGroup<TagDetail>(
             routes,
             "/api/tags",
             "Tags",
-            EntityKindRegistry.Tag,
-            entity => ContractMapper.ToTagDetail((Tag)entity));
+            "tag",
+            (taxonomy, query, cancellationToken) => taxonomy.ListTagsAsync(query, cancellationToken),
+            (taxonomy, id, cancellationToken) => taxonomy.GetTagAsync(id, cancellationToken));
 
         return routes;
     }
@@ -37,8 +38,9 @@ public static class TaxonomyEndpoints
         IEndpointRouteBuilder routes,
         string path,
         string tag,
-        IEntityKind kind,
-        Func<Entity, TDetail> toDetailContract)
+        string kindCode,
+        Func<TaxonomyService, EntityListQuery, CancellationToken, Task<TaxonomyListResponse>> list,
+        Func<TaxonomyService, Guid, CancellationToken, Task<TDetail?>> get)
         where TDetail : class
     {
         var group = routes.MapGroup(path)
@@ -47,57 +49,29 @@ public static class TaxonomyEndpoints
         group.MapGet("/", async (
             string? query,
             string? cursor,
-            IEntityCatalog entities,
+            TaxonomyService taxonomy,
             CancellationToken cancellationToken) =>
         {
-            var response = await entities.ListAsync(kind, query, cursor, cancellationToken);
-            return ContractMapper.ToTaxonomyListResponse(response);
+            return await list(taxonomy, new EntityListQuery(null, query, cursor), cancellationToken);
         })
             .WithName($"List{tag}")
-            .WithSummary($"Lists {kind.Code} entities through the global entity projection.");
+            .WithSummary($"Lists {kindCode} entities through the application layer.");
 
         group.MapGet("/{id:guid}", async (
             Guid id,
-            IEntityDetails details,
+            TaxonomyService taxonomy,
             CancellationToken cancellationToken) =>
         {
-            var entity = await GetTypedTaxonomyDetailAsync(id, kind, details, cancellationToken);
-            if (entity is null)
-            {
-                return Results.NotFound(new ApiProblem(
-                    $"{kind.Code}_not_found",
-                    $"{tag.TrimEnd('s')} '{id}' was not found."));
-            }
-
-            return Results.Ok(toDetailContract(entity));
+            var detail = await get(taxonomy, id, cancellationToken);
+            return detail is null
+                ? Results.NotFound(new ApiProblem(
+                    $"{kindCode}_not_found",
+                    $"{tag.TrimEnd('s')} '{id}' was not found."))
+                : Results.Ok(detail);
         })
             .WithName($"Get{tag.TrimEnd('s')}")
-            .WithSummary($"Gets one {kind.Code} entity.")
+            .WithSummary($"Gets one {kindCode} entity through the application layer.")
             .Produces<TDetail>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
-    }
-
-    private static async Task<Entity?> GetTypedTaxonomyDetailAsync(
-        Guid id,
-        IEntityKind kind,
-        IEntityDetails details,
-        CancellationToken cancellationToken)
-    {
-        if (kind == EntityKindRegistry.Person)
-        {
-            return await details.GetPersonAsync(id, cancellationToken);
-        }
-
-        if (kind == EntityKindRegistry.Studio)
-        {
-            return await details.GetStudioAsync(id, cancellationToken);
-        }
-
-        if (kind == EntityKindRegistry.Tag)
-        {
-            return await details.GetTagAsync(id, cancellationToken);
-        }
-
-        return null;
     }
 }

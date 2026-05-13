@@ -1,4 +1,3 @@
-using Obscura.Api.Mapping;
 using Obscura.Application.Collections;
 using Obscura.Application.Entities;
 using Obscura.Contracts.Collections;
@@ -20,8 +19,7 @@ public static class CollectionEndpoints
             CollectionService collections,
             CancellationToken cancellationToken) =>
         {
-            var response = await collections.ListAsync(new EntityListQuery(EntityKindRegistry.Collection, query, cursor), cancellationToken);
-            return ContractMapper.ToCollectionListResponse(response);
+            return await collections.ListAsync(new EntityListQuery(EntityKindRegistry.Collection, query, cursor), cancellationToken);
         })
             .WithName("ListCollections")
             .WithSummary("Lists collection entities through the global entity projection.");
@@ -39,7 +37,7 @@ public static class CollectionEndpoints
                     $"Collection '{id}' was not found."));
             }
 
-            return Results.Ok(ContractMapper.ToCollectionDetail(collection));
+            return Results.Ok(collection);
         })
             .WithName("GetCollection")
             .WithSummary("Gets one collection entity with its projected items.")

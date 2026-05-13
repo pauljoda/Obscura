@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\Obscura.Contracts\Obscura.Contracts.csproj" />
     <ProjectReference Include="..\Obscura.Domain\Obscura.Domain.csproj" />
   </ItemGroup>
 

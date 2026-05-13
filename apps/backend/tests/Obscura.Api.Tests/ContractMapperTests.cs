@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Obscura.Api.Mapping;
+using Obscura.Application.Mapping;
 using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Media;

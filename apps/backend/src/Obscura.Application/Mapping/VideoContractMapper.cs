@@ -4,7 +4,7 @@ using DomainMarker = Obscura.Domain.Capabilities.EntityMarker;
 using DomainSubtitle = Obscura.Domain.Capabilities.EntitySubtitle;
 using DomainVideo = Obscura.Domain.Media.Video;
 
-namespace Obscura.Api.Mapping;
+namespace Obscura.Application.Mapping;
 
 /// <summary>
 /// Contains video-specific detail contract mapping for v2 video routes.

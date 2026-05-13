@@ -7,7 +7,7 @@ using DomainBook = Obscura.Domain.Media.Book;
 using DomainGallery = Obscura.Domain.Media.Gallery;
 using DomainImage = Obscura.Domain.Media.Image;
 
-namespace Obscura.Api.Mapping;
+namespace Obscura.Application.Mapping;
 
 /// <summary>
 /// Contains media-specific detail contract mapping for v2 image, gallery, book, and audio routes.

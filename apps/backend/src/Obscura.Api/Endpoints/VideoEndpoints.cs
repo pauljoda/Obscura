@@ -1,4 +1,3 @@
-using Obscura.Api.Mapping;
 using Obscura.Application.Videos;
 using Obscura.Contracts.System;
 using Obscura.Contracts.Videos;
@@ -16,7 +15,7 @@ public static class VideoEndpoints
         group.MapGet("/", async (
             VideoService videos,
             CancellationToken cancellationToken) =>
-            ContractMapper.ToVideoListResponse(await videos.ListVideosAsync(cancellationToken)))
+            await videos.ListVideosAsync(cancellationToken))
             .WithName("ListVideos")
             .WithSummary("Lists video entities through the video domain facade.");
 
@@ -31,7 +30,7 @@ public static class VideoEndpoints
                     ? Results.NotFound(new ApiProblem(
                         "video_not_found",
                         $"Video '{id}' was not found."))
-                    : Results.Ok(ContractMapper.ToVideoDetail(video));
+                    : Results.Ok(video);
             })
             .WithName("GetVideo")
             .WithSummary("Gets one video detail record.")

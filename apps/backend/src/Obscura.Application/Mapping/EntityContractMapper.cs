@@ -24,7 +24,7 @@ using ContractEntitySubtitle = Obscura.Contracts.Entities.EntitySubtitle;
 using ContractEntityUrl = Obscura.Contracts.Entities.EntityUrl;
 using ContractRating = Obscura.Contracts.Entities.Rating;
 
-namespace Obscura.Api.Mapping;
+namespace Obscura.Application.Mapping;
 
 /// <summary>
 /// Contains shared entity and list-response contract mapping for v2 API routes.

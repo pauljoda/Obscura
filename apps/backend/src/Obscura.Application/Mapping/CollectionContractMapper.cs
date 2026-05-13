@@ -3,7 +3,7 @@ using Obscura.Domain.Entities;
 using DomainCollection = Obscura.Domain.Media.Collection;
 using DomainEntityLibrary = Obscura.Domain.Media.EntityLibrary;
 
-namespace Obscura.Api.Mapping;
+namespace Obscura.Application.Mapping;
 
 /// <summary>
 /// Contains collection-specific detail contract mapping for v2 collection routes.

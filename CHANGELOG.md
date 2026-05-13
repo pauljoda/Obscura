@@ -123,6 +123,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Split the v2 .NET entity projection infrastructure into focused partial modules for entry-point projection, typed detail hydration, hierarchy loading, capability assembly, and capability-family table readers.
 - Split expanded v2 EF model configuration by data family so capability, media, taxonomy, collection, and system table mappings live in focused infrastructure modules.
 - Split the legacy non-video media import SQL into collection, gallery, image, book, and audio fragments, and documented the public import/reset SQL holders.
+- Moved v2 API contract mapping and media/taxonomy use-case orchestration into the Application layer so API endpoints stay focused on HTTP routing and infrastructure stays below the application boundary.
 - Updated v2 legacy import SQL to populate shared capability tables for descriptions, dates, technical metadata, sources, stats, progress, positions, classifications, fingerprints, playback, and minimal media detail rows.
 - Changed v2 media, taxonomy, and collection detail APIs to use typed aggregate hydrators so flat kind-specific fields are available alongside shared capabilities.
 - Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.

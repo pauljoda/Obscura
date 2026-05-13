@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Obscura.Application.Collections;
 using Obscura.Application.Entities;
+using Obscura.Application.Media;
+using Obscura.Application.Taxonomy;
 using Obscura.Application.Videos;
 
 namespace Obscura.Application;
@@ -20,6 +22,8 @@ public static class DependencyInjection
         services.AddScoped<EntityService>();
         services.AddScoped<VideoService>();
         services.AddScoped<CollectionService>();
+        services.AddScoped<MediaService>();
+        services.AddScoped<TaxonomyService>();
 
         return services;
     }

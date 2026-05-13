@@ -1,6 +1,8 @@
+using Obscura.Application.Mapping;
+using Obscura.Contracts.Series;
+using Obscura.Contracts.Videos;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Interfaces;
-using Obscura.Domain.Media;
 
 namespace Obscura.Application.Videos;
 
@@ -24,33 +26,45 @@ public sealed class VideoService
     /// Lists video entity roots.
     /// </summary>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>A page of video entities.</returns>
-    public Task<EntityPage> ListVideosAsync(CancellationToken cancellationToken) =>
-        _videos.ListVideosAsync(cancellationToken);
+    /// <returns>API-ready video list response.</returns>
+    public async Task<VideoListResponse> ListVideosAsync(CancellationToken cancellationToken)
+    {
+        var page = await _videos.ListVideosAsync(cancellationToken);
+        return ContractMapper.ToVideoListResponse(page);
+    }
 
     /// <summary>
     /// Gets one video aggregate.
     /// </summary>
     /// <param name="id">Video entity identifier.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>The video aggregate, or null when missing.</returns>
-    public Task<Video?> GetVideoAsync(Guid id, CancellationToken cancellationToken) =>
-        _videos.GetVideoAsync(id, cancellationToken);
+    /// <returns>API-ready video detail contract, or null when missing.</returns>
+    public async Task<VideoDetail?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var video = await _videos.GetVideoAsync(id, cancellationToken);
+        return video is null ? null : ContractMapper.ToVideoDetail(video);
+    }
 
     /// <summary>
     /// Lists video series entity roots.
     /// </summary>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>A page of video series entities.</returns>
-    public Task<EntityPage> ListSeriesAsync(CancellationToken cancellationToken) =>
-        _videos.ListSeriesAsync(cancellationToken);
+    /// <returns>API-ready video-series list response.</returns>
+    public async Task<VideoSeriesListResponse> ListSeriesAsync(CancellationToken cancellationToken)
+    {
+        var page = await _videos.ListSeriesAsync(cancellationToken);
+        return ContractMapper.ToVideoSeriesListResponse(page);
+    }
 
     /// <summary>
     /// Gets one video series aggregate.
     /// </summary>
     /// <param name="id">Video series entity identifier.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>The video series aggregate, or null when missing.</returns>
-    public Task<VideoSeries?> GetSeriesAsync(Guid id, CancellationToken cancellationToken) =>
-        _videos.GetSeriesAsync(id, cancellationToken);
+    /// <returns>API-ready video-series detail contract, or null when missing.</returns>
+    public async Task<VideoSeriesDetail?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var series = await _videos.GetSeriesAsync(id, cancellationToken);
+        return series is null ? null : ContractMapper.ToVideoSeriesDetail(series);
+    }
 }

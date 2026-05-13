@@ -2,7 +2,7 @@ using Obscura.Contracts.Series;
 using Obscura.Domain.Entities;
 using DomainVideoSeries = Obscura.Domain.Media.VideoSeries;
 
-namespace Obscura.Api.Mapping;
+namespace Obscura.Application.Mapping;
 
 /// <summary>
 /// Contains video-series-specific detail contract mapping for v2 series routes.

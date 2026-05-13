@@ -1,7 +1,8 @@
 using Obscura.Application.Entities;
+using Obscura.Application.Mapping;
+using Obscura.Contracts.Collections;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Interfaces;
-using Obscura.Domain.Media;
 
 namespace Obscura.Application.Collections;
 
@@ -28,18 +29,22 @@ public sealed class CollectionService
     /// </summary>
     /// <param name="query">List query; only search and cursor are honored because this service is collection-specific.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>A page of collection entity roots.</returns>
-    public Task<EntityPage> ListAsync(EntityListQuery query, CancellationToken cancellationToken) =>
-        _entities.ListAsync(EntityKindRegistry.Collection, query.Search, query.Cursor, cancellationToken);
+    /// <returns>API-ready collection list response.</returns>
+    public async Task<CollectionListResponse> ListAsync(EntityListQuery query, CancellationToken cancellationToken)
+    {
+        var page = await _entities.ListAsync(EntityKindRegistry.Collection, query.Search, query.Cursor, cancellationToken);
+        return ContractMapper.ToCollectionListResponse(page);
+    }
 
     /// <summary>
     /// Gets a collection and expands its collection-item links.
     /// </summary>
     /// <param name="id">Collection entity identifier.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>The collection aggregate, or null when the entity is missing or not a collection.</returns>
-    public async Task<Collection?> GetAsync(Guid id, CancellationToken cancellationToken)
+    /// <returns>API-ready collection detail contract, or null when the entity is missing or not a collection.</returns>
+    public async Task<CollectionDetail?> GetAsync(Guid id, CancellationToken cancellationToken)
     {
-        return await _details.GetCollectionAsync(id, cancellationToken);
+        var collection = await _details.GetCollectionAsync(id, cancellationToken);
+        return collection is null ? null : ContractMapper.ToCollectionDetail(collection);
     }
 }
