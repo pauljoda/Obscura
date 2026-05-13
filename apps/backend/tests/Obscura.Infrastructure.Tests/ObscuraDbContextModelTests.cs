@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
+using Obscura.Domain.Media;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
 
@@ -109,6 +110,19 @@ public sealed class ObscuraDbContextModelTests
         Assert.Contains("relationship IN", index!.GetFilter(), StringComparison.OrdinalIgnoreCase);
         Assert.Contains(EntityRelationshipRegistry.Chapter.Code, index.GetFilter(), StringComparison.OrdinalIgnoreCase);
         Assert.Contains(EntityRelationshipRegistry.Page.Code, index.GetFilter(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void GalleryDetailsDoNotKeepLegacyPhotographerMetadata()
+    {
+        Assert.Null(typeof(Gallery).GetProperty("Photographer"));
+        Assert.Null(typeof(GalleryDetailRow).GetProperty("Photographer"));
+
+        using var db = CreateContext();
+        var modelEntity = db.Model.FindEntityType(typeof(GalleryDetailRow));
+
+        Assert.NotNull(modelEntity);
+        Assert.DoesNotContain(modelEntity!.GetProperties(), property => property.GetColumnName() == "photographer");
     }
 
     [Theory]

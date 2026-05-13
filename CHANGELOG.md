@@ -168,6 +168,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Book and gallery scans now reuse the shared metadata relation helpers, preserving NSFW propagation while reducing duplicated studio, actor, and tag lookup logic.
 - Video series pagination and bulk-selection logic now lives in focused helpers, keeping the hierarchy page behavior unchanged while making future maintenance safer.
 
+### Removed
+
+- Removed the legacy v2 gallery photographer metadata field so gallery details no longer preserve Stash-parity-only data.
+
 ### Added
 
 - Added the initial .NET 10 backend solution with API, contracts, domain, infrastructure, and test projects for the global entity migration.

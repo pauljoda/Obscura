@@ -233,7 +233,6 @@ internal static class ExpandedV2ModelConfiguration
                 .HasConversion(value => value.ToCode(), value => value.DecodeAs<GalleryType>());
             entity.Property(row => row.FolderPath).HasColumnName("folder_path");
             entity.Property(row => row.ZipFilePath).HasColumnName("zip_file_path");
-            entity.Property(row => row.Photographer).HasColumnName("photographer");
             entity.Property(row => row.CoverImageEntityId).HasColumnName("cover_image_entity_id");
             entity.Property(row => row.ImageCount).HasColumnName("image_count");
             entity.HasIndex(row => row.FolderPath);

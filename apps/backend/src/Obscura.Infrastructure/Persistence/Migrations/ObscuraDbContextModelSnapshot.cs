@@ -1258,10 +1258,6 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("image_count");
 
-                    b.Property<string>("Photographer")
-                        .HasColumnType("text")
-                        .HasColumnName("photographer");
-
                     b.Property<string>("ZipFilePath")
                         .HasColumnType("text")
                         .HasColumnName("zip_file_path");

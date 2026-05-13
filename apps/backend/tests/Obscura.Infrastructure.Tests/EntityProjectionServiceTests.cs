@@ -490,7 +490,6 @@ public sealed class EntityProjectionServiceTests
             Date = "2026",
             GalleryType = GalleryType.Folder,
             FolderPath = "/media/gallery",
-            Photographer = "Photographer",
             ImageCount = 12
         });
         db.BookDetails.Add(new BookDetailRow

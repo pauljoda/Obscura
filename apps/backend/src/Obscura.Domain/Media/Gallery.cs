@@ -16,7 +16,6 @@ public sealed record Gallery : Entity
         string Title,
         string? Subtitle,
         GalleryType GalleryType,
-        string? Photographer,
         Guid? CoverImageId,
         IReadOnlyList<ICapability>? capabilities = null)
         : base(
@@ -37,15 +36,11 @@ public sealed record Gallery : Entity
             ])
     {
         this.GalleryType = GalleryType;
-        this.Photographer = Photographer;
         this.CoverImageId = CoverImageId;
     }
 
     /// <summary>Gallery storage shape.</summary>
     public GalleryType GalleryType { get; init; }
-
-    /// <summary>Optional photographer value when not represented as a person credit.</summary>
-    public string? Photographer { get; init; }
 
     /// <summary>Optional image entity selected as the gallery cover.</summary>
     public Guid? CoverImageId { get; init; }
@@ -53,8 +48,8 @@ public sealed record Gallery : Entity
     /// <summary>
     /// Creates a gallery from an already hydrated entity root.
     /// </summary>
-    public Gallery(Entity entity, GalleryType GalleryType, string? Photographer, Guid? CoverImageId)
-        : this(entity.Id, entity.Title, entity.Subtitle, GalleryType, Photographer, CoverImageId, entity.Capabilities)
+    public Gallery(Entity entity, GalleryType GalleryType, Guid? CoverImageId)
+        : this(entity.Id, entity.Title, entity.Subtitle, GalleryType, CoverImageId, entity.Capabilities)
     {
     }
 }

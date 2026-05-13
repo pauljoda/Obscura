@@ -37,7 +37,6 @@ public sealed class GalleryDetailRow
     public GalleryType GalleryType { get; set; } = GalleryType.Virtual;
     public string? FolderPath { get; set; }
     public string? ZipFilePath { get; set; }
-    public string? Photographer { get; set; }
     public Guid? CoverImageEntityId { get; set; }
     public int ImageCount { get; set; }
 }

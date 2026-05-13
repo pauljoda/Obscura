@@ -31,6 +31,12 @@ public sealed class TypedEntityModelTests
     }
 
     [Fact]
+    public void GalleryDoesNotExposeLegacyPhotographerMetadata()
+    {
+        Assert.Null(typeof(Gallery).GetProperty("Photographer"));
+    }
+
+    [Fact]
     public void PersonOwnsPersonSpecificDetailsAndMutators()
     {
         var person = new Person(

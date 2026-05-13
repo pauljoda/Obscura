@@ -342,7 +342,6 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
         return new Gallery(
             entity,
             detail?.GalleryType ?? GalleryType.Virtual,
-            detail?.Photographer,
             detail?.CoverImageEntityId);
     }
 
