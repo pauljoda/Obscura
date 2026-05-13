@@ -3,6 +3,7 @@ using Obscura.Contracts.System;
 using Obscura.Contracts.Taxonomy;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Interfaces;
+using Obscura.Domain.Taxonomy;
 
 namespace Obscura.Api.Endpoints;
 
@@ -10,18 +11,35 @@ public static class TaxonomyEndpoints
 {
     public static IEndpointRouteBuilder MapTaxonomyEndpoints(this IEndpointRouteBuilder routes)
     {
-        MapTaxonomyGroup(routes, "/api/people", "People", EntityKindRegistry.Person);
-        MapTaxonomyGroup(routes, "/api/studios", "Studios", EntityKindRegistry.Studio);
-        MapTaxonomyGroup(routes, "/api/tags", "Tags", EntityKindRegistry.Tag);
+        MapTaxonomyGroup<PersonDetail>(
+            routes,
+            "/api/people",
+            "People",
+            EntityKindRegistry.Person,
+            entity => ContractMapper.ToPersonDetail((Person)entity));
+        MapTaxonomyGroup<StudioDetail>(
+            routes,
+            "/api/studios",
+            "Studios",
+            EntityKindRegistry.Studio,
+            entity => ContractMapper.ToStudioDetail((Studio)entity));
+        MapTaxonomyGroup<TagDetail>(
+            routes,
+            "/api/tags",
+            "Tags",
+            EntityKindRegistry.Tag,
+            entity => ContractMapper.ToTagDetail((Tag)entity));
 
         return routes;
     }
 
-    private static void MapTaxonomyGroup(
+    private static void MapTaxonomyGroup<TDetail>(
         IEndpointRouteBuilder routes,
         string path,
         string tag,
-        IEntityKind kind)
+        IEntityKind kind,
+        Func<Entity, TDetail> toDetailContract)
+        where TDetail : class
     {
         var group = routes.MapGroup(path)
             .WithTags(tag);
@@ -51,11 +69,11 @@ public static class TaxonomyEndpoints
                     $"{tag.TrimEnd('s')} '{id}' was not found."));
             }
 
-            return Results.Ok(ContractMapper.ToTaxonomyDetail(entity));
+            return Results.Ok(toDetailContract(entity));
         })
             .WithName($"Get{tag.TrimEnd('s')}")
             .WithSummary($"Gets one {kind.Code} entity.")
-            .Produces<TaxonomyDetail>()
+            .Produces<TDetail>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
     }
 

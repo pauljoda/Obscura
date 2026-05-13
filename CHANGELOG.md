@@ -76,6 +76,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 .NET backend now hydrates typed entity details from shared capabilities first, reducing duplicated summary, date, source, count, progress, marker, subtitle, and technical fields across media types.
 - The v2 .NET API contract now exposes the expanded capability union so generated clients can read markers, subtitles, stats, dates, source data, technical metadata, progress, positions, and classifications from one shared shape.
 - The v2 .NET schema now has typed capability-first tables for stats, dates, technical metadata, source provenance, progress, positions, and classifications.
+- The v2 .NET media and taxonomy detail APIs now return object-specific detail contracts, so generated clients receive gallery, book, audio, person, studio, and tag shapes without unrelated optional fields.
 
 ### Docs
 
@@ -118,6 +119,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added typed v2 .NET EF rows, mappings, and projection hydration for the expanded capability-first tables.
 - Updated the v2 fresh-start reset to clear the expanded capability-first tables before preserving settings and library roots.
 - Renamed v2 video and series detail API text fields from summary to description so generated clients match the capability-first domain language.
+- Split v2 .NET media and taxonomy contracts plus API mappers by entity type, replacing generic catch-all detail records with modular object-specific detail records.
 - Updated v2 legacy import SQL to populate shared capability tables for descriptions, dates, technical metadata, sources, stats, progress, positions, classifications, fingerprints, playback, and minimal media detail rows.
 - Changed v2 media, taxonomy, and collection detail APIs to use typed aggregate hydrators so flat kind-specific fields are available alongside shared capabilities.
 - Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.

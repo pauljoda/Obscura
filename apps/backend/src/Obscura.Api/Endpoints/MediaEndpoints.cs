@@ -3,6 +3,7 @@ using Obscura.Contracts.Media;
 using Obscura.Contracts.System;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Interfaces;
+using Obscura.Domain.Media;
 
 namespace Obscura.Api.Endpoints;
 
@@ -10,21 +11,53 @@ public static class MediaEndpoints
 {
     public static IEndpointRouteBuilder MapMediaEndpoints(this IEndpointRouteBuilder routes)
     {
-        MapMediaGroup(routes, "/api/images", "Images", EntityKindRegistry.Image, null);
-        MapMediaGroup(routes, "/api/galleries", "Galleries", EntityKindRegistry.Gallery, (EntityRelationshipRegistry.Gallery, EntityKindRegistry.Image));
-        MapMediaGroup(routes, "/api/books", "Books", EntityKindRegistry.Book, null);
-        MapMediaGroup(routes, "/api/audio-libraries", "AudioLibraries", EntityKindRegistry.AudioLibrary, (EntityRelationshipRegistry.AudioLibrary, EntityKindRegistry.AudioTrack));
-        MapMediaGroup(routes, "/api/audio-tracks", "AudioTracks", EntityKindRegistry.AudioTrack, null);
+        MapMediaGroup<ImageDetail>(
+            routes,
+            "/api/images",
+            "Images",
+            EntityKindRegistry.Image,
+            null,
+            (entity, _) => ContractMapper.ToImageDetail((Image)entity));
+        MapMediaGroup<GalleryDetail>(
+            routes,
+            "/api/galleries",
+            "Galleries",
+            EntityKindRegistry.Gallery,
+            (EntityRelationshipRegistry.Gallery, EntityKindRegistry.Image),
+            (entity, childItems) => ContractMapper.ToGalleryDetail((Gallery)entity, childItems));
+        MapMediaGroup<BookDetail>(
+            routes,
+            "/api/books",
+            "Books",
+            EntityKindRegistry.Book,
+            null,
+            (entity, _) => ContractMapper.ToBookDetail((Book)entity));
+        MapMediaGroup<AudioLibraryDetail>(
+            routes,
+            "/api/audio-libraries",
+            "AudioLibraries",
+            EntityKindRegistry.AudioLibrary,
+            (EntityRelationshipRegistry.AudioLibrary, EntityKindRegistry.AudioTrack),
+            (entity, childItems) => ContractMapper.ToAudioLibraryDetail((AudioLibrary)entity, childItems));
+        MapMediaGroup<AudioTrackDetail>(
+            routes,
+            "/api/audio-tracks",
+            "AudioTracks",
+            EntityKindRegistry.AudioTrack,
+            null,
+            (entity, _) => ContractMapper.ToAudioTrackDetail((AudioTrack)entity));
 
         return routes;
     }
 
-    private static void MapMediaGroup(
+    private static void MapMediaGroup<TDetail>(
         IEndpointRouteBuilder routes,
         string path,
         string tag,
         IEntityKind kind,
-        (IEntityRelationship Relationship, IEntityKind ChildKind)? children)
+        (IEntityRelationship Relationship, IEntityKind ChildKind)? children,
+        Func<Entity, IReadOnlyList<Entity>, TDetail> toDetailContract)
+        where TDetail : class
     {
         var group = routes.MapGroup(path)
             .WithTags(tag);
@@ -59,11 +92,11 @@ public static class MediaEndpoints
                 ? []
                 : await entities.ListChildrenAsync(id, children.Value.Relationship, children.Value.ChildKind, cancellationToken);
 
-            return Results.Ok(ContractMapper.ToMediaDetail(entity, childItems));
+            return Results.Ok(toDetailContract(entity, childItems));
         })
             .WithName($"Get{tag.TrimEnd('s')}")
             .WithSummary($"Gets one {kind.Code} media entity.")
-            .Produces<MediaDetail>()
+            .Produces<TDetail>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
     }
 

@@ -57,7 +57,7 @@ public sealed class ContractMapperTests
     }
 
     [Fact]
-    public void MediaDetailSerializesTypedMediaFields()
+    public void GalleryDetailSerializesOnlyGalleryFields()
     {
         var gallery = new Gallery(
             new Entity(
@@ -69,14 +69,16 @@ public sealed class ContractMapperTests
             GalleryType.Folder,
             Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"));
 
-        using var document = JsonDocument.Parse(JsonSerializer.Serialize(ContractMapper.ToMediaDetail(gallery, []), JsonOptions));
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(ContractMapper.ToGalleryDetail(gallery, []), JsonOptions));
 
         Assert.Equal("folder", document.RootElement.GetProperty("galleryType").GetString());
         Assert.Equal("dddddddd-dddd-dddd-dddd-dddddddddddd", document.RootElement.GetProperty("coverImageId").GetGuid().ToString());
+        Assert.False(document.RootElement.TryGetProperty("bookType", out _));
+        Assert.False(document.RootElement.TryGetProperty("embeddedArtist", out _));
     }
 
     [Fact]
-    public void TaxonomyDetailSerializesTypedTaxonomyFields()
+    public void TagDetailSerializesOnlyTagFields()
     {
         var tag = new Tag(
             new Entity(
@@ -88,10 +90,12 @@ public sealed class ContractMapperTests
             Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
             IgnoreAutoTag: true);
 
-        using var document = JsonDocument.Parse(JsonSerializer.Serialize(ContractMapper.ToTaxonomyDetail(tag), JsonOptions));
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(ContractMapper.ToTagDetail(tag), JsonOptions));
 
         Assert.Equal("ffffffff-ffff-ffff-ffff-ffffffffffff", document.RootElement.GetProperty("parentTagId").GetGuid().ToString());
         Assert.True(document.RootElement.GetProperty("ignoreAutoTag").GetBoolean());
+        Assert.False(document.RootElement.TryGetProperty("gender", out _));
+        Assert.False(document.RootElement.TryGetProperty("parentStudioId", out _));
     }
 
     [Fact]
