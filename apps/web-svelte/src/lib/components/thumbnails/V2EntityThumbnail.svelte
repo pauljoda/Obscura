@@ -55,20 +55,28 @@
 
         node.style.setProperty("--title-scale", "1");
         node.style.setProperty("--title-travel", "0px");
+        node.style.setProperty("--title-duration", "6s");
         node.dataset.compressed = "false";
         node.dataset.overflow = "false";
 
+        const indicatorWidth = 10;
         const width = node.clientWidth;
+        const availableWidth = Math.max(1, width - indicatorWidth);
         const scrollWidth = text.scrollWidth;
         if (width <= 0 || scrollWidth <= 0) return;
-        const rawOverflow = scrollWidth > width + 1;
-        const scale = Math.max(0.78, Math.min(1, width / scrollWidth));
-        const travel = Math.max(0, Math.ceil(scrollWidth * scale - width));
+        const rawOverflow = scrollWidth > availableWidth + 1;
+        const scale = Math.max(0.78, Math.min(1, availableWidth / scrollWidth));
+        const scaledWidth = scrollWidth * scale;
+        const clippedTravel = Math.max(0, Math.ceil(scaledWidth - availableWidth));
+        const compressedTravel = rawOverflow ? Math.max(8, Math.ceil(width - availableWidth)) : 0;
+        const travel = Math.max(clippedTravel, compressedTravel);
+        const duration = Math.max(5, Math.min(12, travel / 16 + 5));
 
         node.style.setProperty("--title-scale", String(scale));
         node.style.setProperty("--title-travel", `${travel}px`);
+        node.style.setProperty("--title-duration", `${duration}s`);
         node.dataset.compressed = rawOverflow ? "true" : "false";
-        node.dataset.overflow = travel > 1 ? "true" : "false";
+        node.dataset.overflow = rawOverflow ? "true" : "false";
       });
     }
 
@@ -121,14 +129,18 @@
   class:is-hovering={pointerRatio !== null}
   class:is-selected={selected}
   aria-label={card.entity.title}
-  onpointermove={handlePointerMove}
-  onpointerleave={clearHover}
   onblur={clearHover}
   onfocus={() => {
     pointerRatio = hoverable ? 0.5 : null;
   }}
 >
-  <div class="media" style:aspect-ratio={aspectRatio}>
+  <div
+    class="media"
+    role="presentation"
+    style:aspect-ratio={aspectRatio}
+    onpointermove={handlePointerMove}
+    onpointerleave={clearHover}
+  >
     {#if asset}
       <img src={asset.src} alt={asset.alt} loading="lazy" style:object-fit={imageFit} />
     {:else}
@@ -173,7 +185,7 @@
 
   <div class="details">
     <div class="copy">
-      <h3 class="ticker-title" use:fitTitle={card.entity.title} title={card.entity.title}>
+      <h3 class="ticker-title" use:fitTitle={card.entity.title} aria-label={card.entity.title}>
         <span class="title-text">{card.entity.title}</span>
       </h3>
       {#if card.entity.subtitle}
@@ -429,7 +441,6 @@
     margin: 0;
     min-width: 0;
     overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
   }
 
@@ -446,24 +457,19 @@
   }
 
   :global(.ticker-title[data-compressed="true"]) {
-    padding-right: 1.28rem;
+    padding-right: 0.72rem;
   }
 
   :global(.ticker-title[data-compressed="true"])::after {
     position: absolute;
-    top: 0;
+    top: 0.1rem;
     right: 0;
-    bottom: 0;
-    display: grid;
-    align-items: center;
-    justify-items: end;
-    width: 1.35rem;
-    border-right: 2px solid rgb(196 154 90 / 0.72);
-    background: linear-gradient(to right, rgb(10 12 15 / 0), #0a0b0d 34%);
-    color: rgb(196 154 90 / 0.98);
-    content: ">>";
-    font-size: inherit;
-    line-height: inherit;
+    bottom: 0.12rem;
+    width: 0.55rem;
+    border-right: 1px solid rgb(196 154 90 / 0.55);
+    background: linear-gradient(to right, rgb(10 12 15 / 0), #0a0b0d 72%);
+    content: "";
+    opacity: 0.86;
     pointer-events: none;
   }
 
@@ -482,7 +488,7 @@
   }
 
   :global(.ticker-title[data-overflow="true"]:is(:hover, :focus-visible)) .title-text {
-    animation: title-ticker 7s linear infinite;
+    animation: title-ticker var(--title-duration, 7s) linear infinite;
   }
 
   @keyframes title-ticker {
@@ -506,6 +512,7 @@
     font-size: 0.76rem;
     line-height: 1.2;
     align-self: end;
+    text-overflow: ellipsis;
   }
 
   @media (prefers-reduced-motion: reduce) {

@@ -89,6 +89,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 thumbnail lab now supports multi-select cards with a top-left checkbox that appears on hover, focus, or selected state.
 - The v2 thumbnail lab now animates overflowing card titles on hover so users can read the full title without expanding the card.
 - Overflowing v2 thumbnail titles now show a clearer brass ticker indicator and reliably measure the full title before starting the hover animation.
+- V2 thumbnail title hover now uses a subtler overflow edge and keeps scrub handling inside the image area so title ticker hover is not intercepted.
+- V2 thumbnail title hover no longer shows the browser tooltip, and compressed titles now move visibly when the ticker starts.
 
 ### Docs
 
@@ -160,6 +162,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added selectable thumbnail state to the shared v2 card component and wired the lab page to track multiple selected entities.
 - Added measured title ticker behavior to the shared v2 thumbnail so overflowing names scroll in place on hover.
 - Fixed v2 thumbnail title overflow detection by measuring the intrinsic title text width and showing a visible ticker affordance when text compresses.
+- Scoped thumbnail scrub pointer handling to the media area and simplified the title overflow affordance to a subtle brass edge.
+- Removed the native title tooltip from v2 thumbnail titles and prevented CSS ellipsis from blocking the custom ticker track.
 - Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.
 - Job Control failures can now be individually suppressed by error type — clicking Suppress on any failed job hides all jobs sharing the same error fingerprint until you click Show all or clear all failures.
 - Job Control completed jobs now show a duration column so you can see how long each run took, plus a retry indicator when a job needed more than one attempt.
