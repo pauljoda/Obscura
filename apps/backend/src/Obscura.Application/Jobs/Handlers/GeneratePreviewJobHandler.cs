@@ -11,34 +11,25 @@ namespace Obscura.Application.Jobs.Handlers;
 public sealed class GeneratePreviewJobHandler(
     ILogger<GeneratePreviewJobHandler> logger,
     IMediaAssetGenerator assets,
-    ILibraryScanPersistence persistence) : IJobHandler
+    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence)
 {
-    public JobType Type => JobType.GeneratePreview;
+    public override JobType Type => JobType.GeneratePreview;
 
-    public async Task HandleAsync(JobContext context, CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(
+        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken)
     {
-        var entityId = ParseEntityId(context.Job.TargetEntityId);
-        if (entityId is null) return;
-
-        var filePath = await persistence.GetSourceFilePathAsync(entityId.Value, cancellationToken);
-        if (filePath is null || !File.Exists(filePath))
-        {
-            logger.LogWarning("GeneratePreview: source file not found for {EntityId}", entityId);
-            return;
-        }
-
-        var settings = await persistence.GetSettingsAsync(cancellationToken);
+        var settings = await Persistence.GetSettingsAsync(cancellationToken);
 
         await context.ReportProgressAsync(10, "Generating thumbnail", cancellationToken);
-        await GenerateThumbnailAsync(entityId.Value, filePath, settings, cancellationToken);
+        await GenerateThumbnailAsync(entityId, filePath, settings, cancellationToken);
 
         await context.ReportProgressAsync(40, "Generating preview clip", cancellationToken);
-        await GeneratePreviewClipAsync(entityId.Value, filePath, settings, cancellationToken);
+        await GeneratePreviewClipAsync(entityId, filePath, settings, cancellationToken);
 
         if (settings.GenerateTrickplay)
         {
             await context.ReportProgressAsync(60, "Generating trickplay sprites", cancellationToken);
-            await GenerateTrickplayAsync(entityId.Value, filePath, settings, cancellationToken);
+            await GenerateTrickplayAsync(entityId, filePath, settings, cancellationToken);
         }
 
         logger.LogInformation("GeneratePreview: completed for {Label}", context.Job.TargetLabel);
@@ -64,7 +55,7 @@ public sealed class GeneratePreviewJobHandler(
         if (success)
         {
             var size = new FileInfo(thumbPath).Length;
-            await persistence.UpsertEntityFileAsync(entityId, "thumbnail", thumbPath, "image/jpeg", size, cancellationToken);
+            await Persistence.UpsertEntityFileAsync(entityId, "thumbnail", thumbPath, "image/jpeg", size, cancellationToken);
         }
     }
 
@@ -81,7 +72,7 @@ public sealed class GeneratePreviewJobHandler(
         if (success)
         {
             var size = new FileInfo(previewPath).Length;
-            await persistence.UpsertEntityFileAsync(entityId, "preview", previewPath, "video/mp4", size, cancellationToken);
+            await Persistence.UpsertEntityFileAsync(entityId, "preview", previewPath, "video/mp4", size, cancellationToken);
         }
     }
 
@@ -117,7 +108,7 @@ public sealed class GeneratePreviewJobHandler(
         var vttPath = assets.VideoTrickplayVttPath(entityId);
         await WriteTrickplayVttAsync(entityId, vttPath, frameCount, interval, frameWidth, frameHeight, cancellationToken);
 
-        await persistence.UpsertEntityFileAsync(entityId, "trickplay", vttPath, "text/vtt", null, cancellationToken);
+        await Persistence.UpsertEntityFileAsync(entityId, "trickplay", vttPath, "text/vtt", null, cancellationToken);
     }
 
     private static async Task WriteTrickplayVttAsync(
@@ -147,7 +138,7 @@ public sealed class GeneratePreviewJobHandler(
 
     private async Task<(double? Duration, int? Width, int? Height)> GetDimensionsAsync(Guid entityId, CancellationToken cancellationToken)
     {
-        var tech = await persistence.GetEntityTechnicalAsync(entityId, cancellationToken);
+        var tech = await Persistence.GetEntityTechnicalAsync(entityId, cancellationToken);
         if (tech is null)
             return (null, null, null);
 
@@ -172,7 +163,4 @@ public sealed class GeneratePreviewJobHandler(
 
     private static string FormatVttTime(TimeSpan ts) =>
         $"{(int)ts.TotalHours:D2}:{ts.Minutes:D2}:{ts.Seconds:D2}.{ts.Milliseconds:D3}";
-
-    private static Guid? ParseEntityId(string? value) =>
-        Guid.TryParse(value, out var id) ? id : null;
 }

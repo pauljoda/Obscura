@@ -252,6 +252,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Media list API calls now share one query encoder across client and server fetchers, keeping repeated filters and pagination parameters consistent across library pages.
 - Book and gallery scans now reuse the shared metadata relation helpers, preserving NSFW propagation while reducing duplicated studio, actor, and tag lookup logic.
 - Video series pagination and bulk-selection logic now lives in focused helpers, keeping the hierarchy page behavior unchanged while making future maintenance safer.
+- Extracted shared job handler scaffolding into `EntityFileJobHandler` (entity ID parsing, source file validation) and `ScanJobHandler` (root ID parsing, root iteration with progress) base classes, reducing boilerplate across 11 handlers.
+- Collapsed three identical fingerprint handlers (`FingerprintVideoJobHandler`, `FingerprintImageJobHandler`, `FingerprintAudioJobHandler`) into one `FingerprintJobHandler` registered per media type via factory DI.
 
 ### Removed
 

@@ -12,37 +12,30 @@ public sealed class ExtractSubtitlesJobHandler(
     ILogger<ExtractSubtitlesJobHandler> logger,
     IMediaProbe mediaProbe,
     IMediaAssetGenerator assets,
-    ILibraryScanPersistence persistence) : IJobHandler
+    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence)
 {
-    public JobType Type => JobType.ExtractSubtitles;
+    public override JobType Type => JobType.ExtractSubtitles;
 
-    public async Task HandleAsync(JobContext context, CancellationToken cancellationToken)
+    protected override Task OnSourceFileNotFoundAsync(Guid entityId, CancellationToken cancellationToken) =>
+        Persistence.MarkSubtitlesExtractedAsync(entityId, cancellationToken);
+
+    protected override async Task ExecuteAsync(
+        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken)
     {
-        var entityId = ParseEntityId(context.Job.TargetEntityId);
-        if (entityId is null) return;
-
-        var filePath = await persistence.GetSourceFilePathAsync(entityId.Value, cancellationToken);
-        if (filePath is null || !File.Exists(filePath))
-        {
-            logger.LogWarning("ExtractSubtitles: source file not found for {EntityId}", entityId);
-            await persistence.MarkSubtitlesExtractedAsync(entityId.Value, cancellationToken);
-            return;
-        }
-
         await context.ReportProgressAsync(10, "Probing subtitle streams", cancellationToken);
 
         var streams = await mediaProbe.ProbeSubtitleStreamsAsync(filePath, cancellationToken);
         if (streams.Count == 0)
         {
             logger.LogInformation("ExtractSubtitles: no text subtitles in {Label}", context.Job.TargetLabel);
-            await persistence.MarkSubtitlesExtractedAsync(entityId.Value, cancellationToken);
+            await Persistence.MarkSubtitlesExtractedAsync(entityId, cancellationToken);
             await context.ReportProgressAsync(100, "No subtitles found", cancellationToken);
             return;
         }
 
         await context.ReportProgressAsync(30, $"Extracting {streams.Count} subtitle streams", cancellationToken);
 
-        var outputDir = assets.SubtitleDir(entityId.Value);
+        var outputDir = assets.SubtitleDir(entityId);
         var extractedPaths = await assets.ExtractSubtitlesAsync(filePath, outputDir, streams, cancellationToken);
 
         await context.ReportProgressAsync(80, "Recording subtitle tracks", cancellationToken);
@@ -58,18 +51,15 @@ public sealed class ExtractSubtitlesJobHandler(
             var matchingStream = streams.FirstOrDefault(s => s.StreamIndex.ToString() == indexStr);
             var label = matchingStream?.Title;
 
-            await persistence.UpsertSubtitleAsync(entityId.Value, language, label, "vtt",
+            await Persistence.UpsertSubtitleAsync(entityId, language, label, "vtt",
                 "embedded", path, matchingStream?.CodecName ?? "unknown", streamIndex, cancellationToken);
         }
 
-        await persistence.MarkSubtitlesExtractedAsync(entityId.Value, cancellationToken);
+        await Persistence.MarkSubtitlesExtractedAsync(entityId, cancellationToken);
 
         logger.LogInformation("ExtractSubtitles: extracted {Count} subtitle tracks from {Label}",
             extractedPaths.Count, context.Job.TargetLabel);
 
         await context.ReportProgressAsync(100, $"Extracted {extractedPaths.Count} subtitles", cancellationToken);
     }
-
-    private static Guid? ParseEntityId(string? value) =>
-        Guid.TryParse(value, out var id) ? id : null;
 }

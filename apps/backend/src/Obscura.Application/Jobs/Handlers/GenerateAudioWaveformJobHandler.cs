@@ -12,25 +12,16 @@ namespace Obscura.Application.Jobs.Handlers;
 public sealed class GenerateAudioWaveformJobHandler(
     ILogger<GenerateAudioWaveformJobHandler> logger,
     IMediaAssetGenerator assets,
-    ILibraryScanPersistence persistence) : IJobHandler
+    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence)
 {
-    public JobType Type => JobType.GenerateAudioWaveform;
+    public override JobType Type => JobType.GenerateAudioWaveform;
 
-    public async Task HandleAsync(JobContext context, CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(
+        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken)
     {
-        var entityId = ParseEntityId(context.Job.TargetEntityId);
-        if (entityId is null) return;
-
-        var filePath = await persistence.GetSourceFilePathAsync(entityId.Value, cancellationToken);
-        if (filePath is null || !File.Exists(filePath))
-        {
-            logger.LogWarning("GenerateAudioWaveform: source file not found for {EntityId}", entityId);
-            return;
-        }
-
         await context.ReportProgressAsync(10, "Generating waveform data", cancellationToken);
 
-        var probe = await GetDurationAsync(entityId.Value, cancellationToken);
+        var probe = await GetDurationAsync(entityId, cancellationToken);
         if (probe is null or <= 0)
         {
             logger.LogWarning("GenerateAudioWaveform: no duration for {EntityId}, skipping", entityId);
@@ -44,13 +35,13 @@ public sealed class GenerateAudioWaveformJobHandler(
             return;
         }
 
-        var outputPath = assets.AudioWaveformPath(entityId.Value);
+        var outputPath = assets.AudioWaveformPath(entityId);
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
         var json = JsonSerializer.Serialize(new { data = waveformData });
         await File.WriteAllTextAsync(outputPath, json, cancellationToken);
 
         var size = new FileInfo(outputPath).Length;
-        await persistence.UpsertEntityFileAsync(entityId.Value, "waveform", outputPath, "application/json", size, cancellationToken);
+        await Persistence.UpsertEntityFileAsync(entityId, "waveform", outputPath, "application/json", size, cancellationToken);
 
         logger.LogInformation("GenerateAudioWaveform: created waveform for {Label} ({Pixels} pixels)",
             context.Job.TargetLabel, waveformData.Length / 2);
@@ -60,10 +51,7 @@ public sealed class GenerateAudioWaveformJobHandler(
 
     private async Task<double?> GetDurationAsync(Guid entityId, CancellationToken cancellationToken)
     {
-        var tech = await persistence.GetEntityTechnicalAsync(entityId, cancellationToken);
+        var tech = await Persistence.GetEntityTechnicalAsync(entityId, cancellationToken);
         return tech?.DurationSeconds;
     }
-
-    private static Guid? ParseEntityId(string? value) =>
-        Guid.TryParse(value, out var id) ? id : null;
 }

@@ -11,26 +11,13 @@ namespace Obscura.Application.Jobs.Handlers;
 public sealed class ProbeVideoJobHandler(
     ILogger<ProbeVideoJobHandler> logger,
     IMediaProbe mediaProbe,
-    ILibraryScanPersistence persistence) : IJobHandler
+    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence)
 {
-    public JobType Type => JobType.ProbeVideo;
+    public override JobType Type => JobType.ProbeVideo;
 
-    public async Task HandleAsync(JobContext context, CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(
+        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken)
     {
-        var entityId = ParseEntityId(context.Job.TargetEntityId);
-        if (entityId is null)
-        {
-            logger.LogWarning("ProbeVideo: no target entity ID");
-            return;
-        }
-
-        var filePath = await persistence.GetSourceFilePathAsync(entityId.Value, cancellationToken);
-        if (filePath is null || !File.Exists(filePath))
-        {
-            logger.LogWarning("ProbeVideo: source file not found for {EntityId}", entityId);
-            return;
-        }
-
         await context.ReportProgressAsync(10, "Probing video metadata", cancellationToken);
 
         var probe = await mediaProbe.ProbeVideoAsync(filePath, cancellationToken);
@@ -40,7 +27,7 @@ public sealed class ProbeVideoJobHandler(
             return;
         }
 
-        await persistence.UpsertEntityTechnicalAsync(entityId.Value,
+        await Persistence.UpsertEntityTechnicalAsync(entityId,
             probe.DurationSeconds, probe.Width, probe.Height, probe.FrameRate, probe.BitRate,
             probe.SampleRate, probe.Channels, probe.Codec, probe.Container, null,
             cancellationToken);
@@ -50,7 +37,4 @@ public sealed class ProbeVideoJobHandler(
 
         await context.ReportProgressAsync(100, "Probe complete", cancellationToken);
     }
-
-    private static Guid? ParseEntityId(string? value) =>
-        Guid.TryParse(value, out var id) ? id : null;
 }

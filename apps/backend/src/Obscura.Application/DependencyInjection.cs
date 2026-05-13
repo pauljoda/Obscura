@@ -1,13 +1,16 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Obscura.Application.Collections;
 using Obscura.Application.Entities;
 using Obscura.Application.Jobs;
 using Obscura.Application.Jobs.Handlers;
+using Obscura.Application.Jobs.Ports;
 using Obscura.Application.Media;
 using Obscura.Application.Migrations;
 using Obscura.Application.Taxonomy;
 using Obscura.Application.Videos;
+using Obscura.Domain.Entities;
 
 namespace Obscura.Application;
 
@@ -52,10 +55,22 @@ public static class DependencyInjection
         services.AddTransient<IJobHandler, ProbeVideoJobHandler>();
         services.AddTransient<IJobHandler, ProbeAudioJobHandler>();
 
-        // Fingerprinting
-        services.AddTransient<IJobHandler, FingerprintVideoJobHandler>();
-        services.AddTransient<IJobHandler, FingerprintImageJobHandler>();
-        services.AddTransient<IJobHandler, FingerprintAudioJobHandler>();
+        // Fingerprinting (single handler, registered per job type)
+        services.AddTransient<IJobHandler>(sp => new FingerprintJobHandler(
+            JobType.FingerprintVideo,
+            sp.GetRequiredService<ILogger<FingerprintJobHandler>>(),
+            sp.GetRequiredService<IMediaHashing>(),
+            sp.GetRequiredService<ILibraryScanPersistence>()));
+        services.AddTransient<IJobHandler>(sp => new FingerprintJobHandler(
+            JobType.FingerprintImage,
+            sp.GetRequiredService<ILogger<FingerprintJobHandler>>(),
+            sp.GetRequiredService<IMediaHashing>(),
+            sp.GetRequiredService<ILibraryScanPersistence>()));
+        services.AddTransient<IJobHandler>(sp => new FingerprintJobHandler(
+            JobType.FingerprintAudio,
+            sp.GetRequiredService<ILogger<FingerprintJobHandler>>(),
+            sp.GetRequiredService<IMediaHashing>(),
+            sp.GetRequiredService<ILibraryScanPersistence>()));
 
         // Preview / asset generation
         services.AddTransient<IJobHandler, GeneratePreviewJobHandler>();

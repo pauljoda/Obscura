@@ -12,41 +12,26 @@ namespace Obscura.Application.Jobs.Handlers;
 public sealed class GenerateBookPageThumbnailJobHandler(
     ILogger<GenerateBookPageThumbnailJobHandler> logger,
     IMediaAssetGenerator assets,
-    ILibraryScanPersistence persistence) : IJobHandler
+    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence)
 {
-    public JobType Type => JobType.GenerateBookPageThumbnail;
+    public override JobType Type => JobType.GenerateBookPageThumbnail;
 
-    public async Task HandleAsync(JobContext context, CancellationToken cancellationToken)
+    protected override bool ValidateFilePath(string filePath)
     {
-        var entityId = ParseEntityId(context.Job.TargetEntityId);
-        if (entityId is null) return;
+        var parts = filePath.Split("::", 2, StringSplitOptions.None);
+        return parts.Length == 2 && File.Exists(parts[0]);
+    }
 
-        var sourcePath = await persistence.GetSourceFilePathAsync(entityId.Value, cancellationToken);
-        if (sourcePath is null)
-        {
-            logger.LogWarning("GenerateBookPageThumbnail: source path not found for {EntityId}", entityId);
-            return;
-        }
-
+    protected override async Task ExecuteAsync(
+        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken)
+    {
         await context.ReportProgressAsync(20, "Extracting page", cancellationToken);
 
-        var parts = sourcePath.Split("::", 2, StringSplitOptions.None);
-        if (parts.Length != 2)
-        {
-            logger.LogWarning("GenerateBookPageThumbnail: invalid source path format {Path}", sourcePath);
-            return;
-        }
-
+        var parts = filePath.Split("::", 2, StringSplitOptions.None);
         var archivePath = parts[0];
         var memberPath = parts[1];
 
-        if (!File.Exists(archivePath))
-        {
-            logger.LogWarning("GenerateBookPageThumbnail: archive not found {Path}", archivePath);
-            return;
-        }
-
-        var tempPath = Path.Combine(Path.GetTempPath(), $"obscura-page-{entityId.Value}{Path.GetExtension(memberPath)}");
+        var tempPath = Path.Combine(Path.GetTempPath(), $"obscura-page-{entityId}{Path.GetExtension(memberPath)}");
         try
         {
             if (!ExtractZipMember(archivePath, memberPath, tempPath))
@@ -57,13 +42,13 @@ public sealed class GenerateBookPageThumbnailJobHandler(
 
             await context.ReportProgressAsync(60, "Generating thumbnail", cancellationToken);
 
-            var thumbPath = assets.BookPageThumbnailPath(entityId.Value);
+            var thumbPath = assets.BookPageThumbnailPath(entityId);
             var success = await assets.GenerateImageThumbnailAsync(tempPath, thumbPath, 640, 3, cancellationToken);
 
             if (success)
             {
                 var size = new FileInfo(thumbPath).Length;
-                await persistence.UpsertEntityFileAsync(entityId.Value, "thumbnail", thumbPath, "image/jpeg", size, cancellationToken);
+                await Persistence.UpsertEntityFileAsync(entityId, "thumbnail", thumbPath, "image/jpeg", size, cancellationToken);
                 logger.LogInformation("GenerateBookPageThumbnail: created thumbnail for {Label}", context.Job.TargetLabel);
             }
         }
@@ -92,7 +77,4 @@ public sealed class GenerateBookPageThumbnailJobHandler(
             return false;
         }
     }
-
-    private static Guid? ParseEntityId(string? value) =>
-        Guid.TryParse(value, out var id) ? id : null;
 }
