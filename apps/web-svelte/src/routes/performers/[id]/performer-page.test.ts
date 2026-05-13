@@ -107,10 +107,6 @@ describe("performer detail page", () => {
     render(Page, {
       props: {
         data: {
-          initialCollapsed: false,
-          initialNsfwMode: "show",
-          lanAutoEnable: false,
-          awaitingBreakingConsent: false,
           performer: makePerformer() as unknown as Record<string, unknown> & {
             id: string;
             name: string;
@@ -172,10 +168,6 @@ describe("performer detail page", () => {
     render(Page, {
       props: {
         data: {
-          initialCollapsed: false,
-          initialNsfwMode: "show",
-          lanAutoEnable: false,
-          awaitingBreakingConsent: false,
           performer: makePerformer() as unknown as Record<string, unknown> & {
             id: string;
             name: string;

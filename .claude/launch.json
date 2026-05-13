@@ -17,7 +17,7 @@
     {
       "name": "web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@obscura/web-svelte", "exec", "vite", "dev", "--host", "--port", "8011"],
+      "runtimeArgs": ["--filter", "@obscura/web-svelte", "exec", "vite", "dev", "--host", "--port", "8008"],
       "port": 8011
     }
   ]

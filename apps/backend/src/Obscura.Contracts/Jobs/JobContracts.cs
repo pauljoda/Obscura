@@ -50,3 +50,10 @@ public sealed record JobCancelResponse(int Cancelled);
 /// </summary>
 /// <param name="Cleared">Number of failed job runs moved into the cancelled state.</param>
 public sealed record JobFailureClearResponse(int Cleared);
+
+/// <summary>
+/// API response returned after a bulk job operation such as rebuild-previews or backfill-fingerprints.
+/// </summary>
+/// <param name="Enqueued">Number of jobs queued.</param>
+/// <param name="Skipped">Number of entities skipped because a pending job already exists.</param>
+public sealed record BulkJobResponse(int Enqueued, int Skipped);

@@ -12,21 +12,32 @@
   import CommandPalette from "$lib/components/CommandPalette.svelte";
   import PlaylistController from "$lib/components/PlaylistController.svelte";
 
+  import type { NsfwMode } from "$lib/nsfw/cookie";
   import { provideNsfw } from "$lib/nsfw/store.svelte";
   import { provideAppChrome } from "$lib/stores/app-chrome.svelte";
   import { providePageSnapshots, type AppPageSnapshot } from "$lib/stores/page-snapshots.svelte";
   import { provideSearch } from "$lib/stores/search.svelte";
   import { providePlaylist } from "$lib/stores/playlist.svelte";
 
-  let { data, children: pageContent } = $props();
+  const defaultLayoutData: Required<
+    Pick<App.PageData, "initialNsfwMode" | "lanAutoEnable" | "initialCollapsed" | "awaitingBreakingConsent">
+  > = {
+    initialNsfwMode: "off" satisfies NsfwMode,
+    lanAutoEnable: false,
+    initialCollapsed: false,
+    awaitingBreakingConsent: false,
+  };
+
+  let { data = {}, children: pageContent } = $props();
+  const layoutData = $derived({ ...defaultLayoutData, ...data });
 
   // Wire all context providers once at the root. The stores themselves
   // attach keyboard listeners (Cmd+K, ⌘⇧Z) via $effect.root on client boot.
   provideNsfw(() => ({
-    initialMode: data.initialNsfwMode,
-    lanAutoEnable: data.lanAutoEnable,
+    initialMode: layoutData.initialNsfwMode,
+    lanAutoEnable: layoutData.lanAutoEnable,
   }));
-  const chrome = provideAppChrome(() => data.initialCollapsed);
+  const chrome = provideAppChrome(() => layoutData.initialCollapsed);
   provideSearch();
   const playlist = providePlaylist();
   let mainScroller = $state<HTMLElement | null>(null);
@@ -78,7 +89,7 @@
   const playlistOffset = $derived(playlist.isActive ? "3.5rem" : "0px");
 </script>
 
-<BreakingUpgradeGate awaitingConsent={data.awaitingBreakingConsent}>
+<BreakingUpgradeGate awaitingConsent={layoutData.awaitingBreakingConsent}>
   {#snippet children()}
     <div
       class="flex min-h-dvh"

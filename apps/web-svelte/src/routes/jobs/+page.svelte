@@ -17,6 +17,7 @@
     clearV2JobFailures,
     createV2Job,
     fetchV2Jobs,
+    fetchV2LibraryConfig,
   } from "$lib/api/v2";
   import type { JobRun, JobsDashboard } from "$lib/v1/api/types-v1";
   import { useNsfw } from "$lib/nsfw/store.svelte";
@@ -24,6 +25,7 @@
     buildV2JobsDashboard,
     jobTypeForV2Queue,
     jobTypesForV2Queue,
+    type V2ScheduleInfo,
   } from "$lib/jobs/v2-dashboard";
   import { groupQueuesForJobDashboard } from "$lib/jobs/queue-sections";
   import {
@@ -63,10 +65,12 @@
     loading = !data.dashboard;
   });
 
+  let scheduleInfo = $state<V2ScheduleInfo | undefined>(undefined);
+
   async function loadDashboard() {
     try {
       const response = await fetchV2Jobs();
-      dashboard = buildV2JobsDashboard(response.items);
+      dashboard = buildV2JobsDashboard(response.items, scheduleInfo);
       error = null;
     } catch (err) {
       error = err instanceof Error ? err.message : "Failed to load jobs";
@@ -75,8 +79,21 @@
     }
   }
 
+  async function loadSchedule() {
+    try {
+      const config = await fetchV2LibraryConfig();
+      scheduleInfo = {
+        enabled: config.settings.autoScanEnabled,
+        intervalMinutes: config.settings.scanIntervalMinutes,
+      };
+    } catch {
+      // schedule info is best-effort; jobs still load fine without it
+    }
+  }
+
   onMount(() => {
     dismissedErrors.init();
+    void loadSchedule();
     void loadDashboard();
     pollTimer = setInterval(() => void loadDashboard(), 5000);
   });

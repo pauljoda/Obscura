@@ -113,6 +113,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Job Control now reads from and controls the v2 .NET job queue, giving the migration a real worker dashboard before media routes move over.
 - Settings now read and save through the v2 .NET backend, including watched folders, generation preferences, playback defaults, subtitle preferences, and root-level scan flags.
 - Obscura can now serve the Svelte app shell from the .NET backend on one local origin, making it clear that migrated routes are talking to Kestrel instead of the old Node server.
+- The Settings diagnostics section now uses the v2 .NET backend for rebuild-previews and backfill-fingerprints instead of v1 proxy routes that stopped working in static builds.
+- The Jobs dashboard now shows real auto-scan schedule info from the settings API instead of a hardcoded placeholder.
+- The Dev Tools sidebar link is now always visible instead of only showing during SvelteKit dev-mode, so admin tools remain accessible when the app is served from the .NET backend.
 
 ### Docs
 
@@ -120,6 +123,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added the codebase rule for rich public documentation comments and documented the v2 .NET Domain, Application, and contract types so the new backend model is easier to read in C# tooling.
 - Documented the intended .NET Domain/Application/Contracts boundary for the v2 backend so the C# model can grow as first-class application code instead of API DTO plumbing.
 - Rewrote README and documentation site to reflect Obscura's broader media-home identity — books, comics, audio, video, and galleries are now all highlighted equally, the "Stash replacement" framing is dropped, and the doc-site homepage now serves as a product page non-technical visitors can understand.
+
+### Added
+
+- Added v2 .NET bulk job endpoints for rebuild-previews and backfill-fingerprints, queuing per-entity preview or fingerprint jobs in a single API call.
 
 ### Changed
 

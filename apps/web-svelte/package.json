@@ -33,7 +33,7 @@
     "@fontsource-variable/jetbrains-mono": "^5.2.5",
     "@fontsource/geist-sans": "^5.2.5",
     "@lucide/svelte": "^1.8.0",
-    "@sveltejs/adapter-node": "^5.2.12",
+    "@sveltejs/adapter-static": "3.0.10",
     "@sveltejs/kit": "^2.22.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
     "@tailwindcss/vite": "^4.2.2",

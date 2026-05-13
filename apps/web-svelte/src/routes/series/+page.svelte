@@ -66,6 +66,7 @@
   } from "./series-page-selection";
 
   let { data } = $props();
+  const initialNsfwMode = $derived((data as App.PageData).initialNsfwMode ?? "off");
   const appChrome = useAppChrome();
   const viewPrefsFormFactor = detectUiPrefsFormFactor();
 
@@ -510,7 +511,7 @@
               activeFilters: seriesActiveFilters,
               activePresetId: seriesActivePresetId ?? undefined,
             },
-            data.initialNsfwMode,
+            initialNsfwMode,
           ),
           root: "all",
           randomSeed: seriesSortBy === "randomized" ? randomSortSeed : undefined,
@@ -536,7 +537,7 @@
             data.activeSeasonNumber != null ? String(data.activeSeasonNumber) : undefined,
           limit: data.pageSize,
           offset,
-          nsfw: data.initialNsfwMode,
+          nsfw: initialNsfwMode,
         });
         const merged = applySeriesPageMerge({
           current: loadedVideos,

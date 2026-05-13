@@ -108,10 +108,6 @@ describe("audio track detail page", () => {
     render(Page, {
       props: {
         data: {
-          initialCollapsed: false,
-          initialNsfwMode: "show",
-          lanAutoEnable: false,
-          awaitingBreakingConsent: false,
           track: makeTrack(),
           libraryCoverImagePath: null,
         },
@@ -129,10 +125,6 @@ describe("audio track detail page", () => {
     render(Page, {
       props: {
         data: {
-          initialCollapsed: false,
-          initialNsfwMode: "show",
-          lanAutoEnable: false,
-          awaitingBreakingConsent: false,
           track: makeTrack(),
           libraryCoverImagePath: null,
         },

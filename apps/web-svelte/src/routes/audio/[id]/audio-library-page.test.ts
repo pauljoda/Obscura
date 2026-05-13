@@ -156,10 +156,6 @@ describe("audio library detail page", () => {
     render(Page, {
       props: {
         data: {
-          initialCollapsed: false,
-          initialNsfwMode: "show",
-          lanAutoEnable: false,
-          awaitingBreakingConsent: false,
           library: makeLibrary(),
         },
       },
@@ -194,10 +190,6 @@ describe("audio library detail page", () => {
     render(Page, {
       props: {
         data: {
-          initialCollapsed: false,
-          initialNsfwMode: "show",
-          lanAutoEnable: false,
-          awaitingBreakingConsent: false,
           library: makeLibrary(),
         },
       },

@@ -1,7 +1,9 @@
 <script lang="ts">
   import { Ellipsis, Search, Settings } from "@lucide/svelte";
   import { page } from "$app/state";
+  import { onMount } from "svelte";
   import { cn } from "@obscura/ui-svelte";
+  import { v2ApiPath } from "$lib/api/orval-fetch";
   import { useAppChrome } from "$lib/stores/app-chrome.svelte";
   import { useSearch } from "$lib/stores/search.svelte";
   import { getCanvasHeaderBreadcrumbItems } from "./canvas-header-breadcrumbs";
@@ -48,13 +50,37 @@
 
   let appleMod = $state(false);
   let breadcrumbMenuOpen = $state(false);
+  let backendRuntime = $state<"dotnet" | "unknown" | "offline">("unknown");
   $effect(() => {
     appleMod = typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.userAgent);
   });
+
+  onMount(() => {
+    let cancelled = false;
+    const checkBackend = async () => {
+      try {
+        const response = await fetch(v2ApiPath("/health"));
+        const health = (await response.json()) as { runtime?: string };
+        if (!cancelled) backendRuntime = health.runtime === "dotnet" ? "dotnet" : "unknown";
+      } catch {
+        if (!cancelled) backendRuntime = "offline";
+      }
+    };
+
+    void checkBackend();
+    return () => {
+      cancelled = true;
+    };
+  });
+
   const searchShortcutKbd = $derived(appleMod ? "⌘K" : "Ctrl+K");
 
   function closeBreadcrumbMenu() {
     breadcrumbMenuOpen = false;
+  }
+
+  function resolveHref(href: string) {
+    return href;
   }
 </script>
 
@@ -84,7 +110,7 @@
               <span class="truncate text-text-primary">{crumb.label}</span>
             {:else}
               <a
-                href={crumb.href}
+                href={resolveHref(crumb.href)}
                 class="shrink-0 text-text-muted hover:text-text-primary transition-colors duration-fast"
               >
                 {crumb.label}
@@ -126,7 +152,7 @@
                   >
                     {#each item.items as crumb (crumb.href)}
                       <a
-                        href={crumb.href}
+                        href={resolveHref(crumb.href)}
                         role="menuitem"
                         class="block min-w-0 truncate px-3 py-2 text-text-muted transition-colors duration-fast hover:bg-surface-2 hover:text-text-primary focus-visible:bg-surface-2 focus-visible:text-text-primary outline-none"
                         onclick={closeBreadcrumbMenu}
@@ -141,7 +167,7 @@
               <span class="min-w-0 truncate text-text-primary">{item.label}</span>
             {:else}
               <a
-                href={item.href}
+                href={resolveHref(item.href)}
                 class="shrink-0 text-text-muted hover:text-text-primary transition-colors duration-fast"
               >
                 {item.label}
@@ -154,6 +180,23 @@
   </div>
 
   <div class="flex items-center gap-2">
+    <div
+      class={cn(
+        "hidden items-center gap-1.5 border border-border-subtle bg-surface-1 px-2 py-1 text-[0.64rem] font-mono uppercase tracking-wider text-text-disabled lg:flex",
+        backendRuntime === "dotnet" && "border-border-accent/30 text-text-accent",
+        backendRuntime === "offline" && "border-status-error/30 text-status-error-text",
+      )}
+      title={backendRuntime === "dotnet" ? "API served by .NET" : "Checking .NET API"}
+    >
+      <span
+        class={cn(
+          "h-1.5 w-1.5 bg-text-disabled",
+          backendRuntime === "dotnet" && "bg-accent-500 shadow-[0_0_8px_rgba(196,154,90,0.75)]",
+          backendRuntime === "offline" && "bg-status-error",
+        )}
+      ></span>
+      API {backendRuntime}
+    </div>
     <button
       type="button"
       onclick={() => search.openPalette()}

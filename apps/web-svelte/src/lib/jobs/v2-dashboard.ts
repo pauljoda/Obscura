@@ -238,7 +238,15 @@ export function mapV2JobRun(job: V2JobRun): JobRunDto {
   };
 }
 
-export function buildV2JobsDashboard(jobs: readonly V2JobRun[]): JobsDashboardDto {
+export interface V2ScheduleInfo {
+  enabled: boolean;
+  intervalMinutes: number;
+}
+
+export function buildV2JobsDashboard(
+  jobs: readonly V2JobRun[],
+  schedule?: V2ScheduleInfo,
+): JobsDashboardDto {
   const mappedJobs = jobs.map(mapV2JobRun);
   const summaries = new Map<QueueName, QueueSummaryDto>();
 
@@ -281,8 +289,8 @@ export function buildV2JobsDashboard(jobs: readonly V2JobRun[]): JobsDashboardDt
     recentJobs: mappedJobs,
     lastScanAt,
     schedule: {
-      enabled: false,
-      intervalMinutes: 0,
+      enabled: schedule?.enabled ?? false,
+      intervalMinutes: schedule?.intervalMinutes ?? 0,
     },
   };
 }

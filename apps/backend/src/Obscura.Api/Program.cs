@@ -9,10 +9,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 var configuredStaticWebRoot = builder.Configuration["OBSCURA_STATIC_WEB_ROOT"] ??
     builder.Configuration["Obscura:StaticWebRoot"];
-var staticFileProvider = !string.IsNullOrWhiteSpace(configuredStaticWebRoot) &&
-    Directory.Exists(configuredStaticWebRoot)
-        ? new PhysicalFileProvider(configuredStaticWebRoot)
-        : null;
+var resolvedStaticWebRoot = ResolveStaticWebRoot(
+    configuredStaticWebRoot,
+    builder.Environment.ContentRootPath);
+var staticFileProvider = resolvedStaticWebRoot is not null
+    ? new PhysicalFileProvider(resolvedStaticWebRoot)
+    : null;
 
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
@@ -67,8 +69,8 @@ app.MapSettingsEndpoints();
 app.MapSystemEndpoints();
 app.MapTaxonomyEndpoints();
 
-var staticIndexPath = staticFileProvider is not null
-    ? Path.Combine(configuredStaticWebRoot!, "index.html")
+var staticIndexPath = resolvedStaticWebRoot is not null
+    ? Path.Combine(resolvedStaticWebRoot, "index.html")
     : Path.Combine(app.Environment.WebRootPath ?? string.Empty, "index.html");
 
 if (File.Exists(staticIndexPath))
@@ -86,5 +88,23 @@ else
 await ObscuraMigrationRunner.ApplyObscuraMigrationsAsync(app.Services, app.Configuration);
 
 app.Run();
+
+static string? ResolveStaticWebRoot(string? configuredPath, string contentRootPath)
+{
+    if (string.IsNullOrWhiteSpace(configuredPath))
+    {
+        return null;
+    }
+
+    var candidates = Path.IsPathRooted(configuredPath)
+        ? [configuredPath]
+        : new[]
+        {
+            Path.GetFullPath(Path.Combine(contentRootPath, configuredPath)),
+            Path.GetFullPath(configuredPath)
+        };
+
+    return candidates.FirstOrDefault(Directory.Exists);
+}
 
 public partial class Program;

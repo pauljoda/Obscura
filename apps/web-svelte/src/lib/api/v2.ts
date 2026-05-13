@@ -64,6 +64,10 @@ export interface V2JobCancelResponse {
 export interface V2JobFailureClearResponse {
   cleared: number;
 }
+export interface V2BulkJobResponse {
+  enqueued: number;
+  skipped: number;
+}
 export type V2SettingsResponse = SettingsResponse;
 export type V2LegacyVideoImportResponse = LegacyVideoImportResponse;
 export type V2LegacyMediaImportResponse = LegacyMediaImportResponse;
@@ -318,6 +322,28 @@ export async function deleteV2LibraryRoot(
   });
 
   return readV2Json(response, "Failed to remove library root");
+}
+
+export async function rebuildV2Previews(
+  options?: V2RequestOptions,
+): Promise<V2BulkJobResponse> {
+  const response = await fetch(v2ApiPath("/jobs/rebuild-previews"), {
+    method: "POST",
+    signal: options?.signal,
+  });
+
+  return readV2Json(response, "Failed to queue preview rebuild");
+}
+
+export async function backfillV2Fingerprints(
+  options?: V2RequestOptions,
+): Promise<V2BulkJobResponse> {
+  const response = await fetch(v2ApiPath("/jobs/backfill-fingerprints"), {
+    method: "POST",
+    signal: options?.signal,
+  });
+
+  return readV2Json(response, "Failed to queue fingerprint backfill");
 }
 
 export function importV2LegacyVideos(
