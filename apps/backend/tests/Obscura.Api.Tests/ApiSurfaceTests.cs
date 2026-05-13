@@ -190,6 +190,21 @@ public sealed class ApiSurfaceTests
             throw new NotSupportedException("The API surface smoke test does not create jobs.");
         }
 
+        public Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("The API surface smoke test does not cancel jobs.");
+        }
+
+        public Task<bool> CancelRunAsync(Guid id, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("The API surface smoke test does not cancel jobs.");
+        }
+
+        public Task<int> ClearFailuresAsync(JobType? type, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("The API surface smoke test does not clear failures.");
+        }
+
         public Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
         {
             throw new NotSupportedException("The API surface smoke test does not claim jobs.");
@@ -332,6 +347,88 @@ public sealed class ApiSurfaceTests
             return Task.FromResult(new SettingsResponse(
                 request.HideNsfw ?? false,
                 request.EnableCastControls ?? true));
+        }
+
+        public Task<LibraryConfigResponse> GetLibraryConfigAsync(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new LibraryConfigResponse(SampleSettings(), []));
+        }
+
+        public Task<LibrarySettings> UpdateLibrarySettingsAsync(
+            LibrarySettingsUpdateRequest request,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(SampleSettings());
+        }
+
+        public Task<LibraryBrowseResponse> BrowseLibraryPathAsync(
+            string? path,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new LibraryBrowseResponse(path ?? "/media", "/", []));
+        }
+
+        public Task<LibraryRoot> CreateLibraryRootAsync(
+            LibraryRootCreateRequest request,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new LibraryRoot(
+                Guid.NewGuid(),
+                request.Path,
+                request.Label ?? "Media",
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                null,
+                DateTimeOffset.UnixEpoch,
+                DateTimeOffset.UnixEpoch));
+        }
+
+        public Task<LibraryRoot?> UpdateLibraryRootAsync(
+            Guid id,
+            LibraryRootUpdateRequest request,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<LibraryRoot?>(null);
+        }
+
+        public Task<bool> DeleteLibraryRootAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(false);
+        }
+
+        private static LibrarySettings SampleSettings()
+        {
+            return new LibrarySettings(
+                Guid.NewGuid(),
+                false,
+                60,
+                true,
+                true,
+                false,
+                true,
+                true,
+                10,
+                8,
+                2,
+                2,
+                1,
+                false,
+                true,
+                false,
+                "en,eng",
+                "stylized",
+                1,
+                88,
+                1,
+                "direct",
+                true,
+                DateTimeOffset.UnixEpoch,
+                DateTimeOffset.UnixEpoch);
         }
     }
 }

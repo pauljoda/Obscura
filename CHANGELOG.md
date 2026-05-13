@@ -106,6 +106,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Local development now has database backup and restore scripts for repeatedly testing v2 migration mappings against the same data set.
 - Local development now has a sidebar-linked v2 migration control page for prompting the upgrade gate, creating backups, restoring a dump, and clearing v2 data before another import pass.
 - The upgrade gate now reflects the v2 global entity migration, including backup and fresh-start preparation, instead of the older scenes-to-videos transition.
+- Job Control now reads from and controls the v2 .NET job queue, giving the migration a real worker dashboard before media routes move over.
+- Settings now read and save through the v2 .NET backend, including watched folders, generation preferences, playback defaults, subtitle preferences, and root-level scan flags.
 
 ### Docs
 
@@ -129,6 +131,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Moved v2 direct video streaming and cached HLS lookup ports into the .NET Application layer so API routes depend on playback use-case boundaries instead of infrastructure services.
 - Moved the v2 queue worker dispatch loop and registered job handlers into the .NET Application layer so the worker executable now only composes application services and infrastructure adapters.
 - Changed the v2 queue application boundary to use typed job snapshots and typed job creation values, keeping public job-code strings at the API serialization edge.
+- Migrated the Job Control page to the v2 .NET jobs API for dashboard loading, job creation, cancellation, and failure clearing.
+- Migrated the Settings page off SvelteKit server loaders so the route fetches the v2 .NET API directly from the UI during the backend handoff.
 - Changed v2 entity kind filters and endpoint group helpers to carry typed entity kinds instead of parallel kind-code strings at API and Application boundaries.
 - Removed one-to-one infrastructure service interfaces around media tool checks, process execution, process running, and database backups so concrete services carry behavior directly unless a real polymorphic contract exists.
 - Split the v2 EF base entity table mapping out of the main DbContext so infrastructure persistence configuration is easier to review in focused files.
@@ -265,6 +269,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added typed v2 media DTOs and OpenAPI coverage for `/api/images`, `/api/galleries`, `/api/books`, `/api/audio-libraries`, and `/api/audio-tracks`.
 - Added a legacy media import endpoint and Svelte API wrapper coverage for testing the remaining v2 media facades with real local metadata.
 - Added v2 worker handlers for `legacy-video-import` and `legacy-media-import` jobs.
+- Added v2 .NET job endpoints for cancelling queued/running jobs and clearing failed jobs from the operations dashboard.
+- Added v2 .NET settings and watched-root endpoints for reading, saving, browsing folders, creating roots, updating roots, and deleting roots.
 - Added shared v2 URL and external-ID capability tables, projections, generated DTOs, and legacy preview-import coverage across video, book, image, gallery, and audio entities.
 - Added a v2 thumbnail lab page with safe dummy entity cards, shared capability chips, aspect-ratio shaping, and hover preview modes for trickplay and image-sequence thumbnails.
 - Added v2 collection DTOs, `/api/collections` list/detail endpoints, collection-item projection loading, and legacy collection import counts.

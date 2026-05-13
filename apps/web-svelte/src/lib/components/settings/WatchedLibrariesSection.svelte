@@ -16,14 +16,15 @@
     Trash2,
   } from "@lucide/svelte";
   import { Button, StatusLed, cn } from "@obscura/ui-svelte";
-  import type { LibraryBrowse, LibraryRoot } from "$lib/v1/api/types-v1";
   import {
-    browseLibraryPath,
-    createLibraryRoot,
-    deleteLibraryRoot,
-    runQueue,
-    updateLibraryRoot,
-  } from "$lib/v1/api/library-v1";
+    browseV2LibraryPath,
+    createV2Job,
+    createV2LibraryRoot,
+    deleteV2LibraryRoot,
+    updateV2LibraryRoot,
+    type V2LibraryBrowse as LibraryBrowse,
+    type V2LibraryRoot as LibraryRoot,
+  } from "$lib/api/v2";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { entityTerms } from "$lib/terminology";
   import ToggleCard from "./ToggleCard.svelte";
@@ -64,7 +65,7 @@
 
   async function openBrowser(targetPath?: string) {
     try {
-      const response = await browseLibraryPath(targetPath);
+      const response = await browseV2LibraryPath(targetPath);
       browser = response;
       browserVisible = true;
       newRootPath = response.path;
@@ -80,7 +81,7 @@
     }
     addingRoot = true;
     try {
-      await createLibraryRoot({
+      await createV2LibraryRoot({
         path: newRootPath,
         label: newRootLabel || undefined,
         recursive: newRootRecursive,
@@ -97,7 +98,7 @@
       browserVisible = false;
       await onRootsChanged();
       await invalidateAll();
-      await runQueue("library-scan", nsfw.mode);
+      await createV2Job("scan-library");
     } catch (err) {
       onError(err instanceof Error ? err.message : "Failed to add library root");
     } finally {
@@ -109,7 +110,7 @@
     const next = !root.enabled;
     roots = roots.map((r) => (r.id === root.id ? { ...r, enabled: next } : r));
     try {
-      await updateLibraryRoot(root.id, { enabled: next });
+      await updateV2LibraryRoot(root.id, { enabled: next });
       await invalidateAll();
     } catch (err) {
       roots = roots.map((r) => (r.id === root.id ? { ...r, enabled: !next } : r));
@@ -124,7 +125,7 @@
     const next = !root[field];
     roots = roots.map((r) => (r.id === root.id ? { ...r, [field]: next } : r));
     try {
-      await updateLibraryRoot(root.id, { [field]: next });
+      await updateV2LibraryRoot(root.id, { [field]: next });
       await invalidateAll();
     } catch (err) {
       roots = roots.map((r) => (r.id === root.id ? { ...r, [field]: !next } : r));
@@ -136,7 +137,7 @@
     const next = !root.isNsfw;
     roots = roots.map((r) => (r.id === root.id ? { ...r, isNsfw: next } : r));
     try {
-      await updateLibraryRoot(root.id, { isNsfw: next });
+      await updateV2LibraryRoot(root.id, { isNsfw: next });
       await invalidateAll();
     } catch {
       roots = roots.map((r) => (r.id === root.id ? { ...r, isNsfw: !next } : r));
@@ -145,7 +146,7 @@
 
   async function handleDeleteRoot(root: LibraryRoot) {
     try {
-      await deleteLibraryRoot(root.id);
+      await deleteV2LibraryRoot(root.id);
       onMessage(`Removed ${root.label}.`);
       await onRootsChanged();
       await invalidateAll();

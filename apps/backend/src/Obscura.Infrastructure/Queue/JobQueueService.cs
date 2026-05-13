@@ -56,6 +56,68 @@ public sealed class JobQueueService : IJobQueueService
         return ToContract(row);
     }
 
+    public async Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var query = _db.JobRuns
+            .Where(job => job.Status == JobRunStatus.Queued || job.Status == JobRunStatus.Running);
+
+        if (type is not null)
+        {
+            query = query.Where(job => job.Type == type.Value);
+        }
+
+        var rows = await query.ToListAsync(cancellationToken);
+        foreach (var row in rows)
+        {
+            row.Status = JobRunStatus.Cancelled;
+            row.Message = "Cancelled";
+            row.LockedAt = null;
+            row.LockedBy = null;
+            row.FinishedAt = now;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+        return rows.Count;
+    }
+
+    public async Task<bool> CancelRunAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var row = await _db.JobRuns.FindAsync([id], cancellationToken);
+        if (row is null || (row.Status != JobRunStatus.Queued && row.Status != JobRunStatus.Running))
+        {
+            return false;
+        }
+
+        row.Status = JobRunStatus.Cancelled;
+        row.Message = "Cancelled";
+        row.LockedAt = null;
+        row.LockedBy = null;
+        row.FinishedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return true;
+    }
+
+    public async Task<int> ClearFailuresAsync(JobType? type, CancellationToken cancellationToken)
+    {
+        var query = _db.JobRuns.Where(job => job.Status == JobRunStatus.Failed);
+        if (type is not null)
+        {
+            query = query.Where(job => job.Type == type.Value);
+        }
+
+        var rows = await query.ToListAsync(cancellationToken);
+        foreach (var row in rows)
+        {
+            row.Status = JobRunStatus.Cancelled;
+            row.Message = "Cleared failure";
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+        return rows.Count;
+    }
+
     public async Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workerId);
@@ -91,6 +153,11 @@ public sealed class JobQueueService : IJobQueueService
             return;
         }
 
+        if (row.Status != JobRunStatus.Running)
+        {
+            return;
+        }
+
         row.Status = JobRunStatus.Completed;
         row.Progress = 100;
         row.Message = message;
@@ -108,6 +175,11 @@ public sealed class JobQueueService : IJobQueueService
     {
         var row = await _db.JobRuns.FindAsync([id], cancellationToken);
         if (row is null)
+        {
+            return;
+        }
+
+        if (row.Status != JobRunStatus.Running)
         {
             return;
         }

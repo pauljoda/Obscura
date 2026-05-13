@@ -66,6 +66,44 @@ public sealed class JobQueueServiceTests
         Assert.NotNull(failed.FinishedAt);
     }
 
+    [Fact]
+    public async Task CancelAndClearFailuresMoveRunsOutOfActiveBuckets()
+    {
+        await using var db = CreateContext();
+        var service = new JobQueueService(db);
+
+        var queued = await service.EnqueueAsync(JobType.ScanLibrary, CancellationToken.None);
+        var pending = await service.EnqueueAsync(JobType.ProbeVideo, CancellationToken.None);
+        var running = await service.ClaimNextAsync("worker-1", CancellationToken.None);
+
+        var cancelled = await service.CancelAsync(null, CancellationToken.None);
+        Assert.NotNull(running);
+        await service.CompleteAsync(running.Id, "should not overwrite cancellation", CancellationToken.None);
+        var cancelledQueued = await db.JobRuns.FindAsync(queued.Id);
+        var cancelledPending = await db.JobRuns.FindAsync(pending.Id);
+
+        Assert.Equal(2, cancelled);
+        Assert.NotNull(cancelledQueued);
+        Assert.NotNull(cancelledPending);
+        Assert.Equal(JobRunStatus.Cancelled, cancelledQueued.Status);
+        Assert.Equal(JobRunStatus.Cancelled, cancelledPending.Status);
+
+        var failed = await service.EnqueueAsync(JobType.LegacyMediaImport, CancellationToken.None);
+        await service.ClaimNextAsync("worker-2", CancellationToken.None);
+        await service.FailAsync(failed.Id, "permanent", TimeSpan.Zero, CancellationToken.None);
+        await service.ClaimNextAsync("worker-2", CancellationToken.None);
+        await service.FailAsync(failed.Id, "permanent", TimeSpan.Zero, CancellationToken.None);
+        await service.ClaimNextAsync("worker-2", CancellationToken.None);
+        await service.FailAsync(failed.Id, "permanent", TimeSpan.Zero, CancellationToken.None);
+
+        var cleared = await service.ClearFailuresAsync(JobType.LegacyMediaImport, CancellationToken.None);
+        var clearedFailed = await db.JobRuns.FindAsync(failed.Id);
+
+        Assert.Equal(1, cleared);
+        Assert.NotNull(clearedFailed);
+        Assert.Equal(JobRunStatus.Cancelled, clearedFailed.Status);
+    }
+
     private static ObscuraDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()

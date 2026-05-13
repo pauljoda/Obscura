@@ -12,15 +12,19 @@
     Square,
   } from "@lucide/svelte";
   import {
-    acknowledgeJobFailures,
-    cancelAllJobs,
-    cancelJobRun,
-    cancelQueue,
-    fetchJobsDashboard,
-    runQueue,
-  } from "$lib/v1/api/library-v1";
+    cancelV2JobRun,
+    cancelV2Jobs,
+    clearV2JobFailures,
+    createV2Job,
+    fetchV2Jobs,
+  } from "$lib/api/v2";
   import type { JobRun, JobsDashboard } from "$lib/v1/api/types-v1";
   import { useNsfw } from "$lib/nsfw/store.svelte";
+  import {
+    buildV2JobsDashboard,
+    jobTypeForV2Queue,
+    jobTypesForV2Queue,
+  } from "$lib/jobs/v2-dashboard";
   import { groupQueuesForJobDashboard } from "$lib/jobs/queue-sections";
   import {
     describeRunResult,
@@ -36,7 +40,7 @@
   import CompletedJobRow from "$lib/components/jobs/CompletedJobRow.svelte";
   import EmptyPanel from "$lib/components/jobs/EmptyPanel.svelte";
 
-  let { data } = $props();
+  let { data = {} }: { data?: { dashboard?: JobsDashboard | null } } = $props();
 
   const nsfw = useNsfw();
 
@@ -61,8 +65,8 @@
 
   async function loadDashboard() {
     try {
-      const response = await fetchJobsDashboard(nsfw.mode);
-      dashboard = response;
+      const response = await fetchV2Jobs();
+      dashboard = buildV2JobsDashboard(response.items);
       error = null;
     } catch (err) {
       error = err instanceof Error ? err.message : "Failed to load jobs";
@@ -82,11 +86,17 @@
   });
 
   async function handleRun(queueName: string) {
+    const jobType = jobTypeForV2Queue(queueName);
+    if (!jobType) {
+      error = `${queueName} is not available in the v2 worker yet.`;
+      return;
+    }
+
     runningQueue = queueName;
     message = null;
     try {
-      const response = await runQueue(queueName, nsfw.mode);
-      message = describeRunResult(queueName, response.enqueued, response.skipped);
+      await createV2Job(jobType);
+      message = describeRunResult(queueName, 1, 0);
       error = null;
       await loadDashboard();
     } catch (err) {
@@ -97,15 +107,25 @@
   }
 
   async function handleCancel(queueName: string) {
+    const jobTypes = jobTypesForV2Queue(queueName);
+    if (jobTypes.length === 0) {
+      error = `${queueName} is not available in the v2 worker yet.`;
+      return;
+    }
+
     cancellingQueue = queueName;
     message = null;
     try {
-      const response = await cancelQueue(queueName);
-      message = `Cancelled ${queueName} jobs (${response.activeRemoved} active, ${response.waitingRemoved} waiting).`;
+      let cancelled = 0;
+      for (const jobType of jobTypes) {
+        const response = await cancelV2Jobs(jobType);
+        cancelled += response.cancelled;
+      }
+      message = `Cancelled ${cancelled} ${queueName} job${cancelled === 1 ? "" : "s"}.`;
       error = null;
       await loadDashboard();
     } catch (err) {
-      error = err instanceof Error ? err.message : "Failed to cancel jobs";
+      error = err instanceof Error ? err.message : "Failed to cancel v2 jobs";
     } finally {
       cancellingQueue = null;
     }
@@ -115,13 +135,12 @@
     cancellingAllJobs = true;
     message = null;
     try {
-      const response = await cancelAllJobs();
-      const total = response.activeRemoved + response.waitingRemoved;
-      message = `Killed ${response.activeRemoved} active and ${response.waitingRemoved} queued job${total === 1 ? "" : "s"}.`;
+      const response = await cancelV2Jobs();
+      message = `Cancelled ${response.cancelled} v2 job${response.cancelled === 1 ? "" : "s"}.`;
       error = null;
       await loadDashboard();
     } catch (err) {
-      error = err instanceof Error ? err.message : "Failed to kill all jobs";
+      error = err instanceof Error ? err.message : "Failed to cancel v2 jobs";
     } finally {
       cancellingAllJobs = false;
     }
@@ -131,46 +150,38 @@
     cancellingJobRunId = job.id;
     message = null;
     try {
-      const response = await cancelJobRun(job.id);
-      message = `Cancelled ${displayJobHeading(job, nsfw.mode)} from ${response.queueName}${response.queueState ? ` (${response.queueState})` : ""}.`;
+      const response = await cancelV2JobRun(job.id);
+      message = `Cancelled ${response.cancelled} v2 job${response.cancelled === 1 ? "" : "s"}.`;
       error = null;
       await loadDashboard();
     } catch (err) {
-      error = err instanceof Error ? err.message : "Failed to cancel job";
+      error = err instanceof Error ? err.message : "Failed to cancel v2 job";
     } finally {
       cancellingJobRunId = null;
     }
   }
 
   async function handleAcknowledgeFailures(scope: "all" | string) {
+    const jobTypes = scope === "all" ? [null] : jobTypesForV2Queue(scope);
+    if (jobTypes.length === 0) {
+      error = `${scope} is not available in the v2 worker yet.`;
+      return;
+    }
+
     acknowledging = scope;
     message = null;
     try {
-      const result = await acknowledgeJobFailures(scope === "all" ? undefined : scope);
-      const parts: string[] = [];
-      const externalRemoved = Object.values(result.externalRemovedByQueue).reduce(
-        (sum, count) => sum + count,
-        0,
-      );
-      if (externalRemoved > 0) {
-        parts.push(
-          `cleared ${externalRemoved} failed queue job${externalRemoved === 1 ? "" : "s"}`,
-        );
+      let cleared = 0;
+      for (const jobType of jobTypes) {
+        const response = await clearV2JobFailures(jobType);
+        cleared += response.cleared;
       }
-      if (result.runsUpdated > 0) {
-        parts.push(
-          `acknowledged ${result.runsUpdated} failed run${result.runsUpdated === 1 ? "" : "s"}`,
-        );
-      }
-      message =
-        parts.length > 0
-          ? `${parts.join("; ").replace(/^\w/, (c) => c.toUpperCase())}.`
-          : "Nothing to clear.";
+      message = `Cleared ${cleared} failed v2 job${cleared === 1 ? "" : "s"}.`;
       error = null;
       dismissedErrors.clearAll();
       await loadDashboard();
     } catch (err) {
-      error = err instanceof Error ? err.message : "Failed to acknowledge failures";
+      error = err instanceof Error ? err.message : "Failed to clear v2 failures";
     } finally {
       acknowledging = null;
     }
@@ -199,7 +210,7 @@
   );
 
   // Group active jobs by queue for dense display
-  const groupedActiveJobs = $derived(() => {
+  const groupedActiveJobs = $derived.by(() => {
     const jobs = dashboard?.activeJobs ?? [];
     if (jobs.length === 0) return [];
     const groups = new Map<string, { queueLabel: string; jobs: typeof jobs }>();
@@ -391,9 +402,9 @@
         </span>
       </div>
     </div>
-    {#if groupedActiveJobs().length}
+    {#if groupedActiveJobs.length}
       <div class="surface-card no-lift overflow-hidden">
-        {#each groupedActiveJobs() as { queueName, queueLabel, jobs: qJobs, activeCount, waitingCount } (queueName)}
+        {#each groupedActiveJobs as { queueName, queueLabel, jobs: qJobs, activeCount, waitingCount } (queueName)}
           <div class="border-b border-border-subtle/50 last:border-0">
             <div class="flex items-center justify-between bg-surface-2/50 px-3 py-1.5">
               <span

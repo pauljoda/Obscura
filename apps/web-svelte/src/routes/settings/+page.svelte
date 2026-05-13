@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { resolve } from "$app/paths";
+  import { onMount } from "svelte";
   import {
     ChevronRight,
     Database,
@@ -21,13 +23,12 @@
     type SubtitleAppearance,
     type SubtitleDisplayStyle,
   } from "@obscura/contracts";
-  import type { LibraryRoot, LibrarySettings } from "$lib/v1/api/types-v1";
   import {
-    fetchLibraryConfig,
-    migrateVideoAssetStorage,
-    updateLibrarySettings,
-  } from "$lib/v1/api/library-v1";
-  import { fetchInstalledScrapers } from "$lib/v1/api/scrapers-v1";
+    fetchV2LibraryConfig,
+    updateV2LibrarySettings,
+    type V2LibraryRoot as LibraryRoot,
+    type V2LibrarySettings as LibrarySettings,
+  } from "$lib/api/v2";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import ToggleCard from "$lib/components/settings/ToggleCard.svelte";
   import NumberStepper from "$lib/components/settings/NumberStepper.svelte";
@@ -36,7 +37,7 @@
   import DiagnosticsSection from "$lib/components/settings/DiagnosticsSection.svelte";
   import WatchedLibrariesSection from "$lib/components/settings/WatchedLibrariesSection.svelte";
 
-  let { data } = $props();
+  let { data = {} }: { data?: { config?: { settings: LibrarySettings; roots: LibraryRoot[] } | null; scraperCount?: number } } = $props();
 
   const nsfw = useNsfw();
 
@@ -115,6 +116,10 @@
     savedMetadataStorageDedicated = normalized.metadataStorageDedicated;
   });
 
+  onMount(() => {
+    void loadConfig();
+  });
+
   function flashMessage(m: string, ms = 2000) {
     message = m;
     setTimeout(() => {
@@ -128,15 +133,12 @@
 
   async function loadConfig() {
     try {
-      const [response, scrapersResponse] = await Promise.all([
-        fetchLibraryConfig(),
-        fetchInstalledScrapers(),
-      ]);
+      const response = await fetchV2LibraryConfig();
       const normalized = normalizeSettings(response.settings);
       settings = normalized;
       savedMetadataStorageDedicated = normalized.metadataStorageDedicated;
       roots = response.roots;
-      scraperCount = scrapersResponse.packages.length;
+      scraperCount = 0;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load settings");
     }
@@ -144,7 +146,7 @@
 
   async function autoSaveSetting(patch: Partial<LibrarySettings>) {
     try {
-      const updated = await updateLibrarySettings({ ...settings, ...patch });
+      const updated = await updateV2LibrarySettings(patch);
       const normalized = normalizeSettings(updated);
       settings = normalized;
       savedMetadataStorageDedicated = normalized.metadataStorageDedicated;
@@ -173,8 +175,7 @@
     metadataStorageBusy = true;
     setError(null);
     try {
-      const updated = await updateLibrarySettings({
-        ...settings,
+      const updated = await updateV2LibrarySettings({
         metadataStorageDedicated: settings.metadataStorageDedicated,
       });
       const normalized = normalizeSettings(updated);
@@ -195,17 +196,15 @@
     setError(null);
     const targetDedicated = settings.metadataStorageDedicated;
     try {
-      const updated = await updateLibrarySettings({
-        ...settings,
+      const updated = await updateV2LibrarySettings({
         metadataStorageDedicated: targetDedicated,
       });
       const normalized = normalizeSettings(updated);
       settings = normalized;
       savedMetadataStorageDedicated = normalized.metadataStorageDedicated;
-      await migrateVideoAssetStorage(targetDedicated, nsfw.mode);
       metadataStorageDialogOpen = false;
       flashMessage(
-        "Setting saved. Moving files in the background — open Jobs to watch progress.",
+        "Setting saved. Moving existing preview files will return with the v2 media pipeline.",
         6000,
       );
     } catch (err) {
@@ -491,7 +490,7 @@
       </div>
     </div>
 
-    <a href="/plugins" class="group block">
+    <a href={resolve("/plugins")} class="group block">
       <div
         class={cn(
           "surface-card no-lift p-3.5 transition-all duration-normal",

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Obscura.Application.Jobs;
 using Obscura.Contracts.Jobs;
 using Obscura.Domain.Entities;
@@ -30,7 +31,63 @@ public static class JobEndpoints
             .WithName("CreateJob")
             .WithSummary("Queues a background job run.");
 
+        group.MapDelete("/", async (
+            [FromQuery] string? type,
+            JobService jobs,
+            CancellationToken cancellationToken) =>
+        {
+            if (!TryDecodeJobType(type, out var jobType))
+            {
+                return Results.BadRequest(new { message = $"Unknown job type '{type}'." });
+            }
+
+            return Results.Ok(await jobs.CancelAsync(jobType, cancellationToken));
+        })
+            .WithName("CancelJobs")
+            .WithSummary("Cancels queued or running job runs.");
+
+        group.MapDelete("/{id:guid}", async (
+            Guid id,
+            JobService jobs,
+            CancellationToken cancellationToken) =>
+            Results.Ok(await jobs.CancelRunAsync(id, cancellationToken)))
+            .WithName("CancelJobRun")
+            .WithSummary("Cancels one queued or running job run.");
+
+        group.MapPost("/failures/clear", async (
+            [FromQuery] string? type,
+            JobService jobs,
+            CancellationToken cancellationToken) =>
+        {
+            if (!TryDecodeJobType(type, out var jobType))
+            {
+                return Results.BadRequest(new { message = $"Unknown job type '{type}'." });
+            }
+
+            return Results.Ok(await jobs.ClearFailuresAsync(jobType, cancellationToken));
+        })
+            .WithName("ClearJobFailures")
+            .WithSummary("Clears failed job runs from the operations dashboard.");
+
         return group;
+    }
+
+    private static bool TryDecodeJobType(string? value, out JobType? type)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            type = null;
+            return true;
+        }
+
+        if (value.TryDecodeAs<JobType>(out var decoded))
+        {
+            type = decoded;
+            return true;
+        }
+
+        type = null;
+        return false;
     }
 }
 

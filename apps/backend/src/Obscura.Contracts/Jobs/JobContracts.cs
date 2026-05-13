@@ -32,3 +32,15 @@ public sealed record JobListResponse(IReadOnlyList<JobRun> Items);
 /// </summary>
 /// <param name="Job">The created job run.</param>
 public sealed record JobCreateResponse(JobRun Job);
+
+/// <summary>
+/// API response returned after cancelling queued or running job runs.
+/// </summary>
+/// <param name="Cancelled">Number of job runs moved into the cancelled state.</param>
+public sealed record JobCancelResponse(int Cancelled);
+
+/// <summary>
+/// API response returned after clearing failed job runs from the active failure list.
+/// </summary>
+/// <param name="Cleared">Number of failed job runs moved into the cancelled state.</param>
+public sealed record JobFailureClearResponse(int Cleared);

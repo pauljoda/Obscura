@@ -14,14 +14,14 @@ export type JobQueueSection = {
 export const JOB_QUEUE_SECTIONS: readonly JobQueueSection[] = [
   {
     id: "scans",
-    title: "Library scans",
-    description: "High-level discovery across configured media roots.",
+    title: "Video scans",
+    description: "Video discovery across configured media roots.",
     queueNames: ["library-scan", "gallery-scan", "book-scan", "audio-scan"],
   },
   {
     id: "maintenance",
-    title: "Library maintenance",
-    description: "One-off tasks such as relocating generated video files.",
+    title: "Video maintenance",
+    description: "One-off video tasks such as relocating generated files.",
     queueNames: ["library-maintenance"],
   },
   {

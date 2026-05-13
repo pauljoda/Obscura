@@ -354,5 +354,74 @@ public sealed class EntityVideoEndpointServiceTests
 
         public Task<SettingsResponse> UpdateAsync(SettingsUpdateRequest request, CancellationToken cancellationToken) =>
             GetAsync(cancellationToken);
+
+        public Task<LibraryConfigResponse> GetLibraryConfigAsync(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new LibraryConfigResponse(SampleSettings(), []));
+        }
+
+        public Task<LibrarySettings> UpdateLibrarySettingsAsync(
+            LibrarySettingsUpdateRequest request,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(SampleSettings());
+        }
+
+        public Task<LibraryBrowseResponse> BrowseLibraryPathAsync(
+            string? path,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new LibraryBrowseResponse(path ?? "/media", "/", []));
+        }
+
+        public Task<LibraryRoot> CreateLibraryRootAsync(
+            LibraryRootCreateRequest request,
+            CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("The endpoint tests do not create library roots.");
+        }
+
+        public Task<LibraryRoot?> UpdateLibraryRootAsync(
+            Guid id,
+            LibraryRootUpdateRequest request,
+            CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("The endpoint tests do not update library roots.");
+        }
+
+        public Task<bool> DeleteLibraryRootAsync(Guid id, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("The endpoint tests do not delete library roots.");
+        }
+
+        private static LibrarySettings SampleSettings()
+        {
+            return new LibrarySettings(
+                Guid.NewGuid(),
+                false,
+                60,
+                true,
+                true,
+                false,
+                true,
+                true,
+                10,
+                8,
+                2,
+                2,
+                1,
+                false,
+                true,
+                false,
+                "en,eng",
+                "stylized",
+                1,
+                88,
+                1,
+                "direct",
+                true,
+                DateTimeOffset.UnixEpoch,
+                DateTimeOffset.UnixEpoch);
+        }
     }
 }

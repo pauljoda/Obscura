@@ -52,6 +52,32 @@ public sealed class JobEndpointServiceTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task CancelJobsEndpointCancelsByOptionalType()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.DeleteFromJsonAsync<JobCancelResponse>("/api/jobs?type=scan-library");
+
+        Assert.NotNull(response);
+        Assert.Equal(1, response.Cancelled);
+    }
+
+    [Fact]
+    public async Task ClearFailuresEndpointClearsByOptionalType()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        using var response = await client.PostAsync("/api/jobs/failures/clear?type=legacy-media-import", null);
+        var payload = await response.Content.ReadFromJsonAsync<JobFailureClearResponse>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(payload);
+        Assert.Equal(2, payload.Cleared);
+    }
+
     private static WebApplicationFactory<Program> CreateFactory()
     {
         return new WebApplicationFactory<Program>()
@@ -90,6 +116,21 @@ public sealed class JobEndpointServiceTests
                 DateTimeOffset.UnixEpoch,
                 null,
                 null));
+        }
+
+        public Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(type == JobType.ScanLibrary ? 1 : 0);
+        }
+
+        public Task<bool> CancelRunAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(id == ExistingJobId);
+        }
+
+        public Task<int> ClearFailuresAsync(JobType? type, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(type == JobType.LegacyMediaImport ? 2 : 0);
         }
 
         public Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)

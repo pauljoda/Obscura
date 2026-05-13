@@ -23,6 +23,30 @@ public interface IJobQueueService
     Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Cancels queued or running jobs, optionally scoped to one typed operation.
+    /// </summary>
+    /// <param name="type">Optional job type scope. Null cancels all cancellable jobs.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>Number of job runs marked cancelled.</returns>
+    Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Cancels one queued or running job run by identifier.
+    /// </summary>
+    /// <param name="id">Job run identifier.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>True when a job was cancelled.</returns>
+    Task<bool> CancelRunAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Clears failed jobs from the active failure list, optionally scoped to one typed operation.
+    /// </summary>
+    /// <param name="type">Optional job type scope. Null clears all failed jobs.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>Number of failed jobs cleared.</returns>
+    Task<int> ClearFailuresAsync(JobType? type, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Claims the next available queued job for one worker.
     /// </summary>
     /// <param name="workerId">Stable worker identifier used for the queue lock.</param>
