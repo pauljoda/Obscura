@@ -102,6 +102,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Moved v2 direct video streaming and cached HLS lookup ports into the .NET Application layer so API routes depend on playback use-case boundaries instead of infrastructure services.
 - Moved the v2 queue worker dispatch loop and registered job handlers into the .NET Application layer so the worker executable now only composes application services and infrastructure adapters.
 - Changed the v2 queue application boundary to use typed job snapshots and typed job creation values, keeping public job-code strings at the API serialization edge.
+- Changed v2 entity kind filters and endpoint group helpers to carry typed entity kinds instead of parallel kind-code strings at API and Application boundaries.
 - Split the v2 EF base entity table mapping out of the main DbContext so infrastructure persistence configuration is easier to review in focused files.
 - Split the v2 EF entity graph mapping for hierarchy, studio, credits, URLs, and external IDs into a focused persistence configuration file.
 - Split the v2 EF marker, subtitle, file, and video source detail mapping into a focused attachment persistence configuration file.

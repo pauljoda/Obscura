@@ -2,6 +2,7 @@ using Obscura.Application.Entities;
 using Obscura.Application.Taxonomy;
 using Obscura.Contracts.System;
 using Obscura.Contracts.Taxonomy;
+using Obscura.Domain.Entities;
 
 namespace Obscura.Api.Endpoints;
 
@@ -13,21 +14,21 @@ public static class TaxonomyEndpoints
             routes,
             "/api/people",
             "People",
-            "person",
+            EntityKindRegistry.Person,
             (taxonomy, query, cancellationToken) => taxonomy.ListPeopleAsync(query, cancellationToken),
             (taxonomy, id, cancellationToken) => taxonomy.GetPersonAsync(id, cancellationToken));
         MapTaxonomyGroup<StudioDetail>(
             routes,
             "/api/studios",
             "Studios",
-            "studio",
+            EntityKindRegistry.Studio,
             (taxonomy, query, cancellationToken) => taxonomy.ListStudiosAsync(query, cancellationToken),
             (taxonomy, id, cancellationToken) => taxonomy.GetStudioAsync(id, cancellationToken));
         MapTaxonomyGroup<TagDetail>(
             routes,
             "/api/tags",
             "Tags",
-            "tag",
+            EntityKindRegistry.Tag,
             (taxonomy, query, cancellationToken) => taxonomy.ListTagsAsync(query, cancellationToken),
             (taxonomy, id, cancellationToken) => taxonomy.GetTagAsync(id, cancellationToken));
 
@@ -38,7 +39,7 @@ public static class TaxonomyEndpoints
         IEndpointRouteBuilder routes,
         string path,
         string tag,
-        string kindCode,
+        IEntityKind kind,
         Func<TaxonomyService, EntityListQuery, CancellationToken, Task<TaxonomyListResponse>> list,
         Func<TaxonomyService, Guid, CancellationToken, Task<TDetail?>> get)
         where TDetail : class
@@ -55,7 +56,7 @@ public static class TaxonomyEndpoints
             return await list(taxonomy, new EntityListQuery(null, query, cursor), cancellationToken);
         })
             .WithName($"List{tag}")
-            .WithSummary($"Lists {kindCode} entities through the application layer.");
+            .WithSummary($"Lists {kind.Code} entities through the application layer.");
 
         group.MapGet("/{id:guid}", async (
             Guid id,
@@ -65,12 +66,12 @@ public static class TaxonomyEndpoints
             var detail = await get(taxonomy, id, cancellationToken);
             return detail is null
                 ? Results.NotFound(new ApiProblem(
-                    $"{kindCode}_not_found",
+                    $"{kind.Code}_not_found",
                     $"{tag.TrimEnd('s')} '{id}' was not found."))
                 : Results.Ok(detail);
         })
             .WithName($"Get{tag.TrimEnd('s')}")
-            .WithSummary($"Gets one {kindCode} entity through the application layer.")
+            .WithSummary($"Gets one {kind.Code} entity through the application layer.")
             .Produces<TDetail>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
     }

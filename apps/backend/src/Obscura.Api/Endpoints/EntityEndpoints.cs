@@ -13,18 +13,13 @@ public static class EntityEndpoints
             .WithTags("Entities");
 
         group.MapGet("/", async (
-            string? kind,
+            EntityKindQuery? kind,
             string? query,
             string? cursor,
             EntityService entities,
             CancellationToken cancellationToken) =>
             {
-                if (!TryResolveEntityKind(kind, out var entityKind, out var problem))
-                {
-                    return Results.BadRequest(problem);
-                }
-
-                return Results.Ok(await entities.ListAsync(new EntityListQuery(entityKind, query, cursor), cancellationToken));
+                return Results.Ok(await entities.ListAsync(new EntityListQuery(kind?.Value, query, cursor), cancellationToken));
             })
             .WithName("ListEntities")
             .WithSummary("Lists global entities with optional kind, search, and cursor filters.")
@@ -97,26 +92,30 @@ public static class EntityEndpoints
 
         return group;
     }
+}
 
-    private static bool TryResolveEntityKind(string? code, out IEntityKind? kind, out ApiProblem? problem)
+/// <summary>
+/// Query-bound entity kind value that decodes public kind codes at the HTTP edge.
+/// </summary>
+/// <param name="Value">Typed entity kind resolved from the query string.</param>
+public readonly record struct EntityKindQuery(IEntityKind Value)
+{
+    /// <summary>
+    /// Attempts to parse a query-string value into a known entity kind.
+    /// </summary>
+    /// <param name="value">Query-string value supplied by the API caller.</param>
+    /// <param name="provider">Format provider supplied by the minimal API binder.</param>
+    /// <param name="result">Parsed query value when the kind code is known.</param>
+    /// <returns>True when the query value maps to a registered entity kind.</returns>
+    public static bool TryParse(string? value, IFormatProvider? provider, out EntityKindQuery result)
     {
-        kind = null;
-        problem = null;
-
-        if (string.IsNullOrWhiteSpace(code))
+        if (value is not null && EntityKindRegistry.TryGet(value, out var kind))
         {
+            result = new EntityKindQuery(kind);
             return true;
         }
 
-        if (EntityKindRegistry.TryGet(code, out var knownKind))
-        {
-            kind = knownKind;
-            return true;
-        }
-
-        problem = new ApiProblem(
-            "unknown_entity_kind",
-            $"Entity kind '{code}' is not supported by this Obscura backend.");
+        result = default;
         return false;
     }
 }

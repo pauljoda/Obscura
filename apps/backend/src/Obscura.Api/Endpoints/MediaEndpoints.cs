@@ -2,6 +2,7 @@ using Obscura.Application.Entities;
 using Obscura.Application.Media;
 using Obscura.Contracts.Media;
 using Obscura.Contracts.System;
+using Obscura.Domain.Entities;
 
 namespace Obscura.Api.Endpoints;
 
@@ -13,35 +14,35 @@ public static class MediaEndpoints
             routes,
             "/api/images",
             "Images",
-            "image",
+            EntityKindRegistry.Image,
             (media, query, cancellationToken) => media.ListImagesAsync(query, cancellationToken),
             (media, id, cancellationToken) => media.GetImageAsync(id, cancellationToken));
         MapMediaGroup<GalleryDetail>(
             routes,
             "/api/galleries",
             "Galleries",
-            "gallery",
+            EntityKindRegistry.Gallery,
             (media, query, cancellationToken) => media.ListGalleriesAsync(query, cancellationToken),
             (media, id, cancellationToken) => media.GetGalleryAsync(id, cancellationToken));
         MapMediaGroup<BookDetail>(
             routes,
             "/api/books",
             "Books",
-            "book",
+            EntityKindRegistry.Book,
             (media, query, cancellationToken) => media.ListBooksAsync(query, cancellationToken),
             (media, id, cancellationToken) => media.GetBookAsync(id, cancellationToken));
         MapMediaGroup<AudioLibraryDetail>(
             routes,
             "/api/audio-libraries",
             "AudioLibraries",
-            "audio_library",
+            EntityKindRegistry.AudioLibrary,
             (media, query, cancellationToken) => media.ListAudioLibrariesAsync(query, cancellationToken),
             (media, id, cancellationToken) => media.GetAudioLibraryAsync(id, cancellationToken));
         MapMediaGroup<AudioTrackDetail>(
             routes,
             "/api/audio-tracks",
             "AudioTracks",
-            "audio_track",
+            EntityKindRegistry.AudioTrack,
             (media, query, cancellationToken) => media.ListAudioTracksAsync(query, cancellationToken),
             (media, id, cancellationToken) => media.GetAudioTrackAsync(id, cancellationToken));
 
@@ -52,7 +53,7 @@ public static class MediaEndpoints
         IEndpointRouteBuilder routes,
         string path,
         string tag,
-        string kindCode,
+        IEntityKind kind,
         Func<MediaService, EntityListQuery, CancellationToken, Task<MediaListResponse>> list,
         Func<MediaService, Guid, CancellationToken, Task<TDetail?>> get)
         where TDetail : class
@@ -69,7 +70,7 @@ public static class MediaEndpoints
             return await list(media, new EntityListQuery(null, query, cursor), cancellationToken);
         })
             .WithName($"List{tag}")
-            .WithSummary($"Lists {kindCode} media entities through the application layer.");
+            .WithSummary($"Lists {kind.Code} media entities through the application layer.");
 
         group.MapGet("/{id:guid}", async (
             Guid id,
@@ -79,12 +80,12 @@ public static class MediaEndpoints
             var detail = await get(media, id, cancellationToken);
             return detail is null
                 ? Results.NotFound(new ApiProblem(
-                    $"{kindCode}_not_found",
+                    $"{kind.Code}_not_found",
                     $"{tag} item '{id}' was not found."))
                 : Results.Ok(detail);
         })
             .WithName($"Get{tag.TrimEnd('s')}")
-            .WithSummary($"Gets one {kindCode} media entity through the application layer.")
+            .WithSummary($"Gets one {kind.Code} media entity through the application layer.")
             .Produces<TDetail>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
     }

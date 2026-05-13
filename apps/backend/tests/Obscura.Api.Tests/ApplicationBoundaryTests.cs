@@ -27,4 +27,29 @@ public sealed class ApplicationBoundaryTests
                 "Obscura.Contracts.Jobs.JobRun",
                 method.ReturnType.FullName ?? method.ReturnType.Name));
     }
+
+    [Fact]
+    public void ApiEntityKindQueryUsesTypedEntityKindValue()
+    {
+        var type = typeof(Program).Assembly.GetType("Obscura.Api.Endpoints.EntityKindQuery");
+
+        Assert.NotNull(type);
+        Assert.Equal(typeof(IEntityKind), type.GetProperty("Value")?.PropertyType);
+    }
+
+    [Fact]
+    public void ApiEndpointHelpersDoNotCarryEntityKindAsStrings()
+    {
+        var endpointTypes = typeof(Program).Assembly
+            .GetTypes()
+            .Where(type => type.Namespace == "Obscura.Api.Endpoints");
+
+        var stringKindParameters = endpointTypes
+            .SelectMany(type => type.GetMethods(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public))
+            .SelectMany(method => method.GetParameters())
+            .Where(parameter => parameter.Name is "kind" or "kindCode" && parameter.ParameterType == typeof(string))
+            .ToArray();
+
+        Assert.Empty(stringKindParameters);
+    }
 }
