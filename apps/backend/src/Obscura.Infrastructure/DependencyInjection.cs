@@ -5,6 +5,7 @@ using Npgsql;
 using Obscura.Application.Jobs;
 using Obscura.Application.Migrations;
 using Obscura.Application.Settings;
+using Obscura.Application.Videos;
 using Obscura.Infrastructure.Backups;
 using Obscura.Infrastructure.Database;
 using Obscura.Domain.Interfaces;

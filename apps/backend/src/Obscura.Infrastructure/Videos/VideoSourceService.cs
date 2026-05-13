@@ -1,9 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Application.Videos;
 using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
 
 namespace Obscura.Infrastructure.Videos;
 
+/// <summary>
+/// EF-backed implementation that resolves source video files from the shared file capability table.
+/// </summary>
 public sealed class VideoSourceService : IVideoSourceService
 {
     private static readonly ISet<string> BrowserNativeExtensions =
@@ -30,11 +34,16 @@ public sealed class VideoSourceService : IVideoSourceService
 
     private readonly ObscuraDbContext _db;
 
+    /// <summary>
+    /// Creates a video source resolver over the v2 database context.
+    /// </summary>
+    /// <param name="db">Database context used to find video source file rows.</param>
     public VideoSourceService(ObscuraDbContext db)
     {
         _db = db;
     }
 
+    /// <inheritdoc />
     public async Task<VideoSourceFile?> GetSourceAsync(Guid id, CancellationToken cancellationToken)
     {
         var source = await (

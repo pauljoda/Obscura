@@ -1,14 +1,24 @@
+using Obscura.Application.Videos;
+
 namespace Obscura.Infrastructure.Videos;
 
+/// <summary>
+/// Filesystem-backed implementation that resolves generated HLS playback assets from the cache directory.
+/// </summary>
 public sealed class HlsAssetService : IHlsAssetService
 {
     private readonly HlsAssetServiceOptions _options;
 
+    /// <summary>
+    /// Creates an HLS asset resolver rooted at the configured cache directory.
+    /// </summary>
+    /// <param name="options">Cache-root options for generated HLS packages.</param>
     public HlsAssetService(HlsAssetServiceOptions options)
     {
         _options = options;
     }
 
+    /// <inheritdoc />
     public Task<HlsAsset?> GetAssetAsync(
         Guid id,
         string assetPath,

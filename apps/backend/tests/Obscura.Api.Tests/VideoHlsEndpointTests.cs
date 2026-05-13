@@ -2,7 +2,7 @@ using System.Net;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Obscura.Infrastructure.Videos;
+using Obscura.Application.Videos;
 
 namespace Obscura.Api.Tests;
 

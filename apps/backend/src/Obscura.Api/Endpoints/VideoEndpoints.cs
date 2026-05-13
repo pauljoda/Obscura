@@ -1,7 +1,6 @@
 using Obscura.Application.Videos;
 using Obscura.Contracts.System;
 using Obscura.Contracts.Videos;
-using Obscura.Infrastructure.Videos;
 
 namespace Obscura.Api.Endpoints;
 
