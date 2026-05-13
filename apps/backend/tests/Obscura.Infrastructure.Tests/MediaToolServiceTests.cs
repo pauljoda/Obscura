@@ -35,7 +35,7 @@ public sealed class MediaToolServiceTests
         Assert.Null(status.FfprobeVersion);
     }
 
-    private sealed class FakeProcessExecutor : IProcessExecutor
+    private sealed class FakeProcessExecutor : ProcessExecutor
     {
         private readonly IReadOnlyDictionary<string, ProcessExecutionResult> _results;
 
@@ -44,7 +44,7 @@ public sealed class MediaToolServiceTests
             _results = results;
         }
 
-        public Task<ProcessExecutionResult> RunAsync(
+        public override Task<ProcessExecutionResult> RunAsync(
             string fileName,
             IReadOnlyList<string> arguments,
             IReadOnlyDictionary<string, string>? environment,
@@ -54,9 +54,9 @@ public sealed class MediaToolServiceTests
         }
     }
 
-    private sealed class ThrowingProcessExecutor : IProcessExecutor
+    private sealed class ThrowingProcessExecutor : ProcessExecutor
     {
-        public Task<ProcessExecutionResult> RunAsync(
+        public override Task<ProcessExecutionResult> RunAsync(
             string fileName,
             IReadOnlyList<string> arguments,
             IReadOnlyDictionary<string, string>? environment,

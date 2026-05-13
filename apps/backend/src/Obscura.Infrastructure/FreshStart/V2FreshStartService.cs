@@ -8,11 +8,11 @@ namespace Obscura.Infrastructure.FreshStart;
 public sealed class V2FreshStartService : IV2FreshStartService
 {
     private readonly ObscuraDbContext _db;
-    private readonly IDatabaseBackupService _backupService;
+    private readonly DatabaseBackupService _backupService;
 
     public V2FreshStartService(
         ObscuraDbContext db,
-        IDatabaseBackupService backupService)
+        DatabaseBackupService backupService)
     {
         _db = db;
         _backupService = backupService;

@@ -1,27 +1,42 @@
 using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
+using Obscura.Infrastructure.Processes;
 
 namespace Obscura.Infrastructure.Backups;
 
-public sealed class DatabaseBackupService : IDatabaseBackupService
+/// <summary>
+/// Creates PostgreSQL dump backups before destructive v2 migration reset operations.
+/// </summary>
+public sealed class DatabaseBackupService
 {
     private readonly ObscuraDbContext _db;
-    private readonly IProcessRunner _processRunner;
+    private readonly ProcessExecutor _processExecutor;
     private readonly string _connectionString;
     private readonly string _dataDir;
 
+    /// <summary>
+    /// Creates the backup service.
+    /// </summary>
+    /// <param name="db">Database context used to record backup attempts.</param>
+    /// <param name="processExecutor">Process runner used to invoke pg_dump.</param>
+    /// <param name="options">Backup connection and filesystem options.</param>
     public DatabaseBackupService(
         ObscuraDbContext db,
-        IProcessRunner processRunner,
+        ProcessExecutor processExecutor,
         DatabaseBackupServiceOptions options)
     {
         _db = db;
-        _processRunner = processRunner;
+        _processExecutor = processExecutor;
         _connectionString = options.ConnectionString;
         _dataDir = options.DataDir;
     }
 
+    /// <summary>
+    /// Creates a timestamped pg_dump file and records the result in the v2 backup table.
+    /// </summary>
+    /// <param name="cancellationToken">Token used to cancel backup creation.</param>
+    /// <returns>Backup path when pg_dump exits successfully.</returns>
     public async Task<DatabaseBackupResult> CreateBackupAsync(CancellationToken cancellationToken)
     {
         var plan = PostgresBackupPlan.Create(_dataDir, DateTimeOffset.UtcNow);
@@ -39,14 +54,14 @@ public sealed class DatabaseBackupService : IDatabaseBackupService
         await _db.SaveChangesAsync(cancellationToken);
 
         var environment = PostgresEnvironment.FromConnectionString(_connectionString);
-        var exitCode = await _processRunner.RunAsync(plan.FileName, plan.Arguments, environment, cancellationToken);
+        var process = await _processExecutor.RunAsync(plan.FileName, plan.Arguments, environment, cancellationToken);
 
         row.CompletedAt = DateTimeOffset.UtcNow;
-        row.Status = exitCode == 0 ? DatabaseBackupStatus.Completed : DatabaseBackupStatus.Failed;
-        row.Error = exitCode == 0 ? null : $"pg_dump exited with code {exitCode}.";
+        row.Status = process.ExitCode == 0 ? DatabaseBackupStatus.Completed : DatabaseBackupStatus.Failed;
+        row.Error = process.ExitCode == 0 ? null : $"pg_dump exited with code {process.ExitCode}.";
         await _db.SaveChangesAsync(cancellationToken);
 
-        if (exitCode != 0)
+        if (process.ExitCode != 0)
         {
             throw new InvalidOperationException(row.Error);
         }

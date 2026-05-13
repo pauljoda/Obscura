@@ -2,15 +2,27 @@ using Obscura.Infrastructure.Processes;
 
 namespace Obscura.Infrastructure.Media;
 
-public sealed class MediaToolService : IMediaToolService
+/// <summary>
+/// Checks whether required media binaries are available to the backend process.
+/// </summary>
+public sealed class MediaToolService
 {
-    private readonly IProcessExecutor _processExecutor;
+    private readonly ProcessExecutor _processExecutor;
 
-    public MediaToolService(IProcessExecutor processExecutor)
+    /// <summary>
+    /// Creates the media tool checker.
+    /// </summary>
+    /// <param name="processExecutor">Process runner used to invoke media binaries.</param>
+    public MediaToolService(ProcessExecutor processExecutor)
     {
         _processExecutor = processExecutor;
     }
 
+    /// <summary>
+    /// Checks for ffmpeg and ffprobe and returns availability plus version hints.
+    /// </summary>
+    /// <param name="cancellationToken">Token used to cancel process checks.</param>
+    /// <returns>Current media tool availability status.</returns>
     public async Task<MediaToolStatus> CheckAsync(CancellationToken cancellationToken)
     {
         var ffmpeg = await CheckToolAsync("ffmpeg", cancellationToken);

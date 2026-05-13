@@ -2,9 +2,20 @@ using System.Diagnostics;
 
 namespace Obscura.Infrastructure.Processes;
 
-public sealed class ProcessExecutor : IProcessExecutor
+/// <summary>
+/// Runs external command-line processes and captures their standard output and error streams.
+/// </summary>
+public class ProcessExecutor
 {
-    public async Task<ProcessExecutionResult> RunAsync(
+    /// <summary>
+    /// Starts a process with explicit arguments and environment overrides.
+    /// </summary>
+    /// <param name="fileName">Executable name or absolute path.</param>
+    /// <param name="arguments">Arguments passed without shell interpolation.</param>
+    /// <param name="environment">Optional environment variables to set for the process.</param>
+    /// <param name="cancellationToken">Token used to cancel process execution.</param>
+    /// <returns>Exit code plus captured standard output and standard error.</returns>
+    public virtual async Task<ProcessExecutionResult> RunAsync(
         string fileName,
         IReadOnlyList<string> arguments,
         IReadOnlyDictionary<string, string>? environment,

@@ -47,10 +47,9 @@ public static class DependencyInjection
         services.AddSingleton(new V2UpgradeGateOptions(dataDir));
         services.AddSingleton<IV2UpgradeGate, V2UpgradeGate>();
         services.AddSingleton(new DatabaseBackupServiceOptions(connectionString, dataDir));
-        services.AddSingleton<IProcessExecutor, ProcessExecutor>();
-        services.AddSingleton<IProcessRunner, ProcessRunner>();
-        services.AddSingleton<IMediaToolService, MediaToolService>();
-        services.AddScoped<IDatabaseBackupService, DatabaseBackupService>();
+        services.AddSingleton<ProcessExecutor>();
+        services.AddSingleton<MediaToolService>();
+        services.AddScoped<DatabaseBackupService>();
         services.AddScoped<IV2FreshStartService, V2FreshStartService>();
         services.AddScoped<ILegacyMediaImportService, LegacyMediaImportService>();
         services.AddScoped<ILegacyVideoImportService, LegacyVideoImportService>();
