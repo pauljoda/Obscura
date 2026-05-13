@@ -103,6 +103,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - List-view entity cards now keep consistent row height regardless of image aspect ratio — portrait, landscape, and square thumbnails all render at the same size without clipping the title or metadata chips.
 - V2 entity lists now enforce the server-side hide-NSFW setting before entity rows are projected, so hidden content is not sent to the browser.
 - V2 video and season thumbnails now reserve the bottom-left overlay for entity-specific labels such as season and episode numbers.
+- Local development now has database backup and restore scripts for repeatedly testing v2 migration mappings against the same data set.
 
 ### Docs
 

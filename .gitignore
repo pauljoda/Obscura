@@ -23,6 +23,7 @@ test-results
 # Generated media & cache (dev/test data)
 .cache/
 .obscura-cache/
+.obscura-dev/
 
 # OS
 .DS_Store

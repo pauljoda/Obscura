@@ -23,6 +23,8 @@
     "docs:build": "pnpm --filter @obscura/documentation-site build",
     "docs:serve": "node scripts/docs-site.mjs serve",
     "docs:check": "pnpm --filter @obscura/documentation-site typecheck && pnpm --filter @obscura/documentation-site build",
+    "dev:db:backup": "node scripts/dev/db-backup.mjs",
+    "dev:db:restore": "node scripts/dev/db-restore.mjs",
     "dev:seed-scroll": "node scripts/dev/seed-scroll-fixtures.mjs",
     "release:check": "node scripts/release/check-version.mjs",
     "release:cut": "node scripts/release/cut.mjs"
