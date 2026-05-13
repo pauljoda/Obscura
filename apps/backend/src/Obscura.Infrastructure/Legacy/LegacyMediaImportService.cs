@@ -1,4 +1,5 @@
 using Npgsql;
+using Obscura.Application.Migrations;
 
 namespace Obscura.Infrastructure.Legacy;
 

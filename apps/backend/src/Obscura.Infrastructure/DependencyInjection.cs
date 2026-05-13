@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Obscura.Application.Jobs;
+using Obscura.Application.Migrations;
 using Obscura.Application.Settings;
 using Obscura.Infrastructure.Backups;
 using Obscura.Infrastructure.Database;

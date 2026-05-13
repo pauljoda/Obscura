@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Application.Migrations;
 using Obscura.Infrastructure.Backups;
 using Obscura.Infrastructure.Persistence;
 

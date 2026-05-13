@@ -1,6 +1,6 @@
 using Obscura.Contracts.Jobs;
 using Obscura.Domain.Entities;
-using Obscura.Infrastructure.Legacy;
+using Obscura.Application.Migrations;
 
 namespace Obscura.Worker;
 

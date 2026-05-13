@@ -2,10 +2,8 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Obscura.Application.Migrations;
 using Obscura.Contracts.System;
-using Obscura.Infrastructure.FreshStart;
-using Obscura.Infrastructure.Legacy;
-using Obscura.Infrastructure.Upgrades;
 
 namespace Obscura.Api.Tests;
 
@@ -91,7 +89,7 @@ public sealed class V2FreshStartEndpointTests
     {
         public V2UpgradeGateStatus Check()
         {
-            return new V2UpgradeGateStatus(V2UpgradeGate.GateId, true, "/tmp/accepted");
+            return new V2UpgradeGateStatus("v2-global-entities", true, "/tmp/accepted");
         }
 
         public V2UpgradeGateStatus Accept()

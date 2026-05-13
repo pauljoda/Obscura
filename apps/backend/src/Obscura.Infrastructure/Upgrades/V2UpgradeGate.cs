@@ -1,3 +1,5 @@
+using Obscura.Application.Migrations;
+
 namespace Obscura.Infrastructure.Upgrades;
 
 public sealed class V2UpgradeGate : IV2UpgradeGate
