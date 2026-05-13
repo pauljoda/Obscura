@@ -3,11 +3,11 @@
   import { page } from "$app/state";
   import { Film } from "@lucide/svelte";
   import type { PageData } from "./$types";
-  import type { VideoCardListItem } from "$lib/api/types";
+  import type { VideoCardListItem } from "$lib/v1/api/types-v1";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
-  import { deleteVideo } from "$lib/api/videos";
+  import { deleteVideo } from "$lib/v1/api/videos-v1";
   import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
   import { videosSurfaceConfig } from "$lib/media-surface/configs/videos";
 

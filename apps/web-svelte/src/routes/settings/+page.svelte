@@ -21,13 +21,13 @@
     type SubtitleAppearance,
     type SubtitleDisplayStyle,
   } from "@obscura/contracts";
-  import type { LibraryRoot, LibrarySettings } from "$lib/api/types";
+  import type { LibraryRoot, LibrarySettings } from "$lib/v1/api/types-v1";
   import {
     fetchLibraryConfig,
     migrateVideoAssetStorage,
     updateLibrarySettings,
-  } from "$lib/api/library";
-  import { fetchInstalledScrapers } from "$lib/api/scrapers";
+  } from "$lib/v1/api/library-v1";
+  import { fetchInstalledScrapers } from "$lib/v1/api/scrapers-v1";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import ToggleCard from "$lib/components/settings/ToggleCard.svelte";
   import NumberStepper from "$lib/components/settings/NumberStepper.svelte";

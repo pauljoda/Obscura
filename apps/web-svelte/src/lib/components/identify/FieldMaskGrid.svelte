@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { AcceptFieldMask } from "$lib/api/scrapers";
+  import type { AcceptFieldMask } from "$lib/v1/api/scrapers-v1";
   import { Checkbox, cn } from "@obscura/ui-svelte";
 
   type FieldKey = keyof AcceptFieldMask;

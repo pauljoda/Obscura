@@ -19,7 +19,7 @@ import {
   loadUiPrefObject,
 } from "$lib/server/ui-prefs";
 import { redirectHiddenNsfwDetail } from "$lib/server/nsfw-page-guard";
-import type { PerformerItem, StudioItem, TagItem } from "$lib/api/types";
+import type { PerformerItem, StudioItem, TagItem } from "$lib/v1/api/types-v1";
 
 const PAGE_SIZE = 60;
 

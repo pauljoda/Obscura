@@ -16,7 +16,7 @@
     SearchResultItem,
   } from "@obscura/contracts";
   import SearchResultCard from "$lib/components/SearchResultCard.svelte";
-  import { fetchSearch } from "$lib/api/media";
+  import { fetchSearch } from "$lib/v1/api/media-v1";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { entityTerms } from "$lib/terminology";
   import {

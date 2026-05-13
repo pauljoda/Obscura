@@ -1,10 +1,10 @@
-import { fetchApi } from "./core";
+import { fetchApi } from "./core-v1";
 import type {
   JobsDashboard,
   LibraryBrowse,
   LibraryRoot,
   LibrarySettings,
-} from "./types";
+} from "./types-v1";
 
 export async function fetchLibraryConfig(): Promise<{
   settings: LibrarySettings;

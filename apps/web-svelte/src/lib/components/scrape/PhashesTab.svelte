@@ -13,15 +13,15 @@
     createStashId,
     deleteStashId,
     fetchStashBoxEndpoints,
-  } from "$lib/api/scrapers";
-  import type { StashBoxEndpoint } from "$lib/api/types";
+  } from "$lib/v1/api/scrapers-v1";
+  import type { StashBoxEndpoint } from "$lib/v1/api/types-v1";
   import {
     listPhashContributions,
     submitFingerprintsToEndpoint,
     type FingerprintAlgorithm,
     type PhashContributionItem,
     type PhashContributionSubmission,
-  } from "$lib/api/phash-contributions";
+  } from "$lib/v1/api/phash-contributions-v1";
   import StashIdChips from "./StashIdChips.svelte";
 
   const ALGORITHMS: FingerprintAlgorithm[] = ["MD5", "OSHASH", "PHASH"];

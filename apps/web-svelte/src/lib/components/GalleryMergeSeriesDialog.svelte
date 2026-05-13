@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ArrowDownUp, FolderInput, Loader2, X } from "@lucide/svelte";
   import type { GalleryListItemDto } from "@obscura/contracts";
-  import { fetchGalleryDetail, mergeGalleriesIntoSeries } from "$lib/api/media";
+  import { fetchGalleryDetail, mergeGalleriesIntoSeries } from "$lib/v1/api/media-v1";
   import { portal } from "$lib/actions/portal";
 
   interface Props {

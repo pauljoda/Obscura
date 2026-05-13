@@ -8,8 +8,8 @@ const { updatePerformer } = vi.hoisted(() => ({
   updatePerformer: vi.fn(),
 }));
 
-vi.mock("$lib/api/entities", async () => {
-  const actual = await vi.importActual<typeof import("$lib/api/entities")>("$lib/api/entities");
+vi.mock("$lib/v1/api/entities-v1", async () => {
+  const actual = await vi.importActual<typeof import("$lib/v1/api/entities-v1")>("$lib/v1/api/entities-v1");
   return {
     ...actual,
     updatePerformer,

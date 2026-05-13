@@ -7,7 +7,7 @@ import {
   buildStudioListQuery,
   buildTagListQuery,
   buildVideoSeriesListQuery,
-} from "./query-builders";
+} from "./query-builders-v1";
 
 describe("media list query builders", () => {
   it("encodes scalar and repeated gallery params in a shared order", () => {

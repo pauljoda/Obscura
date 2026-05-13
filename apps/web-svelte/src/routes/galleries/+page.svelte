@@ -4,7 +4,7 @@
   import type { GalleryListItemDto } from "@obscura/contracts";
   import type { PageData } from "./$types";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
-  import { deleteGallery } from "$lib/api/media";
+  import { deleteGallery } from "$lib/v1/api/media-v1";
   import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
   import { galleriesSurfaceConfig } from "$lib/media-surface/configs/galleries";
 

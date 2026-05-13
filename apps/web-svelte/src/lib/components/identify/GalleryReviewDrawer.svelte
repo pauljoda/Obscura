@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Check, Loader2 } from "@lucide/svelte";
   import { Checkbox, cn } from "@obscura/ui-svelte";
-  import { executePlugin, fetchScrapeResult } from "$lib/api/scrapers";
+  import { executePlugin, fetchScrapeResult } from "$lib/v1/api/scrapers-v1";
   import type {
     GalleryRow,
     GalleryField,

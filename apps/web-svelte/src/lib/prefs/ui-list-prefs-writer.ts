@@ -11,7 +11,7 @@
  */
 
 import { invalidate } from "$app/navigation";
-import { fetchApi } from "$lib/api/core";
+import { fetchApi } from "$lib/v1/api/core-v1";
 
 export async function writeListPrefs<T>(key: string, value: T): Promise<void> {
   try {

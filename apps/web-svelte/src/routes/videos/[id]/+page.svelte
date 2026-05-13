@@ -15,16 +15,16 @@
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import type { SubtitleAppearance, SubtitleDisplayStyle, VideoDetailDto } from "@obscura/contracts";
-  import { toApiUrl } from "$lib/api/core";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
   import {
     updateVideo,
     recordVideoPlay,
     recordVideoOrgasm,
     resetVideoMetadata,
     fetchVideoDetail,
-  } from "$lib/api/videos";
-  import { fetchLibraryConfig, rebuildVideoPreview } from "$lib/api/library";
-  import type { LibrarySettings } from "$lib/api/types";
+  } from "$lib/v1/api/videos-v1";
+  import { fetchLibraryConfig, rebuildVideoPreview } from "$lib/v1/api/library-v1";
+  import type { LibrarySettings } from "$lib/v1/api/types-v1";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { useAppChrome, type AppBreadcrumb } from "$lib/stores/app-chrome.svelte";
   import { usePlaylist } from "$lib/stores/playlist.svelte";

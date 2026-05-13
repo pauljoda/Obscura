@@ -26,7 +26,7 @@ import type {
   PerformerItem,
   StudioItem,
   TagItem,
-} from "../api/types";
+} from "$lib/v1/api/types-v1";
 import {
   buildAudioLibraryListQuery,
   buildBookListQuery,
@@ -39,7 +39,7 @@ import {
   type GalleryListQueryParams,
   type ImageListQueryParams,
   type TagStudioListQueryParams,
-} from "../api/query-builders";
+} from "$lib/v1/api/query-builders-v1";
 
 export async function fetchGalleries(
   params?: GalleryListQueryParams,

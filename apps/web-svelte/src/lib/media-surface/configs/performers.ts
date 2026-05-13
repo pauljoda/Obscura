@@ -3,8 +3,8 @@ import type {
   FilterSectionSpec,
   MediaSurfaceConfig,
 } from "$lib/media-surface/config";
-import { fetchPerformers, deletePerformer, updatePerformer } from "$lib/api/entities";
-import type { PerformerItem } from "$lib/api/types";
+import { fetchPerformers, deletePerformer, updatePerformer } from "$lib/v1/api/entities-v1";
+import type { PerformerItem } from "$lib/v1/api/types-v1";
 import PerformerCard from "./PerformerCard.svelte";
 
 type PerformerFilterType =

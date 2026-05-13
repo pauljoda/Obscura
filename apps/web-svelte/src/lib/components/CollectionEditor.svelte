@@ -25,8 +25,8 @@
     deleteCollectionCover,
     updateCollection,
     uploadCollectionCover,
-  } from "$lib/api/media";
-  import { toApiUrl } from "$lib/api/core";
+  } from "$lib/v1/api/media-v1";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
   import ConditionBuilder from "./collections/ConditionBuilder.svelte";
   import type { SuggestionItem } from "$lib/collection-suggestions";
 

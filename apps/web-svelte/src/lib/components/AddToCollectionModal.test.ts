@@ -11,7 +11,7 @@ const { fetchCollections, addCollectionItems, createCollection } = vi.hoisted(
   }),
 );
 
-vi.mock("$lib/api/media", () => ({
+vi.mock("$lib/v1/api/media-v1", () => ({
   fetchCollections,
   addCollectionItems,
   createCollection,

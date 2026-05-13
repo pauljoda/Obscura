@@ -22,7 +22,7 @@
     fetchVideoSubtitleCues,
     updateVideoSubtitle,
     uploadVideoSubtitle,
-  } from "$lib/api/videos";
+  } from "$lib/v1/api/videos-v1";
 
   interface Props {
     videoId: string;

@@ -11,7 +11,7 @@
  * `createServerPresets`, so they follow you across devices and browsers.
  */
 
-import type { FetchVideosParams } from "$lib/api/video-query";
+import type { FetchVideosParams } from "$lib/v1/api/video-query-v1";
 import { isRecord } from "$lib/list-prefs";
 
 export const VIDEOS_LIST_PREFS_KEY = "videos:listPrefs";

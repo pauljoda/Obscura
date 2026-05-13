@@ -1,7 +1,7 @@
 <script lang="ts">
   import { X, BookOpen, Film, Images, Layers, Music, ListMusic } from "@lucide/svelte";
   import type { CollectionEntityType } from "@obscura/contracts";
-  import { toApiUrl } from "$lib/api/core";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
   import {
     getEntityMeta,

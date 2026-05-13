@@ -1,10 +1,10 @@
 import {
   identifyPerformerViaStashBox,
-} from "$lib/api/scrapers";
+} from "$lib/v1/api/scrapers-v1";
 import {
   scrapePerformerApi,
   applyPerformerScrape,
-} from "$lib/api/entities";
+} from "$lib/v1/api/entities-v1";
 import type { MutableFlag, RowUpdater } from "./runner-utils";
 import {
   SEEK_TIMEOUT_MS,

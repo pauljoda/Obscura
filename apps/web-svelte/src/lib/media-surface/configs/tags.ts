@@ -3,8 +3,8 @@ import type {
   FilterSectionSpec,
   MediaSurfaceConfig,
 } from "$lib/media-surface/config";
-import { deleteTag, fetchTags, updateTag } from "$lib/api/entities";
-import type { TagItem } from "$lib/api/types";
+import { deleteTag, fetchTags, updateTag } from "$lib/v1/api/entities-v1";
+import type { TagItem } from "$lib/v1/api/types-v1";
 import TagCard from "./TagCard.svelte";
 
 export type TagFilterType =

@@ -4,7 +4,7 @@
   import { Badge } from "@obscura/ui-svelte";
   import type { BookPageDto, ImageListItemDto } from "@obscura/contracts";
   import type { PageData } from "./$types";
-  import { deleteBook, updateBook, updateBookProgress } from "$lib/api/media";
+  import { deleteBook, updateBook, updateBookProgress } from "$lib/v1/api/media-v1";
   import BookEdit from "$lib/components/BookEdit.svelte";
   import ComicReader from "$lib/components/ComicReader.svelte";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
@@ -17,7 +17,7 @@
   import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import NsfwTagLabel from "$lib/components/nsfw/NsfwTagLabel.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
-  import { toApiUrl } from "$lib/api/core";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
   import { getChapterProgressDisplay, getCurrentChapterProgressDisplay } from "$lib/book-progress";
   import { useAppChrome, type AppBreadcrumb } from "$lib/stores/app-chrome.svelte";
 

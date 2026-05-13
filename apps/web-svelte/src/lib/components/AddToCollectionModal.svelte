@@ -20,7 +20,7 @@
     addCollectionItems,
     createCollection,
     fetchCollections,
-  } from "$lib/api/media";
+  } from "$lib/v1/api/media-v1";
 
   interface Props {
     open: boolean;

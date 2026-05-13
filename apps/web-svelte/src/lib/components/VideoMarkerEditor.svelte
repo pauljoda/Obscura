@@ -6,7 +6,7 @@
     createVideoMarker,
     updateVideoMarker,
     deleteVideoMarker,
-  } from "$lib/api/videos";
+  } from "$lib/v1/api/videos-v1";
   import TimeMarkerForm, { formatSecondsInput } from "./TimeMarkerForm.svelte";
 
   interface Props {

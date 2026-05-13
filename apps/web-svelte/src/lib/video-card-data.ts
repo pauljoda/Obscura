@@ -1,4 +1,4 @@
-import { toApiUrl } from "$lib/api/core";
+import { toApiUrl } from "$lib/v1/api/core-v1";
 
 export interface VideoCardPerformer {
   name: string;

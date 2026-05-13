@@ -1,4 +1,4 @@
-import { buildQueryString } from "../query-string";
+import { buildQueryString } from "$lib/query-string";
 
 export interface FetchVideosParams {
   view?: "full" | "card";

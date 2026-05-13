@@ -4,7 +4,7 @@ import type {
   NormalizedSeriesCandidate,
   NormalizedSeriesResult,
 } from "@obscura/contracts";
-import type { ScrapeResult } from "$lib/api/types";
+import type { ScrapeResult } from "$lib/v1/api/types-v1";
 import CascadeReviewDrawer from "./CascadeReviewDrawer.svelte";
 
 const {
@@ -23,18 +23,18 @@ const {
   fetchVideoSeriesLibraryDetail: vi.fn(),
 }));
 
-vi.mock("$lib/api/scrapers", () => ({
+vi.mock("$lib/v1/api/scrapers-v1", () => ({
   acceptVideoSeriesScrape,
   executePlugin,
   fetchScrapeResult,
 }));
 
-vi.mock("$lib/api/entities", () => ({
+vi.mock("$lib/v1/api/entities-v1", () => ({
   fetchAllPerformers,
   fetchTags,
 }));
 
-vi.mock("$lib/api/videos", () => ({
+vi.mock("$lib/v1/api/videos-v1", () => ({
   fetchVideoSeriesLibraryDetail,
 }));
 

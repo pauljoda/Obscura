@@ -1,7 +1,7 @@
 <script lang="ts">
   import { BookOpen, Loader2, Upload, X } from "@lucide/svelte";
   import type { BookDetailDto } from "@obscura/contracts";
-  import { deleteBookCover, uploadBookCover } from "$lib/api/media";
+  import { deleteBookCover, uploadBookCover } from "$lib/v1/api/media-v1";
   import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
 
   interface Props {

@@ -17,7 +17,7 @@
     deleteTagImage,
     updateTag,
     uploadTagImage,
-  } from "$lib/api/entities";
+  } from "$lib/v1/api/entities-v1";
   import { page } from "$app/state";
   import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import MediaTabs from "$lib/media-surface/tabs/MediaTabs.svelte";

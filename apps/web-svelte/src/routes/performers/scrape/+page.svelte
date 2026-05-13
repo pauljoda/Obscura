@@ -14,13 +14,13 @@
     fetchAllPerformers,
     scrapePerformerApi,
     applyPerformerScrape,
-  } from "$lib/api/entities";
-  import { fetchInstalledScrapers } from "$lib/api/scrapers";
+  } from "$lib/v1/api/entities-v1";
+  import { fetchInstalledScrapers } from "$lib/v1/api/scrapers-v1";
   import type {
     PerformerItem,
     ScraperPackage,
     NormalizedPerformerScrapeResult,
-  } from "$lib/api/types";
+  } from "$lib/v1/api/types-v1";
   import { entityTerms } from "$lib/terminology";
   import ProviderSelector from "$lib/components/ProviderSelector.svelte";
   import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";

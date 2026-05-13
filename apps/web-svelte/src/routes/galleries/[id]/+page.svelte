@@ -3,7 +3,7 @@
   import { onMount } from "svelte";
   import { Images, LayoutGrid, LayoutList, Pencil, Rows3 } from "@lucide/svelte";
   import { Badge, dur } from "@obscura/ui-svelte";
-  import { deleteImage, updateGallery } from "$lib/api/media";
+  import { deleteImage, updateGallery } from "$lib/v1/api/media-v1";
   import type { ImageListItemDto } from "@obscura/contracts";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";

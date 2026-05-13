@@ -15,9 +15,9 @@
     Ruler,
   } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/api/core";
-  import { updatePerformer } from "$lib/api/entities";
-  import type { VideoListItem } from "$lib/api/types";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
+  import { updatePerformer } from "$lib/v1/api/entities-v1";
+  import type { VideoListItem } from "$lib/v1/api/types-v1";
   import type {
     VideoSeriesListItemDto,
     GalleryListItemDto,

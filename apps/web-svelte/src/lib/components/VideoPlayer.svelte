@@ -58,8 +58,8 @@
     HLS_RETRY_AFTER_SECONDS,
     type HlsStatus,
   } from "@obscura/contracts/media";
-  import type { SubtitleCueDto } from "$lib/api/types";
-  import { fetchVideoSubtitleCues } from "$lib/api/videos";
+  import type { SubtitleCueDto } from "$lib/v1/api/types-v1";
+  import { fetchVideoSubtitleCues } from "$lib/v1/api/videos-v1";
   import {
     enterMediaFullscreen,
     exitDocumentFullscreen,

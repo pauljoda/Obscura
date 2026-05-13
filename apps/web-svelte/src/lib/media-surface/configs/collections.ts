@@ -1,7 +1,7 @@
 import { LayoutGrid, LayoutList } from "@lucide/svelte";
 import type { CollectionListItemDto } from "@obscura/contracts";
 import type { MediaSurfaceConfig } from "$lib/media-surface/config";
-import { deleteCollection, fetchCollections } from "$lib/api/media";
+import { deleteCollection, fetchCollections } from "$lib/v1/api/media-v1";
 import CollectionCard from "./CollectionCard.svelte";
 
 type CollectionFilterType = never;

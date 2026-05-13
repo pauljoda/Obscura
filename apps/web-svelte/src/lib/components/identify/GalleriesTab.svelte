@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { acceptPluginResult } from "$lib/api/scrapers";
+  import { acceptPluginResult } from "$lib/v1/api/scrapers-v1";
   import type { GalleryRow, GalleryField } from "$lib/identify/identify-types";
   import GalleryRowCard from "./GalleryRowCard.svelte";
   import GalleryReviewDrawer from "./GalleryReviewDrawer.svelte";

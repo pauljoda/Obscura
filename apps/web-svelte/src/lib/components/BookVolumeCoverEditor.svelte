@@ -4,7 +4,7 @@
   import {
     deleteBookVolumeCover,
     uploadBookVolumeCover,
-  } from "$lib/api/media";
+  } from "$lib/v1/api/media-v1";
   import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
 
   interface Props {

@@ -4,7 +4,7 @@
  */
 import { env } from "$env/dynamic/public";
 
-export { buildQueryString } from "../query-string";
+export { buildQueryString } from "$lib/query-string";
 
 export const API_BASE = env.PUBLIC_API_URL || "/api";
 

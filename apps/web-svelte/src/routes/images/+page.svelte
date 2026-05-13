@@ -9,7 +9,7 @@
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
-  import { deleteImage } from "$lib/api/media";
+  import { deleteImage } from "$lib/v1/api/media-v1";
   import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
   import { imagesSurfaceConfig } from "$lib/media-surface/configs/images";
 

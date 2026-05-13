@@ -1,5 +1,5 @@
-import { createStashId } from "$lib/api/scrapers";
-import type { StashIdEntry } from "$lib/api/types";
+import { createStashId } from "$lib/v1/api/scrapers-v1";
+import type { StashIdEntry } from "$lib/v1/api/types-v1";
 
 export async function autoSaveStashId(
   entityType: "video" | "performer" | "studio" | "tag",

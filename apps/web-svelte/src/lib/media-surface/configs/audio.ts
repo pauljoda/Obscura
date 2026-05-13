@@ -8,7 +8,7 @@ import {
   deleteAudioLibrary,
   fetchAudioLibraries,
   updateAudioLibrary,
-} from "$lib/api/media";
+} from "$lib/v1/api/media-v1";
 import AudioLibraryCard from "./AudioLibraryCard.svelte";
 
 type AudioFilterType =

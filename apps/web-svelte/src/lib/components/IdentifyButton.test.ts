@@ -10,7 +10,7 @@ const { executePlugin, fetchInstalledPlugins, fetchInstalledScrapers, fetchStash
     fetchStashBoxEndpoints: vi.fn(),
   }));
 
-vi.mock("$lib/api/scrapers", () => ({
+vi.mock("$lib/v1/api/scrapers-v1", () => ({
   acceptPluginResult: vi.fn(),
   executePlugin,
   fetchInstalledPlugins,
@@ -20,7 +20,7 @@ vi.mock("$lib/api/scrapers", () => ({
   scrapeVideo: vi.fn(),
 }));
 
-vi.mock("$lib/api/videos", () => ({
+vi.mock("$lib/v1/api/videos-v1", () => ({
   fetchVideoDetail: vi.fn(),
   fetchVideoSeriesLibraryDetail: vi.fn(),
 }));

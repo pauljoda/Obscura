@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ChevronDown, ChevronUp, EyeOff } from "@lucide/svelte";
   import { Badge, StatusLed } from "@obscura/ui-svelte";
-  import type { JobRun } from "$lib/api/types";
+  import type { JobRun } from "$lib/v1/api/types-v1";
   import {
     displayDescribeTrigger,
     displayJobHeading,

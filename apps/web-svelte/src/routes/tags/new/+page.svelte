@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto, invalidate } from "$app/navigation";
   import { AlertTriangle, ArrowLeft, FileText, Tag as TagIcon } from "@lucide/svelte";
-  import { createTag } from "$lib/api/entities";
+  import { createTag } from "$lib/v1/api/entities-v1";
   import {
     EditFormShell,
     FormField,

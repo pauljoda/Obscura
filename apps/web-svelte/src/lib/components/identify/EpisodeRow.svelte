@@ -2,7 +2,7 @@
   import { AlertCircle, ChevronDown } from "@lucide/svelte";
   import { Checkbox, cn } from "@obscura/ui-svelte";
   import type { NormalizedEpisodeResult } from "@obscura/contracts";
-  import type { AcceptFieldMask } from "$lib/api/scrapers";
+  import type { AcceptFieldMask } from "$lib/v1/api/scrapers-v1";
   import FieldMaskGrid from "./FieldMaskGrid.svelte";
 
   type FieldKey = keyof AcceptFieldMask;

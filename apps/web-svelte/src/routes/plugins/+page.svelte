@@ -53,12 +53,12 @@
     type ObscuraPluginIndexEntry,
     type InstalledPlugin,
     type PluginUpdateStatus,
-  } from "$lib/api/scrapers";
+  } from "$lib/v1/api/scrapers-v1";
   import type {
     CommunityIndexEntry,
     ScraperPackage,
     StashBoxEndpoint,
-  } from "$lib/api/types";
+  } from "$lib/v1/api/types-v1";
 
   /* ─── Capability label map ──────────────────────────────────── */
 

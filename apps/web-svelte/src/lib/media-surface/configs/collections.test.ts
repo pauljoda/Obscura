@@ -5,7 +5,7 @@ const { fetchCollections } = vi.hoisted(() => ({
   fetchCollections: vi.fn(),
 }));
 
-vi.mock("$lib/api/media", () => ({
+vi.mock("$lib/v1/api/media-v1", () => ({
   fetchCollections,
   deleteCollection: vi.fn(),
 }));

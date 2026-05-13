@@ -2,8 +2,8 @@
   import { Check, Plus, Trash2, X } from "@lucide/svelte";
   import type {
     PhashContributionItem,
-  } from "$lib/api/phash-contributions";
-  import type { StashBoxEndpoint } from "$lib/api/types";
+  } from "$lib/v1/api/phash-contributions-v1";
+  import type { StashBoxEndpoint } from "$lib/v1/api/types-v1";
 
   interface Props {
     item: PhashContributionItem;

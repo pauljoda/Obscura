@@ -11,9 +11,9 @@
     User,
   } from "@lucide/svelte";
   import type { BookDetailDto } from "@obscura/contracts";
-  import type { PerformerItem, StudioItem, TagItem } from "$lib/api/types";
-  import { updateBook } from "$lib/api/media";
-  import { fetchPerformers, fetchStudios, fetchTags } from "$lib/api/entities";
+  import type { PerformerItem, StudioItem, TagItem } from "$lib/v1/api/types-v1";
+  import { updateBook } from "$lib/v1/api/media-v1";
+  import { fetchPerformers, fetchStudios, fetchTags } from "$lib/v1/api/entities-v1";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import BookChapterCoverEditor from "./BookChapterCoverEditor.svelte";
   import BookRootCoverEditor from "./BookRootCoverEditor.svelte";

@@ -1,5 +1,5 @@
-import { lookupTagViaStashBox } from "$lib/api/scrapers";
-import { updateTag } from "$lib/api/entities";
+import { lookupTagViaStashBox } from "$lib/v1/api/scrapers-v1";
+import { updateTag } from "$lib/v1/api/entities-v1";
 import { autoSaveStashId } from "./stash-id";
 import type { MutableFlag, RowUpdater } from "./runner-utils";
 import { SEEK_TIMEOUT_MS, withTimeout } from "./scrape-types";

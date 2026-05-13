@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Badge } from "@obscura/ui-svelte";
-  import type { JobRun } from "$lib/api/types";
+  import type { JobRun } from "$lib/v1/api/types-v1";
   import {
     displayDescribeTrigger,
     displayJobHeading,

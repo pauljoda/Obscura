@@ -2,8 +2,8 @@
   import { Check, ChevronDown, Loader2 } from "@lucide/svelte";
   import type { BookChapterDto, BookVolumeDto, ImageCandidate } from "@obscura/contracts";
   import { Checkbox, cn } from "@obscura/ui-svelte";
-  import { fetchBookDetail } from "$lib/api/media";
-  import { executePlugin, fetchScrapeResult } from "$lib/api/scrapers";
+  import { fetchBookDetail } from "$lib/v1/api/media-v1";
+  import { executePlugin, fetchScrapeResult } from "$lib/v1/api/scrapers-v1";
   import type {
     BookField,
     BookRow,

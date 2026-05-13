@@ -12,7 +12,7 @@
     Building2,
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/api/core";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
   import NsfwShowModeChip from "$lib/components/nsfw/NsfwShowModeChip.svelte";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";

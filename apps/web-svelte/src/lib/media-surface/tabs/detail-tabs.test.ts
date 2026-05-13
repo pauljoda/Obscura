@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { detailTabsFor } from "./detail-tabs";
-import { fetchAudioLibraries, fetchBooks, fetchGalleries, fetchImages } from "$lib/api/media";
+import { fetchAudioLibraries, fetchBooks, fetchGalleries, fetchImages } from "$lib/v1/api/media-v1";
 import AudioLibraryCard from "../configs/AudioLibraryCard.svelte";
 import AudioTrackCard from "../configs/AudioTrackCard.svelte";
 import SeriesCardWrapper from "../configs/SeriesCardWrapper.svelte";
 import VideoCardWrapper from "../configs/VideoCardWrapper.svelte";
 
-vi.mock("$lib/api/videos", () => ({
+vi.mock("$lib/v1/api/videos-v1", () => ({
   fetchVideoCards: vi.fn(),
   fetchSeries: vi.fn(),
 }));
 
-vi.mock("$lib/api/media", () => ({
+vi.mock("$lib/v1/api/media-v1", () => ({
   fetchAudioLibraries: vi.fn(),
   fetchAudioTracks: vi.fn(),
   fetchBooks: vi.fn(),
@@ -19,7 +19,7 @@ vi.mock("$lib/api/media", () => ({
   fetchImages: vi.fn(),
 }));
 
-vi.mock("$lib/api/entities", () => ({
+vi.mock("$lib/v1/api/entities-v1", () => ({
   fetchPerformers: vi.fn(),
 }));
 

@@ -1,4 +1,4 @@
-import { acceptPluginResult, type PluginExecuteResult } from "$lib/api/scrapers";
+import { acceptPluginResult, type PluginExecuteResult } from "$lib/v1/api/scrapers-v1";
 import type { BookRow, NormalizedBookIdentifyResult } from "./identify-types";
 import {
   resetPending,

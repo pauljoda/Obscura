@@ -3,8 +3,8 @@ import type {
   FilterSectionSpec,
   MediaSurfaceConfig,
 } from "$lib/media-surface/config";
-import { deleteStudio, fetchStudios, updateStudio } from "$lib/api/entities";
-import type { StudioItem } from "$lib/api/types";
+import { deleteStudio, fetchStudios, updateStudio } from "$lib/v1/api/entities-v1";
+import type { StudioItem } from "$lib/v1/api/types-v1";
 import StudioCard from "./StudioCard.svelte";
 
 export type StudioFilterType =

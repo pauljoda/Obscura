@@ -13,7 +13,7 @@ describe("video api helpers", () => {
   });
 
   it("loads subtitle source through the same-origin /api ingress", async () => {
-    const { fetchVideoSubtitleSource } = await import("./videos");
+    const { fetchVideoSubtitleSource } = await import("./videos-v1");
     fetchMock.mockResolvedValue(
       new Response("WEBVTT", {
         status: 200,
@@ -29,7 +29,7 @@ describe("video api helpers", () => {
   });
 
   it("uploads subtitles through the same-origin /api ingress", async () => {
-    const { uploadVideoSubtitle } = await import("./videos");
+    const { uploadVideoSubtitle } = await import("./videos-v1");
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ track: { id: "track-1" } }), {
         status: 200,

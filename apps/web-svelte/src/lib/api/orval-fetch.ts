@@ -1,10 +1,10 @@
 import { dev } from "$app/environment";
 import { env } from "$env/dynamic/public";
-import { API_BASE } from "./core";
 
+const DEFAULT_API_BASE = env.PUBLIC_API_URL || "/api";
 export const V2_API_BASE =
   env.PUBLIC_V2_API_URL ||
-  (dev && API_BASE === "/api" ? "http://127.0.0.1:8010/api" : API_BASE);
+  (dev && DEFAULT_API_BASE === "/api" ? "http://127.0.0.1:8010/api" : DEFAULT_API_BASE);
 
 export function v2ApiPath(path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;

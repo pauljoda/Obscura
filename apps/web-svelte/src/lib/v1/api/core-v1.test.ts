@@ -13,7 +13,7 @@ describe("api core", () => {
   });
 
   it("falls back to the same-origin /api base for JSON requests", async () => {
-    const { fetchApi } = await import("./core");
+    const { fetchApi } = await import("./core-v1");
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
@@ -32,7 +32,7 @@ describe("api core", () => {
   });
 
   it("falls back to the same-origin /api base for uploads", async () => {
-    const { uploadFile } = await import("./core");
+    const { uploadFile } = await import("./core-v1");
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
@@ -52,7 +52,7 @@ describe("api core", () => {
   });
 
   it("prefixes relative asset paths with the same-origin /api base", async () => {
-    const { toApiUrl } = await import("./core");
+    const { toApiUrl } = await import("./core-v1");
     expect(toApiUrl("/assets/videos/abc/thumb")).toBe("/api/assets/videos/abc/thumb");
   });
 });

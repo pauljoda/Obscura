@@ -3,7 +3,7 @@
   import {
     acceptBreakingGate,
     fetchSystemStatus,
-  } from "$lib/api/system";
+  } from "$lib/v1/api/system-v1";
 
   interface Props {
     /** From +layout.server.ts — server-side probe of system status. */

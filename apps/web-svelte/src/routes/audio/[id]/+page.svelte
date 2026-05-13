@@ -17,17 +17,17 @@
     Loader2,
   } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/api/core";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
   import {
     deleteAudioTrack,
     updateAudioLibrary,
     updateAudioTrack,
-  } from "$lib/api/media";
+  } from "$lib/v1/api/media-v1";
   import {
     fetchPerformers,
     fetchStudios,
     fetchTags,
-  } from "$lib/api/entities";
+  } from "$lib/v1/api/entities-v1";
   import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import AudioPlayer from "$lib/components/AudioPlayer.svelte";
   import AddToCollectionModal from "$lib/components/AddToCollectionModal.svelte";

@@ -15,15 +15,15 @@
     X,
   } from "@lucide/svelte";
   import type { GalleryDetailDto } from "@obscura/contracts";
-  import type { PerformerItem, StudioItem, TagItem } from "$lib/api/types";
-  import { toApiUrl } from "$lib/api/core";
+  import type { PerformerItem, StudioItem, TagItem } from "$lib/v1/api/types-v1";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
   import {
     deleteGalleryCover,
     setGalleryCoverFromImage,
     updateGallery,
     uploadGalleryCover,
-  } from "$lib/api/media";
-  import { fetchPerformers, fetchStudios, fetchTags } from "$lib/api/entities";
+  } from "$lib/v1/api/media-v1";
+  import { fetchPerformers, fetchStudios, fetchTags } from "$lib/v1/api/entities-v1";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import NsfwBlur from "./nsfw/NsfwBlur.svelte";

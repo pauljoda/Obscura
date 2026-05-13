@@ -12,7 +12,7 @@
   import type { ImageListItemDto } from "@obscura/contracts";
   import { fade } from "svelte/transition";
   import { dur, ease } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/api/core";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
   import NsfwBlur from "./nsfw/NsfwBlur.svelte";
   import {
     comicPreloadIndexes,

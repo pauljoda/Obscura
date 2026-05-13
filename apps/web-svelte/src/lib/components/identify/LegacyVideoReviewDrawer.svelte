@@ -3,12 +3,12 @@
     NormalizedScrapeResult,
     ScrapeResult,
     VideoDetail,
-  } from "$lib/api/types";
+  } from "$lib/v1/api/types-v1";
   import {
     acceptScrapeResult,
     rejectScrapeResult,
-  } from "$lib/api/scrapers";
-  import { fetchVideoDetail } from "$lib/api/videos";
+  } from "$lib/v1/api/scrapers-v1";
+  import { fetchVideoDetail } from "$lib/v1/api/videos-v1";
   import type { VideoField, VideoRow } from "$lib/identify/scrape-types";
   import { VIDEO_FIELDS } from "$lib/identify/scrape-types";
   import ReviewDrawer from "./ReviewDrawer.svelte";

@@ -10,15 +10,15 @@
     scrapeVideo,
     acceptPluginResult,
     type InstalledPlugin,
-  } from "$lib/api/scrapers";
+  } from "$lib/v1/api/scrapers-v1";
   import type {
     NormalizedScrapeResult,
     ScrapeResult,
     ScraperPackage,
     StashBoxEndpoint,
     VideoDetail,
-  } from "$lib/api/types";
-  import { fetchVideoDetail, fetchVideoSeriesLibraryDetail } from "$lib/api/videos";
+  } from "$lib/v1/api/types-v1";
+  import { fetchVideoDetail, fetchVideoSeriesLibraryDetail } from "$lib/v1/api/videos-v1";
   import { filterNsfwAware } from "$lib/nsfw/aware-providers";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { buildLocalSeasonsInput } from "$lib/identify/identify-video-series-runner";

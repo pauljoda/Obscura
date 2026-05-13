@@ -5,9 +5,9 @@
     NormalizedMovieResult,
     NormalizedSeriesResult,
   } from "@obscura/contracts";
-  import type { ScrapeResult } from "$lib/api/types";
-  import { executePlugin, fetchScrapeResult } from "$lib/api/scrapers";
-  import { fetchVideoSeriesLibraryDetail } from "$lib/api/videos";
+  import type { ScrapeResult } from "$lib/v1/api/types-v1";
+  import { executePlugin, fetchScrapeResult } from "$lib/v1/api/scrapers-v1";
+  import { fetchVideoSeriesLibraryDetail } from "$lib/v1/api/videos-v1";
   import { buildLocalSeasonsInput } from "$lib/identify/identify-video-series-runner";
   import ReviewDrawer from "./ReviewDrawer.svelte";
   import SeriesCascadeBody from "./SeriesCascadeBody.svelte";

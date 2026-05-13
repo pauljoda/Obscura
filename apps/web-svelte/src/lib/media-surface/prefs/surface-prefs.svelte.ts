@@ -5,7 +5,7 @@
  * users don't lose `videos:listPrefs` on the migration.
  */
 
-import { fetchApi } from "$lib/api/core";
+import { fetchApi } from "$lib/v1/api/core-v1";
 import {
   detectUiPrefsFormFactor,
   formFactorUiPrefKey,

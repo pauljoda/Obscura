@@ -22,15 +22,15 @@
   } from "@lucide/svelte";
   import { Button, cn } from "@obscura/ui-svelte";
   import type { VideoDetailDto } from "@obscura/contracts";
-  import type { TagItem, PerformerItem, StudioItem } from "$lib/api/types";
+  import type { TagItem, PerformerItem, StudioItem } from "$lib/v1/api/types-v1";
   import {
     fetchVideoDetail,
     updateVideo,
     uploadVideoThumbnail,
     deleteVideoThumbnail,
     generateVideoThumbnailFromFrame,
-  } from "$lib/api/videos";
-  import { fetchTags, fetchPerformers, fetchStudios } from "$lib/api/entities";
+  } from "$lib/v1/api/videos-v1";
+  import { fetchTags, fetchPerformers, fetchStudios } from "$lib/v1/api/entities-v1";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { entityTerms } from "$lib/terminology";
   import NsfwTagLabel from "./nsfw/NsfwTagLabel.svelte";

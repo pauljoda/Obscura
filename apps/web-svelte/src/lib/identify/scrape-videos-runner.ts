@@ -4,7 +4,7 @@ import {
   acceptScrapeResult,
   rejectScrapeResult,
   executePlugin,
-} from "$lib/api/scrapers";
+} from "$lib/v1/api/scrapers-v1";
 import type { MutableFlag, RowUpdater } from "./runner-utils";
 import { SEEK_TIMEOUT_MS, withTimeout } from "./scrape-types";
 import type {

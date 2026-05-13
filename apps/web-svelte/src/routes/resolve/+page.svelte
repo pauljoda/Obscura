@@ -14,19 +14,19 @@
     AlertTriangle,
   } from "@lucide/svelte";
   import { Badge, Button, cn } from "@obscura/ui-svelte";
-  import { fetchVideos } from "$lib/api/videos";
+  import { fetchVideos } from "$lib/v1/api/videos-v1";
   import {
     fetchInstalledScrapers,
     scrapeVideo,
     acceptScrapeResult,
     rejectScrapeResult,
-  } from "$lib/api/scrapers";
+  } from "$lib/v1/api/scrapers-v1";
   import type {
     VideoListItem,
     ScraperPackage,
     ScrapeResult,
     NormalizedScrapeResult,
-  } from "$lib/api/types";
+  } from "$lib/v1/api/types-v1";
   import { entityTerms } from "$lib/terminology";
   import ProviderSelector from "$lib/components/ProviderSelector.svelte";
   import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";

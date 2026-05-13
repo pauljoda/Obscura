@@ -10,7 +10,7 @@
   import { useSearch } from "$lib/stores/search.svelte";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { entityTerms } from "$lib/terminology";
-  import { fetchSearch } from "$lib/api/media";
+  import { fetchSearch } from "$lib/v1/api/media-v1";
   import { recentSearches } from "$lib/stores/recent-searches.svelte";
   import { buildHrefWithFrom } from "$lib/back-navigation";
 

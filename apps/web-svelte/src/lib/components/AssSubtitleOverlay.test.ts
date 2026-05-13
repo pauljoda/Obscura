@@ -15,7 +15,7 @@ const { fetchVideoSubtitleSource, jassubCtor, destroy, loadJassub } = vi.hoisted
   };
 });
 
-vi.mock("$lib/api/videos", () => ({
+vi.mock("$lib/v1/api/videos-v1", () => ({
   fetchVideoSubtitleSource,
 }));
 

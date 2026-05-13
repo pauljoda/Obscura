@@ -8,8 +8,8 @@ import {
   deleteVideo,
   fetchVideoCards,
   updateVideo,
-} from "$lib/api/videos";
-import type { VideoCardListItem } from "$lib/api/types";
+} from "$lib/v1/api/videos-v1";
+import type { VideoCardListItem } from "$lib/v1/api/types-v1";
 import {
   videosListPrefsToFetchParams,
   type VideosListPrefs,

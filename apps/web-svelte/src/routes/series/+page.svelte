@@ -24,14 +24,14 @@
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import VideoSeriesEdit from "$lib/components/VideoSeriesEdit.svelte";
   import { entityTerms, formatVideoCount } from "$lib/terminology";
-  import { toApiUrl } from "$lib/api/core";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
   import {
     deleteVideo,
     fetchSeries as fetchMoreSeriesItems,
     fetchVideoCards as fetchMoreVideoCards,
     updateSeries,
     updateVideo,
-  } from "$lib/api/videos";
+  } from "$lib/v1/api/videos-v1";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import {
     detectUiPrefsFormFactor,

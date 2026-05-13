@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Play, Square } from "@lucide/svelte";
   import { StatusLed, cn } from "@obscura/ui-svelte";
-  import type { QueueSummary } from "$lib/api/types";
+  import type { QueueSummary } from "$lib/v1/api/types-v1";
   import { getQueueIcon, ledForQueue } from "$lib/jobs/helpers";
 
   interface Props {

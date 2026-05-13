@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { VideoCardListItem } from "$lib/api/types";
+  import type { VideoCardListItem } from "$lib/v1/api/types-v1";
   import type { CardProps } from "$lib/media-surface/config";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";

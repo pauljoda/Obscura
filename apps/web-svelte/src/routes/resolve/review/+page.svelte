@@ -13,8 +13,8 @@
     fetchAllScrapeResults,
     acceptScrapeResult,
     rejectScrapeResult,
-  } from "$lib/api/scrapers";
-  import type { ScrapeResult } from "$lib/api/types";
+  } from "$lib/v1/api/scrapers-v1";
+  import type { ScrapeResult } from "$lib/v1/api/types-v1";
   import { entityTerms } from "$lib/terminology";
   import CascadeReviewDrawer from "$lib/components/identify/CascadeReviewDrawer.svelte";
   import LegacyVideoReviewDrawer from "$lib/components/identify/LegacyVideoReviewDrawer.svelte";

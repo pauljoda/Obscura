@@ -16,7 +16,7 @@ const {
   uploadSeriesCover: vi.fn(),
 }));
 
-vi.mock("$lib/api/videos", () => ({
+vi.mock("$lib/v1/api/videos-v1", () => ({
   deleteSeriesBackdrop,
   deleteSeriesCover,
   updateSeries,
@@ -24,7 +24,7 @@ vi.mock("$lib/api/videos", () => ({
   uploadSeriesCover,
 }));
 
-vi.mock("$lib/api/entities", () => ({
+vi.mock("$lib/v1/api/entities-v1", () => ({
   fetchPerformers: vi.fn(() => Promise.resolve({ performers: [], total: 0, limit: 100, offset: 0 })),
   fetchStudios: vi.fn(() => Promise.resolve({ studios: [] })),
   fetchTags: vi.fn(() => Promise.resolve({ tags: [] })),

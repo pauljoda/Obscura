@@ -9,7 +9,7 @@
  * resolves, the caller reads the provided `defaults` synchronously.
  */
 
-import { fetchApi } from "$lib/api/core";
+import { fetchApi } from "$lib/v1/api/core-v1";
 
 interface UiPrefResponse<T> {
   key: string;

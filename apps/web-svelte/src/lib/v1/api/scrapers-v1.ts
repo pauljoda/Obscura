@@ -1,4 +1,4 @@
-import { buildQueryString, fetchApi } from "./core";
+import { buildQueryString, fetchApi } from "./core-v1";
 import type {
   CommunityIndexEntry,
   MetadataProvider,
@@ -12,7 +12,7 @@ import type {
   StashBoxStudioResult,
   StashBoxTagResult,
   StashIdEntry,
-} from "./types";
+} from "./types-v1";
 
 export async function fetchCommunityIndex(
   force = false,

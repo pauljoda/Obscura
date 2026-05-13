@@ -19,9 +19,9 @@
     AlertTriangle,
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-  import { fetchPerformers, fetchTags } from "$lib/api/entities";
-  import { updateAudioTrack } from "$lib/api/media";
-  import { toApiUrl } from "$lib/api/core";
+  import { fetchPerformers, fetchTags } from "$lib/v1/api/entities-v1";
+  import { updateAudioTrack } from "$lib/v1/api/media-v1";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
   import { tagsVisibleInNsfwMode } from "$lib/nsfw/tags";
   import { entityTerms } from "$lib/terminology";
   import AddToCollectionModal from "$lib/components/AddToCollectionModal.svelte";

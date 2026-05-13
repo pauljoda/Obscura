@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { acceptPluginResult } from "$lib/api/scrapers";
+  import { acceptPluginResult } from "$lib/v1/api/scrapers-v1";
   import type { BookField, BookRow } from "$lib/identify/identify-types";
   import BookRowCard from "./BookRowCard.svelte";
   import BookReviewDrawer from "./BookReviewDrawer.svelte";

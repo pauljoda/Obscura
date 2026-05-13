@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto, invalidate } from "$app/navigation";
   import { ArrowLeft, Calendar, Globe, Tag as TagIcon, User, Users } from "@lucide/svelte";
-  import { createPerformer } from "$lib/api/entities";
+  import { createPerformer } from "$lib/v1/api/entities-v1";
   import {
     DateField,
     EditFormShell,

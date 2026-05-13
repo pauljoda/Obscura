@@ -8,21 +8,21 @@ import type {
   SubtitleCueDto,
   VideoMarkerDto,
 } from "@obscura/contracts";
-import { buildQueryString, fetchApi, toApiUrl, uploadFile } from "./core";
+import { buildQueryString, fetchApi, toApiUrl, uploadFile } from "./core-v1";
 import {
   buildFetchVideosQuery,
   type FetchVideosParams,
-} from "./video-query";
+} from "./video-query-v1";
 import {
   buildVideoSeriesListQuery,
   type VideoSeriesListQueryParams,
-} from "./query-builders";
+} from "./query-builders-v1";
 import type {
   VideoCardListItem,
   VideoDetail,
   VideoListItem,
   VideoStats,
-} from "./types";
+} from "./types-v1";
 
 export interface FetchVideosResponse {
   videos: VideoListItem[];

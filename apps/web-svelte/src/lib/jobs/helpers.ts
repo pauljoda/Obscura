@@ -1,5 +1,5 @@
 import type { LedStatus, BadgeVariant } from "@obscura/ui-svelte";
-import type { JobRun, QueueSummary } from "$lib/api/types";
+import type { JobRun, QueueSummary } from "$lib/v1/api/types-v1";
 import {
   Cpu,
   BookOpen,

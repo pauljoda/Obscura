@@ -3,8 +3,8 @@
   import { Image as ImageIcon, FileText, HardDrive, Calendar, Pencil } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
   import type { ImageDetailDto } from "@obscura/contracts";
-  import { toApiUrl } from "$lib/api/core";
-  import { updateImage } from "$lib/api/media";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
+  import { updateImage } from "$lib/v1/api/media-v1";
   import InlineRating from "$lib/components/InlineRating.svelte";
   import ImageEdit from "$lib/components/ImageEdit.svelte";
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";

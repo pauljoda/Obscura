@@ -13,16 +13,16 @@ import { buildQueryString, serverFetch } from "./core";
 import {
   buildFetchVideosQuery,
   type FetchVideosParams,
-} from "../api/video-query";
+} from "$lib/v1/api/video-query-v1";
 import {
   buildVideoSeriesListQuery,
   type VideoSeriesListQueryParams,
-} from "../api/query-builders";
+} from "$lib/v1/api/query-builders-v1";
 import type {
   VideoDetail,
   VideoListItem,
   VideoStats,
-} from "../api/types";
+} from "$lib/v1/api/types-v1";
 
 const SHORT_REVALIDATE_SECONDS = 5;
 

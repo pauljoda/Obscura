@@ -8,7 +8,7 @@ import {
   deleteGallery,
   fetchGalleries,
   updateGallery,
-} from "$lib/api/media";
+} from "$lib/v1/api/media-v1";
 import GalleryCard from "./GalleryCard.svelte";
 
 type GalleryFilterType =

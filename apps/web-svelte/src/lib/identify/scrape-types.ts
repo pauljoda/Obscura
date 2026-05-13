@@ -10,7 +10,7 @@ import type {
   NormalizedPerformerScrapeResult,
   NormalizedStudioScrapeResult,
   NormalizedTagScrapeResult,
-} from "$lib/api/types";
+} from "$lib/v1/api/types-v1";
 import { entityTerms } from "$lib/terminology";
 
 export type {

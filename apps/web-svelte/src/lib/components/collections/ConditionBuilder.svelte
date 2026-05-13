@@ -8,7 +8,7 @@
   import { COLLECTION_RULE_FIELDS } from "@obscura/contracts";
   import ConditionGroup from "./ConditionGroup.svelte";
   import CollectionItemCard from "./CollectionItemCard.svelte";
-  import { previewCollectionRules } from "$lib/api/media";
+  import { previewCollectionRules } from "$lib/v1/api/media-v1";
   import type { SuggestionItem } from "$lib/collection-suggestions";
   import { useNsfw } from "$lib/nsfw/store.svelte";
 

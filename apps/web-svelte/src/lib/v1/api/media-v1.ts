@@ -29,7 +29,7 @@ import type {
   CollectionRulePreviewDto,
   PaginatedResponse,
 } from "@obscura/contracts";
-import { buildQueryString, fetchApi, uploadFile } from "./core";
+import { buildQueryString, fetchApi, uploadFile } from "./core-v1";
 import {
   buildAudioLibraryListQuery,
   buildBookListQuery,
@@ -39,7 +39,7 @@ import {
   type BookListQueryParams,
   type GalleryListQueryParams,
   type ImageListQueryParams,
-} from "./query-builders";
+} from "./query-builders-v1";
 
 export interface RequestOptions {
   signal?: AbortSignal;

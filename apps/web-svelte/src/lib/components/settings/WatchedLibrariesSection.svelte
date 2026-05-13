@@ -16,14 +16,14 @@
     Trash2,
   } from "@lucide/svelte";
   import { Button, StatusLed, cn } from "@obscura/ui-svelte";
-  import type { LibraryBrowse, LibraryRoot } from "$lib/api/types";
+  import type { LibraryBrowse, LibraryRoot } from "$lib/v1/api/types-v1";
   import {
     browseLibraryPath,
     createLibraryRoot,
     deleteLibraryRoot,
     runQueue,
     updateLibraryRoot,
-  } from "$lib/api/library";
+  } from "$lib/v1/api/library-v1";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { entityTerms } from "$lib/terminology";
   import ToggleCard from "./ToggleCard.svelte";

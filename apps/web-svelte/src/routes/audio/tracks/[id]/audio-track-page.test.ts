@@ -12,16 +12,16 @@ const { fetchTags, fetchPerformers } = vi.hoisted(() => ({
   fetchPerformers: vi.fn(),
 }));
 
-vi.mock("$lib/api/media", async () => {
-  const actual = await vi.importActual<typeof import("$lib/api/media")>("$lib/api/media");
+vi.mock("$lib/v1/api/media-v1", async () => {
+  const actual = await vi.importActual<typeof import("$lib/v1/api/media-v1")>("$lib/v1/api/media-v1");
   return {
     ...actual,
     updateAudioTrack,
   };
 });
 
-vi.mock("$lib/api/entities", async () => {
-  const actual = await vi.importActual<typeof import("$lib/api/entities")>("$lib/api/entities");
+vi.mock("$lib/v1/api/entities-v1", async () => {
+  const actual = await vi.importActual<typeof import("$lib/v1/api/entities-v1")>("$lib/v1/api/entities-v1");
   return {
     ...actual,
     fetchTags,

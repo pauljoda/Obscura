@@ -1,9 +1,9 @@
-import { lookupStudioViaStashBox } from "$lib/api/scrapers";
+import { lookupStudioViaStashBox } from "$lib/v1/api/scrapers-v1";
 import {
   updateStudio,
   uploadStudioImageFromUrl,
   findOrCreateStudio,
-} from "$lib/api/entities";
+} from "$lib/v1/api/entities-v1";
 import { autoSaveStashId } from "./stash-id";
 import type { MutableFlag, RowUpdater } from "./runner-utils";
 import { SEEK_TIMEOUT_MS, withTimeout } from "./scrape-types";

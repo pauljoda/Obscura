@@ -3,7 +3,7 @@
   import { ArrowLeft, ArrowRight, BookOpen, Check, HardDrive, Play, RotateCcw } from "@lucide/svelte";
   import type { BookPageDto, ImageListItemDto } from "@obscura/contracts";
   import type { PageData } from "./$types";
-  import { updateBookProgress } from "$lib/api/media";
+  import { updateBookProgress } from "$lib/v1/api/media-v1";
   import ComicReader from "$lib/components/ComicReader.svelte";
   import HierarchyBreadcrumbs from "$lib/components/shared/HierarchyBreadcrumbs.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";

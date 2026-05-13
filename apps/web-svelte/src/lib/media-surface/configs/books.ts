@@ -4,7 +4,7 @@ import type {
   FilterSectionSpec,
   MediaSurfaceConfig,
 } from "$lib/media-surface/config";
-import { deleteBook, fetchBooks, updateBook } from "$lib/api/media";
+import { deleteBook, fetchBooks, updateBook } from "$lib/v1/api/media-v1";
 import BookCard from "./BookCard.svelte";
 
 type BookFilterType =

@@ -1,4 +1,4 @@
-import { buildQueryString, fetchApi } from "./core";
+import { buildQueryString, fetchApi } from "./core-v1";
 
 export type FingerprintAlgorithm = "MD5" | "OSHASH" | "PHASH";
 

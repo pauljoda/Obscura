@@ -18,8 +18,8 @@
     cancelQueue,
     fetchJobsDashboard,
     runQueue,
-  } from "$lib/api/library";
-  import type { JobRun, JobsDashboard } from "$lib/api/types";
+  } from "$lib/v1/api/library-v1";
+  import type { JobRun, JobsDashboard } from "$lib/v1/api/types-v1";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { groupQueuesForJobDashboard } from "$lib/jobs/queue-sections";
   import {

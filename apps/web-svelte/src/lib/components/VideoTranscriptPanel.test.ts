@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import VideoTranscriptPanel from "./VideoTranscriptPanel.svelte";
 import type { VideoSubtitleTrackDto } from "@obscura/contracts";
 
-vi.mock("$lib/api/videos", () => ({
+vi.mock("$lib/v1/api/videos-v1", () => ({
   deleteVideoSubtitle: vi.fn(),
   extractVideoSubtitles: vi.fn(),
   fetchVideoSubtitleCues: vi.fn().mockResolvedValue({

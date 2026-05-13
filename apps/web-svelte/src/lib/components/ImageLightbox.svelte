@@ -19,8 +19,8 @@
   import { isVideoImage } from "@obscura/contracts";
   import { dur, ease, receiveThumb, sendThumb } from "@obscura/ui-svelte";
   import { fade } from "svelte/transition";
-  import { toApiUrl } from "$lib/api/core";
-  import { updateImage } from "$lib/api/media";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
+  import { updateImage } from "$lib/v1/api/media-v1";
   import { buildLightboxImageSource, buildLightboxVideoSources } from "./image-lightbox-media";
   import NsfwBlur from "./nsfw/NsfwBlur.svelte";
 

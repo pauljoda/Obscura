@@ -1,9 +1,9 @@
-import { buildQueryString, fetchApi, uploadFile } from "./core";
+import { buildQueryString, fetchApi, uploadFile } from "./core-v1";
 import {
   buildStudioListQuery,
   buildTagListQuery,
   type TagStudioListQueryParams,
-} from "./query-builders";
+} from "./query-builders-v1";
 import type {
   NormalizedPerformerScrapeResult,
   PerformerDetail,
@@ -12,7 +12,7 @@ import type {
   StudioItem,
   TagDetail,
   TagItem,
-} from "./types";
+} from "./types-v1";
 
 export interface RequestOptions {
   signal?: AbortSignal;

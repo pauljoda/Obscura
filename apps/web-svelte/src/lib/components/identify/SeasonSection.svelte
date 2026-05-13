@@ -2,7 +2,7 @@
   import { ChevronDown } from "@lucide/svelte";
   import { Checkbox, cn } from "@obscura/ui-svelte";
   import type { NormalizedEpisodeResult, NormalizedSeasonResult } from "@obscura/contracts";
-  import type { AcceptFieldMask } from "$lib/api/scrapers";
+  import type { AcceptFieldMask } from "$lib/v1/api/scrapers-v1";
   import FieldMaskGrid from "./FieldMaskGrid.svelte";
   import ImagePicker from "./ImagePicker.svelte";
   import EpisodeRow from "./EpisodeRow.svelte";

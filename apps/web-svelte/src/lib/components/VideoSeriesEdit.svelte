@@ -15,16 +15,16 @@
     X,
   } from "@lucide/svelte";
   import type { VideoSeriesDetailDto } from "@obscura/contracts";
-  import type { PerformerItem, StudioItem, TagItem } from "$lib/api/types";
-  import { toApiUrl } from "$lib/api/core";
-  import { fetchPerformers, fetchStudios, fetchTags } from "$lib/api/entities";
+  import type { PerformerItem, StudioItem, TagItem } from "$lib/v1/api/types-v1";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
+  import { fetchPerformers, fetchStudios, fetchTags } from "$lib/v1/api/entities-v1";
   import {
     deleteSeriesBackdrop,
     deleteSeriesCover,
     updateSeries,
     uploadSeriesBackdrop,
     uploadSeriesCover,
-  } from "$lib/api/videos";
+  } from "$lib/v1/api/videos-v1";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import StarRatingPicker from "./StarRatingPicker.svelte";

@@ -27,8 +27,8 @@
     CollectionItemDto,
     CollectionMode,
   } from "@obscura/contracts";
-  import { deleteCollection, fetchCollectionItems, refreshCollection, removeCollectionItems } from "$lib/api/media";
-  import { toApiUrl } from "$lib/api/core";
+  import { deleteCollection, fetchCollectionItems, refreshCollection, removeCollectionItems } from "$lib/v1/api/media-v1";
+  import { toApiUrl } from "$lib/v1/api/core-v1";
   import CollectionItemCard from "$lib/components/collections/CollectionItemCard.svelte";
   import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import { usePlaylist } from "$lib/stores/playlist.svelte";

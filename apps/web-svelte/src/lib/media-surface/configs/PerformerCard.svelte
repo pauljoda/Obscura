@@ -3,7 +3,7 @@
   import type { CardProps } from "$lib/media-surface/config";
   import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
-  import type { PerformerItem } from "$lib/api/types";
+  import type { PerformerItem } from "$lib/v1/api/types-v1";
 
   let {
     item,

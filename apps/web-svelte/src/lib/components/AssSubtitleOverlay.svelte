@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { fetchVideoSubtitleSource } from "$lib/api/videos";
+  import { fetchVideoSubtitleSource } from "$lib/v1/api/videos-v1";
   import { loadJassub } from "$lib/vendor/load-jassub";
 
   interface Props {

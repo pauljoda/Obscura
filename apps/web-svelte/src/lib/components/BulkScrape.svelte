@@ -21,25 +21,25 @@
     Fingerprint,
   } from "@lucide/svelte";
   import { Checkbox, cn } from "@obscura/ui-svelte";
-  import { fetchVideoCards } from "$lib/api/videos";
+  import { fetchVideoCards } from "$lib/v1/api/videos-v1";
   import {
     fetchPerformers,
-  } from "$lib/api/entities";
-  import { fetchStudios, fetchTags } from "$lib/api/entities";
+  } from "$lib/v1/api/entities-v1";
+  import { fetchStudios, fetchTags } from "$lib/v1/api/entities-v1";
   import {
     fetchInstalledScrapers,
     fetchStashBoxEndpoints,
     fetchInstalledPlugins,
     type InstalledPlugin,
-  } from "$lib/api/scrapers";
-  import { fetchSeries } from "$lib/api/videos";
+  } from "$lib/v1/api/scrapers-v1";
+  import { fetchSeries } from "$lib/v1/api/videos-v1";
   import {
     fetchGalleries,
     fetchBooks,
     fetchImages,
     fetchAudioLibraries,
     fetchAudioTracks,
-  } from "$lib/api/media";
+  } from "$lib/v1/api/media-v1";
   import type {
     VideoRow,
     PerformerRow,

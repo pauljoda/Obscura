@@ -12,9 +12,9 @@
     type AcceptFieldMask,
     type CascadeAcceptSpec,
     type SelectedImages,
-  } from "$lib/api/scrapers";
-  import { fetchTags } from "$lib/api/entities";
-  import { fetchAllPerformers } from "$lib/api/entities";
+  } from "$lib/v1/api/scrapers-v1";
+  import { fetchTags } from "$lib/v1/api/entities-v1";
+  import { fetchAllPerformers } from "$lib/v1/api/entities-v1";
   import CandidatePicker from "./CandidatePicker.svelte";
   import FieldMaskGrid from "./FieldMaskGrid.svelte";
   import ImagePicker from "./ImagePicker.svelte";

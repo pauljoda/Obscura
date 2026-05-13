@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { acceptPluginResult } from "$lib/api/scrapers";
+  import { acceptPluginResult } from "$lib/v1/api/scrapers-v1";
   import type {
     VideoSeriesRow,
     VideoSeriesField,

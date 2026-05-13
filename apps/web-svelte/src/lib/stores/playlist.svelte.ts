@@ -7,7 +7,7 @@ import type {
   PlaylistSessionDto,
   PlaylistSessionWriteDto,
 } from "@obscura/contracts";
-import { fetchApi } from "$lib/api/core";
+import { fetchApi } from "$lib/v1/api/core-v1";
 
 const KEY = Symbol("playlist");
 

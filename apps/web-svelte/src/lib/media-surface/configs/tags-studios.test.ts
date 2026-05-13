@@ -18,7 +18,7 @@ const {
   updateTag: vi.fn(),
 }));
 
-vi.mock("$lib/api/entities", () => ({
+vi.mock("$lib/v1/api/entities-v1", () => ({
   deleteStudio,
   deleteTag,
   fetchStudios,

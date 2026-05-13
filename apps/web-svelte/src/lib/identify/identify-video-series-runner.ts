@@ -1,8 +1,8 @@
-import { executePlugin, acceptPluginResult } from "$lib/api/scrapers";
+import { executePlugin, acceptPluginResult } from "$lib/v1/api/scrapers-v1";
 import {
   fetchVideoSeriesLibraryDetail,
   type VideoSeriesLibraryDetail,
-} from "$lib/api/videos";
+} from "$lib/v1/api/videos-v1";
 import type { MutableFlag, RowUpdater } from "./runner-utils";
 import { SEEK_TIMEOUT_MS, withTimeout } from "./scrape-types";
 import type {

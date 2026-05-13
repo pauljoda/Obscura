@@ -6,7 +6,7 @@
     acceptVideoEpisodeScrape,
     type AcceptFieldMask,
     type SelectedImages,
-  } from "$lib/api/scrapers";
+  } from "$lib/v1/api/scrapers-v1";
   import FieldMaskGrid from "./FieldMaskGrid.svelte";
   import ImagePicker from "./ImagePicker.svelte";
 

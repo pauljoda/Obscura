@@ -12,14 +12,14 @@
  * land in commit 18 once the matching endpoints exist.
  */
 
-import { fetchVideoCards, fetchSeries } from "$lib/api/videos";
+import { fetchVideoCards, fetchSeries } from "$lib/v1/api/videos-v1";
 import {
   fetchAudioLibraries,
   fetchAudioTracks,
   fetchGalleries,
   fetchImages,
-} from "$lib/api/media";
-import { fetchPerformers } from "$lib/api/entities";
+} from "$lib/v1/api/media-v1";
+import { fetchPerformers } from "$lib/v1/api/entities-v1";
 import { videosSurfaceConfig } from "../configs/videos";
 import { galleriesSurfaceConfig } from "../configs/galleries";
 import { imagesSurfaceConfig } from "../configs/images";
@@ -35,7 +35,7 @@ import type {
   ImageListItemDto,
   VideoSeriesListItemDto,
 } from "@obscura/contracts";
-import type { VideoCardListItem, PerformerItem } from "$lib/api/types";
+import type { VideoCardListItem, PerformerItem } from "$lib/v1/api/types-v1";
 import AudioLibraryCard from "../configs/AudioLibraryCard.svelte";
 import AudioTrackCard from "../configs/AudioTrackCard.svelte";
 import SeriesCardWrapper from "../configs/SeriesCardWrapper.svelte";
