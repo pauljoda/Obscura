@@ -4,10 +4,13 @@ namespace Obscura.Contracts.Jobs;
 /// API-facing operation row used by the jobs dashboard.
 /// </summary>
 /// <param name="Id">Job run identifier.</param>
-/// <param name="Type">Queue type or operation code.</param>
-/// <param name="Status">Current job status.</param>
+/// <param name="Type">Queue type code (e.g. "scan-library", "probe-video").</param>
+/// <param name="Status">Current job status code.</param>
 /// <param name="Progress">Progress percentage from 0 through 100.</param>
 /// <param name="Message">Optional status, completion, or failure message.</param>
+/// <param name="TargetKind">Entity kind for display (e.g. "library-root", "video").</param>
+/// <param name="TargetId">Entity identifier for display.</param>
+/// <param name="TargetLabel">Human-readable label shown on the dashboard.</param>
 /// <param name="CreatedAt">Time the job was created.</param>
 /// <param name="StartedAt">Time the job started, when claimed.</param>
 /// <param name="FinishedAt">Time the job finished, when complete or failed.</param>
@@ -17,6 +20,9 @@ public sealed record JobRun(
     string Status,
     int Progress,
     string? Message,
+    string? TargetKind,
+    string? TargetId,
+    string? TargetLabel,
     DateTimeOffset CreatedAt,
     DateTimeOffset? StartedAt,
     DateTimeOffset? FinishedAt);

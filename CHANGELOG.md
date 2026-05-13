@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 
+- The v2 .NET job queue now supports all 20 media processing job types with concurrent worker processing, automatic scan scheduling, deduplication, progress reporting, job chaining, and history pruning — establishing the full infrastructure for migrating scan, probe, fingerprint, preview, and metadata processors.
 - Obscura now has the first .NET backend foundation for the v2 migration, including a runnable health endpoint, shared entity contracts, and development wiring that can run beside the current app while the migration is built out.
 - The v2 .NET backend now exposes the first stable API contract routes for entities, videos, jobs, and settings, giving the Svelte UI a typed surface to migrate toward.
 - The v2 .NET backend now includes the first global entity database model, with shared rating, flag, tag-link, and video-detail tables isolated in a new `v2` schema.
@@ -108,6 +109,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The upgrade gate now reflects the v2 global entity migration, including backup and fresh-start preparation, instead of the older scenes-to-videos transition.
 - Job Control now reads from and controls the v2 .NET job queue, giving the migration a real worker dashboard before media routes move over.
 - Settings now read and save through the v2 .NET backend, including watched folders, generation preferences, playback defaults, subtitle preferences, and root-level scan flags.
+- Obscura can now serve the Svelte app shell from the .NET backend on one local origin, making it clear that migrated routes are talking to Kestrel instead of the old Node server.
 
 ### Docs
 
@@ -133,6 +135,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Changed the v2 queue application boundary to use typed job snapshots and typed job creation values, keeping public job-code strings at the API serialization edge.
 - Migrated the Job Control page to the v2 .NET jobs API for dashboard loading, job creation, cancellation, and failure clearing.
 - Migrated the Settings page off SvelteKit server loaders so the route fetches the v2 .NET API directly from the UI during the backend handoff.
+- Changed the web shell to build as a static SvelteKit app that the .NET API can serve with SPA fallback during the v2 route migration.
+- Added a `dev:app` command that builds the static shell and runs the .NET-hosted app on port 8008 for local migration testing.
 - Changed v2 entity kind filters and endpoint group helpers to carry typed entity kinds instead of parallel kind-code strings at API and Application boundaries.
 - Removed one-to-one infrastructure service interfaces around media tool checks, process execution, process running, and database backups so concrete services carry behavior directly unless a real polymorphic contract exists.
 - Split the v2 EF base entity table mapping out of the main DbContext so infrastructure persistence configuration is easier to review in focused files.

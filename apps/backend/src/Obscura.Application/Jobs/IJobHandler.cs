@@ -4,6 +4,7 @@ namespace Obscura.Application.Jobs;
 
 /// <summary>
 /// Application handler for executing one durable background job type.
+/// Handlers are resolved per-scope so they can take scoped dependencies via constructor injection.
 /// </summary>
 public interface IJobHandler
 {
@@ -13,9 +14,9 @@ public interface IJobHandler
     JobType Type { get; }
 
     /// <summary>
-    /// Executes the claimed job run.
+    /// Executes the claimed job run. The context provides progress reporting and job chaining.
     /// </summary>
-    /// <param name="job">Claimed job run to execute.</param>
+    /// <param name="context">Execution context with the job snapshot, progress, and enqueue access.</param>
     /// <param name="cancellationToken">Token used to cancel execution.</param>
-    Task HandleAsync(JobRunSnapshot job, CancellationToken cancellationToken);
+    Task HandleAsync(JobContext context, CancellationToken cancellationToken);
 }

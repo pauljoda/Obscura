@@ -22,6 +22,15 @@ public sealed class JobRunRow
 
     public string? Message { get; set; }
 
+    /// <summary>Entity kind for dashboard display and deduplication (e.g. "video", "library-root").</summary>
+    public string? TargetEntityKind { get; set; }
+
+    /// <summary>Entity identifier for dashboard display and deduplication.</summary>
+    public string? TargetEntityId { get; set; }
+
+    /// <summary>Human-readable label shown on the job dashboard.</summary>
+    public string? TargetLabel { get; set; }
+
     public DateTimeOffset AvailableAt { get; set; }
 
     public DateTimeOffset? LockedAt { get; set; }

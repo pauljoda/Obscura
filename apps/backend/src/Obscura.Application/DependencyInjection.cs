@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Obscura.Application.Collections;
 using Obscura.Application.Entities;
 using Obscura.Application.Jobs;
+using Obscura.Application.Jobs.Handlers;
 using Obscura.Application.Media;
 using Obscura.Application.Migrations;
 using Obscura.Application.Taxonomy;
@@ -18,8 +19,6 @@ public static class DependencyInjection
     /// <summary>
     /// Adds Obscura application services that orchestrate domain ports for API endpoints and future workers.
     /// </summary>
-    /// <param name="services">Service collection being configured by the host.</param>
-    /// <returns>The same service collection for fluent startup configuration.</returns>
     public static IServiceCollection AddObscuraApplication(this IServiceCollection services)
     {
         services.AddScoped<EntityService>();
@@ -34,16 +33,46 @@ public static class DependencyInjection
     }
 
     /// <summary>
-    /// Adds application job handlers and the hosted queue worker used by the worker executable host.
+    /// Adds application job handlers, the hosted queue worker, scan scheduler, and history pruner.
     /// </summary>
-    /// <param name="services">Service collection being configured by the worker host.</param>
-    /// <returns>The same service collection for fluent startup configuration.</returns>
     public static IServiceCollection AddObscuraWorkerApplication(this IServiceCollection services)
     {
-        services.AddSingleton<IJobHandler, NoOpJobHandler>();
-        services.AddSingleton<IJobHandler, LegacyVideoImportJobHandler>();
-        services.AddSingleton<IJobHandler, LegacyMediaImportJobHandler>();
+        // Legacy / utility handlers
+        services.AddTransient<IJobHandler, NoOpJobHandler>();
+        services.AddTransient<IJobHandler, LegacyVideoImportJobHandler>();
+        services.AddTransient<IJobHandler, LegacyMediaImportJobHandler>();
+
+        // Scanning
+        services.AddTransient<IJobHandler, ScanLibraryJobHandler>();
+        services.AddTransient<IJobHandler, ScanGalleryJobHandler>();
+        services.AddTransient<IJobHandler, ScanBookJobHandler>();
+        services.AddTransient<IJobHandler, ScanAudioJobHandler>();
+
+        // Probing
+        services.AddTransient<IJobHandler, ProbeVideoJobHandler>();
+        services.AddTransient<IJobHandler, ProbeAudioJobHandler>();
+
+        // Fingerprinting
+        services.AddTransient<IJobHandler, FingerprintVideoJobHandler>();
+        services.AddTransient<IJobHandler, FingerprintImageJobHandler>();
+        services.AddTransient<IJobHandler, FingerprintAudioJobHandler>();
+
+        // Preview / asset generation
+        services.AddTransient<IJobHandler, GeneratePreviewJobHandler>();
+        services.AddTransient<IJobHandler, GenerateImageThumbnailJobHandler>();
+        services.AddTransient<IJobHandler, GenerateBookPageThumbnailJobHandler>();
+        services.AddTransient<IJobHandler, GenerateAudioWaveformJobHandler>();
+        services.AddTransient<IJobHandler, ExtractSubtitlesJobHandler>();
+
+        // Metadata / collections / maintenance
+        services.AddTransient<IJobHandler, ImportMetadataJobHandler>();
+        services.AddTransient<IJobHandler, RefreshCollectionJobHandler>();
+        services.AddTransient<IJobHandler, LibraryMaintenanceJobHandler>();
+
+        // Background services
         services.AddHostedService<QueueWorker>();
+        services.AddHostedService<JobScheduler>();
+        services.AddHostedService<JobHistoryPruner>();
 
         return services;
     }

@@ -222,6 +222,9 @@ public sealed class ObscuraDbContext : DbContext
             entity.Property(row => row.MaxAttempts).HasColumnName("max_attempts");
             entity.Property(row => row.Progress).HasColumnName("progress");
             entity.Property(row => row.Message).HasColumnName("message");
+            entity.Property(row => row.TargetEntityKind).HasColumnName("target_entity_kind").HasMaxLength(64);
+            entity.Property(row => row.TargetEntityId).HasColumnName("target_entity_id").HasMaxLength(64);
+            entity.Property(row => row.TargetLabel).HasColumnName("target_label").HasMaxLength(512);
             entity.Property(row => row.AvailableAt).HasColumnName("available_at");
             entity.Property(row => row.LockedAt).HasColumnName("locked_at");
             entity.Property(row => row.LockedBy).HasColumnName("locked_by").HasMaxLength(128);
@@ -229,6 +232,8 @@ public sealed class ObscuraDbContext : DbContext
             entity.Property(row => row.StartedAt).HasColumnName("started_at");
             entity.Property(row => row.FinishedAt).HasColumnName("finished_at");
             entity.HasIndex(row => new { row.Status, row.AvailableAt, row.Priority });
+            entity.HasIndex(row => new { row.Type, row.TargetEntityId, row.Status })
+                .HasDatabaseName("ix_job_runs_dedup");
             entity.ToTable(table =>
             {
                 table.HasCheckConstraint("ck_job_runs_progress", "progress >= 0 AND progress <= 100");

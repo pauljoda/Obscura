@@ -84,6 +84,9 @@ public sealed class JobService
             job.Status.ToCode(),
             job.Progress,
             job.Message,
+            job.TargetEntityKind,
+            job.TargetEntityId,
+            job.TargetLabel,
             job.CreatedAt,
             job.StartedAt,
             job.FinishedAt);

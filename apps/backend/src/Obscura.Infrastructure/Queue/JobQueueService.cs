@@ -20,32 +20,32 @@ public sealed class JobQueueService : IJobQueueService
         return await _db.JobRuns
             .AsNoTracking()
             .OrderByDescending(row => row.CreatedAt)
-            .Take(100)
-            .Select(row => new JobRunSnapshot(
-                row.Id,
-                row.Type,
-                row.Status,
-                row.Progress,
-                row.Message,
-                row.CreatedAt,
-                row.StartedAt,
-                row.FinishedAt))
+            .Take(200)
+            .Select(row => ToSnapshot(row))
             .ToListAsync(cancellationToken);
     }
 
     public async Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken)
     {
+        return await EnqueueAsync(new EnqueueJobRequest(type), cancellationToken);
+    }
+
+    public async Task<JobRunSnapshot> EnqueueAsync(EnqueueJobRequest request, CancellationToken cancellationToken)
+    {
         var now = DateTimeOffset.UtcNow;
         var row = new JobRunRow
         {
             Id = Guid.NewGuid(),
-            Type = type,
+            Type = request.Type,
             Status = JobRunStatus.Queued,
-            PayloadJson = "{}",
-            Priority = 0,
+            PayloadJson = request.PayloadJson ?? "{}",
+            Priority = request.Priority,
             Attempts = 0,
             MaxAttempts = 3,
             Progress = 0,
+            TargetEntityKind = request.TargetEntityKind,
+            TargetEntityId = request.TargetEntityId,
+            TargetLabel = request.TargetLabel,
             AvailableAt = now,
             CreatedAt = now
         };
@@ -53,7 +53,21 @@ public sealed class JobQueueService : IJobQueueService
         _db.JobRuns.Add(row);
         await _db.SaveChangesAsync(cancellationToken);
 
-        return ToContract(row);
+        return ToSnapshot(row);
+    }
+
+    public async Task<bool> HasPendingAsync(JobType type, string? targetEntityId, CancellationToken cancellationToken)
+    {
+        var query = _db.JobRuns.Where(job =>
+            job.Type == type &&
+            (job.Status == JobRunStatus.Queued || job.Status == JobRunStatus.Running));
+
+        if (targetEntityId is not null)
+        {
+            query = query.Where(job => job.TargetEntityId == targetEntityId);
+        }
+
+        return await query.AnyAsync(cancellationToken);
     }
 
     public async Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken)
@@ -118,11 +132,46 @@ public sealed class JobQueueService : IJobQueueService
         return rows.Count;
     }
 
+    /// <summary>
+    /// Claims the next available job. Uses atomic FOR UPDATE SKIP LOCKED on PostgreSQL
+    /// for safe concurrent access, with an EF Core fallback for test providers.
+    /// </summary>
     public async Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workerId);
 
         var now = DateTimeOffset.UtcNow;
+
+        if (_db.Database.IsRelational())
+        {
+            var claimed = await _db.Database.SqlQueryRaw<Guid>(
+                """
+                UPDATE v2.job_runs
+                SET status = 'running',
+                    locked_at = {0},
+                    locked_by = {1},
+                    started_at = COALESCE(started_at, {0}),
+                    attempts = attempts + 1
+                WHERE id = (
+                    SELECT id FROM v2.job_runs
+                    WHERE status = 'queued' AND available_at <= {0}
+                    ORDER BY priority DESC, available_at, created_at
+                    LIMIT 1
+                    FOR UPDATE SKIP LOCKED
+                )
+                RETURNING id
+                """,
+                now, workerId).ToListAsync(cancellationToken);
+
+            if (claimed.Count == 0)
+            {
+                return null;
+            }
+
+            var claimedRow = await _db.JobRuns.FindAsync([claimed[0]], cancellationToken);
+            return claimedRow is null ? null : ToSnapshot(claimedRow);
+        }
+
         var row = await _db.JobRuns
             .Where(job => job.Status == JobRunStatus.Queued && job.AvailableAt <= now)
             .OrderByDescending(job => job.Priority)
@@ -142,18 +191,30 @@ public sealed class JobQueueService : IJobQueueService
         row.Attempts += 1;
         await _db.SaveChangesAsync(cancellationToken);
 
-        return ToContract(row);
+        return ToSnapshot(row);
+    }
+
+    public async Task UpdateProgressAsync(Guid id, int progress, string? message, CancellationToken cancellationToken)
+    {
+        var row = await _db.JobRuns.FindAsync([id], cancellationToken);
+        if (row is null || row.Status != JobRunStatus.Running)
+        {
+            return;
+        }
+
+        row.Progress = Math.Clamp(progress, 0, 100);
+        if (message is not null)
+        {
+            row.Message = message;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
     }
 
     public async Task CompleteAsync(Guid id, string? message, CancellationToken cancellationToken)
     {
         var row = await _db.JobRuns.FindAsync([id], cancellationToken);
-        if (row is null)
-        {
-            return;
-        }
-
-        if (row.Status != JobRunStatus.Running)
+        if (row is null || row.Status != JobRunStatus.Running)
         {
             return;
         }
@@ -174,12 +235,7 @@ public sealed class JobQueueService : IJobQueueService
         CancellationToken cancellationToken)
     {
         var row = await _db.JobRuns.FindAsync([id], cancellationToken);
-        if (row is null)
-        {
-            return;
-        }
-
-        if (row.Status != JobRunStatus.Running)
+        if (row is null || row.Status != JobRunStatus.Running)
         {
             return;
         }
@@ -194,7 +250,18 @@ public sealed class JobQueueService : IJobQueueService
         await _db.SaveChangesAsync(cancellationToken);
     }
 
-    private static JobRunSnapshot ToContract(JobRunRow row)
+    public async Task<int> PruneHistoryAsync(TimeSpan retention, CancellationToken cancellationToken)
+    {
+        var cutoff = DateTimeOffset.UtcNow - retention;
+        return await _db.JobRuns
+            .Where(job =>
+                (job.Status == JobRunStatus.Completed || job.Status == JobRunStatus.Cancelled) &&
+                job.FinishedAt != null &&
+                job.FinishedAt < cutoff)
+            .ExecuteDeleteAsync(cancellationToken);
+    }
+
+    private static JobRunSnapshot ToSnapshot(JobRunRow row)
     {
         return new JobRunSnapshot(
             row.Id,
@@ -202,6 +269,10 @@ public sealed class JobQueueService : IJobQueueService
             row.Status,
             row.Progress,
             row.Message,
+            row.PayloadJson,
+            row.TargetEntityKind,
+            row.TargetEntityId,
+            row.TargetLabel,
             row.CreatedAt,
             row.StartedAt,
             row.FinishedAt);

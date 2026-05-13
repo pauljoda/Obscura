@@ -180,49 +180,41 @@ public sealed class ApiSurfaceTests
 
     private sealed class EmptyJobQueueService : IJobQueueService
     {
-        public Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken)
-        {
-            return Task.FromResult<IReadOnlyList<JobRunSnapshot>>([]);
-        }
+        public Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<JobRunSnapshot>>([]);
 
-        public Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken)
-        {
-            throw new NotSupportedException("The API surface smoke test does not create jobs.");
-        }
+        public Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
 
-        public Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken)
-        {
-            throw new NotSupportedException("The API surface smoke test does not cancel jobs.");
-        }
+        public Task<JobRunSnapshot> EnqueueAsync(EnqueueJobRequest request, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
 
-        public Task<bool> CancelRunAsync(Guid id, CancellationToken cancellationToken)
-        {
-            throw new NotSupportedException("The API surface smoke test does not cancel jobs.");
-        }
+        public Task<bool> HasPendingAsync(JobType type, string? targetEntityId, CancellationToken cancellationToken) =>
+            Task.FromResult(false);
 
-        public Task<int> ClearFailuresAsync(JobType? type, CancellationToken cancellationToken)
-        {
-            throw new NotSupportedException("The API surface smoke test does not clear failures.");
-        }
+        public Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
 
-        public Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
-        {
-            throw new NotSupportedException("The API surface smoke test does not claim jobs.");
-        }
+        public Task<bool> CancelRunAsync(Guid id, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
 
-        public Task CompleteAsync(Guid id, string? message, CancellationToken cancellationToken)
-        {
-            throw new NotSupportedException("The API surface smoke test does not complete jobs.");
-        }
+        public Task<int> ClearFailuresAsync(JobType? type, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
 
-        public Task FailAsync(
-            Guid id,
-            string message,
-            TimeSpan retryDelay,
-            CancellationToken cancellationToken)
-        {
-            throw new NotSupportedException("The API surface smoke test does not fail jobs.");
-        }
+        public Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task UpdateProgressAsync(Guid id, int progress, string? message, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task CompleteAsync(Guid id, string? message, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task FailAsync(Guid id, string message, TimeSpan retryDelay, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<int> PruneHistoryAsync(TimeSpan retention, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 
     private sealed class EmptyEntityProjectionService : IEntityCatalog, IEntityDetails, IRatingService, IVideoLibrary

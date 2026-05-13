@@ -95,61 +95,46 @@ public sealed class JobEndpointServiceTests
         private static readonly Guid ExistingJobId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         private static readonly Guid CreatedJobId = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
+        private static JobRunSnapshot Snap(Guid id, JobType type, JobRunStatus status) =>
+            new(id, type, status, 0, null, "{}", null, null, null, DateTimeOffset.UnixEpoch, null, null);
+
         public Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken)
         {
-            IReadOnlyList<JobRunSnapshot> jobs =
-            [
-                new JobRunSnapshot(ExistingJobId, JobType.ScanLibrary, JobRunStatus.Queued, 0, null, DateTimeOffset.UnixEpoch, null, null)
-            ];
-
+            IReadOnlyList<JobRunSnapshot> jobs = [Snap(ExistingJobId, JobType.ScanLibrary, JobRunStatus.Queued)];
             return Task.FromResult(jobs);
         }
 
-        public Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(new JobRunSnapshot(
-                CreatedJobId,
-                type,
-                JobRunStatus.Queued,
-                0,
-                null,
-                DateTimeOffset.UnixEpoch,
-                null,
-                null));
-        }
+        public Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken) =>
+            Task.FromResult(Snap(CreatedJobId, type, JobRunStatus.Queued));
 
-        public Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(type == JobType.ScanLibrary ? 1 : 0);
-        }
+        public Task<JobRunSnapshot> EnqueueAsync(EnqueueJobRequest request, CancellationToken cancellationToken) =>
+            Task.FromResult(Snap(CreatedJobId, request.Type, JobRunStatus.Queued));
 
-        public Task<bool> CancelRunAsync(Guid id, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(id == ExistingJobId);
-        }
+        public Task<bool> HasPendingAsync(JobType type, string? targetEntityId, CancellationToken cancellationToken) =>
+            Task.FromResult(false);
 
-        public Task<int> ClearFailuresAsync(JobType? type, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(type == JobType.LegacyMediaImport ? 2 : 0);
-        }
+        public Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken) =>
+            Task.FromResult(type == JobType.ScanLibrary ? 1 : 0);
 
-        public Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
-        {
-            throw new NotSupportedException("The API endpoint tests do not claim jobs.");
-        }
+        public Task<bool> CancelRunAsync(Guid id, CancellationToken cancellationToken) =>
+            Task.FromResult(id == ExistingJobId);
 
-        public Task CompleteAsync(Guid id, string? message, CancellationToken cancellationToken)
-        {
-            throw new NotSupportedException("The API endpoint tests do not complete jobs.");
-        }
+        public Task<int> ClearFailuresAsync(JobType? type, CancellationToken cancellationToken) =>
+            Task.FromResult(type == JobType.LegacyMediaImport ? 2 : 0);
 
-        public Task FailAsync(
-            Guid id,
-            string message,
-            TimeSpan retryDelay,
-            CancellationToken cancellationToken)
-        {
-            throw new NotSupportedException("The API endpoint tests do not fail jobs.");
-        }
+        public Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task UpdateProgressAsync(Guid id, int progress, string? message, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task CompleteAsync(Guid id, string? message, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task FailAsync(Guid id, string message, TimeSpan retryDelay, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<int> PruneHistoryAsync(TimeSpan retention, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 }

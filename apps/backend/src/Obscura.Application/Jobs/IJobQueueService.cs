@@ -10,64 +10,61 @@ public interface IJobQueueService
     /// <summary>
     /// Lists recent background job runs for operational surfaces.
     /// </summary>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>Recent job runs ordered newest first.</returns>
     Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken);
 
     /// <summary>
-    /// Enqueues a new background job run.
+    /// Enqueues a new background job run with default settings.
     /// </summary>
-    /// <param name="type">Typed job kind to run.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>The persisted job run.</returns>
     Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Enqueues a new background job run with full target and payload control.
+    /// </summary>
+    Task<JobRunSnapshot> EnqueueAsync(EnqueueJobRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Checks whether a queued or running job already exists for the given type and optional target.
+    /// Used to prevent duplicate work.
+    /// </summary>
+    Task<bool> HasPendingAsync(JobType type, string? targetEntityId, CancellationToken cancellationToken);
 
     /// <summary>
     /// Cancels queued or running jobs, optionally scoped to one typed operation.
     /// </summary>
-    /// <param name="type">Optional job type scope. Null cancels all cancellable jobs.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>Number of job runs marked cancelled.</returns>
     Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken);
 
     /// <summary>
     /// Cancels one queued or running job run by identifier.
     /// </summary>
-    /// <param name="id">Job run identifier.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>True when a job was cancelled.</returns>
     Task<bool> CancelRunAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>
     /// Clears failed jobs from the active failure list, optionally scoped to one typed operation.
     /// </summary>
-    /// <param name="type">Optional job type scope. Null clears all failed jobs.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>Number of failed jobs cleared.</returns>
     Task<int> ClearFailuresAsync(JobType? type, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Claims the next available queued job for one worker.
+    /// Claims the next available queued job for one worker using atomic row locking.
     /// </summary>
-    /// <param name="workerId">Stable worker identifier used for the queue lock.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>The claimed job run, or null when no jobs are available.</returns>
     Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Updates progress on a running job for dashboard display.
+    /// </summary>
+    Task UpdateProgressAsync(Guid id, int progress, string? message, CancellationToken cancellationToken);
 
     /// <summary>
     /// Marks a running job complete.
     /// </summary>
-    /// <param name="id">Job run identifier.</param>
-    /// <param name="message">Optional completion message.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
     Task CompleteAsync(Guid id, string? message, CancellationToken cancellationToken);
 
     /// <summary>
     /// Marks a running job failed and schedules a retry when attempts remain.
     /// </summary>
-    /// <param name="id">Job run identifier.</param>
-    /// <param name="message">Failure message stored on the job run.</param>
-    /// <param name="retryDelay">Delay before the job becomes available again.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
     Task FailAsync(Guid id, string message, TimeSpan retryDelay, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Deletes completed and cancelled job runs older than the retention period.
+    /// </summary>
+    Task<int> PruneHistoryAsync(TimeSpan retention, CancellationToken cancellationToken);
 }

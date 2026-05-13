@@ -11,7 +11,7 @@ public sealed class NoOpJobHandler : IJobHandler
     public JobType Type => JobType.Noop;
 
     /// <inheritdoc />
-    public Task HandleAsync(JobRunSnapshot job, CancellationToken cancellationToken)
+    public Task HandleAsync(JobContext context, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }

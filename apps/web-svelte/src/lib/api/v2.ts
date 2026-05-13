@@ -49,7 +49,11 @@ export type V2VideoListResponse = VideoListResponse;
 export type V2VideoDetail = VideoDetail;
 export type V2VideoSeriesListResponse = VideoSeriesListResponse;
 export type V2VideoSeriesDetail = VideoSeriesDetail;
-export type V2JobRun = JobRun;
+export type V2JobRun = JobRun & {
+  targetKind?: string | null;
+  targetId?: string | null;
+  targetLabel?: string | null;
+};
 export type V2JobListResponse = JobListResponse;
 export interface V2JobCreateResponse {
   job: V2JobRun;

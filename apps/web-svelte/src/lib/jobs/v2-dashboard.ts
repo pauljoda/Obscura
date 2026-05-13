@@ -18,18 +18,114 @@ type V2JobDefinition = {
 const queueDefinitionByName = new Map(queueDefinitions.map((queue) => [queue.name, queue]));
 
 const V2_JOB_DEFINITIONS = [
+  // Scanning
   {
     type: "scan-library",
     queueName: "library-scan",
     label: "Video Scan",
-    description: "Discovers videos through the v2 worker queue.",
+    description: "Discovers videos in configured library roots.",
   },
+  {
+    type: "scan-gallery",
+    queueName: "gallery-scan",
+    label: "Gallery Scan",
+    description: "Discovers image galleries in configured library roots.",
+  },
+  {
+    type: "scan-book",
+    queueName: "book-scan",
+    label: "Book Scan",
+    description: "Discovers comic books in configured library roots.",
+  },
+  {
+    type: "scan-audio",
+    queueName: "audio-scan",
+    label: "Audio Scan",
+    description: "Discovers audio tracks in configured library roots.",
+  },
+  // Probing
   {
     type: "probe-video",
     queueName: "media-probe",
     label: "Video Probe",
-    description: "Extracts technical metadata for v2 video records.",
+    description: "Extracts technical metadata from video files via ffprobe.",
   },
+  {
+    type: "probe-audio",
+    queueName: "audio-probe",
+    label: "Audio Probe",
+    description: "Extracts technical metadata and embedded tags from audio files.",
+  },
+  // Fingerprinting
+  {
+    type: "fingerprint-video",
+    queueName: "fingerprint",
+    label: "Video Fingerprint",
+    description: "Computes MD5, oshash, and optional perceptual hash for videos.",
+  },
+  {
+    type: "fingerprint-image",
+    queueName: "image-fingerprint",
+    label: "Image Fingerprint",
+    description: "Computes MD5 and oshash for images.",
+  },
+  {
+    type: "fingerprint-audio",
+    queueName: "audio-fingerprint",
+    label: "Audio Fingerprint",
+    description: "Computes MD5 and oshash for audio tracks.",
+  },
+  // Preview / asset generation
+  {
+    type: "generate-preview",
+    queueName: "preview",
+    label: "Video Preview",
+    description: "Builds video thumbnails, preview clips, and trickplay sprites.",
+  },
+  {
+    type: "generate-image-thumbnail",
+    queueName: "image-thumbnail",
+    label: "Image Thumbnail",
+    description: "Generates thumbnails and lightweight previews for images.",
+  },
+  {
+    type: "generate-book-page-thumbnail",
+    queueName: "book-page-thumbnail",
+    label: "Book Page Thumbnail",
+    description: "Generates thumbnails for comic book pages.",
+  },
+  {
+    type: "generate-audio-waveform",
+    queueName: "audio-waveform",
+    label: "Audio Waveform",
+    description: "Generates waveform peak data for audio playback visualization.",
+  },
+  {
+    type: "extract-subtitles",
+    queueName: "extract-subtitles",
+    label: "Subtitle Extraction",
+    description: "Extracts embedded subtitle tracks from video files as WebVTT.",
+  },
+  // Metadata / collections / maintenance
+  {
+    type: "import-metadata",
+    queueName: "metadata-import",
+    label: "Metadata Import",
+    description: "Coordinates provider imports and applies metadata to entities.",
+  },
+  {
+    type: "refresh-collection",
+    queueName: "collection-refresh",
+    label: "Collection Refresh",
+    description: "Re-evaluates dynamic collection rules and updates membership.",
+  },
+  {
+    type: "library-maintenance",
+    queueName: "library-maintenance",
+    label: "Library Maintenance",
+    description: "Moves video-derived assets between cache and media-adjacent storage.",
+  },
+  // Legacy / utility
   {
     type: "legacy-video-import",
     queueName: "metadata-import",
@@ -126,9 +222,9 @@ export function mapV2JobRun(job: V2JobRun): JobRunDto {
     queueName: definition.queueName,
     queueLabel: definition.label,
     status,
-    targetType: job.type,
-    targetId: null,
-    targetLabel: definition.label,
+    targetType: job.targetKind ?? job.type,
+    targetId: job.targetId ?? null,
+    targetLabel: job.targetLabel ?? definition.label,
     triggeredBy: "system",
     triggerLabel: "Queued by v2 jobs",
     jobKind: "standard",
