@@ -55,16 +55,19 @@
 
         node.style.setProperty("--title-scale", "1");
         node.style.setProperty("--title-travel", "0px");
+        node.dataset.compressed = "false";
         node.dataset.overflow = "false";
 
         const width = node.clientWidth;
         const scrollWidth = text.scrollWidth;
         if (width <= 0 || scrollWidth <= 0) return;
+        const rawOverflow = scrollWidth > width + 1;
         const scale = Math.max(0.78, Math.min(1, width / scrollWidth));
-        const travel = Math.max(0, scrollWidth * scale - width);
+        const travel = Math.max(0, Math.ceil(scrollWidth * scale - width));
 
         node.style.setProperty("--title-scale", String(scale));
         node.style.setProperty("--title-travel", `${travel}px`);
+        node.dataset.compressed = rawOverflow ? "true" : "false";
         node.dataset.overflow = travel > 1 ? "true" : "false";
       });
     }
@@ -442,21 +445,23 @@
     transition: font-size 120ms ease;
   }
 
-  :global(.ticker-title[data-overflow="true"]) {
-    padding-right: 1.05rem;
+  :global(.ticker-title[data-compressed="true"]) {
+    padding-right: 1.28rem;
   }
 
-  :global(.ticker-title[data-overflow="true"])::after {
+  :global(.ticker-title[data-compressed="true"])::after {
     position: absolute;
     top: 0;
     right: 0;
     bottom: 0;
     display: grid;
     align-items: center;
-    width: 1.1rem;
-    background: linear-gradient(to right, rgb(10 12 15 / 0), #0a0b0d 42%);
-    color: rgb(244 239 230 / 0.9);
-    content: "...";
+    justify-items: end;
+    width: 1.35rem;
+    border-right: 2px solid rgb(196 154 90 / 0.72);
+    background: linear-gradient(to right, rgb(10 12 15 / 0), #0a0b0d 34%);
+    color: rgb(196 154 90 / 0.98);
+    content: ">>";
     font-size: inherit;
     line-height: inherit;
     pointer-events: none;
@@ -464,17 +469,19 @@
 
   .title-text {
     display: inline-block;
+    width: max-content;
+    max-width: none;
     min-width: 0;
     transform: translateX(0);
     transition: transform 160ms ease;
     will-change: transform;
   }
 
-  :global(.ticker-title[data-overflow="true"]:hover)::after {
+  :global(.ticker-title[data-compressed="true"]:hover)::after {
     opacity: 0;
   }
 
-  :global(.ticker-title[data-overflow="true"]:hover) .title-text {
+  :global(.ticker-title[data-overflow="true"]:is(:hover, :focus-visible)) .title-text {
     animation: title-ticker 7s linear infinite;
   }
 
@@ -502,7 +509,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    :global(.ticker-title[data-overflow="true"]:hover) .title-text {
+    :global(.ticker-title[data-overflow="true"]:is(:hover, :focus-visible)) .title-text {
       animation: none;
     }
   }
