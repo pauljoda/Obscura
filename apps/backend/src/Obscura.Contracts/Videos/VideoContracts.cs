@@ -53,7 +53,7 @@ public sealed record VideoSubtitle(
 /// <param name="Id">Video entity identifier.</param>
 /// <param name="Kind">Entity kind code.</param>
 /// <param name="Title">Video title.</param>
-/// <param name="Summary">Optional synopsis or description.</param>
+/// <param name="Description">Optional canonical description.</param>
 /// <param name="Duration">Runtime when known.</param>
 /// <param name="Width">Source width in pixels when known.</param>
 /// <param name="Height">Source height in pixels when known.</param>
@@ -64,7 +64,7 @@ public sealed record VideoDetail(
     Guid Id,
     string Kind,
     string Title,
-    string? Summary,
+    string? Description,
     TimeSpan? Duration,
     int? Width,
     int? Height,

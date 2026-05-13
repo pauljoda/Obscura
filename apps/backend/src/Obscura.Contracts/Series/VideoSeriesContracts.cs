@@ -17,7 +17,7 @@ public sealed record VideoSeriesListResponse(
 /// <param name="Id">Series entity identifier.</param>
 /// <param name="Kind">Entity kind code.</param>
 /// <param name="Title">Series title.</param>
-/// <param name="Summary">Optional series summary.</param>
+/// <param name="Description">Optional canonical description.</param>
 /// <param name="Capabilities">Shared entity capabilities for the series.</param>
 /// <param name="Children">Non-video child groupings, such as seasons, when available.</param>
 /// <param name="Videos">Playable video cards linked to the series.</param>
@@ -26,7 +26,7 @@ public sealed record VideoSeriesDetail(
     Guid Id,
     string Kind,
     string Title,
-    string? Summary,
+    string? Description,
     IReadOnlyList<EntityCapability> Capabilities,
     IReadOnlyList<EntityCard> Children,
     IReadOnlyList<EntityCard> Videos,
