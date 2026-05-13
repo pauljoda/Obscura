@@ -9,7 +9,7 @@ import type {
   VideoSeriesDetailDto,
   VideoSeriesListItemDto,
 } from "@obscura/contracts";
-import { buildQueryString, serverFetch } from "./core";
+import { buildQueryString, serverFetch } from "./core-v1";
 import {
   buildFetchVideosQuery,
   type FetchVideosParams,

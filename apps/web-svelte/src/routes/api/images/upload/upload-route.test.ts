@@ -9,11 +9,11 @@ const { db, getWebDb, mapAppCoreErrorToJson, uploadRootImageWrite } = vi.hoisted
   }),
 );
 
-vi.mock("$lib/server/db", () => ({
+vi.mock("$lib/v1/server/db-v1", () => ({
   getWebDb,
 }));
 
-vi.mock("$lib/server/error-mapper", () => ({
+vi.mock("$lib/v1/server/error-mapper-v1", () => ({
   mapAppCoreErrorToJson,
 }));
 

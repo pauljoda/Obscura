@@ -8,7 +8,7 @@ const { parseNsfwModeCookie } = vi.hoisted(() => ({
   parseNsfwModeCookie: vi.fn(() => "show"),
 }));
 
-vi.mock("$lib/server/core", () => ({
+vi.mock("$lib/v1/server/core-v1", () => ({
   serverFetch,
 }));
 

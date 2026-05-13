@@ -1,6 +1,6 @@
 import type { LayoutServerLoad } from "./$types";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
-import { fetchLibraryConfig } from "$lib/server/system";
+import { fetchLibraryConfig } from "$lib/v1/server/system-v1";
 
 /**
  * Root server load. Reads cookies on every request so the client

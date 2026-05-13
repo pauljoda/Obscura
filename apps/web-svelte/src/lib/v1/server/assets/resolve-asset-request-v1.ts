@@ -14,13 +14,13 @@ import {
   sendBuffer,
   streamFile,
   streamFileWithRange,
-} from "./asset-response";
+} from "./asset-response-v1";
 import {
   MUTABLE_ASSET_CACHE_CONTROL,
   PRIVATE_DAILY_IMMUTABLE_ASSET_CACHE_CONTROL,
   PRIVATE_HOURLY_ASSET_CACHE_CONTROL,
   PRIVATE_IMMUTABLE_ASSET_CACHE_CONTROL,
-} from "$lib/server/cache-policy";
+} from "$lib/v1/server/cache-policy-v1";
 
 const SIDECAR_MIME: Record<SidecarKind, string> = {
   thumb: "image/jpeg",

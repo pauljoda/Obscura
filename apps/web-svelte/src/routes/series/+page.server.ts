@@ -4,7 +4,7 @@ import {
   fetchVideoCards,
   fetchSeries,
   fetchSeriesDetail,
-} from "$lib/server/videos";
+} from "$lib/v1/server/videos-v1";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import {
   SERIES_LIST_PREFS_KEY,
@@ -12,13 +12,13 @@ import {
   validateSeriesListPrefs,
   seriesListPrefsToFetchParams,
 } from "$lib/prefs/series-list-prefs";
-import { getWebDb } from "$lib/server/db";
-import { serverFetch } from "$lib/server/core";
+import { getWebDb } from "$lib/v1/server/db-v1";
+import { serverFetch } from "$lib/v1/server/core-v1";
 import {
   loadFormFactorUiPrefObjects,
   loadUiPrefObject,
-} from "$lib/server/ui-prefs";
-import { redirectHiddenNsfwDetail } from "$lib/server/nsfw-page-guard";
+} from "$lib/v1/server/ui-prefs-v1";
+import { redirectHiddenNsfwDetail } from "$lib/v1/server/nsfw-page-guard-v1";
 import type { PerformerItem, StudioItem, TagItem } from "$lib/v1/api/types-v1";
 
 const PAGE_SIZE = 60;

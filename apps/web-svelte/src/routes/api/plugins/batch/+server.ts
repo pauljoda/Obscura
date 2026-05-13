@@ -1,7 +1,7 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
-import { getWebDb } from "$lib/server/db";
-import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
-import { startPluginBatchJob } from "$lib/server/plugin-batch";
+import { getWebDb } from "$lib/v1/server/db-v1";
+import { mapAppCoreErrorToJson } from "$lib/v1/server/error-mapper-v1";
+import { startPluginBatchJob } from "$lib/v1/server/plugin-batch-v1";
 
 export const POST: RequestHandler = async ({ request }) => {
   const db = await getWebDb();

@@ -3,7 +3,7 @@ import {
   type SearchProvider,
 } from "@obscura/app-core";
 import type { EntityKind } from "@obscura/contracts";
-import { getWebDb } from "./db";
+import { getWebDb } from "./db-v1";
 
 let cached: {
   db: unknown;

@@ -6,7 +6,7 @@ const { db, getWebDb, listImagesRead } = vi.hoisted(() => ({
   listImagesRead: vi.fn(),
 }));
 
-vi.mock("$lib/server/db", () => ({
+vi.mock("$lib/v1/server/db-v1", () => ({
   getWebDb,
 }));
 

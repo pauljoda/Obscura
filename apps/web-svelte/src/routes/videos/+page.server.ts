@@ -1,7 +1,7 @@
 import { redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 import { getUiPrefRead } from "@obscura/app-core";
-import { fetchVideoCards } from "$lib/server/videos";
+import { fetchVideoCards } from "$lib/v1/server/videos-v1";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import {
   VIDEOS_LIST_PREFS_KEY,
@@ -9,12 +9,12 @@ import {
   validateVideosListPrefs,
   videosListPrefsToFetchParams,
 } from "$lib/prefs/videos-list-prefs";
-import { getWebDb } from "$lib/server/db";
-import { serverFetch } from "$lib/server/core";
+import { getWebDb } from "$lib/v1/server/db-v1";
+import { serverFetch } from "$lib/v1/server/core-v1";
 import {
   loadFormFactorUiPrefObjects,
   loadUiPrefObject,
-} from "$lib/server/ui-prefs";
+} from "$lib/v1/server/ui-prefs-v1";
 import type { PerformerItem, StudioItem, TagItem } from "$lib/v1/api/types-v1";
 
 const PAGE_SIZE = 60;

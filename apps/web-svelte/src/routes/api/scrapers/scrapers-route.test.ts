@@ -29,7 +29,7 @@ const {
   rejectScrapeResultWrite: vi.fn(),
 }));
 
-vi.mock("$lib/server/db", () => ({
+vi.mock("$lib/v1/server/db-v1", () => ({
   getWebDb,
 }));
 

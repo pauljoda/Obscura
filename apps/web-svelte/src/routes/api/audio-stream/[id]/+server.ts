@@ -1,5 +1,5 @@
 import type { RequestHandler } from "@sveltejs/kit";
-import { getWebDb } from "$lib/server/db";
+import { getWebDb } from "$lib/v1/server/db-v1";
 import { schema } from "@obscura/db";
 import { eq } from "drizzle-orm";
 import { spawn } from "node:child_process";

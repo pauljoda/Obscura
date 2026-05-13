@@ -33,11 +33,11 @@ const {
   getPluginBatchJobStatus: vi.fn(),
 }));
 
-vi.mock("$lib/server/db", () => ({
+vi.mock("$lib/v1/server/db-v1", () => ({
   getWebDb,
 }));
 
-vi.mock("$lib/server/plugin-batch", () => ({
+vi.mock("$lib/v1/server/plugin-batch-v1", () => ({
   startPluginBatchJob,
   getPluginBatchJobStatus,
 }));

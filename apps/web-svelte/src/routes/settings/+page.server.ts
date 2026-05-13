@@ -1,5 +1,5 @@
 import type { PageServerLoad } from "./$types";
-import { fetchInstalledScrapers, fetchLibraryConfig } from "$lib/server/system";
+import { fetchInstalledScrapers, fetchLibraryConfig } from "$lib/v1/server/system-v1";
 
 export const load: PageServerLoad = async ({ depends, fetch }) => {
   depends("settings");

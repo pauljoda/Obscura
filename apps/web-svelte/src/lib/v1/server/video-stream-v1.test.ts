@@ -98,7 +98,7 @@ describe("serveVideoSource", () => {
   });
 
   it("rejects non-native containers from Direct instead of preparing a hidden remux", async () => {
-    const { serveVideoSource } = await import("./video-stream");
+    const { serveVideoSource } = await import("./video-stream-v1");
 
     const response = await serveVideoSource(createDb(sourcePath), "video-1", null);
 
@@ -110,7 +110,7 @@ describe("serveVideoSource", () => {
   });
 
   it("serves native direct files with byte ranges", async () => {
-    const { serveVideoSource } = await import("./video-stream");
+    const { serveVideoSource } = await import("./video-stream-v1");
     const mp4Path = path.join(tempDir, "episode.mp4");
     await writeFile(mp4Path, "native-mp4-with-audio");
 

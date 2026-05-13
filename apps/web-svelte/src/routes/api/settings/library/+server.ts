@@ -6,7 +6,7 @@ import {
 } from "@obscura/app-core";
 import { schema } from "@obscura/db";
 import { asc } from "drizzle-orm";
-import { getWebDb } from "$lib/server/db";
+import { getWebDb } from "$lib/v1/server/db-v1";
 
 export const GET: RequestHandler = async () => {
   const db = await getWebDb();

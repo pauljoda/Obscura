@@ -1,7 +1,7 @@
 import type { PageServerLoad } from "./$types";
-import { fetchBooks } from "$lib/server/media";
+import { fetchBooks } from "$lib/v1/server/media-v1";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
-import { loadFormFactorUiPrefObjects } from "$lib/server/ui-prefs";
+import { loadFormFactorUiPrefObjects } from "$lib/v1/server/ui-prefs-v1";
 
 const PAGE_SIZE = 60;
 

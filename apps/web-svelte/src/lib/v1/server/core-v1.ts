@@ -23,7 +23,7 @@
  */
 import { env } from "$env/dynamic/public";
 
-export { buildQueryString } from "../query-string";
+export { buildQueryString } from "$lib/query-string";
 
 // When no event fetch is supplied we need an absolute URL back to the
 // SvelteKit server.

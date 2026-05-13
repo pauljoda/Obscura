@@ -20,7 +20,7 @@ import type {
   CollectionRuleGroup,
   PaginatedResponse,
 } from "@obscura/contracts";
-import { buildQueryString, serverFetch } from "./core";
+import { buildQueryString, serverFetch } from "./core-v1";
 import type {
   PerformerDetail,
   PerformerItem,

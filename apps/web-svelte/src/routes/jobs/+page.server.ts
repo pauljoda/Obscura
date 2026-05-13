@@ -1,5 +1,5 @@
 import type { PageServerLoad } from "./$types";
-import { fetchJobsDashboard } from "$lib/server/system";
+import { fetchJobsDashboard } from "$lib/v1/server/system-v1";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 
 export const load: PageServerLoad = async ({ cookies, depends, fetch }) => {

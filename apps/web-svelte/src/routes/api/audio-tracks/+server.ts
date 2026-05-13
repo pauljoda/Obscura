@@ -1,6 +1,6 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
 import { listAudioTracksRead, type ListAudioTracksQuery } from "@obscura/app-core";
-import { getWebDb } from "$lib/server/db";
+import { getWebDb } from "$lib/v1/server/db-v1";
 
 const SCALAR_KEYS = [
   "search",

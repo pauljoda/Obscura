@@ -3,7 +3,7 @@ import {
   listVideoSeriesRead,
   type ListVideoSeriesQuery,
 } from "@obscura/app-core";
-import { getWebDb } from "$lib/server/db";
+import { getWebDb } from "$lib/v1/server/db-v1";
 
 const KEYS = [
   "parent",

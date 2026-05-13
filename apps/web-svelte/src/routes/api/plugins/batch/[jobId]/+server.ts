@@ -1,5 +1,5 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
-import { getPluginBatchJobStatus } from "$lib/server/plugin-batch";
+import { getPluginBatchJobStatus } from "$lib/v1/server/plugin-batch-v1";
 
 export const GET: RequestHandler = async ({ params }) => {
   const job = getPluginBatchJobStatus(params.jobId!);

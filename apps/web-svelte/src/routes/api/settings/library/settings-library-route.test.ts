@@ -27,11 +27,11 @@ const { db, getWebDb, getStorageStats, settingsRow, rootRows } = vi.hoisted(() =
   };
 });
 
-vi.mock("$lib/server/db", () => ({
+vi.mock("$lib/v1/server/db-v1", () => ({
   getWebDb,
 }));
 
-vi.mock("$lib/server/library-storage", () => ({
+vi.mock("$lib/v1/server/library-storage-v1", () => ({
   getStorageStats,
 }));
 

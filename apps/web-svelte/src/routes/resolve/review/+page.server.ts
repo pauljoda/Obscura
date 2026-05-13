@@ -1,4 +1,4 @@
-import { fetchAllPendingScrapeResults } from "$lib/server/media";
+import { fetchAllPendingScrapeResults } from "$lib/v1/server/media-v1";
 
 export const prerender = false;
 

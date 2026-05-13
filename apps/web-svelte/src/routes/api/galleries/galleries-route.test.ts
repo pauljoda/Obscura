@@ -7,7 +7,7 @@ const { db, getWebDb, listGalleriesRead, createGalleryWrite } = vi.hoisted(() =>
   createGalleryWrite: vi.fn(),
 }));
 
-vi.mock("$lib/server/db", () => ({
+vi.mock("$lib/v1/server/db-v1", () => ({
   getWebDb,
 }));
 

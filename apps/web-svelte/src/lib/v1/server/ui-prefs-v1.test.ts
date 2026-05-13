@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeUiPrefObject } from "./ui-prefs";
+import { mergeUiPrefObject } from "./ui-prefs-v1";
 
 describe("server ui prefs", () => {
   it("merges saved object values over defaults for first render", () => {

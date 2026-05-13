@@ -1,8 +1,8 @@
 import { type RequestHandler } from "@sveltejs/kit";
-import { getWebDb } from "$lib/server/db";
-import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
-import { createDbAssetDeps } from "$lib/server/assets/database-deps";
-import { resolveAssetRequest } from "$lib/server/assets/resolve-asset-request";
+import { getWebDb } from "$lib/v1/server/db-v1";
+import { mapAppCoreErrorToJson } from "$lib/v1/server/error-mapper-v1";
+import { createDbAssetDeps } from "$lib/v1/server/assets/database-deps-v1";
+import { resolveAssetRequest } from "$lib/v1/server/assets/resolve-asset-request-v1";
 
 export const GET: RequestHandler = async ({ params, request }) => {
   const db = await getWebDb();

@@ -5,11 +5,11 @@ const { fetchGalleryDetail, loadFormFactorUiPrefObjects } = vi.hoisted(() => ({
   loadFormFactorUiPrefObjects: vi.fn(),
 }));
 
-vi.mock("$lib/server/media", () => ({
+vi.mock("$lib/v1/server/media-v1", () => ({
   fetchGalleryDetail,
 }));
 
-vi.mock("$lib/server/ui-prefs", () => ({
+vi.mock("$lib/v1/server/ui-prefs-v1", () => ({
   loadFormFactorUiPrefObjects,
 }));
 

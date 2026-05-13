@@ -16,7 +16,7 @@ const { getWebDb } = vi.hoisted(() => ({
   getWebDb: vi.fn(() => Promise.resolve({})),
 }));
 
-vi.mock("$lib/server/videos", () => ({
+vi.mock("$lib/v1/server/videos-v1", () => ({
   fetchVideoCards,
   fetchSeries,
   fetchSeriesDetail,
@@ -30,7 +30,7 @@ vi.mock("@obscura/app-core", () => ({
   getUiPrefRead,
 }));
 
-vi.mock("$lib/server/db", () => ({
+vi.mock("$lib/v1/server/db-v1", () => ({
   getWebDb,
 }));
 

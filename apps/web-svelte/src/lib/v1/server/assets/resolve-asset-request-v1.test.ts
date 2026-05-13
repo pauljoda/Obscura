@@ -2,7 +2,7 @@ import os from "node:os";
 import path from "node:path";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { afterEach, describe, expect, it } from "vitest";
-import type { AssetResolverDeps } from "./resolve-asset-request";
+import type { AssetResolverDeps } from "./resolve-asset-request-v1";
 
 function createDeps(
   overrides: Partial<AssetResolverDeps> = {},
@@ -46,7 +46,7 @@ describe("resolveAssetRequest", () => {
     await writeFile(videoPath, "video-bytes");
     await writeFile(cardPath, "card-bytes");
 
-    const { resolveAssetRequest } = await import("./resolve-asset-request");
+    const { resolveAssetRequest } = await import("./resolve-asset-request-v1");
     const response = await resolveAssetRequest(
       createDeps({
         resolveVideoFilePath: async () => videoPath,
@@ -88,7 +88,7 @@ describe("resolveAssetRequest", () => {
     const videoPath = path.join(mediaDir, "clip.mp4");
     await writeFile(videoPath, "video-bytes");
 
-    const { resolveAssetRequest } = await import("./resolve-asset-request");
+    const { resolveAssetRequest } = await import("./resolve-asset-request-v1");
     const response = await resolveAssetRequest(
       createDeps({
         resolveVideoFilePath: async () => videoPath,
@@ -122,7 +122,7 @@ describe("resolveAssetRequest", () => {
     const videoPath = path.join(mediaDir, "clip.mp4");
     await writeFile(videoPath, "video-bytes");
 
-    const { resolveAssetRequest } = await import("./resolve-asset-request");
+    const { resolveAssetRequest } = await import("./resolve-asset-request-v1");
     const response = await resolveAssetRequest(
       createDeps({
         resolveVideoFilePath: async () => videoPath,
@@ -146,7 +146,7 @@ describe("resolveAssetRequest", () => {
     await mkdir(path.dirname(coverPath), { recursive: true });
     await writeFile(coverPath, "cover-bytes");
 
-    const { resolveAssetRequest } = await import("./resolve-asset-request");
+    const { resolveAssetRequest } = await import("./resolve-asset-request-v1");
     const response = await resolveAssetRequest(
       createDeps({
         getCollectionDetail: async () => ({
@@ -175,7 +175,7 @@ describe("resolveAssetRequest", () => {
     await writeFile(path.join(dir, "cover.webp"), "generated-cover");
     await writeFile(path.join(dir, "cover-custom.jpg"), "custom-cover");
 
-    const { resolveAssetRequest } = await import("./resolve-asset-request");
+    const { resolveAssetRequest } = await import("./resolve-asset-request-v1");
     const response = await resolveAssetRequest(
       createDeps({
         getCollectionDetail: async () => ({
@@ -204,7 +204,7 @@ describe("resolveAssetRequest", () => {
     const previewBytes = Buffer.from("0123456789abcdef");
     await writeFile(previewPath, previewBytes);
 
-    const { resolveAssetRequest } = await import("./resolve-asset-request");
+    const { resolveAssetRequest } = await import("./resolve-asset-request-v1");
 
     const fullResponse = await resolveAssetRequest(
       createDeps(),
@@ -257,7 +257,7 @@ describe("resolveAssetRequest", () => {
     await mkdir(path.dirname(waveformPath), { recursive: true });
     await writeFile(waveformPath, JSON.stringify({ peaks: [0, 1, 0] }));
 
-    const { resolveAssetRequest } = await import("./resolve-asset-request");
+    const { resolveAssetRequest } = await import("./resolve-asset-request-v1");
     const response = await resolveAssetRequest(
       createDeps(),
       "audio-tracks/track-1/waveform.json",

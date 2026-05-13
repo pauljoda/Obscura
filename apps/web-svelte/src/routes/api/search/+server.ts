@@ -1,7 +1,7 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
 import type { EntityKind } from "@obscura/contracts";
 import { executeSearch } from "@obscura/app-core";
-import { getSearchProviders } from "$lib/server/search";
+import { getSearchProviders } from "$lib/v1/server/search-v1";
 
 export const GET: RequestHandler = async ({ url }) => {
   const query = (url.searchParams.get("q") ?? "").trim();

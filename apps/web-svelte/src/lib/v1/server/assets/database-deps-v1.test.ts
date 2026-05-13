@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createDbAssetDeps } from "./database-deps";
+import { createDbAssetDeps } from "./database-deps-v1";
 
 describe("createDbAssetDeps", () => {
   it("reads only the metadata storage setting needed for asset resolution", async () => {

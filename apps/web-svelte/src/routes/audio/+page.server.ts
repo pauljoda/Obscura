@@ -1,10 +1,10 @@
 import type { PageServerLoad } from "./$types";
-import { fetchAudioLibraries } from "$lib/server/media";
+import { fetchAudioLibraries } from "$lib/v1/server/media-v1";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import {
   loadFormFactorUiPrefObjects,
   loadUiPrefObject,
-} from "$lib/server/ui-prefs";
+} from "$lib/v1/server/ui-prefs-v1";
 
 const PAGE_SIZE = 60;
 

@@ -1,11 +1,11 @@
 import type { PageServerLoad } from "./$types";
-import { fetchGalleryDetail } from "$lib/server/media";
+import { fetchGalleryDetail } from "$lib/v1/server/media-v1";
 import { error, redirect } from "@sveltejs/kit";
 import { getBookLegacyGalleryRedirectRead } from "@obscura/app-core";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
-import { redirectHiddenNsfwDetail } from "$lib/server/nsfw-page-guard";
-import { loadFormFactorUiPrefObjects } from "$lib/server/ui-prefs";
-import { getWebDb } from "$lib/server/db";
+import { redirectHiddenNsfwDetail } from "$lib/v1/server/nsfw-page-guard-v1";
+import { loadFormFactorUiPrefObjects } from "$lib/v1/server/ui-prefs-v1";
+import { getWebDb } from "$lib/v1/server/db-v1";
 
 const PAGE_SIZE = 120;
 

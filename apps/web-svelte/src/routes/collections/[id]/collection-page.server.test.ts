@@ -6,11 +6,11 @@ const { fetchCollectionDetail, serverFetch, parseNsfwModeCookie } = vi.hoisted((
   parseNsfwModeCookie: vi.fn(() => "show"),
 }));
 
-vi.mock("$lib/server/media", () => ({
+vi.mock("$lib/v1/server/media-v1", () => ({
   fetchCollectionDetail,
 }));
 
-vi.mock("$lib/server/core", () => ({
+vi.mock("$lib/v1/server/core-v1", () => ({
   serverFetch,
 }));
 

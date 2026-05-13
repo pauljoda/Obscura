@@ -5,8 +5,8 @@ import {
   type CreatePerformerBody,
   type ListPerformersQuery,
 } from "@obscura/app-core";
-import { getWebDb } from "$lib/server/db";
-import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
+import { getWebDb } from "$lib/v1/server/db-v1";
+import { mapAppCoreErrorToJson } from "$lib/v1/server/error-mapper-v1";
 
 const QUERY_KEYS = [
   "search",

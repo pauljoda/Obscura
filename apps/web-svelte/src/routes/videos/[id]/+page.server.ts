@@ -1,8 +1,8 @@
 import type { PageServerLoad } from "./$types";
-import { fetchVideoDetail } from "$lib/server/videos";
+import { fetchVideoDetail } from "$lib/v1/server/videos-v1";
 import { error } from "@sveltejs/kit";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
-import { redirectHiddenNsfwDetail } from "$lib/server/nsfw-page-guard";
+import { redirectHiddenNsfwDetail } from "$lib/v1/server/nsfw-page-guard-v1";
 
 export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) => {
   depends(`videos:${params.id}`);

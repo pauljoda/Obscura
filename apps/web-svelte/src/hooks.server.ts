@@ -1,5 +1,5 @@
 import type { Handle } from "@sveltejs/kit";
-import { PAGE_CACHE_CONTROL } from "$lib/server/cache-policy";
+import { PAGE_CACHE_CONTROL } from "$lib/v1/server/cache-policy-v1";
 
 function requestMethodCanUseBrowserCache(method: string) {
   return method === "GET" || method === "HEAD";

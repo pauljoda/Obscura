@@ -1,5 +1,5 @@
 import type { PageServerLoad } from "./$types";
-import { fetchVideoCards, fetchSeries } from "$lib/server/videos";
+import { fetchVideoCards, fetchSeries } from "$lib/v1/server/videos-v1";
 import {
   fetchGalleries,
   fetchBooks,
@@ -7,7 +7,7 @@ import {
   fetchAudioLibraries,
   fetchPerformers,
   fetchStudios,
-} from "$lib/server/media";
+} from "$lib/v1/server/media-v1";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import type {
   GalleryListItemDto,

@@ -1,8 +1,8 @@
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
-import { fetchBookDetail } from "$lib/server/media";
+import { fetchBookDetail } from "$lib/v1/server/media-v1";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
-import { redirectHiddenNsfwDetail } from "$lib/server/nsfw-page-guard";
+import { redirectHiddenNsfwDetail } from "$lib/v1/server/nsfw-page-guard-v1";
 
 export const load: PageServerLoad = async ({ params, depends, fetch, cookies }) => {
   depends(`books:${params.id}`);

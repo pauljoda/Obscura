@@ -1,11 +1,11 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
 import { backfillPhashesWrite } from "@obscura/app-core";
-import { getWebDb } from "$lib/server/db";
+import { getWebDb } from "$lib/v1/server/db-v1";
 import {
   readOptionalJsonObject,
   readSfwOnlyFromRequest,
-} from "$lib/server/jobs-request";
-import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
+} from "$lib/v1/server/jobs-request-v1";
+import { mapAppCoreErrorToJson } from "$lib/v1/server/error-mapper-v1";
 
 export const POST: RequestHandler = async ({ request }) => {
   const db = await getWebDb();

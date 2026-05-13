@@ -4,7 +4,7 @@ import {
   type FormFactorUiPrefs,
   type UiPrefsFormFactor,
 } from "$lib/prefs/form-factor-prefs";
-import { getWebDb } from "$lib/server/db";
+import { getWebDb } from "$lib/v1/server/db-v1";
 
 export function mergeUiPrefObject<T extends object>(
   defaults: T,

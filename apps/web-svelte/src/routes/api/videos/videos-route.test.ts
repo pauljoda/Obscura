@@ -7,11 +7,11 @@ const { db, getWebDb, listVideosRead, mapAppCoreErrorToJson } = vi.hoisted(() =>
   mapAppCoreErrorToJson: vi.fn(),
 }));
 
-vi.mock("$lib/server/db", () => ({
+vi.mock("$lib/v1/server/db-v1", () => ({
   getWebDb,
 }));
 
-vi.mock("$lib/server/error-mapper", () => ({
+vi.mock("$lib/v1/server/error-mapper-v1", () => ({
   mapAppCoreErrorToJson,
 }));
 

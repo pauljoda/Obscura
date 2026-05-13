@@ -2,7 +2,7 @@ import {
   fetchTags,
   fetchPerformers,
   fetchStudios,
-} from "$lib/server/media";
+} from "$lib/v1/server/media-v1";
 import {
   buildPerformerSuggestions,
   buildStudioSuggestions,

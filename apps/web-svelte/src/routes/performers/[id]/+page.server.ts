@@ -1,9 +1,9 @@
 import type { PageServerLoad } from "./$types";
-import { serverFetch } from "$lib/server/core";
+import { serverFetch } from "$lib/v1/server/core-v1";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import { buildQueryString } from "$lib/query-string";
 import { error } from "@sveltejs/kit";
-import { redirectHiddenNsfwDetail } from "$lib/server/nsfw-page-guard";
+import { redirectHiddenNsfwDetail } from "$lib/v1/server/nsfw-page-guard-v1";
 
 const VIDEO_LIMIT = 60;
 const GALLERY_LIMIT = 24;

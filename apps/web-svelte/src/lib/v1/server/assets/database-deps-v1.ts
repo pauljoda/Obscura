@@ -2,7 +2,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { getCollectionDetailRead } from "@obscura/app-core";
 import { resolveExistingMediaPath } from "@obscura/media-core";
 import { schema, type AppDb } from "@obscura/db";
-import type { AssetResolverDeps } from "./resolve-asset-request";
+import type { AssetResolverDeps } from "./resolve-asset-request-v1";
 
 const { galleries, images, bookPages, librarySettings, videoEpisodes, videoMovies } = schema;
 

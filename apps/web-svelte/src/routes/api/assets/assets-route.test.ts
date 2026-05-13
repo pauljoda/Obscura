@@ -10,19 +10,19 @@ const { db, getWebDb, createDbAssetDeps, resolveAssetRequest, mapAppCoreErrorToJ
   }),
 );
 
-vi.mock("$lib/server/db", () => ({
+vi.mock("$lib/v1/server/db-v1", () => ({
   getWebDb,
 }));
 
-vi.mock("$lib/server/assets/database-deps", () => ({
+vi.mock("$lib/v1/server/assets/database-deps-v1", () => ({
   createDbAssetDeps,
 }));
 
-vi.mock("$lib/server/assets/resolve-asset-request", () => ({
+vi.mock("$lib/v1/server/assets/resolve-asset-request-v1", () => ({
   resolveAssetRequest,
 }));
 
-vi.mock("$lib/server/error-mapper", () => ({
+vi.mock("$lib/v1/server/error-mapper-v1", () => ({
   mapAppCoreErrorToJson,
 }));
 
