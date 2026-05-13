@@ -12,7 +12,7 @@ public sealed class ContractMapperTests
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     [Fact]
-    public void VideoDetailSerializesDescriptionInsteadOfLegacySummary()
+    public void VideoDetailKeepsSharedDescriptionInsideCapabilities()
     {
         var video = new Video(
             new Entity(
@@ -27,13 +27,20 @@ public sealed class ContractMapperTests
 
         using var document = JsonDocument.Parse(JsonSerializer.Serialize(ContractMapper.ToVideoDetail(video), JsonOptions));
 
-        Assert.True(document.RootElement.TryGetProperty("description", out var description));
-        Assert.Equal("Capability description", description.GetString());
+        Assert.False(document.RootElement.TryGetProperty("description", out _));
         Assert.False(document.RootElement.TryGetProperty("summary", out _));
+        Assert.Equal(
+            "description",
+            document.RootElement
+                .GetProperty("capabilities")
+                .EnumerateArray()
+                .Single()
+                .GetProperty("kind")
+                .GetString());
     }
 
     [Fact]
-    public void VideoSeriesDetailSerializesDescriptionInsteadOfLegacySummary()
+    public void VideoSeriesDetailKeepsSharedDescriptionInsideCapabilities()
     {
         var series = new VideoSeries(
             new Entity(
@@ -51,9 +58,16 @@ public sealed class ContractMapperTests
 
         using var document = JsonDocument.Parse(JsonSerializer.Serialize(ContractMapper.ToVideoSeriesDetail(series), JsonOptions));
 
-        Assert.True(document.RootElement.TryGetProperty("description", out var description));
-        Assert.Equal("Series description", description.GetString());
+        Assert.False(document.RootElement.TryGetProperty("description", out _));
         Assert.False(document.RootElement.TryGetProperty("summary", out _));
+        Assert.Equal(
+            "description",
+            document.RootElement
+                .GetProperty("capabilities")
+                .EnumerateArray()
+                .Single()
+                .GetProperty("kind")
+                .GetString());
     }
 
     [Fact]

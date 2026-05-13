@@ -77,6 +77,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 .NET API contract now exposes the expanded capability union so generated clients can read markers, subtitles, stats, dates, source data, technical metadata, progress, positions, and classifications from one shared shape.
 - The v2 .NET schema now has typed capability-first tables for stats, dates, technical metadata, source provenance, progress, positions, and classifications.
 - The v2 .NET media and taxonomy detail APIs now return object-specific detail contracts, so generated clients receive gallery, book, audio, person, studio, and tag shapes without unrelated optional fields.
+- The v2 .NET video and series detail APIs now keep shared metadata inside capabilities instead of duplicating description, technical, marker, and subtitle fields at the top level.
 
 ### Docs
 

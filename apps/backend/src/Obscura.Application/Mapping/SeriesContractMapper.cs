@@ -19,7 +19,6 @@ public static partial class ContractMapper
             series.Id,
             series.Kind.Code,
             series.Title,
-            series.Description,
             ToEntityCapabilities(series.Capabilities),
             ToEntityCards(series.Children),
             ToEntityCards(series.Videos),
