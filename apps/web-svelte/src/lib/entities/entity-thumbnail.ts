@@ -61,6 +61,7 @@ export interface EntityThumbnailCard {
   entity: EntityThumbnailEntity;
   aspectRatio: EntityThumbnailAspectRatio;
   cover: EntityThumbnailAsset | null;
+  fit?: "contain" | "cover";
   hover: EntityThumbnailHoverPreview;
   href?: string;
   meta?: EntityThumbnailMetaItem[];

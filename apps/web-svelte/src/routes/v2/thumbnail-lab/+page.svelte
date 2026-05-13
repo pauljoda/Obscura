@@ -1,6 +1,8 @@
 <script lang="ts">
   import V2EntityThumbnail from "$lib/components/thumbnails/V2EntityThumbnail.svelte";
   import { thumbnailLabRows } from "$lib/entities/thumbnail-lab-data";
+
+  let thumbnailScale = $state(14);
 </script>
 
 <svelte:head>
@@ -13,10 +15,17 @@
       <p>v2 entity surface</p>
       <h1>Thumbnail Lab</h1>
     </div>
-    <span>{thumbnailLabRows.length} entity kinds</span>
+    <div class="controls">
+      <label for="thumbnail-scale">
+        <span>Scale</span>
+        <strong>{thumbnailScale}rem</strong>
+      </label>
+      <input id="thumbnail-scale" type="range" min="9" max="21" step="1" bind:value={thumbnailScale} />
+      <span>{thumbnailLabRows.length} entity kinds</span>
+    </div>
   </header>
 
-  <div class="rows">
+  <div class="rows" style={`--thumb-size: ${thumbnailScale}rem;`}>
     {#each thumbnailLabRows as row (row.kind)}
       <section class="kind-row" aria-labelledby={`${row.kind}-heading`}>
         <div class="row-heading">
@@ -79,7 +88,7 @@
     line-height: 0.96;
   }
 
-  header > span,
+  .controls > span,
   .row-heading > span {
     border: 1px solid rgb(255 255 255 / 0.12);
     background: rgb(255 255 255 / 0.045);
@@ -88,6 +97,35 @@
     font-size: 0.72rem;
     padding: 0.45rem 0.58rem;
     white-space: nowrap;
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: auto minmax(9rem, 14rem) auto;
+    gap: 0.7rem;
+    align-items: center;
+  }
+
+  .controls label {
+    display: grid;
+    gap: 0.15rem;
+    color: rgb(244 239 230 / 0.6);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.68rem;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .controls strong {
+    color: rgb(244 239 230 / 0.82);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: none;
+  }
+
+  .controls input {
+    accent-color: #c49a5a;
+    inline-size: 100%;
   }
 
   .rows {
@@ -116,7 +154,7 @@
 
   .strip {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(12rem, 15rem));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--thumb-size)), var(--thumb-size)));
     gap: 0.9rem;
     align-items: start;
     border-top: 1px solid rgb(255 255 255 / 0.08);
@@ -134,8 +172,13 @@
       flex-direction: column;
     }
 
+    .controls {
+      grid-template-columns: 1fr;
+      inline-size: 100%;
+    }
+
     .strip {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--thumb-size)), 1fr));
     }
   }
 </style>

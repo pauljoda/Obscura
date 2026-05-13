@@ -81,6 +81,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The generated Svelte v2 API client now matches the capability-first .NET OpenAPI surface, and the v2 video and series detail pages read shared metadata through capability helpers.
 - The generated Svelte v2 API client now reflects canonical hyphenated .NET entity kind codes in media endpoint summaries.
 - The Svelte app now includes a v2 thumbnail lab that exercises one shared entity-card thumbnail path across every current entity kind before the main UI is rewired.
+- The v2 thumbnail lab now shows denser rows, adjustable thumbnail scale, cleaner shared chips, and fit-within image rendering so card sizing can be tuned before the main UI migration.
 
 ### Docs
 
@@ -144,6 +145,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Moved the v2 settings service contract into the Application layer so API routes depend on application settings behavior while Infrastructure only implements EF-backed persistence.
 - Updated v2 legacy import SQL to populate shared capability tables for descriptions, dates, technical metadata, sources, stats, progress, positions, classifications, fingerprints, playback, and minimal media detail rows.
 - Changed v2 media, taxonomy, and collection detail APIs to use typed aggregate hydrators so flat kind-specific fields are available alongside shared capabilities.
+- Refined the v2 thumbnail lab by removing non-user-facing kind and hover labels, adding outer card borders, expanding each entity row to five samples, and adding a scale slider.
 - Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.
 - Job Control failures can now be individually suppressed by error type — clicking Suppress on any failed job hides all jobs sharing the same error fingerprint until you click Show all or clear all failures.
 - Job Control completed jobs now show a duration column so you can see how long each run took, plus a retry indicator when a job needed more than one attempt.

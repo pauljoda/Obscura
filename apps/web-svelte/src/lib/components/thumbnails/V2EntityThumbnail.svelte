@@ -34,6 +34,7 @@
 
   const asset = $derived(getThumbnailAsset(card, pointerRatio));
   const aspectRatio = $derived(toAspectRatioValue(card.aspectRatio));
+  const imageFit = $derived(card.fit ?? "contain");
   const hoverable = $derived(hasHoverPreview(card));
   const nsfw = $derived(isNsfw(card.entity.capabilities));
   const rating = $derived(getRatingValue(card.entity.capabilities));
@@ -71,7 +72,7 @@
 >
   <div class="media" style:aspect-ratio={aspectRatio}>
     {#if asset}
-      <img src={asset.src} alt={asset.alt} loading="lazy" />
+      <img src={asset.src} alt={asset.alt} loading="lazy" style:object-fit={imageFit} />
     {:else}
       <div class="placeholder" aria-hidden="true">
         {@render IconFor({ icon: card.meta?.[0]?.icon ?? "collection" })}
@@ -80,30 +81,19 @@
 
     <div class="scrim" aria-hidden="true"></div>
 
-    <div class="badges">
-      <span class="kind">{card.entity.kind}</span>
-      {#if nsfw}
-        <span class="badge danger" title="NSFW">
-          <ShieldAlert size={13} />
-          NSFW
-        </span>
-      {/if}
-      {#if rating > 0}
-        <span class="badge" title="Rating">
-          <Star size={13} />
-          {formatRating(rating)}
-        </span>
-      {/if}
-    </div>
-
-    {#if hoverable}
-      <div class="hover-state" data-kind={card.hover.kind}>
-        {#if card.hover.kind === "trickplay"}
-          <Film size={13} />
-          Scrub
-        {:else}
-          <Images size={13} />
-          Preview
+    {#if nsfw || rating > 0}
+      <div class="badges">
+        {#if nsfw}
+          <span class="badge danger" title="NSFW">
+            <ShieldAlert size={13} />
+            NSFW
+          </span>
+        {/if}
+        {#if rating > 0}
+          <span class="badge" title="Rating">
+            <Star size={13} />
+            {formatRating(rating)}
+          </span>
         {/if}
       </div>
     {/if}
@@ -164,9 +154,17 @@
   .entity-thumbnail {
     display: grid;
     gap: 0.65rem;
+    border: 1px solid rgb(255 255 255 / 0.12);
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.055), rgb(255 255 255 / 0.018)),
+      rgb(12 12 13 / 0.92);
     color: var(--color-text, #f4efe6);
+    padding: 0.55rem;
     text-decoration: none;
     min-width: 0;
+    box-shadow:
+      inset 0 0 0 1px rgb(0 0 0 / 0.42),
+      0 14px 28px rgb(0 0 0 / 0.24);
   }
 
   .media {
@@ -174,7 +172,8 @@
     overflow: hidden;
     border: 1px solid rgb(255 255 255 / 0.1);
     background:
-      linear-gradient(135deg, rgb(15 16 18 / 0.96), rgb(38 34 28 / 0.92)),
+      radial-gradient(circle at 50% 45%, rgb(255 255 255 / 0.08), transparent 34%),
+      linear-gradient(135deg, rgb(15 16 18 / 0.96), rgb(28 25 20 / 0.92)),
       #111;
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.03);
   }
@@ -188,15 +187,14 @@
   .media img {
     display: block;
     object-fit: cover;
+    object-position: center;
     transition:
-      filter 160ms ease,
-      transform 160ms ease;
+      filter 160ms ease;
   }
 
   .entity-thumbnail:is(:hover, :focus-visible) .media img,
   .entity-thumbnail.is-hovering .media img {
     filter: saturate(1.06) contrast(1.04);
-    transform: scale(1.015);
   }
 
   .placeholder {
@@ -229,9 +227,7 @@
     align-items: center;
   }
 
-  .kind,
-  .badge,
-  .hover-state {
+  .badge {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
@@ -247,26 +243,13 @@
     backdrop-filter: blur(12px);
   }
 
-  .kind {
-    color: rgb(231 197 142 / 0.95);
-    text-transform: uppercase;
-  }
-
-  .badge :global(svg),
-  .hover-state :global(svg) {
+  .badge :global(svg) {
     flex: 0 0 auto;
   }
 
   .danger {
     color: #ffb5a9;
     border-color: rgb(255 121 97 / 0.35);
-  }
-
-  .hover-state {
-    position: absolute;
-    right: 0.45rem;
-    bottom: 0.45rem;
-    color: rgb(244 239 230 / 0.78);
   }
 
   .copy {
@@ -334,9 +317,7 @@
   }
 
   @media (max-width: 640px) {
-    .kind,
-    .badge,
-    .hover-state {
+    .badge {
       font-size: 0.61rem;
     }
 

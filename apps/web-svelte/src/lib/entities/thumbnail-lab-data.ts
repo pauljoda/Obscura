@@ -12,22 +12,59 @@ export interface EntityThumbnailRow {
   cards: EntityThumbnailCard[];
 }
 
-function svgArt(label: string, primary: string, secondary: string, accent: string): string {
+type ArtShape = "wide" | "video" | "square" | "portrait" | "poster";
+
+function artDimensions(shape: ArtShape): { width: number; height: number } {
+  switch (shape) {
+    case "poster":
+      return { width: 720, height: 1080 };
+    case "portrait":
+      return { width: 810, height: 1080 };
+    case "square":
+      return { width: 900, height: 900 };
+    case "wide":
+      return { width: 1260, height: 540 };
+    case "video":
+    default:
+      return { width: 960, height: 540 };
+  }
+}
+
+function svgArt(label: string, primary: string, secondary: string, accent: string, shape: ArtShape): string {
+  const { width, height } = artDimensions(shape);
   const safeLabel = label.replace(/[<>&"]/g, "");
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="${primary}"/><stop offset="1" stop-color="${secondary}"/></linearGradient><filter id="grain"><feTurbulence baseFrequency=".8" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter></defs><rect width="960" height="540" fill="url(#g)"/><rect width="960" height="540" opacity=".13" filter="url(#grain)"/><path d="M70 450 C210 300 280 360 410 220 S670 120 895 260" fill="none" stroke="${accent}" stroke-width="18" opacity=".72"/><circle cx="746" cy="138" r="74" fill="${accent}" opacity=".34"/><rect x="72" y="72" width="380" height="70" fill="#050505" opacity=".5"/><text x="96" y="120" fill="#f4efe6" font-family="Inter,Arial,sans-serif" font-size="38" font-weight="700">${safeLabel}</text></svg>`;
+  const textWidth = Math.min(width - 96, 420);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="${primary}"/><stop offset="1" stop-color="${secondary}"/></linearGradient><filter id="grain"><feTurbulence baseFrequency=".8" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter></defs><rect width="${width}" height="${height}" fill="url(#g)"/><rect width="${width}" height="${height}" opacity=".13" filter="url(#grain)"/><path d="M${width * 0.07} ${height * 0.82} C${width * 0.22} ${height * 0.55} ${width * 0.3} ${height * 0.66} ${width * 0.43} ${height * 0.4} S${width * 0.7} ${height * 0.22} ${width * 0.93} ${height * 0.48}" fill="none" stroke="${accent}" stroke-width="${Math.max(16, width * 0.018)}" opacity=".72"/><circle cx="${width * 0.78}" cy="${height * 0.25}" r="${Math.min(width, height) * 0.14}" fill="${accent}" opacity=".34"/><rect x="48" y="48" width="${textWidth}" height="70" fill="#050505" opacity=".5"/><text x="72" y="96" fill="#f4efe6" font-family="Inter,Arial,sans-serif" font-size="36" font-weight="700">${safeLabel}</text></svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-function asset(label: string, primary: string, secondary: string, accent = "#c49a5a"): EntityThumbnailAsset {
+function asset(
+  label: string,
+  primary: string,
+  secondary: string,
+  accent = "#c49a5a",
+  shape: ArtShape = "video",
+): EntityThumbnailAsset {
   return {
-    src: svgArt(label, primary, secondary, accent),
+    src: svgArt(label, primary, secondary, accent, shape),
     alt: label,
   };
 }
 
-function sequence(label: string, palette: [string, string, string], count: number): EntityThumbnailAsset[] {
+function sequence(
+  label: string,
+  palette: [string, string, string],
+  count: number,
+  shape: ArtShape,
+): EntityThumbnailAsset[] {
   return Array.from({ length: count }, (_, index) =>
-    asset(`${label} ${index + 1}`, palette[(index + 0) % palette.length], palette[(index + 1) % palette.length], palette[(index + 2) % palette.length]),
+    asset(
+      `${label} ${index + 1}`,
+      palette[(index + 0) % palette.length],
+      palette[(index + 1) % palette.length],
+      palette[(index + 2) % palette.length],
+      shape,
+    ),
   );
 }
 
@@ -145,7 +182,7 @@ const ember = "#7b4a24";
 const graphite = "#1f2226";
 
 /** Safe synthetic thumbnail data for exercising the v2 shared entity-card surface without touching user media. */
-export const thumbnailLabRows: EntityThumbnailRow[] = [
+const thumbnailLabSeedRows: EntityThumbnailRow[] = [
   {
     kind: "video",
     label: "Videos",
@@ -156,8 +193,8 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
         title: "Big Buck Bunny Sample",
         subtitle: "Open movie fixture",
         aspectRatio: "video",
-        cover: asset("Big Buck Bunny", forest, graphite, brass),
-        hover: { kind: "trickplay", assets: sequence("Trickplay", [forest, ember, indigo], 6) },
+        cover: asset("Big Buck Bunny", forest, graphite, brass, "video"),
+        hover: { kind: "trickplay", assets: sequence("Trickplay", [forest, ember, indigo], 6, "video") },
         capabilities: [rating(4), technical({ duration: "00:09:56", width: 1920, height: 1080, codec: "h264" })],
         meta: [
           { icon: "duration", label: "09:56" },
@@ -176,7 +213,7 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
         title: "Demo Shorts",
         subtitle: "Series shell",
         aspectRatio: "poster",
-        cover: asset("Demo Shorts", burgundy, graphite, brass),
+        cover: asset("Demo Shorts", burgundy, graphite, brass, "poster"),
         capabilities: [rating(5), stats([{ code: "videos", value: 8 }])],
         meta: [{ icon: "count", label: "8 videos" }],
       }),
@@ -192,7 +229,7 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
         title: "Season 01",
         subtitle: "Ordered child group",
         aspectRatio: "video",
-        cover: asset("Season 01", indigo, graphite, brass),
+        cover: asset("Season 01", indigo, graphite, brass, "wide"),
         capabilities: [position("season", 1, "Season 1"), stats([{ code: "episodes", value: 6 }])],
         meta: [
           { icon: "chapter", label: "S01" },
@@ -211,8 +248,8 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
         title: "Fixture Landscapes",
         subtitle: "Preview sequence",
         aspectRatio: "square",
-        cover: asset("Gallery Cover", ember, graphite, brass),
-        hover: { kind: "image-sequence", assets: sequence("Gallery", [ember, forest, indigo], 5) },
+        cover: asset("Gallery Cover", ember, graphite, brass, "square"),
+        hover: { kind: "image-sequence", assets: sequence("Gallery", [ember, forest, indigo], 5, "portrait") },
         capabilities: [stats([{ code: "images", value: 42 }])],
         meta: [{ icon: "gallery", label: "42 images" }],
       }),
@@ -228,7 +265,7 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
         title: "Sample Still",
         subtitle: "Single image entity",
         aspectRatio: { width: 4, height: 3 },
-        cover: asset("Image Still", forest, indigo, brass),
+        cover: asset("Image Still", forest, indigo, brass, "wide"),
         capabilities: [rating(3), technical({ width: 1600, height: 1200, format: "jpeg" })],
         meta: [{ icon: "image", label: "1600x1200" }],
       }),
@@ -244,8 +281,8 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
         title: "Public Domain Reader",
         subtitle: "Book root",
         aspectRatio: "poster",
-        cover: asset("Book Cover", burgundy, ember, brass),
-        hover: { kind: "image-sequence", assets: sequence("Pages", [burgundy, graphite, forest], 4) },
+        cover: asset("Book Cover", burgundy, ember, brass, "poster"),
+        hover: { kind: "image-sequence", assets: sequence("Pages", [burgundy, graphite, forest], 4, "poster") },
         capabilities: [stats([{ code: "pages", value: 128 }, { code: "chapters", value: 9 }])],
         meta: [
           { icon: "book", label: "128 pages" },
@@ -264,7 +301,7 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
         title: "Volume 01",
         subtitle: "Book hierarchy node",
         aspectRatio: "poster",
-        cover: asset("Volume 01", ember, burgundy, brass),
+        cover: asset("Volume 01", ember, burgundy, brass, "poster"),
         capabilities: [position("volume", 1, "Volume 1"), stats([{ code: "chapters", value: 4 }])],
         meta: [{ icon: "chapter", label: "4 chapters" }],
       }),
@@ -280,8 +317,8 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
         title: "Chapter 01",
         subtitle: "Reader entry",
         aspectRatio: "poster",
-        cover: asset("Chapter 01", forest, burgundy, brass),
-        hover: { kind: "image-sequence", assets: sequence("Chapter", [forest, graphite, ember], 5) },
+        cover: asset("Chapter 01", forest, burgundy, brass, "poster"),
+        hover: { kind: "image-sequence", assets: sequence("Chapter", [forest, graphite, ember], 5, "poster") },
         capabilities: [position("chapter", 1, "Chapter 1"), stats([{ code: "pages", value: 24 }])],
         meta: [{ icon: "book", label: "24 pages" }],
       }),
@@ -297,7 +334,7 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
         title: "Page 001",
         subtitle: "Page entity",
         aspectRatio: "poster",
-        cover: asset("Page 001", indigo, ember, brass),
+        cover: asset("Page 001", indigo, ember, brass, "poster"),
         capabilities: [position("page", 1, "Page 1"), technical({ width: 1200, height: 1800, format: "png" })],
         meta: [{ icon: "image", label: "page 1" }],
       }),
@@ -313,7 +350,7 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
         title: "Royalty Free Album",
         subtitle: "Cover-only image role",
         aspectRatio: "square",
-        cover: asset("Audio Album", graphite, indigo, brass),
+        cover: asset("Audio Album", graphite, indigo, brass, "square"),
         capabilities: [rating(4), stats([{ code: "tracks", value: 12 }])],
         meta: [{ icon: "audio", label: "12 tracks" }],
       }),
@@ -329,7 +366,7 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
         title: "Sample Track",
         subtitle: "Track entity",
         aspectRatio: "square",
-        cover: asset("Sample Track", indigo, forest, brass),
+        cover: asset("Sample Track", indigo, forest, brass, "square"),
         capabilities: [technical({ duration: "00:03:42", codec: "aac" }), position("track", 3, "Track 3")],
         meta: [
           { icon: "duration", label: "03:42" },
@@ -348,7 +385,7 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
         title: "Sample Person",
         subtitle: "Credit target",
         aspectRatio: "portrait",
-        cover: asset("Person", burgundy, indigo, brass),
+        cover: asset("Person", burgundy, indigo, brass, "portrait"),
         capabilities: [stats([{ code: "credits", value: 18 }])],
         meta: [{ icon: "person", label: "18 credits" }],
       }),
@@ -364,7 +401,7 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
         title: "Sample Studio",
         subtitle: "Producer entity",
         aspectRatio: "wide",
-        cover: asset("Studio", graphite, forest, brass),
+        cover: asset("Studio", graphite, forest, brass, "wide"),
         capabilities: [stats([{ code: "items", value: 64 }])],
         meta: [{ icon: "studio", label: "64 items" }],
       }),
@@ -380,7 +417,7 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
         title: "Animation",
         subtitle: "Reusable taxonomy",
         aspectRatio: "square",
-        cover: asset("Tag", ember, indigo, brass),
+        cover: asset("Tag", ember, indigo, brass, "square"),
         capabilities: [stats([{ code: "items", value: 31 }])],
         meta: [{ icon: "tag", label: "31 items" }],
       }),
@@ -396,8 +433,8 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
         title: "Safe Samples",
         subtitle: "Mixed entity set",
         aspectRatio: "video",
-        cover: asset("Collection", forest, ember, brass),
-        hover: { kind: "image-sequence", assets: sequence("Collection", [forest, burgundy, indigo], 4) },
+        cover: asset("Collection", forest, ember, brass, "video"),
+        hover: { kind: "image-sequence", assets: sequence("Collection", [forest, burgundy, indigo], 4, "square") },
         capabilities: [stats([{ code: "items", value: 15 }])],
         meta: [{ icon: "collection", label: "15 items" }],
       }),
@@ -407,7 +444,7 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
         title: "Flag State Sample",
         subtitle: "Synthetic chip coverage",
         aspectRatio: "video",
-        cover: asset("Flagged State", burgundy, graphite, brass),
+        cover: asset("Flagged State", burgundy, graphite, brass, "wide"),
         flagOptions: { isNsfw: true },
         capabilities: [rating(2), stats([{ code: "items", value: 4 }])],
         meta: [{ icon: "collection", label: "4 items" }],
@@ -415,3 +452,26 @@ export const thumbnailLabRows: EntityThumbnailRow[] = [
     ],
   },
 ];
+
+function cloneCard(card: EntityThumbnailCard, index: number): EntityThumbnailCard {
+  if (index === 0) return card;
+
+  return {
+    ...card,
+    entity: {
+      ...card.entity,
+      id: `${card.entity.id}-${index + 1}`,
+      title: `${card.entity.title} ${index + 1}`,
+    },
+  };
+}
+
+function expandCards(cards: EntityThumbnailCard[], count: number): EntityThumbnailCard[] {
+  return Array.from({ length: count }, (_, index) => cloneCard(cards[index % cards.length], index));
+}
+
+/** Safe synthetic thumbnail data for exercising the v2 shared entity-card surface without touching user media. */
+export const thumbnailLabRows: EntityThumbnailRow[] = thumbnailLabSeedRows.map((row) => ({
+  ...row,
+  cards: expandCards(row.cards, 5),
+}));
