@@ -5,14 +5,10 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapability } from './entityCapability';
-import type { EntityCard } from './entityCard';
 
-export interface VideoSeriesDetail {
+export interface ImageDetail {
   id: string;
   kind: string;
   title: string;
   capabilities: EntityCapability[];
-  children: EntityCard[];
-  videos: EntityCard[];
-  renderingMode: string;
 }

@@ -6,9 +6,13 @@
  */
 import type { EntityCapability } from './entityCapability';
 
-export interface TaxonomyDetail {
+export interface AudioTrackDetail {
   id: string;
   kind: string;
   title: string;
   capabilities: EntityCapability[];
+  /** @nullable */
+  embeddedArtist: string | null;
+  /** @nullable */
+  embeddedAlbum: string | null;
 }

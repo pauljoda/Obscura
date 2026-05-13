@@ -8,6 +8,7 @@
     type V2VideoSeriesDetail,
   } from "$lib/api/v2";
   import {
+    getDescription,
     getRatingValue,
     getTags,
     getThumbnailUrl,
@@ -22,6 +23,7 @@
   let ratingBusy = $state(false);
 
   const childCount = $derived((series?.children.length ?? 0) + (series?.videos.length ?? 0));
+  const description = $derived.by(() => (series ? getDescription(series.capabilities) : null));
 
   function ratingValue(current: V2VideoSeriesDetail): number {
     return getRatingValue(current.capabilities);
@@ -98,7 +100,7 @@
             <Layers class="h-5 w-5 text-text-accent" />
             {series.title}
           </h1>
-          <p>{series.summary ?? "No summary yet."}</p>
+          <p>{description ?? "No summary yet."}</p>
         </div>
 
         <div class="stats">

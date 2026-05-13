@@ -7,12 +7,12 @@
 import type { EntityCapability } from './entityCapability';
 import type { EntityCard } from './entityCard';
 
-export interface VideoSeriesDetail {
+export interface AudioLibraryDetail {
   id: string;
   kind: string;
   title: string;
   capabilities: EntityCapability[];
   children: EntityCard[];
-  videos: EntityCard[];
-  renderingMode: string;
+  /** @nullable */
+  parentLibraryId: string | null;
 }

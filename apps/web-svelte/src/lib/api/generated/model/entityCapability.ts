@@ -4,16 +4,25 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { EntityCapabilityClassificationCapability } from './entityCapabilityClassificationCapability';
 import type { EntityCapabilityCountersCapability } from './entityCapabilityCountersCapability';
 import type { EntityCapabilityCreditsCapability } from './entityCapabilityCreditsCapability';
+import type { EntityCapabilityDatesCapability } from './entityCapabilityDatesCapability';
 import type { EntityCapabilityDescriptionCapability } from './entityCapabilityDescriptionCapability';
 import type { EntityCapabilityFilesCapability } from './entityCapabilityFilesCapability';
 import type { EntityCapabilityFingerprintsCapability } from './entityCapabilityFingerprintsCapability';
 import type { EntityCapabilityFlagsCapability } from './entityCapabilityFlagsCapability';
 import type { EntityCapabilityImagesCapability } from './entityCapabilityImagesCapability';
 import type { EntityCapabilityLinksCapability } from './entityCapabilityLinksCapability';
+import type { EntityCapabilityMarkersCapability } from './entityCapabilityMarkersCapability';
+import type { EntityCapabilityPositionCapability } from './entityCapabilityPositionCapability';
+import type { EntityCapabilityProgressCapability } from './entityCapabilityProgressCapability';
 import type { EntityCapabilityRatingCapability } from './entityCapabilityRatingCapability';
+import type { EntityCapabilitySourceCapability } from './entityCapabilitySourceCapability';
+import type { EntityCapabilityStatsCapability } from './entityCapabilityStatsCapability';
 import type { EntityCapabilityStudioCapability } from './entityCapabilityStudioCapability';
+import type { EntityCapabilitySubtitlesCapability } from './entityCapabilitySubtitlesCapability';
 import type { EntityCapabilityTagsCapability } from './entityCapabilityTagsCapability';
+import type { EntityCapabilityTechnicalCapability } from './entityCapabilityTechnicalCapability';
 
-export type EntityCapability = EntityCapabilityRatingCapability | EntityCapabilityTagsCapability | EntityCapabilityCreditsCapability | EntityCapabilityStudioCapability | EntityCapabilityImagesCapability | EntityCapabilityDescriptionCapability | EntityCapabilityLinksCapability | EntityCapabilityFlagsCapability | EntityCapabilityFilesCapability | EntityCapabilityCountersCapability | EntityCapabilityFingerprintsCapability;
+export type EntityCapability = EntityCapabilityRatingCapability | EntityCapabilityTagsCapability | EntityCapabilityCreditsCapability | EntityCapabilityStudioCapability | EntityCapabilityImagesCapability | EntityCapabilityDescriptionCapability | EntityCapabilityLinksCapability | EntityCapabilityFlagsCapability | EntityCapabilityFilesCapability | EntityCapabilityCountersCapability | EntityCapabilityFingerprintsCapability | EntityCapabilityMarkersCapability | EntityCapabilitySubtitlesCapability | EntityCapabilityStatsCapability | EntityCapabilityDatesCapability | EntityCapabilityTechnicalCapability | EntityCapabilitySourceCapability | EntityCapabilityProgressCapability | EntityCapabilityPositionCapability | EntityCapabilityClassificationCapability;

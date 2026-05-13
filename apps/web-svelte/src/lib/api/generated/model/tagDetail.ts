@@ -5,14 +5,13 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapability } from './entityCapability';
-import type { EntityCard } from './entityCard';
 
-export interface VideoSeriesDetail {
+export interface TagDetail {
   id: string;
   kind: string;
   title: string;
   capabilities: EntityCapability[];
-  children: EntityCard[];
-  videos: EntityCard[];
-  renderingMode: string;
+  /** @nullable */
+  parentTagId: string | null;
+  ignoreAutoTag: boolean;
 }

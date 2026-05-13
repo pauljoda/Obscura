@@ -5,12 +5,12 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapability } from './entityCapability';
-import type { EntityCard } from './entityCard';
 
-export interface MediaDetail {
+export interface StudioDetail {
   id: string;
   kind: string;
   title: string;
   capabilities: EntityCapability[];
-  children: EntityCard[];
+  /** @nullable */
+  parentStudioId: string | null;
 }

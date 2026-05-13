@@ -7,12 +7,13 @@
 import type { EntityCapability } from './entityCapability';
 import type { EntityCard } from './entityCard';
 
-export interface VideoSeriesDetail {
+export interface GalleryDetail {
   id: string;
   kind: string;
   title: string;
   capabilities: EntityCapability[];
   children: EntityCard[];
-  videos: EntityCard[];
-  renderingMode: string;
+  galleryType: string;
+  /** @nullable */
+  coverImageId: string | null;
 }

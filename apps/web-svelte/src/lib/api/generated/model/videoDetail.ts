@@ -5,31 +5,12 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapability } from './entityCapability';
-import type { VideoMarker } from './videoMarker';
-import type { VideoSubtitle } from './videoSubtitle';
 
 export interface VideoDetail {
   id: string;
   kind: string;
   title: string;
-  /** @nullable */
-  summary: string | null;
-  /**
-     * @nullable
-     * @pattern ^-?(\d+\.)?\d{2}:\d{2}:\d{2}(\.\d{1,7})?$
-     */
-  duration: string | null;
-  /**
-     * @nullable
-     * @pattern ^-?(?:0|[1-9]\d*)$
-     */
-  width: number | string | null;
-  /**
-     * @nullable
-     * @pattern ^-?(?:0|[1-9]\d*)$
-     */
-  height: number | string | null;
-  markers: VideoMarker[];
-  subtitles: VideoSubtitle[];
   capabilities: EntityCapability[];
+  /** @nullable */
+  subtitlesExtractedAt: string | null;
 }

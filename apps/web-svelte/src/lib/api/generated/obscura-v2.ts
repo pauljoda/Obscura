@@ -6,11 +6,16 @@
  */
 import type {
   ApiProblem,
+  AudioLibraryDetail,
+  AudioTrackDetail,
+  BookDetail,
   CollectionDetail,
   CollectionListResponse,
   EntityCard,
   EntityFlagsUpdateRequest,
   EntityListResponse,
+  GalleryDetail,
+  ImageDetail,
   JobListResponse,
   LegacyMediaImportResponse,
   LegacyVideoImportResponse,
@@ -24,12 +29,13 @@ import type {
   ListPeopleParams,
   ListStudiosParams,
   ListTagsParams,
-  MediaDetail,
   MediaListResponse,
+  PersonDetail,
   RatingUpdateRequest,
   SettingsResponse,
   SettingsUpdateRequest,
-  TaxonomyDetail,
+  StudioDetail,
+  TagDetail,
   TaxonomyListResponse,
   V2FreshStartPrepareResponse,
   V2UpgradeGateStatusResponse,
@@ -374,7 +380,7 @@ export const getListImagesUrl = (params?: ListImagesParams,) => {
 }
 
 /**
- * @summary Lists image media entities through the global entity projection.
+ * @summary Lists image media entities through the application layer.
  */
 export const listImages = async (params?: ListImagesParams, options?: RequestInit): Promise<listImagesResponse> => {
 
@@ -390,7 +396,7 @@ export const listImages = async (params?: ListImagesParams, options?: RequestIni
 
 
 export type getImageResponse200 = {
-  data: MediaDetail
+  data: ImageDetail
   status: 200
 }
 
@@ -417,7 +423,7 @@ export const getGetImageUrl = (id: string,) => {
 }
 
 /**
- * @summary Gets one image media entity.
+ * @summary Gets one image media entity through the application layer.
  */
 export const getImage = async (id: string, options?: RequestInit): Promise<getImageResponse> => {
 
@@ -460,7 +466,7 @@ export const getListGalleriesUrl = (params?: ListGalleriesParams,) => {
 }
 
 /**
- * @summary Lists gallery media entities through the global entity projection.
+ * @summary Lists gallery media entities through the application layer.
  */
 export const listGalleries = async (params?: ListGalleriesParams, options?: RequestInit): Promise<listGalleriesResponse> => {
 
@@ -476,7 +482,7 @@ export const listGalleries = async (params?: ListGalleriesParams, options?: Requ
 
 
 export type getGallerieResponse200 = {
-  data: MediaDetail
+  data: GalleryDetail
   status: 200
 }
 
@@ -503,7 +509,7 @@ export const getGetGallerieUrl = (id: string,) => {
 }
 
 /**
- * @summary Gets one gallery media entity.
+ * @summary Gets one gallery media entity through the application layer.
  */
 export const getGallerie = async (id: string, options?: RequestInit): Promise<getGallerieResponse> => {
 
@@ -546,7 +552,7 @@ export const getListBooksUrl = (params?: ListBooksParams,) => {
 }
 
 /**
- * @summary Lists book media entities through the global entity projection.
+ * @summary Lists book media entities through the application layer.
  */
 export const listBooks = async (params?: ListBooksParams, options?: RequestInit): Promise<listBooksResponse> => {
 
@@ -562,7 +568,7 @@ export const listBooks = async (params?: ListBooksParams, options?: RequestInit)
 
 
 export type getBookResponse200 = {
-  data: MediaDetail
+  data: BookDetail
   status: 200
 }
 
@@ -589,7 +595,7 @@ export const getGetBookUrl = (id: string,) => {
 }
 
 /**
- * @summary Gets one book media entity.
+ * @summary Gets one book media entity through the application layer.
  */
 export const getBook = async (id: string, options?: RequestInit): Promise<getBookResponse> => {
 
@@ -632,7 +638,7 @@ export const getListAudioLibrariesUrl = (params?: ListAudioLibrariesParams,) => 
 }
 
 /**
- * @summary Lists audio-library media entities through the global entity projection.
+ * @summary Lists audio_library media entities through the application layer.
  */
 export const listAudioLibraries = async (params?: ListAudioLibrariesParams, options?: RequestInit): Promise<listAudioLibrariesResponse> => {
 
@@ -648,7 +654,7 @@ export const listAudioLibraries = async (params?: ListAudioLibrariesParams, opti
 
 
 export type getAudioLibrarieResponse200 = {
-  data: MediaDetail
+  data: AudioLibraryDetail
   status: 200
 }
 
@@ -675,7 +681,7 @@ export const getGetAudioLibrarieUrl = (id: string,) => {
 }
 
 /**
- * @summary Gets one audio-library media entity.
+ * @summary Gets one audio_library media entity through the application layer.
  */
 export const getAudioLibrarie = async (id: string, options?: RequestInit): Promise<getAudioLibrarieResponse> => {
 
@@ -718,7 +724,7 @@ export const getListAudioTracksUrl = (params?: ListAudioTracksParams,) => {
 }
 
 /**
- * @summary Lists audio-track media entities through the global entity projection.
+ * @summary Lists audio_track media entities through the application layer.
  */
 export const listAudioTracks = async (params?: ListAudioTracksParams, options?: RequestInit): Promise<listAudioTracksResponse> => {
 
@@ -734,7 +740,7 @@ export const listAudioTracks = async (params?: ListAudioTracksParams, options?: 
 
 
 export type getAudioTrackResponse200 = {
-  data: MediaDetail
+  data: AudioTrackDetail
   status: 200
 }
 
@@ -761,7 +767,7 @@ export const getGetAudioTrackUrl = (id: string,) => {
 }
 
 /**
- * @summary Gets one audio-track media entity.
+ * @summary Gets one audio_track media entity through the application layer.
  */
 export const getAudioTrack = async (id: string, options?: RequestInit): Promise<getAudioTrackResponse> => {
 
@@ -1435,7 +1441,7 @@ export const getListPeopleUrl = (params?: ListPeopleParams,) => {
 }
 
 /**
- * @summary Lists person entities through the global entity projection.
+ * @summary Lists person entities through the application layer.
  */
 export const listPeople = async (params?: ListPeopleParams, options?: RequestInit): Promise<listPeopleResponse> => {
 
@@ -1451,7 +1457,7 @@ export const listPeople = async (params?: ListPeopleParams, options?: RequestIni
 
 
 export type getPeopleResponse200 = {
-  data: TaxonomyDetail
+  data: PersonDetail
   status: 200
 }
 
@@ -1478,7 +1484,7 @@ export const getGetPeopleUrl = (id: string,) => {
 }
 
 /**
- * @summary Gets one person entity.
+ * @summary Gets one person entity through the application layer.
  */
 export const getPeople = async (id: string, options?: RequestInit): Promise<getPeopleResponse> => {
 
@@ -1521,7 +1527,7 @@ export const getListStudiosUrl = (params?: ListStudiosParams,) => {
 }
 
 /**
- * @summary Lists studio entities through the global entity projection.
+ * @summary Lists studio entities through the application layer.
  */
 export const listStudios = async (params?: ListStudiosParams, options?: RequestInit): Promise<listStudiosResponse> => {
 
@@ -1537,7 +1543,7 @@ export const listStudios = async (params?: ListStudiosParams, options?: RequestI
 
 
 export type getStudioResponse200 = {
-  data: TaxonomyDetail
+  data: StudioDetail
   status: 200
 }
 
@@ -1564,7 +1570,7 @@ export const getGetStudioUrl = (id: string,) => {
 }
 
 /**
- * @summary Gets one studio entity.
+ * @summary Gets one studio entity through the application layer.
  */
 export const getStudio = async (id: string, options?: RequestInit): Promise<getStudioResponse> => {
 
@@ -1607,7 +1613,7 @@ export const getListTagsUrl = (params?: ListTagsParams,) => {
 }
 
 /**
- * @summary Lists tag entities through the global entity projection.
+ * @summary Lists tag entities through the application layer.
  */
 export const listTags = async (params?: ListTagsParams, options?: RequestInit): Promise<listTagsResponse> => {
 
@@ -1623,7 +1629,7 @@ export const listTags = async (params?: ListTagsParams, options?: RequestInit): 
 
 
 export type getTagResponse200 = {
-  data: TaxonomyDetail
+  data: TagDetail
   status: 200
 }
 
@@ -1650,7 +1656,7 @@ export const getGetTagUrl = (id: string,) => {
 }
 
 /**
- * @summary Gets one tag entity.
+ * @summary Gets one tag entity through the application layer.
  */
 export const getTag = async (id: string, options?: RequestInit): Promise<getTagResponse> => {
 

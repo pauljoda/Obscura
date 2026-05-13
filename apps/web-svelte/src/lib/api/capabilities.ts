@@ -1,9 +1,11 @@
 import type {
   EntityCapability,
+  EntityCapabilityDescriptionCapability,
   EntityCapabilityFlagsCapability,
   EntityCapabilityImagesCapability,
   EntityCapabilityRatingCapability,
   EntityCapabilityTagsCapability,
+  EntityCapabilityTechnicalCapability,
   Rating,
 } from "$lib/api/generated/model";
 
@@ -39,6 +41,18 @@ export function getImagesCapability(
   return getCapability(capabilities, "images");
 }
 
+export function getDescriptionCapability(
+  capabilities: EntityCapability[],
+): EntityCapabilityDescriptionCapability | undefined {
+  return getCapability(capabilities, "description");
+}
+
+export function getTechnicalCapability(
+  capabilities: EntityCapability[],
+): EntityCapabilityTechnicalCapability | undefined {
+  return getCapability(capabilities, "technical");
+}
+
 export function getFlagsCapability(
   capabilities: EntityCapability[],
 ): EntityCapabilityFlagsCapability | undefined {
@@ -56,6 +70,10 @@ export function getTags(capabilities: EntityCapability[]): string[] {
 
 export function getThumbnailUrl(capabilities: EntityCapability[]): string | null {
   return getImagesCapability(capabilities)?.thumbnailUrl ?? null;
+}
+
+export function getDescription(capabilities: EntityCapability[]): string | null {
+  return getDescriptionCapability(capabilities)?.value ?? null;
 }
 
 export function isNsfw(capabilities: EntityCapability[]): boolean {

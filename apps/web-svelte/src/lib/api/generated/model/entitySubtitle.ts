@@ -5,7 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface VideoSubtitle {
+export interface EntitySubtitle {
   id: string;
   language: string;
   /** @nullable */
@@ -13,7 +13,8 @@ export interface VideoSubtitle {
   format: string;
   source: string;
   storagePath: string;
-  sourceFormat: string;
+  /** @nullable */
+  sourceFormat: string | null;
   /** @nullable */
   sourcePath: string | null;
   isDefault: boolean;

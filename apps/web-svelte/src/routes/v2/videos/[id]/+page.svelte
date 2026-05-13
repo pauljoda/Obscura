@@ -9,8 +9,10 @@
   } from "$lib/api/v2";
   import { v2ApiPath } from "$lib/api/orval-fetch";
   import {
+    getDescription,
     getRatingValue,
     getTags,
+    getTechnicalCapability,
     withRatingCapability,
   } from "$lib/api/capabilities";
 
@@ -22,9 +24,14 @@
   let ratingBusy = $state(false);
 
   const streamSrc = $derived.by(() => (video ? v2ApiPath(`/videos/${video.id}/stream`) : ""));
-  const dimensions = $derived.by(() =>
-    video?.width && video?.height ? `${video.width} x ${video.height}` : "Unknown resolution",
-  );
+  const technical = $derived.by(() => (video ? getTechnicalCapability(video.capabilities) : undefined));
+  const dimensions = $derived.by(() => {
+    const width = technical?.width;
+    const height = technical?.height;
+    return width && height ? `${width} x ${height}` : "Unknown resolution";
+  });
+  const duration = $derived(technical?.duration ?? "Unknown duration");
+  const description = $derived.by(() => (video ? getDescription(video.capabilities) : null));
 
   function ratingValue(current: V2VideoDetail): number {
     return getRatingValue(current.capabilities);
@@ -99,12 +106,12 @@
             <Film class="h-5 w-5 text-text-accent" />
             {video.title}
           </h1>
-          <p>{video.summary ?? "No summary yet."}</p>
+          <p>{description ?? "No summary yet."}</p>
         </div>
 
         <div class="stats">
           <span>{dimensions}</span>
-          <span>{video.duration ?? "Unknown duration"}</span>
+          <span>{duration}</span>
           <span>{getTags(video.capabilities).join(", ") || "No tags"}</span>
         </div>
 
