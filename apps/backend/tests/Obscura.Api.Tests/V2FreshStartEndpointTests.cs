@@ -119,7 +119,8 @@ public sealed class V2FreshStartEndpointTests
                 "/data/backups/obscura-pre-v2.dump",
                 PreservedLibraryRoots: 2,
                 PreservedSettings: true,
-                MediaReset: true));
+                MediaReset: true,
+                CachePurged: true));
         }
     }
 

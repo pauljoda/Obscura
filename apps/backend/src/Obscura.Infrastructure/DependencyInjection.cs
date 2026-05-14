@@ -76,7 +76,12 @@ public static class DependencyInjection
         services.AddScoped<ICollectionRuleEngine, CollectionRuleEngine>();
         services.AddScoped<ICollectionRefreshPersistence, CollectionRefreshPersistenceService>();
         services.AddScoped<DatabaseBackupService>();
-        services.AddScoped<IV2FreshStartService, V2FreshStartService>();
+        services.AddScoped<IV2FreshStartService>(provider =>
+            new V2FreshStartService(
+                provider.GetRequiredService<ObscuraDbContext>(),
+                provider.GetRequiredService<DatabaseBackupService>(),
+                cacheDir,
+                provider.GetRequiredService<ILogger<V2FreshStartService>>()));
         services.AddScoped<ILegacyMediaImportService, LegacyMediaImportService>();
         services.AddScoped<ILegacyVideoImportService, LegacyVideoImportService>();
         services.AddScoped<ILegacyAssetNormalizationService>(provider =>
