@@ -192,6 +192,9 @@ public sealed class ApiSurfaceTests
         public Task<bool> HasPendingAsync(JobType type, string? targetEntityId, CancellationToken cancellationToken) =>
             Task.FromResult(false);
 
+        public Task<int> EnqueueBatchAsync(IReadOnlyList<EnqueueJobRequest> requests, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         public Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 

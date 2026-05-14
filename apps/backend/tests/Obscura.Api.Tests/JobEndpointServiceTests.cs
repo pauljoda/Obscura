@@ -113,6 +113,9 @@ public sealed class JobEndpointServiceTests
         public Task<bool> HasPendingAsync(JobType type, string? targetEntityId, CancellationToken cancellationToken) =>
             Task.FromResult(false);
 
+        public Task<int> EnqueueBatchAsync(IReadOnlyList<EnqueueJobRequest> requests, CancellationToken cancellationToken) =>
+            Task.FromResult(requests.Count);
+
         public Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken) =>
             Task.FromResult(type == JobType.ScanLibrary ? 1 : 0);
 
