@@ -1,12 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import {
-    acceptBreakingGate,
-    fetchSystemStatus,
-  } from "$lib/v1/api/system-v1";
 
   interface Props {
-    /** From +layout.server.ts — server-side probe of system status. */
     awaitingConsent: boolean;
     children: Snippet;
   }
@@ -23,12 +18,21 @@
     phase = "preparing";
     error = null;
     try {
-      await acceptBreakingGate();
+      const acceptRes = await fetch("/api/system/v2-upgrade-gate/accept", { method: "POST" });
+      if (!acceptRes.ok) throw new Error(`Accept gate failed: ${acceptRes.status}`);
+
+      const prepareRes = await fetch("/api/system/v2-fresh-start/prepare", { method: "POST" });
+      if (!prepareRes.ok) throw new Error(`Fresh-start prepare failed: ${prepareRes.status}`);
+
       phase = "entering";
-      const s = await fetchSystemStatus();
-      if (!s.awaitingBreakingConsent) {
-        window.location.reload();
-        return;
+      const gateRes = await fetch("/api/system/v2-upgrade-gate");
+      const ct = gateRes.headers.get("content-type") ?? "";
+      if (gateRes.ok && ct.includes("application/json")) {
+        const gate: { accepted: boolean } = await gateRes.json();
+        if (gate.accepted) {
+          window.location.reload();
+          return;
+        }
       }
       error = "Upgrade consent is still required. Refresh the page and try again.";
     } catch (err) {
