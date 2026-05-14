@@ -15,7 +15,13 @@ public enum EntitySubtitleSource
     Generated,
 
     /// <summary>Subtitle imported from a metadata or subtitle provider.</summary>
-    Provider
+    Provider,
+
+    /// <summary>Subtitle uploaded by the user.</summary>
+    Upload,
+
+    /// <summary>Subtitle discovered as a sidecar file alongside the media.</summary>
+    Sidecar
 }
 
 /// <summary>
@@ -29,7 +35,9 @@ public sealed class EntitySubtitleSourceCodec : EnumCodec<EntitySubtitleSource>
             [EntitySubtitleSource.Manual] = "manual",
             [EntitySubtitleSource.Embedded] = "embedded",
             [EntitySubtitleSource.Generated] = "generated",
-            [EntitySubtitleSource.Provider] = "provider"
+            [EntitySubtitleSource.Provider] = "provider",
+            [EntitySubtitleSource.Upload] = "upload",
+            [EntitySubtitleSource.Sidecar] = "sidecar"
         })
     {
     }

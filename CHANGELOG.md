@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 - The v2 upgrade gate consent overlay now appears on first boot when the gate is armed — previously the SPA layout never fetched gate status from the .NET backend, so the overlay never rendered.
 - Legacy media import no longer fails on the `rule_tree` column type mismatch or on book read progress referencing chapter entities that haven't been imported yet.
+- Video entity list no longer crashes on subtitle source codes `upload` and `sidecar` that were valid in v1 but missing from the v2 codec.
 - Entity thumbnails now show a gradient placeholder with the entity-type icon when the cover image is missing or fails to load, instead of displaying broken image alt text.
 - Generated thumbnails, previews, waveforms, and subtitles are now served via the `/assets/` HTTP route and stored as API-relative URLs — previously stored as disk paths that browsers could not resolve.
 - Trickplay hover preview now expands VTT manifest paths into individual frame URLs based on video duration, so the scrub-preview image strip renders correctly on hover.
