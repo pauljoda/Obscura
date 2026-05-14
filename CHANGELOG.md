@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 
+### Changed
+- Updated Claude Code preview launch config to use the .NET backend (`pnpm dev:app`) instead of the deprecated Vite dev server.
+
 - The v2 library maintenance job now validates that expected cache assets exist on disk and removes orphaned cache directories for deleted entities, replacing the placeholder with real asset hygiene.
 - The v2 dynamic collection refresh job now evaluates stored rule trees against the unified entity model, replacing dynamic membership atomically while preserving manual items — a full port of the Node.js collection rule engine to the .NET backend.
 - The v2 .NET backend now has real implementations for all library scan, probe, fingerprint, preview, and subtitle extraction job handlers — replacing stubs with working processors that discover media files, create entities, compute hashes, generate thumbnails and previews, extract subtitles, and chain downstream jobs exactly like the Node.js predecessor.
