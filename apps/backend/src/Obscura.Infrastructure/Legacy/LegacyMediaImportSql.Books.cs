@@ -100,7 +100,7 @@ public static partial class LegacyMediaImportSql
                 SELECT
                     id,
                     book_type,
-                    cover_page_id
+                    CASE WHEN EXISTS (SELECT 1 FROM v2.entities pg WHERE pg.id = cover_page_id) THEN cover_page_id END
                 FROM public.books
                 ON CONFLICT (entity_id) DO UPDATE SET
                     book_type = EXCLUDED.book_type,
@@ -145,7 +145,10 @@ public static partial class LegacyMediaImportSql
                     completed_at,
                     updated_at
                 )
-                SELECT book_id, chapter_id, 'page', page_index, page_count, reader_mode, completed_at, updated_at
+                SELECT
+                    book_id,
+                    CASE WHEN EXISTS (SELECT 1 FROM v2.entities ch WHERE ch.id = chapter_id) THEN chapter_id END,
+                    'page', page_index, page_count, reader_mode, completed_at, updated_at
                 FROM public.book_read_progress
                 WHERE EXISTS (SELECT 1 FROM v2.entities entity WHERE entity.id = book_id AND entity.kind_code = '{{EntityKindRegistry.Book.Code}}')
                 ON CONFLICT (entity_id) DO UPDATE SET

@@ -62,7 +62,7 @@ public static partial class LegacyMediaImportSql
                 SELECT
                     id,
                     mode,
-                    rule_tree::text,
+                    rule_tree,
                     cover_mode,
                     cover_item_id,
                     slideshow_duration_seconds,
