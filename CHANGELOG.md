@@ -16,6 +16,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Entity Detail Lab now renders the `EntityDetail` component with rich fixture data across 8 entity kinds (video, series, gallery, person, book, audio, studio, collection), each exercising different capability combinations.
 - `marked` library for rendering markdown in entity descriptions — plain text passes through unchanged, but descriptions can now include bold, italic, lists, blockquotes, links, and code formatting.
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
+
+### Changed
+- `EntityDetail` hero area now shows an inline metadata row (studio · date · count) and rating stars directly in the hero overlay, matching the established series detail layout.
+- Credits section now renders as a horizontal scroll row of `EntityThumbnail` cards instead of a flat text grid, making referenced entities (performers, studios) visually consistent with the rest of the app.
+- `EntityDetailCredit` model now includes a `thumbnail` field for displaying entity images in credit cards.
 - Dev hub (`/dev/v2-migration`) now links to Thumbnail Lab and the new Detail Lab for quick access to all v2 testing surfaces.
 - Entity Detail Lab page (`/v2/detail-lab`) — shell testing surface for the upcoming `EntityDetail` component.
 - `pnpm dev:kill` script and VS Code task ("Obscura: Kill Orphans") to kill orphaned dev processes (.NET API/Worker, Vite, Docusaurus) and free dev ports (8008, 8010, 3010, 5173).

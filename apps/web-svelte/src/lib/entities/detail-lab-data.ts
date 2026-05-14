@@ -224,82 +224,98 @@ function detailCard(options: {
 }
 
 /** Base fixture card that exercises every capability. Used by the Base tab in detail-lab. */
-export const baseDetailCard: EntityDetailCard = detailCard({
-  id: "base-all-caps",
-  kind: "video",
-  title: "Big Buck Bunny — Director's Cut",
-  capabilities: [
-    images(
-      svgArt("Big Buck Bunny", forest, graphite, brass, "wide"),
-      svgArt("BBB Poster", forest, indigo, brass, "poster"),
-    ),
-    description(
-      "A large, fluffy rabbit is pestered by three bullying rodents. After they destroy a butterfly he loves, he devises an elaborate plan to teach them a lesson.\n\nThis **extended director's cut** includes:\n\n- Behind-the-scenes commentary\n- Restored animation sequences cut from the original theatrical release\n- *Never-before-seen* storyboard comparisons\n\n> \"One of the most beloved open-source animation projects ever produced.\"\n\nMore information available at the [Blender Foundation](https://peach.blender.org/) website.",
-    ),
-    rating(4),
-    flags({ isFavorite: true, isNsfw: false, isOrganized: true }),
-    tags(["animation", "comedy", "short-film", "open-source", "blender"]),
-    studio("studio-blender", "Blender Foundation"),
-    credits([
-      { id: "person-sacha", title: "Sacha Goedegebure" },
-      { id: "person-nathan", title: "Nathan Vegdahl" },
-      { id: "person-jan", title: "Jan Morgenstern" },
-    ]),
-    stats([
-      { code: "views", value: 1842 },
-      { code: "play-count", value: 47 },
-    ]),
-    counters([
-      { code: "downloads", value: 312 },
-      { code: "bookmarks", value: 28 },
-    ]),
-    technical({
-      duration: "00:09:56.40",
-      width: 1920,
-      height: 1080,
-      frameRate: 24,
-      bitRate: 8_500_000,
-      codec: "h264",
-      container: "mp4",
-    }),
-    positions([
-      { code: "season", value: 1, label: "Season 1" },
-      { code: "episode", value: 2, label: "Episode 2" },
-    ]),
-    dates([
-      { code: "release", value: "2008-05-30", sortableValue: "2008-05-30" },
-      { code: "added", value: "2026-01-15", sortableValue: "2026-01-15" },
-    ]),
-    links(
-      [{ url: "https://peach.blender.org/", label: "Official Site" }],
-      [{ provider: "stashdb", value: "abc-123-def", url: "https://stashdb.org/scenes/abc-123" }],
-    ),
-    files([
-      { role: "source", path: "/media/videos/big-buck-bunny-dc.mp4", mimeType: "video/mp4" },
-    ]),
-    fingerprints([
-      { algorithm: "oshash", value: "a1b2c3d4e5f60718" },
-      { algorithm: "phash", value: "9876543210abcdef" },
-      { algorithm: "md5", value: "d41d8cd98f00b204e9800998ecf8427e" },
-    ]),
-    markers([
-      { id: "m-1", title: "Intro", seconds: 0, endSeconds: 45 },
-      { id: "m-2", title: "Butterfly Scene", seconds: 120, endSeconds: 195 },
-      { id: "m-3", title: "Revenge Montage", seconds: 340, endSeconds: 480 },
-      { id: "m-4", title: "Credits", seconds: 550 },
-    ]),
-    subtitles([
-      { id: "sub-en", language: "English", label: "English (CC)", format: "srt", source: "embedded", isDefault: true },
-      { id: "sub-de", language: "German", format: "ass", source: "external" },
-      { id: "sub-ja", language: "Japanese", format: "srt", source: "external" },
-    ]),
-    progress({ index: 340, total: 596, unit: "seconds", mode: "playing" }),
-    classification("animation", "content-type"),
-    source([
-      { code: "stash-import", value: "scene-42" },
-    ]),
-  ],
-});
+export const baseDetailCard: EntityDetailCard = (() => {
+  const card = detailCard({
+    id: "base-all-caps",
+    kind: "video",
+    title: "Big Buck Bunny — Director's Cut",
+    capabilities: [
+      images(
+        svgArt("Big Buck Bunny", forest, graphite, brass, "wide"),
+        svgArt("BBB Poster", forest, indigo, brass, "poster"),
+      ),
+      description(
+        "A large, fluffy rabbit is pestered by three bullying rodents. After they destroy a butterfly he loves, he devises an elaborate plan to teach them a lesson.\n\nThis **extended director's cut** includes:\n\n- Behind-the-scenes commentary\n- Restored animation sequences cut from the original theatrical release\n- *Never-before-seen* storyboard comparisons\n\n> \"One of the most beloved open-source animation projects ever produced.\"\n\nMore information available at the [Blender Foundation](https://peach.blender.org/) website.",
+      ),
+      rating(4),
+      flags({ isFavorite: true, isNsfw: false, isOrganized: true }),
+      tags(["animation", "comedy", "short-film", "open-source", "blender"]),
+      studio("studio-blender", "Blender Foundation"),
+      credits([
+        { id: "person-sacha", title: "Sacha Goedegebure" },
+        { id: "person-nathan", title: "Nathan Vegdahl" },
+        { id: "person-jan", title: "Jan Morgenstern" },
+        { id: "person-emma", title: "Emma Silverton" },
+        { id: "person-kira", title: "Kira Vasquez" },
+      ]),
+      stats([
+        { code: "views", value: 1842 },
+        { code: "play-count", value: 47 },
+      ]),
+      counters([
+        { code: "downloads", value: 312 },
+        { code: "bookmarks", value: 28 },
+      ]),
+      technical({
+        duration: "00:09:56.40",
+        width: 1920,
+        height: 1080,
+        frameRate: 24,
+        bitRate: 8_500_000,
+        codec: "h264",
+        container: "mp4",
+      }),
+      positions([
+        { code: "season", value: 1, label: "Season 1" },
+        { code: "episode", value: 2, label: "Episode 2" },
+      ]),
+      dates([
+        { code: "release", value: "2008-05-30", sortableValue: "2008-05-30" },
+        { code: "added", value: "2026-01-15", sortableValue: "2026-01-15" },
+      ]),
+      links(
+        [{ url: "https://peach.blender.org/", label: "Official Site" }],
+        [{ provider: "stashdb", value: "abc-123-def", url: "https://stashdb.org/scenes/abc-123" }],
+      ),
+      files([
+        { role: "source", path: "/media/videos/big-buck-bunny-dc.mp4", mimeType: "video/mp4" },
+      ]),
+      fingerprints([
+        { algorithm: "oshash", value: "a1b2c3d4e5f60718" },
+        { algorithm: "phash", value: "9876543210abcdef" },
+        { algorithm: "md5", value: "d41d8cd98f00b204e9800998ecf8427e" },
+      ]),
+      markers([
+        { id: "m-1", title: "Intro", seconds: 0, endSeconds: 45 },
+        { id: "m-2", title: "Butterfly Scene", seconds: 120, endSeconds: 195 },
+        { id: "m-3", title: "Revenge Montage", seconds: 340, endSeconds: 480 },
+        { id: "m-4", title: "Credits", seconds: 550 },
+      ]),
+      subtitles([
+        { id: "sub-en", language: "English", label: "English (CC)", format: "srt", source: "embedded", isDefault: true },
+        { id: "sub-de", language: "German", format: "ass", source: "external" },
+        { id: "sub-ja", language: "Japanese", format: "srt", source: "external" },
+      ]),
+      progress({ index: 340, total: 596, unit: "seconds", mode: "playing" }),
+      classification("animation", "content-type"),
+      source([
+        { code: "stash-import", value: "scene-42" },
+      ]),
+    ],
+  });
+
+  const creditThumbs: Record<string, string> = {
+    "person-sacha": svgArt("SG", burgundy, indigo, brass, "portrait"),
+    "person-nathan": svgArt("NV", indigo, forest, brass, "portrait"),
+    "person-jan": svgArt("JM", ember, graphite, brass, "portrait"),
+    "person-emma": svgArt("ES", forest, burgundy, brass, "portrait"),
+    "person-kira": svgArt("KV", graphite, ember, brass, "portrait"),
+  };
+  card.credits = card.credits.map((c) => ({ ...c, thumbnail: creditThumbs[c.id] ?? null }));
+  card.studio = card.studio ? { ...card.studio, thumbnail: svgArt("BF", forest, brass, graphite, "square") } : null;
+
+  return card;
+})();
 
 export const detailLabRows: EntityDetailLabRow[] = [
   {

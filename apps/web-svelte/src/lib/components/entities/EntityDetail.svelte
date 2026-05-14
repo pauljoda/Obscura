@@ -22,7 +22,13 @@
     Database,
     Layers,
   } from "@lucide/svelte";
-  import type { EntityDetailCard, EntityDetailRating } from "$lib/entities/entity-detail";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
+  import type {
+    EntityDetailCard,
+    EntityDetailCredit,
+    EntityDetailRating,
+  } from "$lib/entities/entity-detail";
   import { hasHero, hasPoster, presentSections } from "$lib/entities/entity-detail";
   import { placeholderGradient } from "$lib/entities/entity-thumbnail";
 
@@ -57,6 +63,24 @@
     return marked.parse(card.description, { renderer, async: false, gfm: true, breaks: true }) as string;
   });
 
+  function creditToThumbnailCard(credit: EntityDetailCredit): EntityThumbnailCard {
+    return {
+      entity: { id: credit.id, kind: credit.kind, title: credit.title, capabilities: [] },
+      aspectRatio: credit.kind === "studio" ? "square" : "portrait",
+      cover: credit.thumbnail ? { src: credit.thumbnail, alt: credit.title } : null,
+      hover: { kind: "none" },
+    };
+  }
+
+  const metaItems = $derived.by(() => {
+    const items: string[] = [];
+    if (card.studio) items.push(card.studio.title);
+    if (card.dates.length > 0) items.push(card.dates[0].value);
+    const firstStat = card.stats[0] ?? card.counters[0];
+    if (firstStat) items.push(`${firstStat.value} ${firstStat.label.toLowerCase()}`);
+    return items;
+  });
+
   function handleRatingClick(value: number) {
     if (!onRatingChange || ratingBusy || !card.rating) return;
     const nextValue = card.rating.value === value ? null : value;
@@ -86,43 +110,13 @@
         <span class="kind-badge">{card.kindLabel}</span>
         <h1>{card.entity.title}</h1>
 
-        {#if card.positions.length > 0}
-          <div class="position-badges">
-            {#each card.positions as pos (pos.code)}
-              <span class="position-badge">{pos.label}</span>
+        {#if metaItems.length > 0}
+          <div class="meta-row">
+            {#each metaItems as item, i (i)}
+              {#if i > 0}<span class="meta-sep"></span>{/if}
+              <span class="meta-item" class:is-studio={i === 0 && card.studio != null}>{item}</span>
             {/each}
           </div>
-        {/if}
-      </div>
-    </div>
-  </div>
-
-  <div class="detail-body">
-    <!-- Primary Row: Flags + Rating + Classification -->
-    {#if sections.includes("flags") || sections.includes("rating") || sections.includes("classification")}
-      <div class="primary-row">
-        {#if card.flags.length > 0}
-          <div class="flag-badges">
-            {#each card.flags as flag (flag.code)}
-              <span class="flag-badge" class:active={flag.active} data-flag={flag.code}>
-                {#if flag.code === "favorite"}
-                  <Heart class="h-3.5 w-3.5" />
-                {:else if flag.code === "nsfw"}
-                  <ShieldAlert class="h-3.5 w-3.5" />
-                {:else}
-                  <CheckCircle class="h-3.5 w-3.5" />
-                {/if}
-                {flag.label}
-              </span>
-            {/each}
-          </div>
-        {/if}
-
-        {#if card.classification}
-          <span class="classification-badge">
-            <Layers class="h-3.5 w-3.5" />
-            {card.classification.value}
-          </span>
         {/if}
 
         {#if card.rating}
@@ -137,281 +131,306 @@
                 aria-label={`Rate ${value}`}
                 onclick={() => handleRatingClick(value)}
               >
-                <Star class="h-4 w-4" />
+                <Star class="h-5 w-5" />
               </button>
             {/each}
           </div>
+        {/if}
+
+        {#if card.positions.length > 0}
+          <div class="position-badges">
+            {#each card.positions as pos (pos.code)}
+              <span class="position-badge">{pos.label}</span>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    </div>
+  </div>
+
+  <div class="detail-body">
+    <!-- Flags row -->
+    {#if card.flags.length > 0}
+      <div class="flags-row">
+        {#each card.flags as flag (flag.code)}
+          <span class="flag-badge" class:active={flag.active} data-flag={flag.code}>
+            {#if flag.code === "favorite"}
+              <Heart class="h-3.5 w-3.5" />
+            {:else if flag.code === "nsfw"}
+              <ShieldAlert class="h-3.5 w-3.5" />
+            {:else}
+              <CheckCircle class="h-3.5 w-3.5" />
+            {/if}
+            {flag.label}
+          </span>
+        {/each}
+
+        {#if card.classification}
+          <span class="flag-badge classification">
+            <Layers class="h-3.5 w-3.5" />
+            {card.classification.value}
+          </span>
         {/if}
       </div>
     {/if}
 
     <!-- Description -->
     {#if renderedDescription}
-      <section class="detail-section description-section">
-        <div class="description-content markdown-body">
-          {@html renderedDescription}
-        </div>
-      </section>
+      <div class="description-content markdown-body">
+        {@html renderedDescription}
+      </div>
     {/if}
 
     <!-- Tags -->
     {#if card.tags.length > 0}
-      <section class="detail-section">
-        <h2 class="section-label">
-          <Tag class="h-4 w-4" />
-          Tags
-        </h2>
-        <div class="tag-chips">
-          {#each card.tags as tag (tag)}
-            <span class="tag-chip">{tag}</span>
-          {/each}
-        </div>
-      </section>
-    {/if}
-
-    <!-- Studio + Credits -->
-    {#if card.studio || card.credits.length > 0}
-      <section class="detail-section">
-        <h2 class="section-label">
-          <User class="h-4 w-4" />
-          Credits
-        </h2>
-        <div class="credits-grid">
-          {#if card.studio}
-            <div class="credit-item studio-credit">
-              <Building2 class="h-4 w-4" />
-              <div>
-                <span class="credit-role">Studio</span>
-                <span class="credit-name">{card.studio.title}</span>
-              </div>
-            </div>
-          {/if}
-          {#each card.credits as credit (credit.id)}
-            <div class="credit-item">
-              <User class="h-4 w-4" />
-              <span class="credit-name">{credit.title}</span>
-            </div>
-          {/each}
-        </div>
-      </section>
-    {/if}
-
-    <!-- Stats + Counters -->
-    {#if card.stats.length > 0 || card.counters.length > 0}
-      <section class="detail-section">
-        <h2 class="section-label">
-          <BarChart3 class="h-4 w-4" />
-          Stats
-        </h2>
-        <div class="stat-grid">
-          {#each card.stats as stat (stat.code)}
-            <div class="stat-item">
-              <span class="stat-value">{stat.value}</span>
-              <span class="stat-label">{stat.label}</span>
-            </div>
-          {/each}
-          {#each card.counters as counter (counter.code)}
-            <div class="stat-item">
-              <span class="stat-value">{counter.value}</span>
-              <span class="stat-label">{counter.label}</span>
-            </div>
-          {/each}
-        </div>
-      </section>
-    {/if}
-
-    <!-- Progress -->
-    {#if card.progress}
-      <section class="detail-section">
-        <h2 class="section-label">
-          <BarChart3 class="h-4 w-4" />
-          Progress
-        </h2>
-        <div class="progress-block">
-          <div class="progress-bar">
-            <div class="progress-fill" style:width={`${card.progress.percent}%`}></div>
-          </div>
-          <div class="progress-meta">
-            <span>{card.progress.index} / {card.progress.total} {card.progress.unit}</span>
-            <span>{card.progress.percent}%</span>
-          </div>
-          {#if card.progress.mode}
-            <span class="progress-mode">{card.progress.mode}</span>
-          {/if}
-          {#if card.progress.completed}
-            <span class="progress-completed">
-              <CheckCircle class="h-3.5 w-3.5" />
-              Completed
-            </span>
-          {/if}
-        </div>
-      </section>
-    {/if}
-
-    <!-- Dates -->
-    {#if card.dates.length > 0}
-      <section class="detail-section">
-        <h2 class="section-label">
-          <Calendar class="h-4 w-4" />
-          Dates
-        </h2>
-        <div class="kv-list">
-          {#each card.dates as date (date.code)}
-            <div class="kv-row">
-              <span class="kv-key">{date.label}</span>
-              <span class="kv-value">{date.value}</span>
-            </div>
-          {/each}
-        </div>
-      </section>
-    {/if}
-
-    <!-- Technical -->
-    {#if card.technical.length > 0}
-      <section class="detail-section">
-        <h2 class="section-label">
-          <Hash class="h-4 w-4" />
-          Technical
-        </h2>
-        <div class="kv-list">
-          {#each card.technical as row (row.label)}
-            <div class="kv-row">
-              <span class="kv-key">{row.label}</span>
-              <span class="kv-value mono">{row.value}</span>
-            </div>
-          {/each}
-        </div>
-      </section>
-    {/if}
-
-    <!-- Markers -->
-    {#if card.markers.length > 0}
-      <section class="detail-section">
-        <h2 class="section-label">
-          <Bookmark class="h-4 w-4" />
-          Markers
-        </h2>
-        <div class="marker-list">
-          {#each card.markers as marker (marker.id)}
-            <div class="marker-row">
-              <span class="marker-time mono">{marker.timestamp}</span>
-              <span class="marker-title">{marker.title}</span>
-            </div>
-          {/each}
-        </div>
-      </section>
-    {/if}
-
-    <!-- Subtitles -->
-    {#if card.subtitles.length > 0}
-      <section class="detail-section">
-        <h2 class="section-label">
-          <Captions class="h-4 w-4" />
-          Subtitles
-        </h2>
-        <div class="subtitle-list">
-          {#each card.subtitles as sub (sub.id)}
-            <div class="subtitle-row">
-              <span class="subtitle-lang">{sub.language}</span>
-              {#if sub.label}
-                <span class="subtitle-label">{sub.label}</span>
-              {/if}
-              <span class="subtitle-meta mono">{sub.format} · {sub.source}</span>
-              {#if sub.isDefault}
-                <span class="subtitle-default">default</span>
-              {/if}
-            </div>
-          {/each}
-        </div>
-      </section>
-    {/if}
-
-    <!-- Links -->
-    {#if card.links.length > 0}
-      <section class="detail-section">
-        <h2 class="section-label">
-          <Link class="h-4 w-4" />
-          Links
-        </h2>
-        <div class="link-list">
-          {#each card.links as link (link.label)}
-            {#if link.url}
-              <a href={link.url} target="_blank" rel="noopener noreferrer" class="link-item">
-                <ExternalLink class="h-3.5 w-3.5" />
-                {link.label}
-              </a>
-            {:else}
-              <span class="link-item no-url">
-                {#if link.provider}
-                  <Database class="h-3.5 w-3.5" />
-                {:else}
-                  <Link class="h-3.5 w-3.5" />
-                {/if}
-                {link.label}
-              </span>
-            {/if}
-          {/each}
-        </div>
-      </section>
-    {/if}
-
-    <!-- Files -->
-    {#if card.files.length > 0}
-      <section class="detail-section">
-        <h2 class="section-label">
-          <FileText class="h-4 w-4" />
-          Files
-        </h2>
-        <div class="file-list">
-          {#each card.files as file (file.path)}
-            <div class="file-row">
-              <span class="file-role">{file.role}</span>
-              <span class="file-path mono">{file.path}</span>
-              {#if file.mimeType}
-                <span class="file-mime mono">{file.mimeType}</span>
-              {/if}
-            </div>
-          {/each}
-        </div>
-      </section>
-    {/if}
-
-    <!-- Fingerprints -->
-    {#if card.fingerprints.length > 0}
-      <section class="detail-section">
-        <h2 class="section-label">
-          <Fingerprint class="h-4 w-4" />
-          Fingerprints
-        </h2>
-        <div class="kv-list">
-          {#each card.fingerprints as fp (fp.algorithm)}
-            <div class="kv-row">
-              <span class="kv-key">{fp.algorithm}</span>
-              <span class="kv-value mono">{fp.value}</span>
-            </div>
-          {/each}
-        </div>
-      </section>
-    {/if}
-
-    <!-- Sources -->
-    {#if card.sources.length > 0}
-      <section class="detail-section">
-        <h2 class="section-label">
-          <Database class="h-4 w-4" />
-          Sources
-        </h2>
-        <div class="kv-list">
-          {#each card.sources as src (src.code)}
-            <div class="kv-row">
-              <span class="kv-key">{src.code}</span>
-              <span class="kv-value mono">{src.value}</span>
-            </div>
-          {/each}
-        </div>
-      </section>
+      <div class="tags-row">
+        <span class="tags-label">Tags:</span>
+        {#each card.tags as tag (tag)}
+          <span class="tag-chip">{tag}</span>
+        {/each}
+      </div>
     {/if}
   </div>
+
+  <!-- Credits (horizontal scroll of EntityThumbnails) -->
+  {#if card.studio || card.credits.length > 0}
+    <section class="credits-section">
+      <h2 class="credits-heading">Cast & Crew</h2>
+      <div class="credits-scroll">
+        {#if card.studio}
+          <div class="credit-card">
+            <EntityThumbnail card={creditToThumbnailCard(card.studio)} />
+          </div>
+        {/if}
+        {#each card.credits as credit (credit.id)}
+          <div class="credit-card">
+            <EntityThumbnail card={creditToThumbnailCard(credit)} />
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
+
+  <!-- Lower sections: collapsible metadata -->
+  {#if sections.includes("stats") || sections.includes("progress") || sections.includes("dates") || sections.includes("technical") || sections.includes("markers") || sections.includes("subtitles") || sections.includes("links") || sections.includes("files") || sections.includes("fingerprints") || sections.includes("sources")}
+    <div class="metadata-sections">
+      <!-- Stats + Counters -->
+      {#if card.stats.length > 0 || card.counters.length > 0}
+        <section class="detail-section">
+          <h2 class="section-label">
+            <BarChart3 class="h-4 w-4" />
+            Stats
+          </h2>
+          <div class="stat-grid">
+            {#each card.stats as stat (stat.code)}
+              <div class="stat-item">
+                <span class="stat-value">{stat.value}</span>
+                <span class="stat-label">{stat.label}</span>
+              </div>
+            {/each}
+            {#each card.counters as counter (counter.code)}
+              <div class="stat-item">
+                <span class="stat-value">{counter.value}</span>
+                <span class="stat-label">{counter.label}</span>
+              </div>
+            {/each}
+          </div>
+        </section>
+      {/if}
+
+      <!-- Progress -->
+      {#if card.progress}
+        <section class="detail-section">
+          <h2 class="section-label">
+            <BarChart3 class="h-4 w-4" />
+            Progress
+          </h2>
+          <div class="progress-block">
+            <div class="progress-bar">
+              <div class="progress-fill" style:width={`${card.progress.percent}%`}></div>
+            </div>
+            <div class="progress-meta">
+              <span>{card.progress.index} / {card.progress.total} {card.progress.unit}</span>
+              <span>{card.progress.percent}%</span>
+            </div>
+            {#if card.progress.mode}
+              <span class="progress-mode">{card.progress.mode}</span>
+            {/if}
+            {#if card.progress.completed}
+              <span class="progress-completed">
+                <CheckCircle class="h-3.5 w-3.5" />
+                Completed
+              </span>
+            {/if}
+          </div>
+        </section>
+      {/if}
+
+      <!-- Dates -->
+      {#if card.dates.length > 0}
+        <section class="detail-section">
+          <h2 class="section-label">
+            <Calendar class="h-4 w-4" />
+            Dates
+          </h2>
+          <div class="kv-list">
+            {#each card.dates as date (date.code)}
+              <div class="kv-row">
+                <span class="kv-key">{date.label}</span>
+                <span class="kv-value">{date.value}</span>
+              </div>
+            {/each}
+          </div>
+        </section>
+      {/if}
+
+      <!-- Technical -->
+      {#if card.technical.length > 0}
+        <section class="detail-section">
+          <h2 class="section-label">
+            <Hash class="h-4 w-4" />
+            Technical
+          </h2>
+          <div class="kv-list">
+            {#each card.technical as row (row.label)}
+              <div class="kv-row">
+                <span class="kv-key">{row.label}</span>
+                <span class="kv-value mono">{row.value}</span>
+              </div>
+            {/each}
+          </div>
+        </section>
+      {/if}
+
+      <!-- Markers -->
+      {#if card.markers.length > 0}
+        <section class="detail-section">
+          <h2 class="section-label">
+            <Bookmark class="h-4 w-4" />
+            Markers
+          </h2>
+          <div class="marker-list">
+            {#each card.markers as marker (marker.id)}
+              <div class="marker-row">
+                <span class="marker-time mono">{marker.timestamp}</span>
+                <span class="marker-title">{marker.title}</span>
+              </div>
+            {/each}
+          </div>
+        </section>
+      {/if}
+
+      <!-- Subtitles -->
+      {#if card.subtitles.length > 0}
+        <section class="detail-section">
+          <h2 class="section-label">
+            <Captions class="h-4 w-4" />
+            Subtitles
+          </h2>
+          <div class="subtitle-list">
+            {#each card.subtitles as sub (sub.id)}
+              <div class="subtitle-row">
+                <span class="subtitle-lang">{sub.language}</span>
+                {#if sub.label}
+                  <span class="subtitle-label">{sub.label}</span>
+                {/if}
+                <span class="subtitle-meta mono">{sub.format} · {sub.source}</span>
+                {#if sub.isDefault}
+                  <span class="subtitle-default">default</span>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        </section>
+      {/if}
+
+      <!-- Links -->
+      {#if card.links.length > 0}
+        <section class="detail-section">
+          <h2 class="section-label">
+            <Link class="h-4 w-4" />
+            Links
+          </h2>
+          <div class="link-list">
+            {#each card.links as link (link.label)}
+              {#if link.url}
+                <a href={link.url} target="_blank" rel="noopener noreferrer" class="link-item">
+                  <ExternalLink class="h-3.5 w-3.5" />
+                  {link.label}
+                </a>
+              {:else}
+                <span class="link-item no-url">
+                  {#if link.provider}
+                    <Database class="h-3.5 w-3.5" />
+                  {:else}
+                    <Link class="h-3.5 w-3.5" />
+                  {/if}
+                  {link.label}
+                </span>
+              {/if}
+            {/each}
+          </div>
+        </section>
+      {/if}
+
+      <!-- Files -->
+      {#if card.files.length > 0}
+        <section class="detail-section">
+          <h2 class="section-label">
+            <FileText class="h-4 w-4" />
+            Files
+          </h2>
+          <div class="file-list">
+            {#each card.files as file (file.path)}
+              <div class="file-row">
+                <span class="file-role">{file.role}</span>
+                <span class="file-path mono">{file.path}</span>
+                {#if file.mimeType}
+                  <span class="file-mime mono">{file.mimeType}</span>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        </section>
+      {/if}
+
+      <!-- Fingerprints -->
+      {#if card.fingerprints.length > 0}
+        <section class="detail-section">
+          <h2 class="section-label">
+            <Fingerprint class="h-4 w-4" />
+            Fingerprints
+          </h2>
+          <div class="kv-list">
+            {#each card.fingerprints as fp (fp.algorithm)}
+              <div class="kv-row">
+                <span class="kv-key">{fp.algorithm}</span>
+                <span class="kv-value mono">{fp.value}</span>
+              </div>
+            {/each}
+          </div>
+        </section>
+      {/if}
+
+      <!-- Sources -->
+      {#if card.sources.length > 0}
+        <section class="detail-section">
+          <h2 class="section-label">
+            <Database class="h-4 w-4" />
+            Sources
+          </h2>
+          <div class="kv-list">
+            {#each card.sources as src (src.code)}
+              <div class="kv-row">
+                <span class="kv-key">{src.code}</span>
+                <span class="kv-value mono">{src.value}</span>
+              </div>
+            {/each}
+          </div>
+        </section>
+      {/if}
+    </div>
+  {/if}
 </article>
 
 <style>
@@ -433,8 +452,6 @@
 
     display: grid;
     gap: 0;
-    border: 1px solid var(--detail-border);
-    background: var(--detail-surface);
   }
 
   /* ── Hero ────────────────────────────────────────────────── */
@@ -447,6 +464,7 @@
     background-position: center;
     background-repeat: no-repeat;
     overflow: hidden;
+    border: 1px solid var(--detail-border);
   }
 
   .hero.has-image {
@@ -525,6 +543,68 @@
     color: var(--detail-text);
   }
 
+  /* ── Meta row (studio · date · count) ─────────────────── */
+
+  .meta-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.15rem 0;
+    font-size: 0.82rem;
+    color: var(--detail-text-muted);
+  }
+
+  .meta-item {
+    white-space: nowrap;
+  }
+
+  .meta-item.is-studio {
+    color: var(--detail-accent);
+  }
+
+  .meta-sep {
+    display: inline-block;
+    width: 3px;
+    height: 3px;
+    margin: 0 0.5rem;
+    background: var(--detail-text-muted);
+    opacity: 0.5;
+  }
+
+  /* ── Rating (in hero) ──────────────────────────────────── */
+
+  .rating-row {
+    display: flex;
+    gap: 0.15rem;
+  }
+
+  .rating-star {
+    display: grid;
+    height: 1.75rem;
+    width: 1.75rem;
+    place-items: center;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--detail-text-disabled);
+    cursor: pointer;
+    transition: color 0.15s, filter 0.15s;
+  }
+
+  .rating-star:hover:not(:disabled) {
+    color: var(--detail-accent);
+  }
+
+  .rating-star.active {
+    color: var(--detail-accent);
+    filter: drop-shadow(0 0 6px var(--detail-accent-glow));
+  }
+
+  .rating-star:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
+
   .position-badges {
     display: flex;
     gap: 0.4rem;
@@ -549,22 +629,14 @@
     padding: 1rem 1.5rem 1.5rem;
   }
 
-  /* ── Primary Row (flags, rating, classification) ────────── */
+  /* ── Flags row ─────────────────────────────────────────── */
 
-  .primary-row {
+  .flags-row {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 0.6rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--detail-border);
-    margin-bottom: 1rem;
-  }
-
-  .flag-badges {
-    display: flex;
     gap: 0.35rem;
-    flex-wrap: wrap;
+    padding-bottom: 0.85rem;
   }
 
   .flag-badge {
@@ -602,89 +674,17 @@
     box-shadow: 0 0 10px rgba(78, 138, 98, 0.15);
   }
 
-  .classification-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 0.2rem 0.5rem;
-    font-size: 0.72rem;
-    font-weight: 500;
-    color: var(--detail-text-muted);
-    border: 1px solid var(--detail-border);
-    background: var(--detail-surface-raised);
+  .flag-badge.classification {
     text-transform: capitalize;
   }
 
-  .rating-row {
-    display: flex;
-    gap: 0.2rem;
-    margin-left: auto;
-  }
-
-  .rating-star {
-    display: grid;
-    height: 2rem;
-    width: 2rem;
-    place-items: center;
-    padding: 0;
-    border: 1px solid var(--detail-border);
-    background: var(--detail-surface-raised);
-    color: var(--detail-text-disabled);
-    cursor: pointer;
-    transition: color 0.15s, border-color 0.15s, box-shadow 0.15s;
-  }
-
-  .rating-star:hover:not(:disabled) {
-    color: var(--detail-accent);
-    border-color: var(--detail-accent-muted);
-  }
-
-  .rating-star.active {
-    color: var(--detail-accent);
-    border-color: var(--detail-accent);
-    box-shadow: 0 0 16px var(--detail-accent-glow);
-  }
-
-  .rating-star:disabled {
-    cursor: default;
-    opacity: 0.7;
-  }
-
-  /* ── Sections ───────────────────────────────────────────── */
-
-  .detail-section {
-    padding: 1rem 0;
-    border-bottom: 1px solid var(--detail-border);
-  }
-
-  .detail-section:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-  }
-
-  .section-label {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    margin: 0 0 0.75rem;
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--detail-text-muted);
-  }
-
   /* ── Description (markdown) ─────────────────────────────── */
-
-  .description-section {
-    padding-top: 1rem;
-  }
 
   .description-content {
     color: var(--detail-text-secondary);
     font-size: 0.88rem;
     line-height: 1.65;
+    padding: 0.5rem 0 1rem;
   }
 
   .description-content :global(p) {
@@ -777,18 +777,31 @@
 
   /* ── Tags ───────────────────────────────────────────────── */
 
-  .tag-chips {
+  .tags-row {
     display: flex;
+    align-items: center;
     flex-wrap: wrap;
     gap: 0.35rem;
+    padding-top: 0.25rem;
+  }
+
+  .tags-label {
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--detail-text-muted);
+    margin-right: 0.25rem;
   }
 
   .tag-chip {
-    padding: 0.2rem 0.55rem;
+    padding: 0.18rem 0.55rem;
     font-size: 0.75rem;
     color: var(--detail-text-secondary);
     border: 1px solid var(--detail-border);
     background: var(--detail-surface-raised);
+    text-transform: uppercase;
     transition: border-color 0.15s, color 0.15s;
   }
 
@@ -797,45 +810,77 @@
     border-color: var(--detail-accent-muted);
   }
 
-  /* ── Credits ────────────────────────────────────────────── */
+  /* ── Credits (horizontal scroll) ───────────────────────── */
 
-  .credits-grid {
-    display: grid;
-    gap: 0.5rem;
-    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  .credits-section {
+    padding: 0 1.5rem 1.5rem;
   }
 
-  .credit-item {
+  .credits-heading {
+    margin: 0 0 0.75rem;
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--detail-accent);
+  }
+
+  .credits-scroll {
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--detail-border) transparent;
+  }
+
+  .credits-scroll::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .credits-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .credits-scroll::-webkit-scrollbar-thumb {
+    background: var(--detail-border);
+  }
+
+  .credit-card {
+    flex-shrink: 0;
+    width: 8.5rem;
+  }
+
+  /* ── Metadata sections ──────────────────────────────────── */
+
+  .metadata-sections {
+    padding: 0 1.5rem 1.5rem;
+    border-top: 1px solid var(--detail-border);
+  }
+
+  .detail-section {
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--detail-border);
+  }
+
+  .detail-section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .section-label {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.65rem;
-    border: 1px solid var(--detail-border);
-    background: var(--detail-surface-raised);
-    color: var(--detail-text-secondary);
-    font-size: 0.82rem;
-    transition: border-color 0.15s;
-  }
-
-  .credit-item:hover {
-    border-color: var(--detail-accent-muted);
-  }
-
-  .studio-credit {
-    border-color: var(--detail-accent-muted);
-  }
-
-  .credit-role {
-    display: block;
-    font-size: 0.65rem;
+    gap: 0.45rem;
+    margin: 0 0 0.75rem;
     font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
     color: var(--detail-text-muted);
-  }
-
-  .credit-name {
-    color: var(--detail-text);
   }
 
   /* ── Stat Grid ──────────────────────────────────────────── */
@@ -1121,6 +1166,14 @@
 
     .detail-body {
       padding: 1.25rem 2rem 2rem;
+    }
+
+    .credits-section {
+      padding: 0 2rem 2rem;
+    }
+
+    .metadata-sections {
+      padding: 0 2rem 2rem;
     }
   }
 

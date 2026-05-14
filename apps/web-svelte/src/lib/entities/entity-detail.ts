@@ -77,6 +77,7 @@ export interface EntityDetailCredit {
   id: string;
   kind: string;
   title: string;
+  thumbnail: string | null;
 }
 
 /** An external link or ID. */
@@ -375,9 +376,9 @@ export function entityCardToDetailCard(entity: EntityCard): EntityDetailCard {
     flags: resolveFlags(capabilities),
     tags: tagsCap?.values ?? [],
     studio: studioCap?.value
-      ? { id: studioCap.value.id, kind: studioCap.value.kind, title: studioCap.value.title }
+      ? { id: studioCap.value.id, kind: studioCap.value.kind, title: studioCap.value.title, thumbnail: null }
       : null,
-    credits: creditsCap?.people.map((p) => ({ id: p.id, kind: p.kind, title: p.title })) ?? [],
+    credits: creditsCap?.people.map((p) => ({ id: p.id, kind: p.kind, title: p.title, thumbnail: null })) ?? [],
     stats: (statsCap?.items ?? []).map((item) => ({
       code: item.code,
       label: formatStatCode(item.code),

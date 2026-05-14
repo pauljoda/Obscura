@@ -2,7 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "app",
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@obscura/web-svelte", "dev", "--port", "5173"],
+      "port": 5173
+    },
+    {
+      "name": "docker",
       "runtimeExecutable": "docker",
       "runtimeArgs": ["compose", "-f", "infra/docker/docker-compose.yml", "up"],
       "port": 8008,
@@ -13,13 +19,6 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["docs:dev"],
       "port": 3000
-    },
-    {
-      "name": "web",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev:app"],
-      "port": 8008,
-      "autoPort": false
     }
   ]
 }
