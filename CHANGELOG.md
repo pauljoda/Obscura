@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - All v2 EntityGrid browse pages now participate in SvelteKit's snapshot system — search query, active filters, sort order, view mode, and selection are preserved on back/forward navigation.
 
 ### Changed
+- The v2 upgrade gate dev-mode re-arm now performs a full v2 data reset — truncates all v2 tables and purges cache directories — so the next migration test starts from a completely clean slate with no stale entities, files, or generated assets.
 - The v2 upgrade gate now warns that generated cache assets will be deleted and recommends backing up the data directory before proceeding. Stale v1 cache directories are purged during migration to free disk space.
 - The v2 upgrade gate now runs legacy video and media imports as part of the fresh-start preparation, so all v1 data flows into v2 tables during the upgrade instead of requiring a full library rescan.
 - All browse pages now use the shared `EntityGrid` and `EntityThumbnail` components backed by the v2 .NET entity API, providing built-in search, sort, filter, kind tabs, and grid/list view toggle.

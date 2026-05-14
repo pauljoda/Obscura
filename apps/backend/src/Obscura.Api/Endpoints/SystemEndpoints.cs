@@ -21,12 +21,15 @@ public static class SystemEndpoints
             .WithName("AcceptV2UpgradeGate")
             .WithSummary("Records consent for the v2 global entity upgrade.");
 
-        group.MapPost("/v2-upgrade-gate/prompt", (SystemMigrationService migrations, IHostEnvironment env) =>
+        group.MapPost("/v2-upgrade-gate/prompt", async (
+            SystemMigrationService migrations,
+            IHostEnvironment env,
+            CancellationToken cancellationToken) =>
             env.IsDevelopment()
-                ? Results.Ok(migrations.PromptUpgradeGate())
+                ? Results.Ok(await migrations.PromptUpgradeGateAsync(cancellationToken))
                 : Results.NotFound())
             .WithName("PromptV2UpgradeGate")
-            .WithSummary("Re-arms the v2 global entity upgrade gate for local migration testing.");
+            .WithSummary("Re-arms the v2 global entity upgrade gate for local migration testing. Wipes all v2 data and cache.");
 
         group.MapPost("/v2-fresh-start/prepare", async (
             SystemMigrationService migrations,

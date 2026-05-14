@@ -122,6 +122,8 @@ public sealed class V2FreshStartEndpointTests
                 MediaReset: true,
                 CachePurged: true));
         }
+
+        public Task ResetAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private sealed class FakeLegacyVideoImportService : ILegacyVideoImportService

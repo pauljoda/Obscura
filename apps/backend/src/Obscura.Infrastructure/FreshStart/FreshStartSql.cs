@@ -131,6 +131,42 @@ public static class FreshStartSql
         """;
 
     /// <summary>
+    /// SQL block that truncates every v2 table including settings and library roots.
+    /// Used by development-mode gate re-arming to give a completely clean slate — no
+    /// backup is created and no configuration is preserved.
+    /// </summary>
+    public const string ResetAllV2Data = """
+        TRUNCATE TABLE
+            v2.entity_hierarchy_links,
+            v2.entity_credit_links,
+            v2.entity_studio_links,
+            v2.entity_tag_links,
+            v2.entity_external_ids,
+            v2.entity_urls,
+            v2.entity_subtitles,
+            v2.entity_markers,
+            v2.entity_file_fingerprints,
+            v2.entity_files,
+            v2.entity_counters,
+            v2.entity_stats,
+            v2.entity_dates,
+            v2.entity_technical,
+            v2.entity_sources,
+            v2.entity_progress,
+            v2.entity_positions,
+            v2.entity_classifications,
+            v2.entity_playback,
+            v2.entity_descriptions,
+            v2.video_details,
+            v2.entity_flags,
+            v2.entity_ratings,
+            v2.entities,
+            v2.library_roots,
+            v2.library_settings
+        RESTART IDENTITY CASCADE;
+        """;
+
+    /// <summary>
     /// SQL query that counts preserved v2 library roots after the fresh-start preparation step.
     /// </summary>
     public const string CountPreservedLibraryRoots = """

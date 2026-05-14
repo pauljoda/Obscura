@@ -43,6 +43,17 @@ public sealed class V2FreshStartService : IV2FreshStartService
             CachePurged: cachePurged);
     }
 
+    /// <inheritdoc />
+    public async Task ResetAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Resetting all v2 data for development gate re-arm");
+
+        await _db.Database.ExecuteSqlRawAsync(FreshStartSql.ResetAllV2Data, cancellationToken);
+        _logger.LogInformation("Truncated all v2 schema tables");
+
+        PurgeStaleCacheDirectories();
+    }
+
     /// <summary>
     /// Deletes stale v1 cache subdirectories whose entity IDs no longer correspond to
     /// v2 entities. After migration, a library rescan regenerates all cache assets under

@@ -48,10 +48,17 @@ public sealed class SystemMigrationService
     public V2UpgradeGateStatusResponse AcceptUpgradeGate() => ToContract(_gate.Accept());
 
     /// <summary>
-    /// Re-arms the v2 upgrade gate for local migration testing.
+    /// Re-arms the v2 upgrade gate for local migration testing. Truncates all v2 data
+    /// and purges cache directories so the next migration run starts from a completely
+    /// clean slate — no stale entities, files, or generated assets.
     /// </summary>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>Prompted upgrade gate status response.</returns>
-    public V2UpgradeGateStatusResponse PromptUpgradeGate() => ToContract(_gate.Prompt());
+    public async Task<V2UpgradeGateStatusResponse> PromptUpgradeGateAsync(CancellationToken cancellationToken)
+    {
+        await _freshStart.ResetAsync(cancellationToken);
+        return ToContract(_gate.Prompt());
+    }
 
     /// <summary>
     /// Prepares the v2 fresh-start reset when the upgrade gate has been accepted.
