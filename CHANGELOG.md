@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- All browse pages (Images, Galleries, Books, Audio, Series, Actors, Studios, Tags, Collections) now use the shared `EntityGrid` component backed by the v2 .NET entity API, replacing the legacy `MediaSurface` v1 pattern with consistent search, sort, filter, and grid/list controls across every media type.
+- The Dashboard now loads from the v2 entity API and displays horizontal scroll rows for each content type that has items, replacing the broken v1 server-side rendering that showed a black screen.
 - The v1-to-v2 upgrade now preserves all existing metadata instead of forcing a full rescan. Thumbnails, previews, trickplay sprites, technical metadata, fingerprints, playback history, subtitles, markers, and all taxonomy relationships are migrated automatically.
 
 ### Added
@@ -13,7 +15,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 - The v2 upgrade gate now runs legacy video and media imports as part of the fresh-start preparation, so all v1 data flows into v2 tables during the upgrade instead of requiring a full library rescan.
-- The videos browse page now uses the shared `EntityGrid` and `EntityThumbnail` components backed by the v2 .NET entity API, providing built-in search, sort, filter, kind tabs, and grid/list view toggle.
+- All browse pages now use the shared `EntityGrid` and `EntityThumbnail` components backed by the v2 .NET entity API, providing built-in search, sort, filter, kind tabs, and grid/list view toggle.
+- The Dashboard now fetches recent items from each entity kind via the v2 API and renders horizontal scroll rows with `EntityThumbnail` cards, with NSFW-aware filtering and empty-library state.
 
 ### Fixed
 - The v2 upgrade gate consent overlay now appears on first boot when the gate is armed — previously the SPA layout never fetched gate status from the .NET backend, so the overlay never rendered.

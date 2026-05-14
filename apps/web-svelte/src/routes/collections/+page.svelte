@@ -1,52 +1,130 @@
 <script lang="ts">
-  import { page } from "$app/state";
-  import { invalidateAll } from "$app/navigation";
+  import { onMount } from "svelte";
   import { FolderOpen, Plus } from "@lucide/svelte";
-  import { Button } from "@obscura/ui-svelte";
-  import type { PageData } from "./$types";
-  import MediaSurface from "$lib/v1/media-surface/MediaSurfaceV1.svelte";
-  import { collectionsSurfaceConfig } from "$lib/v1/media-surface/configs/collections-v1";
+  import { fetchV2Entities, type V2EntityCard } from "$lib/api/v2";
+  import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
+  import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
+  import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
+  import InfiniteLoadTrigger from "$lib/v1/media-surface/pagination/InfiniteLoadTriggerV1.svelte";
 
-  let { data }: { data: PageData } = $props();
+  type LoadState = "loading" | "ready" | "error";
 
-  const config = $derived(
-    collectionsSurfaceConfig({
-      initial: { items: data.collections, total: data.total },
-      pageSize: data.pageSize,
-      page: data.page,
-      mode: page.url.searchParams.get("mode") ?? undefined,
-      nsfw: data.nsfwMode === "off" ? "off" : undefined,
-      onMutated: () => invalidateAll(),
-    }),
+  const nsfw = useNsfw();
+
+  let loadState: LoadState = $state("loading");
+  let items: V2EntityCard[] = $state.raw([]);
+  let nextCursor: string | null = $state(null);
+  let errorMessage: string | null = $state(null);
+  let loadingMore = $state(false);
+  let loadMoreError: string | null = $state(null);
+
+  const cards: EntityThumbnailCard[] = $derived(
+    items.map((item) => entityCardToThumbnailCard(item, `/collections/${item.id}`)),
   );
+
+  let lastNsfwMode = $state(nsfw.mode);
+
+  onMount(() => {
+    void loadInitial();
+  });
+
+  $effect(() => {
+    if (nsfw.mode !== lastNsfwMode) {
+      lastNsfwMode = nsfw.mode;
+      void loadInitial();
+    }
+  });
+
+  async function loadInitial() {
+    loadState = "loading";
+    errorMessage = null;
+    items = [];
+    nextCursor = null;
+
+    try {
+      const response = await fetchV2Entities({ kind: "collection", hideNsfw: nsfw.mode === "off" });
+      items = response.items;
+      nextCursor = response.nextCursor;
+      loadState = "ready";
+    } catch (err) {
+      errorMessage = err instanceof Error ? err.message : String(err);
+      loadState = "error";
+    }
+  }
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return;
+    loadingMore = true;
+    loadMoreError = null;
+
+    try {
+      const response = await fetchV2Entities({
+        kind: "collection",
+        cursor: nextCursor,
+        hideNsfw: nsfw.mode === "off",
+      });
+      items = [...items, ...response.items];
+      nextCursor = response.nextCursor;
+    } catch (err) {
+      loadMoreError = err instanceof Error ? err.message : String(err);
+    } finally {
+      loadingMore = false;
+    }
+  }
 </script>
 
 <svelte:head>
-  <title>Obscura</title>
+  <title>Collections · Obscura</title>
 </svelte:head>
 
-<div class="space-y-4">
+<section class="space-y-5">
   <div class="flex items-start justify-between gap-4">
     <div>
       <h1 class="flex items-center gap-2.5">
         <FolderOpen class="h-5 w-5 text-text-accent" />
         Collections
       </h1>
-      <p class="text-text-muted text-[0.78rem] mt-1">Curated groupings across your media</p>
+      <p class="mt-1 text-[0.78rem] text-text-muted">
+        Curated groupings across your media
+      </p>
     </div>
-    <a href="/collections/new">
-      <Button variant="primary" size="md">
-        {#snippet children()}
-          <Plus class="h-4 w-4" />
-          New Collection
-        {/snippet}
-      </Button>
+    <a
+      href="/collections/new"
+      class="inline-flex items-center gap-1.5 bg-accent-500 hover:bg-accent-400 text-accent-950 px-4 py-2 text-sm font-semibold transition-all duration-normal hover:shadow-[0_0_16px_rgba(196,154,90,0.3)]"
+    >
+      <Plus class="h-4 w-4" />
+      New Collection
     </a>
   </div>
 
-  <MediaSurface
-    {config}
-    initialPrefsByFormFactor={data.surfacePrefs}
-    legacyPrefsKey="collections:filterPresets"
-  />
-</div>
+  {#if loadState === "error"}
+    <div class="surface-card-sharp flex items-center justify-between gap-4 p-4 border-error-500/50">
+      <p class="text-sm text-text-muted">{errorMessage ?? "Failed to load collections."}</p>
+      <button
+        type="button"
+        class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary transition-colors"
+        onclick={() => void loadInitial()}
+      >
+        Retry
+      </button>
+    </div>
+  {:else}
+    <EntityGrid
+      {cards}
+      loading={loadState === "loading"}
+      prefsKey="collections"
+      emptyTitle="No collections"
+      emptyMessage="No collections yet. Create one to group media across your library."
+    />
+
+    <InfiniteLoadTrigger
+      hasMore={nextCursor !== null}
+      loading={loadingMore}
+      error={loadMoreError}
+      nextHref="/collections"
+      loadKey={nextCursor ?? undefined}
+      onLoad={loadMore}
+    />
+  {/if}
+</section>

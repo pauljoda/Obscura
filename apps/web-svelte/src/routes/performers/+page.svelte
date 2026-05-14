@@ -1,163 +1,121 @@
 <script lang="ts">
-  import { invalidateAll } from "$app/navigation";
-  import { Users, Star, Image as ImageIcon } from "@lucide/svelte";
-  import { cn } from "@obscura/ui-svelte";
-  import type { PageData } from "./$types";
-  import MediaSurface from "$lib/v1/media-surface/MediaSurfaceV1.svelte";
-  import { performersSurfaceConfig } from "$lib/v1/media-surface/configs/performers-v1";
-  import FilterSection from "$lib/v1/media-surface/toolbar/FilterSectionV1.svelte";
+  import { onMount } from "svelte";
+  import { Users } from "@lucide/svelte";
+  import { fetchV2Entities, type V2EntityCard } from "$lib/api/v2";
+  import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
+  import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
+  import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
+  import InfiniteLoadTrigger from "$lib/v1/media-surface/pagination/InfiniteLoadTriggerV1.svelte";
 
-  let { data }: { data: PageData } = $props();
+  type LoadState = "loading" | "ready" | "error";
 
-  // Build a snippet that injects the per-route Actor / Gender / Country
-  // filter rows into the drawer, since these don't map to a built-in
-  // section kind.
-  type DrawerCtx = {
-    panelFilters: Array<{ type?: string; label: string; value: string }>;
-    onAddFilter: (
-      type: "favorite" | "hasImage" | "gender" | "country" | "rating" | "ratingMin" | "ratingMax",
-      label: string,
-      value: string,
-    ) => void;
-  };
+  const nsfw = useNsfw();
 
-  const config = $derived(
-    performersSurfaceConfig({
-      initial: { items: data.performers, total: data.total },
-      pageSize: data.pageSize,
-      page: data.page,
-      nsfwMode: data.nsfwMode,
-      onMutated: () => invalidateAll(),
-    }),
+  let loadState: LoadState = $state("loading");
+  let items: V2EntityCard[] = $state.raw([]);
+  let nextCursor: string | null = $state(null);
+  let errorMessage: string | null = $state(null);
+  let loadingMore = $state(false);
+  let loadMoreError: string | null = $state(null);
+
+  const cards: EntityThumbnailCard[] = $derived(
+    items.map((item) => entityCardToThumbnailCard(item, `/performers/${item.id}`)),
   );
 
-  // Dynamic gender / country lists derived from the current page's items.
-  const genders = $derived(
-    Array.from(
-      new Set(
-        data.performers.map((p) => p.gender).filter((v): v is string => !!v),
-      ),
-    ).sort(),
-  );
-  const countries = $derived(
-    Array.from(
-      new Set(
-        data.performers.map((p) => p.country).filter((v): v is string => !!v),
-      ),
-    ).sort(),
-  );
+  let lastNsfwMode = $state(nsfw.mode);
+
+  onMount(() => {
+    void loadInitial();
+  });
+
+  $effect(() => {
+    if (nsfw.mode !== lastNsfwMode) {
+      lastNsfwMode = nsfw.mode;
+      void loadInitial();
+    }
+  });
+
+  async function loadInitial() {
+    loadState = "loading";
+    errorMessage = null;
+    items = [];
+    nextCursor = null;
+
+    try {
+      const response = await fetchV2Entities({ kind: "person", hideNsfw: nsfw.mode === "off" });
+      items = response.items;
+      nextCursor = response.nextCursor;
+      loadState = "ready";
+    } catch (err) {
+      errorMessage = err instanceof Error ? err.message : String(err);
+      loadState = "error";
+    }
+  }
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return;
+    loadingMore = true;
+    loadMoreError = null;
+
+    try {
+      const response = await fetchV2Entities({
+        kind: "person",
+        cursor: nextCursor,
+        hideNsfw: nsfw.mode === "off",
+      });
+      items = [...items, ...response.items];
+      nextCursor = response.nextCursor;
+    } catch (err) {
+      loadMoreError = err instanceof Error ? err.message : String(err);
+    } finally {
+      loadingMore = false;
+    }
+  }
 </script>
 
 <svelte:head>
-  <title>Obscura</title>
+  <title>Actors · Obscura</title>
 </svelte:head>
 
-<div class="space-y-4">
-  <div class="flex items-start justify-between gap-4">
-    <div>
-      <h1 class="flex items-center gap-2.5">
-        <Users class="h-5 w-5 text-text-accent" />
-        Actors
-      </h1>
-      <p class="mt-1 text-[0.78rem] text-text-muted">Browse actors in your library</p>
-    </div>
-    <span class="mt-1 text-mono-sm text-text-disabled">{data.total} total</span>
+<section class="space-y-5">
+  <div>
+    <h1 class="flex items-center gap-2.5">
+      <Users class="h-5 w-5 text-text-accent" />
+      Actors
+    </h1>
+    <p class="mt-1 text-[0.78rem] text-text-muted">
+      Browse actors in your library
+    </p>
   </div>
 
-  {#snippet drawerSections({ panelFilters, onAddFilter }: DrawerCtx)}
-    <FilterSection title="Actor">
-      {#snippet children()}
-        <div class="flex flex-wrap gap-1">
-          <button
-            type="button"
-            onclick={() => onAddFilter("favorite", "Favorite", "true")}
-            class={cn(
-              "tag-chip cursor-pointer transition-colors duration-fast",
-              panelFilters.some((f) => f.type === "favorite" && f.value === "true")
-                ? "tag-chip-accent"
-                : "tag-chip-default hover:tag-chip-accent",
-            )}
-          >
-            <Star class="h-3 w-3" /> Favorites
-          </button>
-          <button
-            type="button"
-            onclick={() => onAddFilter("hasImage", "Photo", "true")}
-            class={cn(
-              "tag-chip cursor-pointer transition-colors duration-fast",
-              panelFilters.some((f) => f.type === "hasImage" && f.value === "true")
-                ? "tag-chip-accent"
-                : "tag-chip-default hover:tag-chip-accent",
-            )}
-          >
-            <ImageIcon class="h-3 w-3" /> Has photo
-          </button>
-          <button
-            type="button"
-            onclick={() => onAddFilter("hasImage", "Photo", "false")}
-            class={cn(
-              "tag-chip cursor-pointer transition-colors duration-fast",
-              panelFilters.some((f) => f.type === "hasImage" && f.value === "false")
-                ? "tag-chip-accent"
-                : "tag-chip-default hover:tag-chip-accent",
-            )}
-          >
-            No photo
-          </button>
-        </div>
-      {/snippet}
-    </FilterSection>
+  {#if loadState === "error"}
+    <div class="surface-card-sharp flex items-center justify-between gap-4 p-4 border-error-500/50">
+      <p class="text-sm text-text-muted">{errorMessage ?? "Failed to load actors."}</p>
+      <button
+        type="button"
+        class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary transition-colors"
+        onclick={() => void loadInitial()}
+      >
+        Retry
+      </button>
+    </div>
+  {:else}
+    <EntityGrid
+      {cards}
+      loading={loadState === "loading"}
+      prefsKey="performers"
+      emptyTitle="No actors"
+      emptyMessage="No actors in your library yet. They will appear as you tag media with performer credits."
+    />
 
-    {#if genders.length > 0}
-      <FilterSection title="Gender">
-        {#snippet children()}
-          <div class="flex flex-wrap gap-1">
-            {#each genders as gender (gender)}
-              <button
-                type="button"
-                onclick={() => onAddFilter("gender", "Gender", gender)}
-                class={cn(
-                  "tag-chip cursor-pointer transition-colors duration-fast",
-                  panelFilters.some((f) => f.type === "gender" && f.value === gender)
-                    ? "tag-chip-accent"
-                    : "tag-chip-default hover:tag-chip-accent",
-                )}
-              >
-                {gender.replaceAll("_", " ")}
-              </button>
-            {/each}
-          </div>
-        {/snippet}
-      </FilterSection>
-    {/if}
-
-    {#if countries.length > 0}
-      <FilterSection title="Country">
-        {#snippet children()}
-          <div class="flex flex-wrap gap-1 max-h-40 overflow-y-auto tag-scroll-area">
-            {#each countries as country (country)}
-              <button
-                type="button"
-                onclick={() => onAddFilter("country", "Country", country)}
-                class={cn(
-                  "tag-chip cursor-pointer transition-colors duration-fast",
-                  panelFilters.some((f) => f.type === "country" && f.value === country)
-                    ? "tag-chip-accent"
-                    : "tag-chip-default hover:tag-chip-accent",
-                )}
-              >
-                {country}
-              </button>
-            {/each}
-          </div>
-        {/snippet}
-      </FilterSection>
-    {/if}
-  {/snippet}
-
-  <MediaSurface
-    config={{ ...config, extraFilterSections: drawerSections }}
-    initialPrefsByFormFactor={data.surfacePrefs}
-    legacyPrefsKey="performers:filterPresets"
-  />
-</div>
+    <InfiniteLoadTrigger
+      hasMore={nextCursor !== null}
+      loading={loadingMore}
+      error={loadMoreError}
+      nextHref="/performers"
+      loadKey={nextCursor ?? undefined}
+      onLoad={loadMore}
+    />
+  {/if}
+</section>

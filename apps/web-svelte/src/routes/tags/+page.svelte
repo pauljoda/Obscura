@@ -1,95 +1,121 @@
 <script lang="ts">
-  import { invalidateAll } from "$app/navigation";
-  import { Image as ImageIcon, Star, Tag as TagIcon } from "@lucide/svelte";
-  import { cn } from "@obscura/ui-svelte";
-  import type { PageData } from "./$types";
-  import MediaSurface from "$lib/v1/media-surface/MediaSurfaceV1.svelte";
-  import {
-    tagsSurfaceConfig,
-    type TagFilterType,
-  } from "$lib/v1/media-surface/configs/tags-v1";
-  import FilterSection from "$lib/v1/media-surface/toolbar/FilterSectionV1.svelte";
+  import { onMount } from "svelte";
+  import { Tag as TagIcon } from "@lucide/svelte";
+  import { fetchV2Entities, type V2EntityCard } from "$lib/api/v2";
+  import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
+  import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
+  import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
+  import InfiniteLoadTrigger from "$lib/v1/media-surface/pagination/InfiniteLoadTriggerV1.svelte";
 
-  let { data }: { data: PageData } = $props();
+  type LoadState = "loading" | "ready" | "error";
 
-  type DrawerCtx = {
-    panelFilters: Array<{ type?: string; label: string; value: string }>;
-    onAddFilter: (type: TagFilterType, label: string, value: string) => void;
-  };
+  const nsfw = useNsfw();
 
-  const config = $derived(
-    tagsSurfaceConfig({
-      initial: { items: data.tags, total: data.total },
-      pageSize: data.pageSize,
-      page: data.page,
-      nsfwMode: data.nsfwMode,
-      onMutated: () => invalidateAll(),
-    }),
+  let loadState: LoadState = $state("loading");
+  let items: V2EntityCard[] = $state.raw([]);
+  let nextCursor: string | null = $state(null);
+  let errorMessage: string | null = $state(null);
+  let loadingMore = $state(false);
+  let loadMoreError: string | null = $state(null);
+
+  const cards: EntityThumbnailCard[] = $derived(
+    items.map((item) => entityCardToThumbnailCard(item, `/tags/${item.id}`)),
   );
+
+  let lastNsfwMode = $state(nsfw.mode);
+
+  onMount(() => {
+    void loadInitial();
+  });
+
+  $effect(() => {
+    if (nsfw.mode !== lastNsfwMode) {
+      lastNsfwMode = nsfw.mode;
+      void loadInitial();
+    }
+  });
+
+  async function loadInitial() {
+    loadState = "loading";
+    errorMessage = null;
+    items = [];
+    nextCursor = null;
+
+    try {
+      const response = await fetchV2Entities({ kind: "tag", hideNsfw: nsfw.mode === "off" });
+      items = response.items;
+      nextCursor = response.nextCursor;
+      loadState = "ready";
+    } catch (err) {
+      errorMessage = err instanceof Error ? err.message : String(err);
+      loadState = "error";
+    }
+  }
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return;
+    loadingMore = true;
+    loadMoreError = null;
+
+    try {
+      const response = await fetchV2Entities({
+        kind: "tag",
+        cursor: nextCursor,
+        hideNsfw: nsfw.mode === "off",
+      });
+      items = [...items, ...response.items];
+      nextCursor = response.nextCursor;
+    } catch (err) {
+      loadMoreError = err instanceof Error ? err.message : String(err);
+    } finally {
+      loadingMore = false;
+    }
+  }
 </script>
 
 <svelte:head>
-  <title>Obscura</title>
+  <title>Tags · Obscura</title>
 </svelte:head>
 
-<div class="space-y-4">
-  <div class="flex items-start justify-between gap-4">
-    <div>
-      <h1 class="flex items-center gap-2.5">
-        <TagIcon class="h-5 w-5 text-text-accent" />
-        Tags
-      </h1>
-      <p class="mt-1 text-[0.78rem] text-text-muted">Browse tags in your library</p>
-    </div>
-    <span class="mt-1 text-mono-sm text-text-disabled">{data.total} total</span>
+<section class="space-y-5">
+  <div>
+    <h1 class="flex items-center gap-2.5">
+      <TagIcon class="h-5 w-5 text-text-accent" />
+      Tags
+    </h1>
+    <p class="mt-1 text-[0.78rem] text-text-muted">
+      Browse tags in your library
+    </p>
   </div>
 
-  {#snippet drawerSections({ panelFilters, onAddFilter }: DrawerCtx)}
-    <FilterSection title="Tag">
-      <div class="flex flex-wrap gap-1">
-        <button
-          type="button"
-          onclick={() => onAddFilter("favorite", "Favorite", "true")}
-          class={cn(
-            "tag-chip cursor-pointer transition-colors duration-fast",
-            panelFilters.some((f) => f.type === "favorite" && f.value === "true")
-              ? "tag-chip-accent"
-              : "tag-chip-default hover:tag-chip-accent",
-          )}
-        >
-          <Star class="h-3 w-3" /> Favorites
-        </button>
-        <button
-          type="button"
-          onclick={() => onAddFilter("hasImage", "Image", "true")}
-          class={cn(
-            "tag-chip cursor-pointer transition-colors duration-fast",
-            panelFilters.some((f) => f.type === "hasImage" && f.value === "true")
-              ? "tag-chip-accent"
-              : "tag-chip-default hover:tag-chip-accent",
-          )}
-        >
-          <ImageIcon class="h-3 w-3" /> Has image
-        </button>
-        <button
-          type="button"
-          onclick={() => onAddFilter("hasImage", "Image", "false")}
-          class={cn(
-            "tag-chip cursor-pointer transition-colors duration-fast",
-            panelFilters.some((f) => f.type === "hasImage" && f.value === "false")
-              ? "tag-chip-accent"
-              : "tag-chip-default hover:tag-chip-accent",
-          )}
-        >
-          No image
-        </button>
-      </div>
-    </FilterSection>
-  {/snippet}
+  {#if loadState === "error"}
+    <div class="surface-card-sharp flex items-center justify-between gap-4 p-4 border-error-500/50">
+      <p class="text-sm text-text-muted">{errorMessage ?? "Failed to load tags."}</p>
+      <button
+        type="button"
+        class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary transition-colors"
+        onclick={() => void loadInitial()}
+      >
+        Retry
+      </button>
+    </div>
+  {:else}
+    <EntityGrid
+      {cards}
+      loading={loadState === "loading"}
+      prefsKey="tags"
+      emptyTitle="No tags"
+      emptyMessage="No tags in your library yet. They will appear as you tag your media."
+    />
 
-  <MediaSurface
-    config={{ ...config, extraFilterSections: drawerSections }}
-    initialPrefsByFormFactor={data.surfacePrefs}
-    legacyPrefsKey="tags:filterPresets"
-  />
-</div>
+    <InfiniteLoadTrigger
+      hasMore={nextCursor !== null}
+      loading={loadingMore}
+      error={loadMoreError}
+      nextHref="/tags"
+      loadKey={nextCursor ?? undefined}
+      onLoad={loadMore}
+    />
+  {/if}
+</section>

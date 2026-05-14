@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import {
-    Play,
     Film,
     BookOpen,
     Layers,
@@ -10,73 +9,98 @@
     FolderOpen,
     Users,
     Building2,
+    Tag,
+    ChevronRight,
   } from "@lucide/svelte";
-  import { cn } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/v1/api/core-v1";
-  import NsfwShowModeChip from "$lib/components/nsfw/NsfwShowModeChip.svelte";
-  import VideoCard from "$lib/components/VideoCard.svelte";
-  import SeriesCard from "$lib/components/SeriesCard.svelte";
-  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
-  import { videoListItemToCardData } from "$lib/video-card-data";
+  import { fetchV2Entities, type V2EntityCard } from "$lib/api/v2";
+  import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
+  import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
   import { useNsfw } from "$lib/nsfw/store.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
 
-  let { data } = $props();
+  interface DashboardSection {
+    kind: string;
+    label: string;
+    icon: typeof Film;
+    href: string;
+    entityHref: (id: string) => string;
+    items: V2EntityCard[];
+    cards: EntityThumbnailCard[];
+  }
+
+  const SECTION_DEFS: Omit<DashboardSection, "items" | "cards">[] = [
+    { kind: "video", label: "Videos", icon: Film, href: "/videos", entityHref: (id) => `/videos/${id}` },
+    { kind: "video-series", label: "Series", icon: FolderOpen, href: "/series", entityHref: (id) => `/v2/series/${id}` },
+    { kind: "gallery", label: "Galleries", icon: Layers, href: "/galleries", entityHref: (id) => `/galleries/${id}` },
+    { kind: "book", label: "Books", icon: BookOpen, href: "/books", entityHref: (id) => `/books/${id}` },
+    { kind: "image", label: "Images", icon: ImageIcon, href: "/images", entityHref: (id) => `/images/${id}` },
+    { kind: "audio-library", label: "Audio", icon: Music, href: "/audio", entityHref: (id) => `/audio/${id}` },
+    { kind: "person", label: "Actors", icon: Users, href: "/performers", entityHref: (id) => `/performers/${id}` },
+    { kind: "studio", label: "Studios", icon: Building2, href: "/studios", entityHref: (id) => `/studios/${id}` },
+    { kind: "tag", label: "Tags", icon: Tag, href: "/tags", entityHref: (id) => `/tags/${id}` },
+  ];
+
   const nsfw = useNsfw();
 
-  const featuredVideos = $derived(
-    data.featuredVideos.filter((v) => nsfw.mode === "show" || !v.isNsfw),
-  );
-  const recentVideos = $derived(
-    data.recentVideos.filter((v) => nsfw.mode === "show" || !v.isNsfw),
-  );
-  const galleries = $derived(
-    data.galleries.filter((g) => nsfw.mode === "show" || !g.isNsfw),
-  );
-  const books = $derived(
-    data.books.filter((b) => nsfw.mode === "show" || !b.isNsfw),
-  );
-  const images = $derived(
-    data.images.filter((i) => nsfw.mode === "show" || !i.isNsfw),
-  );
-  const audioLibraries = $derived(
-    data.audioLibraries.filter((a) => nsfw.mode === "show" || !a.isNsfw),
-  );
-  const series = $derived(data.series.filter((s) => nsfw.mode === "show" || !s.isNsfw));
-  const performers = $derived(
-    data.performers.filter((p) => nsfw.mode === "show" || !p.isNsfw),
-  );
-  const studios = $derived(
-    data.studios.filter((s) => nsfw.mode === "show" || !s.isNsfw),
-  );
+  let loading = $state(true);
+  let sections: DashboardSection[] = $state([]);
 
-  const hasAnyContent = $derived(
-    featuredVideos.length > 0 ||
-      recentVideos.length > 0 ||
-      galleries.length > 0 ||
-      books.length > 0 ||
-      images.length > 0 ||
-      audioLibraries.length > 0 ||
-      series.length > 0 ||
-      performers.length > 0 ||
-      studios.length > 0,
-  );
+  const populatedSections = $derived(sections.filter((s) => s.cards.length > 0));
+  const hasAnyContent = $derived(populatedSections.length > 0);
 
-  let currentIndex = $state(0);
+  let lastNsfwMode = $state(nsfw.mode);
 
   onMount(() => {
-    if (featuredVideos.length <= 1) return;
-    const interval = setInterval(() => {
-      currentIndex = (currentIndex + 1) % featuredVideos.length;
-    }, 8000);
-    return () => clearInterval(interval);
+    void loadDashboard();
   });
+
+  $effect(() => {
+    if (nsfw.mode !== lastNsfwMode) {
+      lastNsfwMode = nsfw.mode;
+      void loadDashboard();
+    }
+  });
+
+  async function loadDashboard() {
+    loading = true;
+    const hideNsfw = nsfw.mode === "off";
+
+    const results = await Promise.allSettled(
+      SECTION_DEFS.map(async (def) => {
+        const response = await fetchV2Entities({ kind: def.kind, hideNsfw });
+        return { def, items: response.items };
+      }),
+    );
+
+    sections = results.map((result, i) => {
+      const def = SECTION_DEFS[i];
+      if (result.status === "fulfilled") {
+        const items = result.value.items.slice(0, 20);
+        return {
+          ...def,
+          items,
+          cards: items.map((item) => entityCardToThumbnailCard(item, def.entityHref(item.id))),
+        };
+      }
+      return { ...def, items: [], cards: [] };
+    });
+
+    loading = false;
+  }
 </script>
 
 <svelte:head>
   <title>Dashboard — Obscura</title>
 </svelte:head>
 
-{#if !hasAnyContent}
+{#if loading}
+  <div class="min-h-[80vh] flex items-center justify-center">
+    <div class="flex flex-col items-center gap-4">
+      <div class="h-8 w-8 border-2 border-accent-500/30 border-t-accent-500 animate-spin"></div>
+      <p class="text-sm text-text-muted">Loading your library...</p>
+    </div>
+  </div>
+{:else if !hasAnyContent}
   <div class="min-h-[80vh] flex flex-col items-center justify-center text-center p-8">
     <div
       class="w-24 h-24 mb-8 text-accent-500/20 flex items-center justify-center bg-surface-2 border border-border-subtle"
@@ -85,8 +109,8 @@
     </div>
     <h1 class="text-3xl font-bold text-text-primary mb-4">Your library is empty</h1>
     <p class="text-text-muted max-w-md mb-8">
-      It looks like you haven't added any media yet, or your current filters are hiding everything.
-      Head over to Settings to configure your library roots and start scanning.
+      It looks like you haven't added any media yet. Head over to Settings to configure
+      your library roots and start scanning.
     </p>
     <a
       href="/settings"
@@ -96,348 +120,36 @@
     </a>
   </div>
 {:else}
-  <div class="min-h-screen bg-bg text-text-primary pb-24 -m-5">
-    <!-- Hero -->
-    {#if featuredVideos.length > 0}
-      <div
-        class="relative w-full h-[70vh] min-h-[500px] max-h-[800px] overflow-hidden bg-surface-1"
-      >
-        {#each featuredVideos as video, index (video.id)}
-          {@const isActive = index === currentIndex}
-          {@const heroThumb = toApiUrl(video.cardThumbnailPath) ?? toApiUrl(video.thumbnailPath)}
-          <div
-            class={cn(
-              "absolute inset-0 transition-opacity duration-[1500ms] ease-in-out",
-              isActive ? "opacity-100 z-10" : "opacity-0 z-0",
-            )}
+  <div class="space-y-10 pb-16 -mx-1">
+    {#each populatedSections as section (section.kind)}
+      <section>
+        <div class="flex items-center justify-between mb-4 px-1">
+          <h2 class="text-lg font-semibold flex items-center gap-2">
+            <section.icon class="w-4.5 h-4.5 text-accent-500" />
+            {section.label}
+          </h2>
+          <a
+            href={section.href}
+            class="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text-accent transition-colors"
           >
-            {#if heroThumb}
-              <img
-                src={heroThumb}
-                alt={video.title}
-                class={cn(
-                  "w-full h-full object-cover transform-gpu transition-transform duration-[10000ms] ease-out",
-                  isActive ? "scale-105" : "scale-100",
-                )}
-              />
-            {/if}
-          </div>
-        {/each}
-
-        <!-- Cinematic gradient overlay -->
-        <div class="absolute inset-0 z-20 bg-gradient-to-t from-bg via-bg/60 to-transparent"></div>
-        <div class="absolute inset-0 z-20 bg-gradient-to-r from-bg via-bg/40 to-transparent"></div>
-
-        <!-- Hero content -->
-        <div class="absolute bottom-0 left-0 w-full p-8 md:p-16 z-30 flex flex-col justify-end">
-          <div class="max-w-3xl grid" style:grid-template-areas="'stack'">
-            {#each featuredVideos as video, index (video.id)}
-              {@const isActive = index === currentIndex}
-              <div
-                style:grid-area="stack"
-                class={cn(
-                  "transition-all duration-normal flex flex-col justify-end",
-                  isActive
-                    ? "opacity-100 translate-y-0 pointer-events-auto z-10"
-                    : "opacity-0 translate-y-4 pointer-events-none z-0",
-                )}
-              >
-                <div
-                  class="flex items-center gap-3 text-accent-500 font-mono text-sm tracking-widest uppercase mb-4"
-                >
-                  <span class="flex items-center gap-1">
-                    <Film class="w-4 h-4" />
-                    Featured
-                  </span>
-                  {#if video.isNsfw}
-                    <span class="text-text-muted">•</span>
-                    <NsfwShowModeChip isNsfw={video.isNsfw} />
-                  {/if}
-                  {#if video.durationFormatted}
-                    <span class="text-text-muted">•</span>
-                    <span>{video.durationFormatted}</span>
-                  {/if}
-                  {#if video.resolution}
-                    <span class="text-text-muted">•</span>
-                    <span>{video.resolution}</span>
-                  {/if}
-                </div>
-                <h1
-                  class="text-4xl md:text-6xl font-bold tracking-tight text-white drop-shadow-lg line-clamp-2"
-                >
-                  {video.title}
-                </h1>
-                <div class="pt-6 flex items-center gap-4">
-                  <a
-                    href={`/videos/${video.id}`}
-                    class="flex items-center gap-2 bg-accent-500 hover:bg-accent-400 text-accent-950 px-8 py-3 font-semibold transition-all duration-normal hover:shadow-[0_0_24px_rgba(196,154,90,0.4)]"
-                  >
-                    <Play class="w-5 h-5 fill-current" />
-                    Play now
-                  </a>
-                </div>
-              </div>
-            {/each}
-          </div>
-
-          {#if featuredVideos.length > 1}
-            <div class="absolute bottom-8 right-8 md:bottom-16 md:right-16 flex items-center gap-1">
-              {#each featuredVideos as _, index (index)}
-                <button
-                  type="button"
-                  onclick={() => (currentIndex = index)}
-                  class="p-2 group"
-                  aria-label={`Go to slide ${index + 1}`}
-                >
-                  <div
-                    class={cn(
-                      "h-1 transition-all duration-normal",
-                      index === currentIndex
-                        ? "w-8 bg-accent-500 shadow-[0_0_8px_rgba(196,154,90,0.6)]"
-                        : "w-4 bg-white/30 group-hover:bg-white/50",
-                    )}
-                  ></div>
-                </button>
-              {/each}
-            </div>
-          {/if}
+            View all
+            <ChevronRight class="h-3.5 w-3.5" />
+          </a>
         </div>
-      </div>
-    {/if}
 
-    <!-- Horizontal rows -->
-    <div class="space-y-12 mt-12 px-4 md:px-8">
-      {#if recentVideos.length > 0}
-        <section>
-          <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
-            <Film class="w-5 h-5 text-accent-500" />
-            Recent Videos
-          </h2>
-          <div class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hidden">
-            {#each recentVideos as video, i (video.id)}
-              <div class="flex-none w-72 md:w-80 snap-start">
-                <VideoCard
-                  video={videoListItemToCardData(video, "/")}
-                  variant="grid"
-                  index={i}
-                />
-              </div>
-            {/each}
-          </div>
-        </section>
-      {/if}
-
-      {#if galleries.length > 0}
-        <section>
-          <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
-            <Layers class="w-5 h-5 text-accent-500" />
-            Recent Galleries
-          </h2>
-          <div class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hidden">
-            {#each galleries as g (g.id)}
-              <div class="flex-none w-48 md:w-56 snap-start">
-                <a
-                  href={`/galleries/${g.id}`}
-                  class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
-                >
-                  <EntityThumbnail
-                    kind="gallery"
-                    title={g.title}
-                    coverImagePath={g.coverImagePath}
-                    previewImagePaths={g.previewImagePaths}
-                    imageCount={g.imageCount}
-                    isNsfw={g.isNsfw}
-                    isComic={g.isComic}
-                    rating={g.rating}
-                    aspectRatio={g.isComic ? null : g.coverAspectRatio}
-                    fit={g.isComic ? "contain" : "cover"}
-                    size="grid"
-                  />
-                  <div class="p-2.5">
-                    <h3 class="truncate text-sm font-medium">{g.title}</h3>
-                    <p class="text-xs text-text-muted mt-0.5">
-                      {g.imageCount} image{g.imageCount === 1 ? "" : "s"}
-                    </p>
-                  </div>
-                </a>
-              </div>
-            {/each}
-          </div>
-        </section>
-      {/if}
-
-      {#if books.length > 0}
-        <section>
-          <h2 class="mb-6 flex items-center gap-2 text-xl font-semibold">
-            <BookOpen class="h-5 w-5 text-accent-500" />
-            Recent Books
-          </h2>
-          <div class="scrollbar-hidden flex snap-x snap-mandatory gap-4 overflow-x-auto pb-6">
-            {#each books as book, i (book.id)}
-              <div class="w-48 flex-none snap-start md:w-56">
-                <a
-                  href={`/books/${book.id}`}
-                  class="surface-card-sharp group/card block overflow-hidden transition-colors duration-fast hover:border-border-accent"
-                >
-                  <EntityThumbnail
-                    kind="book"
-                    title={book.title}
-                    coverImagePath={book.coverImagePath}
-                    previewImagePaths={book.previewImagePaths}
-                    pageCount={book.pageCount}
-                    isNsfw={book.isNsfw}
-                    rating={book.rating}
-                    aspectClass="aspect-[2/3]"
-                    fit="contain"
-                    gradientIndex={i}
-                  />
-                  <div class="p-2.5">
-                    <h3 class="truncate text-sm font-medium">{book.title}</h3>
-                    <p class="mt-0.5 text-xs text-text-muted">
-                      {book.chapterCount} chapter{book.chapterCount === 1 ? "" : "s"}
-                    </p>
-                  </div>
-                </a>
-              </div>
-            {/each}
-          </div>
-        </section>
-      {/if}
-
-      {#if images.length > 0}
-        <section>
-          <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
-            <ImageIcon class="w-5 h-5 text-accent-500" />
-            Recent Images
-          </h2>
-          <div class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hidden">
-            {#each images as img (img.id)}
-              <div class="flex-none w-64 md:w-72 snap-start">
-                <a
-                  href={`/images/${img.id}`}
-                  class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
-                >
-                  <EntityThumbnail
-                    kind="image"
-                    title={img.title}
-                    thumbnailPath={img.thumbnailPath}
-                    previewPath={img.previewPath}
-                    isNsfw={img.isNsfw}
-                    isVideo={img.isVideo}
-                    width={img.width}
-                    height={img.height}
-                    rating={img.rating}
-                    size="hero"
-                  />
-                  <div class="p-2.5">
-                    <h3 class="truncate text-sm font-medium">{img.title}</h3>
-                  </div>
-                </a>
-              </div>
-            {/each}
-          </div>
-        </section>
-      {/if}
-
-      {#if audioLibraries.length > 0}
-        <section>
-          <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
-            <Music class="w-5 h-5 text-accent-500" />
-            Recent Audio
-          </h2>
-          <div class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hidden">
-            {#each audioLibraries as a, i (a.id)}
-              <div class="flex-none w-48 md:w-56 snap-start">
-                <a
-                  href={`/audio/${a.id}`}
-                  class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block group/card"
-                >
-                  <EntityThumbnail kind="audio-library" library={a} gradientIndex={i} />
-                  <div class="p-2.5">
-                    <h3 class="truncate text-sm font-medium">{a.title}</h3>
-                    <p class="text-xs text-text-muted mt-0.5">
-                      {a.trackCount} track{a.trackCount === 1 ? "" : "s"}
-                    </p>
-                  </div>
-                </a>
-              </div>
-            {/each}
-          </div>
-        </section>
-      {/if}
-
-      {#if series.length > 0}
-        <section>
-          <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
-            <FolderOpen class="w-5 h-5 text-accent-500" />
-            Recent Series
-          </h2>
-          <div class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hidden">
-            {#each series as s (s.id)}
-              <div class="flex-none w-40 md:w-48 snap-start">
-                <SeriesCard series={s} href={`/series?series=${s.id}`} compact />
-              </div>
-            {/each}
-          </div>
-        </section>
-      {/if}
-
-      {#if performers.length > 0}
-        <section>
-          <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
-            <Users class="w-5 h-5 text-accent-500" />
-            Recent Performers
-          </h2>
-          <div class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hidden">
-            {#each performers as p (p.id)}
-              <div class="flex-none w-40 md:w-48 snap-start">
-                <a
-                  href={`/performers/${p.id}`}
-                  class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
-                >
-                  <EntityThumbnail
-                    kind="performer"
-                    performer={p}
-                    gradientIndex={0}
-                  />
-                  <div class="p-2">
-                    <h3 class="truncate text-[0.8rem] font-medium">{p.name}</h3>
-                    {#if (p.appearanceCount ?? p.videoCount) > 0}
-                      <p class="text-[0.65rem] text-text-disabled">
-                        {p.appearanceCount ?? p.videoCount} appearance{(p.appearanceCount ?? p.videoCount) === 1 ? "" : "s"}
-                      </p>
-                    {/if}
-                  </div>
-                </a>
-              </div>
-            {/each}
-          </div>
-        </section>
-      {/if}
-
-      {#if studios.length > 0}
-        <section>
-          <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
-            <Building2 class="w-5 h-5 text-accent-500" />
-            Studios
-          </h2>
-          <div class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hidden">
-            {#each studios as s (s.id)}
-              <div class="flex-none w-64 md:w-72 snap-start">
-                <a
-                  href={`/studios/${encodeURIComponent(s.name)}`}
-                  class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
-                >
-                  <EntityThumbnail kind="studio" studio={s} />
-                  <div class="p-2.5">
-                    <h3 class="truncate text-sm font-medium">{s.name}</h3>
-                  </div>
-                </a>
-              </div>
-            {/each}
-          </div>
-        </section>
-      {/if}
-    </div>
+        <div class="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hidden px-1">
+          {#each section.cards as card (card.entity.id)}
+            <div class="flex-none snap-start" style:width="clamp(140px, 18vw, 220px)">
+              <a
+                href={card.href}
+                class="block overflow-hidden border border-border-subtle bg-surface-1 hover:border-border-accent transition-colors duration-fast"
+              >
+                <EntityThumbnail {card} />
+              </a>
+            </div>
+          {/each}
+        </div>
+      </section>
+    {/each}
   </div>
 {/if}
