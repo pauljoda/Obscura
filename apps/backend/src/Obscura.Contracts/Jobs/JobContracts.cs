@@ -28,10 +28,19 @@ public sealed record JobRun(
     DateTimeOffset? FinishedAt);
 
 /// <summary>
+/// Aggregate count of job runs sharing a type and status.
+/// </summary>
+/// <param name="Type">Job type code (e.g. "scan-library").</param>
+/// <param name="Status">Job status code (e.g. "queued", "running").</param>
+/// <param name="Count">Number of job runs with this type and status.</param>
+public sealed record JobQueueCountDto(string Type, string Status, int Count);
+
+/// <summary>
 /// API response containing job runs for the operations dashboard.
 /// </summary>
-/// <param name="Items">Job runs ordered by the API.</param>
-public sealed record JobListResponse(IReadOnlyList<JobRun> Items);
+/// <param name="Items">Recent job runs (most recent first, capped for dashboard display).</param>
+/// <param name="Counts">Aggregate counts per type and status across all job runs.</param>
+public sealed record JobListResponse(IReadOnlyList<JobRun> Items, IReadOnlyList<JobQueueCountDto> Counts);
 
 /// <summary>
 /// API response returned after creating a new job run.

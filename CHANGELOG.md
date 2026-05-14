@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 - Entity thumbnails now show a gradient placeholder with the entity-type icon when the cover image is missing or fails to load, instead of displaying broken image alt text.
 - Generated thumbnails, previews, waveforms, and subtitles are now served via the `/assets/` HTTP route and stored as API-relative URLs — previously stored as disk paths that browsers could not resolve.
+- Trickplay hover preview now expands VTT manifest paths into individual frame URLs based on video duration, so the scrub-preview image strip renders correctly on hover.
+- Jobs dashboard now shows accurate queue backlog counts via server-side aggregate queries — previously capped at 200 due to the item list limit.
 - Navigation between pages no longer causes a full-page reload flash. Removed legacy v1 server load files (`+page.server.ts`) that prevented SvelteKit's client-side router from intercepting link clicks.
 - Library scan now propagates the NSFW flag from the library root to all child entities — images, audio libraries, audio tracks, book chapters, and book pages were previously missing the flag even when their parent library root was marked NSFW.
 

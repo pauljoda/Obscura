@@ -250,6 +250,19 @@ public sealed class JobQueueService : IJobQueueService
         await _db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<JobQueueCount>> GetQueueCountsAsync(CancellationToken cancellationToken)
+    {
+        var rows = await _db.JobRuns
+            .AsNoTracking()
+            .GroupBy(r => new { r.Type, r.Status })
+            .Select(g => new { g.Key.Type, g.Key.Status, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .Select(r => new JobQueueCount(r.Type.ToCode(), r.Status.ToCode(), r.Count))
+            .ToList();
+    }
+
     public async Task<int> PruneHistoryAsync(TimeSpan retention, CancellationToken cancellationToken)
     {
         var cutoff = DateTimeOffset.UtcNow - retention;

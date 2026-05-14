@@ -64,6 +64,12 @@ public interface IJobQueueService
     Task FailAsync(Guid id, string message, TimeSpan retryDelay, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Returns aggregate counts of job runs grouped by type code and status code,
+    /// so the dashboard can display accurate totals without fetching all rows.
+    /// </summary>
+    Task<IReadOnlyList<JobQueueCount>> GetQueueCountsAsync(CancellationToken cancellationToken);
+
+    /// <summary>
     /// Deletes completed and cancelled job runs older than the retention period.
     /// </summary>
     Task<int> PruneHistoryAsync(TimeSpan retention, CancellationToken cancellationToken);

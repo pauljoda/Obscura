@@ -7,6 +7,7 @@ import {
   type QueueSummaryDto,
 } from "@obscura/contracts";
 import type { V2JobRun } from "$lib/api/v2";
+import type { JobQueueCountDto } from "$lib/api/generated/model/jobListResponse";
 
 type V2JobDefinition = {
   type: string;
@@ -246,6 +247,7 @@ export interface V2ScheduleInfo {
 export function buildV2JobsDashboard(
   jobs: readonly V2JobRun[],
   schedule?: V2ScheduleInfo,
+  counts?: readonly JobQueueCountDto[],
 ): JobsDashboardDto {
   const mappedJobs = jobs.map(mapV2JobRun);
   const summaries = new Map<QueueName, QueueSummaryDto>();
@@ -256,15 +258,30 @@ export function buildV2JobsDashboard(
     }
   }
 
-  for (const job of mappedJobs) {
-    const summary = summaries.get(job.queueName);
-    if (!summary) continue;
+  if (counts && counts.length > 0) {
+    for (const { type, status, count } of counts) {
+      const def = jobDefinitionByType.get(type);
+      if (!def) continue;
+      const summary = summaries.get(def.queueName);
+      if (!summary) continue;
 
-    if (job.status === "active") summary.active += 1;
-    if (job.status === "waiting") summary.waiting += 1;
-    if (job.status === "delayed") summary.delayed += 1;
-    if (job.status === "completed") summary.completed += 1;
-    if (job.status === "failed") summary.failed += 1;
+      const mapped = mapV2JobStatus(status);
+      if (mapped === "active") summary.active += count;
+      else if (mapped === "waiting") summary.waiting += count;
+      else if (mapped === "completed") summary.completed += count;
+      else if (mapped === "failed") summary.failed += count;
+    }
+  } else {
+    for (const job of mappedJobs) {
+      const summary = summaries.get(job.queueName);
+      if (!summary) continue;
+
+      if (job.status === "active") summary.active += 1;
+      if (job.status === "waiting") summary.waiting += 1;
+      if (job.status === "delayed") summary.delayed += 1;
+      if (job.status === "completed") summary.completed += 1;
+      if (job.status === "failed") summary.failed += 1;
+    }
   }
 
   for (const summary of summaries.values()) {

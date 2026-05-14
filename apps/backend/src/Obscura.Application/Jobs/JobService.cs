@@ -24,8 +24,14 @@ public sealed class JobService
     /// </summary>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>API-ready job list response.</returns>
-    public async Task<JobListResponse> ListAsync(CancellationToken cancellationToken) =>
-        new((await _queue.ListAsync(cancellationToken)).Select(ToContract).ToArray());
+    public async Task<JobListResponse> ListAsync(CancellationToken cancellationToken)
+    {
+        var items = (await _queue.ListAsync(cancellationToken)).Select(ToContract).ToArray();
+        var counts = (await _queue.GetQueueCountsAsync(cancellationToken))
+            .Select(c => new JobQueueCountDto(c.TypeCode, c.StatusCode, c.Count))
+            .ToArray();
+        return new JobListResponse(items, counts);
+    }
 
     /// <summary>
     /// Creates a job from a typed queue operation.

@@ -166,9 +166,39 @@ function assetFromPath(path: string, title: string, role?: string): EntityThumbn
 function previewAssets(entity: EntityCard, roles: string[]): EntityThumbnailAsset[] {
   const images = getImagesCapability(entity.capabilities);
   if (!images) return [];
-  return images.items
-    .filter((item) => roles.includes(item.kind))
-    .map((item) => assetFromPath(item.path, entity.title, item.kind));
+
+  const results: EntityThumbnailAsset[] = [];
+  for (const item of images.items) {
+    if (!roles.includes(item.kind)) continue;
+
+    if (item.kind === "trickplay" && item.path.endsWith(".vtt")) {
+      const frameAssets = expandTrickplayFrames(entity, item.path);
+      if (frameAssets.length > 0) {
+        results.push(...frameAssets);
+        continue;
+      }
+    }
+
+    results.push(assetFromPath(item.path, entity.title, item.kind));
+  }
+  return results;
+}
+
+function expandTrickplayFrames(entity: EntityCard, vttPath: string): EntityThumbnailAsset[] {
+  const technical = getTechnicalCapability(entity.capabilities);
+  const duration = durationSeconds(technical?.duration);
+  if (!duration || duration <= 0) return [];
+
+  const baseDir = vttPath.replace(/\/[^/]+\.vtt$/, "/trickplay-frames");
+  const interval = 10;
+  const frameCount = Math.max(1, Math.floor(duration / interval));
+
+  const assets: EntityThumbnailAsset[] = [];
+  for (let i = 0; i < frameCount; i++) {
+    const frameName = `frame-${String(i).padStart(5, "0")}.jpg`;
+    assets.push(assetFromPath(`${baseDir}/${frameName}`, entity.title, "trickplay"));
+  }
+  return assets;
 }
 
 function metaForEntity(entity: EntityCard): EntityThumbnailCard["meta"] {

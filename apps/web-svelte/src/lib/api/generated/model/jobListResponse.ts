@@ -6,6 +6,13 @@
  */
 import type { JobRun } from './jobRun';
 
+export interface JobQueueCountDto {
+  type: string;
+  status: string;
+  count: number;
+}
+
 export interface JobListResponse {
   items: JobRun[];
+  counts: JobQueueCountDto[];
 }

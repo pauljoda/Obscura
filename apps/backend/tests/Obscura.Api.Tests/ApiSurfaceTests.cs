@@ -213,6 +213,9 @@ public sealed class ApiSurfaceTests
         public Task FailAsync(Guid id, string message, TimeSpan retryDelay, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
+        public Task<IReadOnlyList<JobQueueCount>> GetQueueCountsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<JobQueueCount>>([]);
+
         public Task<int> PruneHistoryAsync(TimeSpan retention, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
     }

@@ -70,7 +70,7 @@
   async function loadDashboard() {
     try {
       const response = await fetchV2Jobs();
-      dashboard = buildV2JobsDashboard(response.items, scheduleInfo);
+      dashboard = buildV2JobsDashboard(response.items, scheduleInfo, response.counts);
       error = null;
     } catch (err) {
       error = err instanceof Error ? err.message : "Failed to load jobs";
