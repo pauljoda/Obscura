@@ -27,7 +27,7 @@
     {
       "label": "Obscura: .NET Build",
       "type": "shell",
-      "command": "dotnet build apps/backend/Obscura.sln",
+      "command": "dotnet build apps/backend/Obscura.slnx",
       "options": { "cwd": "${workspaceFolder}" },
       "group": "build",
       "problemMatcher": "$msCompile",
@@ -36,7 +36,7 @@
     {
       "label": "Obscura: .NET Test",
       "type": "shell",
-      "command": "dotnet test apps/backend/Obscura.sln",
+      "command": "dotnet test apps/backend/Obscura.slnx",
       "options": { "cwd": "${workspaceFolder}" },
       "group": "test",
       "problemMatcher": "$msCompile",
