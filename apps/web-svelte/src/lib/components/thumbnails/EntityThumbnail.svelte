@@ -5,20 +5,25 @@
     Building2,
     Calendar,
     Clock3,
+    Disc3,
     Film,
     Flame,
+    FolderOpen,
     Hash,
+    Image,
     Images,
     Layers,
     Music,
     Star,
     Tag,
-    User,
+    Users,
   } from "@lucide/svelte";
   import { getRatingValue, isNsfw } from "$lib/api/capabilities";
   import {
     getThumbnailAsset,
     hasHoverPreview,
+    iconForKind,
+    placeholderGradient,
     toAspectRatioValue,
     type EntityThumbnailCard,
     type EntityThumbnailMetaIcon,
@@ -35,10 +40,22 @@
   let { card, layout = "grid", onSelectedChange, selectable = false, selected = false }: Props = $props();
 
   let pointerRatio = $state<number | null>(null);
+  let imageFailed = $state(false);
+  let lastSrc = $state<string | undefined>(undefined);
 
   const asset = $derived(getThumbnailAsset(card, pointerRatio));
   const aspectRatio = $derived(toAspectRatioValue(card.aspectRatio));
   const imageFit = $derived(card.fit ?? "contain");
+  const placeholderIcon = $derived(iconForKind(card.entity.kind));
+  const showPlaceholder = $derived(!asset || imageFailed);
+  const gradient = $derived(placeholderGradient(card.entity.title));
+
+  $effect(() => {
+    if (asset?.src !== lastSrc) {
+      lastSrc = asset?.src;
+      imageFailed = false;
+    }
+  });
   const hoverable = $derived(hasHoverPreview(card));
   const nsfw = $derived(isNsfw(card.entity.capabilities));
   const rating = $derived(getRatingValue(card.entity.capabilities));
@@ -141,16 +158,25 @@
 >
   <div
     class="media"
+    class:has-placeholder={showPlaceholder}
     role="presentation"
     style:aspect-ratio={layout === "list" ? undefined : aspectRatio}
+    style:background={showPlaceholder ? gradient : undefined}
     onpointermove={handlePointerMove}
     onpointerleave={clearHover}
   >
-    {#if asset}
-      <img src={asset.src} alt={asset.alt} loading="lazy" style:object-fit={imageFit} />
+    {#if asset && !showPlaceholder}
+      <img
+        src={asset.src}
+        alt={asset.alt}
+        loading="lazy"
+        style:object-fit={imageFit}
+        onerror={() => { imageFailed = true; }}
+      />
     {:else}
+      <div class="placeholder-glow" aria-hidden="true"></div>
       <div class="placeholder" aria-hidden="true">
-        {@render IconFor({ icon: card.meta?.[0]?.icon ?? "collection" })}
+        {@render PlaceholderIcon({ kind: card.entity.kind })}
       </div>
     {/if}
 
@@ -212,7 +238,7 @@
           {#each card.meta as item (item.icon + item.label)}
             <div>
               <dt>
-                {@render IconFor({ icon: item.icon })}
+                {@render MetaIcon({ icon: item.icon })}
               </dt>
               <dd>{item.label}</dd>
             </div>
@@ -223,7 +249,36 @@
   {/if}
 </svelte:element>
 
-{#snippet IconFor({ icon }: { icon: EntityThumbnailMetaIcon })}
+{#snippet PlaceholderIcon({ kind }: { kind: string })}
+  {#if kind.startsWith("video")}
+    <div class="placeholder-frame">
+      <Film class="placeholder-icon-framed" />
+    </div>
+  {:else if kind.startsWith("audio")}
+    <div class="placeholder-audio">
+      <Disc3 class="placeholder-disc" />
+      <Music class="placeholder-note" />
+    </div>
+  {:else if kind === "person"}
+    <Users class="placeholder-icon" />
+  {:else if kind.startsWith("book")}
+    <BookOpen class="placeholder-icon" />
+  {:else if kind === "gallery"}
+    <Layers class="placeholder-icon" />
+  {:else if kind === "image"}
+    <Image class="placeholder-icon" />
+  {:else if kind === "studio"}
+    <Building2 class="placeholder-icon" />
+  {:else if kind === "tag"}
+    <Tag class="placeholder-icon" />
+  {:else if kind === "collection"}
+    <FolderOpen class="placeholder-icon" />
+  {:else}
+    <Hash class="placeholder-icon" />
+  {/if}
+{/snippet}
+
+{#snippet MetaIcon({ icon }: { icon: EntityThumbnailMetaIcon })}
   {#if icon === "audio"}
     <Music size={12} />
   {:else if icon === "book"}
@@ -241,7 +296,7 @@
   {:else if icon === "image"}
     <Images size={12} />
   {:else if icon === "person"}
-    <User size={12} />
+    <Users size={12} />
   {:else if icon === "studio"}
     <Building2 size={12} />
   {:else if icon === "tag"}
@@ -332,15 +387,81 @@
     filter: saturate(1.06) contrast(1.04);
   }
 
-  .placeholder {
-    display: grid;
-    place-items: center;
-    color: rgb(244 239 230 / 0.58);
+  .placeholder-glow {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at top, rgb(245 239 213 / 0.16), transparent 38%),
+      linear-gradient(180deg, rgb(7 8 11 / 0.06) 0%, rgb(7 8 11 / 0.55) 100%);
+    pointer-events: none;
   }
 
-  .placeholder :global(svg) {
-    width: 30%;
-    height: 30%;
+  .placeholder {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  .placeholder-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    border: 1px solid rgb(196 154 90 / 0.25);
+    background: rgb(0 0 0 / 0.3);
+    backdrop-filter: blur(4px);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.08),
+      0 0 24px rgb(0 0 0 / 0.35);
+  }
+
+  .placeholder :global(.placeholder-icon-framed) {
+    width: 1.75rem;
+    height: 1.75rem;
+    color: rgb(231 211 175 / 0.85);
+    filter: drop-shadow(0 0 14px rgb(196 154 90 / 0.24));
+  }
+
+  .placeholder :global(.placeholder-icon) {
+    width: 2rem;
+    height: 2rem;
+    color: rgb(255 255 255 / 0.25);
+  }
+
+  .placeholder-audio {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .placeholder :global(.placeholder-disc) {
+    width: 3.5rem;
+    height: 3.5rem;
+    color: rgb(255 255 255 / 0.15);
+    animation: spin-disc 12s linear infinite;
+  }
+
+  .placeholder :global(.placeholder-note) {
+    position: absolute;
+    width: 1.5rem;
+    height: 1.5rem;
+    color: rgb(255 255 255 / 0.4);
+  }
+
+  @keyframes spin-disc {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .placeholder :global(.placeholder-disc) {
+      animation: none;
+    }
   }
 
   .scrim {

@@ -8,10 +8,11 @@ import {
   type EntityCapabilityKind,
 } from "$lib/api/capabilities";
 import type { EntityCard, EntityCapability } from "$lib/api/generated/model";
-import type {
-  EntityThumbnailAsset,
-  EntityThumbnailCard,
-  EntityThumbnailMetaIcon,
+import {
+  iconForKind,
+  type EntityThumbnailAsset,
+  type EntityThumbnailCard,
+  type EntityThumbnailMetaIcon,
 } from "./entity-thumbnail";
 
 /**
@@ -138,17 +139,6 @@ function statIcon(code: string): EntityThumbnailMetaIcon {
   return "count";
 }
 
-function iconForKind(kind: string): EntityThumbnailMetaIcon {
-  if (kind.startsWith("audio")) return "audio";
-  if (kind.startsWith("book")) return "book";
-  if (kind.startsWith("video")) return "video";
-  if (kind === "gallery") return "gallery";
-  if (kind === "image") return "image";
-  if (kind === "person") return "person";
-  if (kind === "studio") return "studio";
-  if (kind === "tag") return "tag";
-  return "collection";
-}
 
 function aspectRatioForEntity(entity: EntityCard): EntityThumbnailCard["aspectRatio"] {
   const technical = getTechnicalCapability(entity.capabilities);

@@ -114,6 +114,39 @@ export function pickHoverAsset(card: EntityThumbnailCard, pointerRatio: number):
   return card.hover.assets[index] ?? null;
 }
 
+/** Maps an entity kind code to the closest matching thumbnail meta icon for placeholder display. */
+export function iconForKind(kind: string): EntityThumbnailMetaIcon {
+  if (kind.startsWith("audio")) return "audio";
+  if (kind.startsWith("book")) return "book";
+  if (kind.startsWith("video")) return "video";
+  if (kind === "gallery") return "gallery";
+  if (kind === "image") return "image";
+  if (kind === "person") return "person";
+  if (kind === "studio") return "studio";
+  if (kind === "tag") return "tag";
+  return "collection";
+}
+
+const PLACEHOLDER_GRADIENTS = [
+  "linear-gradient(135deg, #1a1028 0%, #2d1b4e 40%, #4a2040 100%)",
+  "linear-gradient(135deg, #0f1a2e 0%, #1b3a5c 40%, #0d2847 100%)",
+  "linear-gradient(135deg, #1a0f0a 0%, #3d2415 40%, #5c3a1b 100%)",
+  "linear-gradient(135deg, #0a1a14 0%, #153d2b 40%, #1b5c3f 100%)",
+  "linear-gradient(135deg, #1a1018 0%, #3d1535 40%, #5c1b4a 100%)",
+  "linear-gradient(135deg, #1a180a 0%, #3d3515 40%, #5c4f1b 100%)",
+  "linear-gradient(135deg, #0a0f1a 0%, #15243d 40%, #1b365c 100%)",
+  "linear-gradient(135deg, #1a0a12 0%, #3d1528 40%, #5c1b3b 100%)",
+];
+
+/** Picks a deterministic gradient background from the palette based on the entity title. */
+export function placeholderGradient(title: string): string {
+  let hash = 0;
+  for (let i = 0; i < title.length; i++) {
+    hash = (hash * 31 + title.charCodeAt(i)) >>> 0;
+  }
+  return PLACEHOLDER_GRADIENTS[hash % PLACEHOLDER_GRADIENTS.length];
+}
+
 /** Resolves the currently visible asset, preferring hover previews when active. */
 export function getThumbnailAsset(card: EntityThumbnailCard, pointerRatio: number | null): EntityThumbnailAsset | null {
   if (pointerRatio !== null) {
