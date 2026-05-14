@@ -28,6 +28,7 @@
     type EntityThumbnailCard,
     type EntityThumbnailMetaIcon,
   } from "$lib/entities/entity-thumbnail";
+  import { loadTrickplayFrames, type TrickplayFrame } from "@obscura/ui-svelte";
 
   interface Props {
     card: EntityThumbnailCard;
@@ -44,12 +45,45 @@
   let hoverBroken = $state(false);
   let lastSrc = $state<string | undefined>(undefined);
 
-  const asset = $derived(getThumbnailAsset(card, hoverBroken ? null : pointerRatio));
+  let spriteFrames = $state<TrickplayFrame[] | null>(null);
+  let spriteError = $state(false);
+
+  const isSpriteHover = $derived(card.hover.kind === "sprite");
+  const asset = $derived(getThumbnailAsset(card, hoverBroken || isSpriteHover ? null : pointerRatio));
   const aspectRatio = $derived(toAspectRatioValue(card.aspectRatio));
   const imageFit = $derived(card.fit ?? "contain");
   const placeholderIcon = $derived(iconForKind(card.entity.kind));
-  const showPlaceholder = $derived(!asset || imageFailed);
+  const showPlaceholder = $derived(isSpriteHover ? !card.cover : !asset || imageFailed);
   const gradient = $derived(placeholderGradient(card.entity.title));
+
+  const activeSpriteFrame = $derived.by(() => {
+    if (!isSpriteHover || !spriteFrames || pointerRatio === null) return null;
+    const clamped = Math.max(0, Math.min(1, pointerRatio));
+    const idx = Math.min(spriteFrames.length - 1, Math.floor(clamped * spriteFrames.length));
+    return spriteFrames[idx] ?? null;
+  });
+
+  const spriteDims = $derived.by(() => {
+    if (!spriteFrames) return { width: 0, height: 0 };
+    return {
+      width: spriteFrames.reduce((max, f) => Math.max(max, f.x + f.width), 0),
+      height: spriteFrames.reduce((max, f) => Math.max(max, f.y + f.height), 0),
+    };
+  });
+
+  async function ensureSpriteLoaded() {
+    if (!isSpriteHover || spriteFrames || spriteError) return;
+    const hover = card.hover as { kind: "sprite"; spriteUrl: string; vttUrl: string };
+    try {
+      if (typeof globalThis.Image !== "undefined") {
+        const img = new globalThis.Image();
+        img.src = hover.spriteUrl;
+      }
+      spriteFrames = await loadTrickplayFrames(hover.vttUrl);
+    } catch {
+      spriteError = true;
+    }
+  }
 
   $effect(() => {
     if (asset?.src !== lastSrc) {
@@ -57,7 +91,7 @@
       imageFailed = false;
     }
   });
-  const hoverable = $derived(hasHoverPreview(card) && !hoverBroken);
+  const hoverable = $derived(hasHoverPreview(card) && !hoverBroken && !spriteError);
   const nsfw = $derived(isNsfw(card.entity.capabilities));
   const rating = $derived(getRatingValue(card.entity.capabilities));
   const imageOnly = $derived(card.entity.kind === "book-page");
@@ -163,10 +197,20 @@
     role="presentation"
     style:aspect-ratio={layout === "list" ? undefined : aspectRatio}
     style:background={showPlaceholder ? gradient : undefined}
+    onpointerenter={() => void ensureSpriteLoaded()}
     onpointermove={handlePointerMove}
     onpointerleave={clearHover}
   >
-    {#if asset && !showPlaceholder}
+    {#if isSpriteHover && card.cover}
+      <img
+        src={card.cover.src}
+        alt={card.cover.alt}
+        loading="lazy"
+        style:object-fit={imageFit}
+        class:sprite-active={activeSpriteFrame !== null}
+        onerror={() => { imageFailed = true; }}
+      />
+    {:else if asset && !showPlaceholder}
       <img
         src={asset.src}
         alt={asset.alt}
@@ -174,8 +218,6 @@
         style:object-fit={imageFit}
         onerror={() => {
           imageFailed = true;
-          // A hover asset 404'd — disable hover entirely so we stop flickering
-          // between broken frames and the cover image.
           if (pointerRatio !== null) {
             hoverBroken = true;
             pointerRatio = null;
@@ -187,6 +229,15 @@
       <div class="placeholder" aria-hidden="true">
         {@render PlaceholderIcon({ kind: card.entity.kind })}
       </div>
+    {/if}
+
+    {#if activeSpriteFrame && card.hover.kind === "sprite" && spriteDims.width > 0}
+      <div class="sprite-overlay" aria-hidden="true"
+        style:background-image="url({card.hover.spriteUrl})"
+        style:background-size="{(spriteDims.width / activeSpriteFrame.width) * 100}% {(spriteDims.height / activeSpriteFrame.height) * 100}%"
+        style:background-position="{spriteDims.width <= activeSpriteFrame.width ? 0 : (activeSpriteFrame.x / (spriteDims.width - activeSpriteFrame.width)) * 100}% {spriteDims.height <= activeSpriteFrame.height ? 0 : (activeSpriteFrame.y / (spriteDims.height - activeSpriteFrame.height)) * 100}%"
+        style:background-repeat="no-repeat"
+      ></div>
     {/if}
 
     {#if !imageOnly}
@@ -394,6 +445,17 @@
   .entity-thumbnail:is(:hover, :focus-visible) .media img,
   .entity-thumbnail.is-hovering .media img {
     filter: saturate(1.06) contrast(1.04);
+  }
+
+  .media img.sprite-active,
+  .media img:global(.sprite-active) {
+    opacity: 0;
+  }
+
+  .sprite-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
   }
 
   .placeholder-glow {

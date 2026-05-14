@@ -50,4 +50,19 @@ describe("entity thumbnail helpers", () => {
     expect(hasHoverPreview({ ...card, hover: { kind: "image-sequence", assets: [] } })).toBe(false);
     expect(hasHoverPreview({ ...card, hover: { kind: "none" } })).toBe(false);
   });
+
+  it("reports sprite hover as supported without assets array", () => {
+    expect(hasHoverPreview({
+      ...card,
+      hover: { kind: "sprite", spriteUrl: "/assets/videos/1/sprite", vttUrl: "/assets/videos/1/trickplay" },
+    })).toBe(true);
+  });
+
+  it("pickHoverAsset returns null for sprite hover kind", () => {
+    const spriteCard: EntityThumbnailCard = {
+      ...card,
+      hover: { kind: "sprite", spriteUrl: "/assets/videos/1/sprite", vttUrl: "/assets/videos/1/trickplay" },
+    };
+    expect(pickHoverAsset(spriteCard, 0.5)).toBeNull();
+  });
 });

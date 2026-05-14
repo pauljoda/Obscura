@@ -567,10 +567,11 @@ function getDefaultCacheRoots() {
   const sharedCache = path.join(workspaceRoot, ".obscura-cache");
   const legacyWorkerCache = path.join(workspaceRoot, "apps", "worker", ".obscura-cache");
   const legacyApiCache = path.join(workspaceRoot, "apps", "api", ".obscura-cache");
+  const dotnetCache = path.join(workspaceRoot, "apps", "backend", "data", "cache");
 
   return {
     canonical: sharedCache,
-    candidates: [sharedCache, legacyWorkerCache, legacyApiCache],
+    candidates: [sharedCache, dotnetCache, legacyWorkerCache, legacyApiCache],
   };
 }
 

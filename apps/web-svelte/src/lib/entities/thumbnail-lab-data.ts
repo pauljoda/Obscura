@@ -157,7 +157,7 @@ function card(options: {
   meta?: EntityThumbnailMetaItem[];
 }): EntityThumbnailCard {
   const hover = options.hover ?? { kind: "none" };
-  const hoverAssets = hover.kind === "none" ? [] : hover.assets;
+  const hoverAssets = hover.kind === "none" || hover.kind === "sprite" ? [] : hover.assets;
   const hoverRole = hover.kind === "trickplay" ? "trickplay" : "preview";
   const supportedImageKinds =
     options.supportedImageKinds ??

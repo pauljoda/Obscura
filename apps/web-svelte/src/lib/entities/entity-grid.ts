@@ -179,35 +179,24 @@ function previewAssets(entity: EntityCard, roles: string[]): EntityThumbnailAsse
   const results: EntityThumbnailAsset[] = [];
   for (const item of images.items) {
     if (!roles.includes(item.kind)) continue;
-
-    if (item.kind === "trickplay" && item.path.endsWith(".vtt")) {
-      const frameAssets = expandTrickplayFrames(entity, item.path);
-      if (frameAssets.length > 0) {
-        results.push(...frameAssets);
-        continue;
-      }
-    }
-
+    if (item.kind === "trickplay" && item.path.endsWith(".vtt")) continue;
     results.push(assetFromPath(item.path, entity.title, item.kind));
   }
   return results;
 }
 
-function expandTrickplayFrames(entity: EntityCard, vttPath: string): EntityThumbnailAsset[] {
-  const technical = getTechnicalCapability(entity.capabilities);
-  const duration = durationSeconds(technical?.duration);
-  if (!duration || duration <= 0) return [];
+/** Finds the sprite URL and trickplay VTT URL from entity image assets when both exist. */
+function findSpriteHover(entity: EntityCard): { spriteUrl: string; vttUrl: string } | null {
+  const images = getImagesCapability(entity.capabilities);
+  if (!images) return null;
 
-  const baseDir = vttPath.replace(/\/[^/]+\.vtt$/, "/trickplay-frames");
-  const interval = 10;
-  const frameCount = Math.max(1, Math.floor(duration / interval));
+  const vttItem = images.items.find((item) => item.kind === "trickplay" && item.path.endsWith(".vtt"));
+  if (!vttItem) return null;
 
-  const assets: EntityThumbnailAsset[] = [];
-  for (let i = 0; i < frameCount; i++) {
-    const frameName = `frame-${String(i).padStart(5, "0")}.jpg`;
-    assets.push(assetFromPath(`${baseDir}/${frameName}`, entity.title, "trickplay"));
-  }
-  return assets;
+  const spriteItem = images.items.find((item) => item.kind === "sprite");
+  const spriteUrl = spriteItem?.path ?? vttItem.path.replace(/\/[^/]+\.vtt$/, "/sprite");
+
+  return { spriteUrl, vttUrl: vttItem.path };
 }
 
 function metaForEntity(entity: EntityCard): EntityThumbnailCard["meta"] {
@@ -292,7 +281,14 @@ export function entityCardToThumbnailCard(
     images?.coverUrl ??
     images?.items.find((item) => item.kind === "cover" || item.kind === "poster" || item.kind === "thumbnail")?.path ??
     null;
-  const trickplay = previewAssets(entity, ["trickplay", "sprite"]);
+
+  const spriteHover = findSpriteHover(entity);
+  const imageSequence = previewAssets(entity, ["trickplay", "sprite"]);
+  const hover: EntityThumbnailCard["hover"] = spriteHover
+    ? { kind: "sprite", spriteUrl: spriteHover.spriteUrl, vttUrl: spriteHover.vttUrl }
+    : imageSequence.length > 0
+      ? { kind: "image-sequence", assets: imageSequence }
+      : { kind: "none" };
 
   return {
     aspectRatio: aspectRatioForEntity(entity),
@@ -303,10 +299,7 @@ export function entityCardToThumbnailCard(
       capabilities: entity.capabilities,
     },
     fit: entity.kind === "video" || entity.kind === "collection" ? "cover" : "contain",
-    hover:
-      trickplay.length === 0
-        ? { kind: "none" }
-        : { kind: "trickplay", assets: trickplay },
+    hover,
     href,
     meta: metaForEntity(entity),
   };

@@ -27,6 +27,11 @@ export type EntityThumbnailHoverPreview =
   | {
       kind: "trickplay" | "image-sequence";
       assets: EntityThumbnailAsset[];
+    }
+  | {
+      kind: "sprite";
+      spriteUrl: string;
+      vttUrl: string;
     };
 
 /** Icon vocabulary for compact thumbnail metadata chips. */
@@ -103,12 +108,15 @@ export function toAspectRatioValue(ratio: EntityThumbnailAspectRatio): string {
 
 /** Returns whether a card has enough preview assets to respond to hover or focus. */
 export function hasHoverPreview(card: EntityThumbnailCard): boolean {
-  return card.hover.kind !== "none" && card.hover.assets.length > 0;
+  if (card.hover.kind === "none") return false;
+  if (card.hover.kind === "sprite") return true;
+  return card.hover.assets.length > 0;
 }
 
 /** Selects the hover frame nearest the current pointer position across the thumbnail. */
 export function pickHoverAsset(card: EntityThumbnailCard, pointerRatio: number): EntityThumbnailAsset | null {
-  if (card.hover.kind === "none" || card.hover.assets.length === 0) return null;
+  if (card.hover.kind === "none" || card.hover.kind === "sprite") return null;
+  if (card.hover.assets.length === 0) return null;
   const boundedRatio = Math.min(Math.max(pointerRatio, 0), 1);
   const index = Math.min(card.hover.assets.length - 1, Math.floor(boundedRatio * card.hover.assets.length));
   return card.hover.assets[index] ?? null;

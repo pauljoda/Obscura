@@ -195,6 +195,41 @@ public sealed class ThumbnailService
         return results.Count(r => r);
     }
 
+    /// <summary>
+    /// Composites individual frame images into a single sprite-sheet JPEG using
+    /// ffmpeg's concat demuxer and tile filter. Frames are read in lexical order
+    /// from <paramref name="frameDir"/>.
+    /// </summary>
+    public async Task<bool> ComposeSpriteSheetAsync(
+        string frameDir, string outputPath, int columns,
+        int frameWidth, int frameHeight, int jpegQuality,
+        CancellationToken cancellationToken)
+    {
+        var frames = Directory.GetFiles(frameDir, "frame-*.jpg")
+            .OrderBy(f => f, StringComparer.Ordinal)
+            .ToArray();
+        if (frames.Length == 0) return false;
+
+        var rows = (int)Math.Ceiling((double)frames.Length / columns);
+        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+
+        var concatList = Path.Combine(frameDir, "_concat.txt");
+        await File.WriteAllLinesAsync(concatList,
+            frames.Select(f => $"file '{f}'"),
+            cancellationToken);
+
+        var result = await _processExecutor.RunAsync("ffmpeg",
+            ["-hide_banner", "-loglevel", "error", "-y",
+             "-f", "concat", "-safe", "0", "-i", concatList,
+             "-vf", $"scale={frameWidth}:{frameHeight},tile={columns}x{rows}",
+             "-q:v", jpegQuality.ToString(),
+             outputPath],
+            null, cancellationToken);
+
+        File.Delete(concatList);
+        return result.ExitCode == 0 && File.Exists(outputPath);
+    }
+
     private async Task<bool> ExtractSingleKeyframeAsync(
         SemaphoreSlim semaphore, string inputPath, string outputPath,
         double seekSeconds, int width, int height, int jpegQuality,

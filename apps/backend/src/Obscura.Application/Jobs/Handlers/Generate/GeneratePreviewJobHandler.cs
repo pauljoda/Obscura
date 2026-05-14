@@ -112,6 +112,18 @@ public sealed class GeneratePreviewJobHandler(
             "Trickplay: extracted {Count} frames in single pass (expected {Expected})",
             extractedCount, frameCount);
 
+        const int columns = 5;
+        var spritePath = assets.VideoSpritePath(entityId);
+        var spriteOk = await assets.ComposeSpriteSheetAsync(
+            frameDir, spritePath, columns, frameWidth, frameHeight,
+            QualityToJpeg(settings.TrickplayQuality), cancellationToken);
+
+        if (!spriteOk)
+        {
+            logger.LogWarning("Failed to compose trickplay sprite for {EntityId}", entityId);
+            return;
+        }
+
         var vttPath = assets.VideoTrickplayVttPath(entityId);
         await WriteTrickplayVttAsync(entityId, vttPath, extractedCount, interval, frameWidth, frameHeight, cancellationToken);
 

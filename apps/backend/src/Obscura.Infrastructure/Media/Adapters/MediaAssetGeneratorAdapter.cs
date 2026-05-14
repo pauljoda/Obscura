@@ -28,6 +28,12 @@ public sealed class MediaAssetGeneratorAdapter(ThumbnailService thumbnails, Asse
         CancellationToken cancellationToken) =>
         thumbnails.ExtractTrickplayFramesBatchAsync(inputPath, outputDir, duration, intervalSeconds, width, height, jpegQuality, cancellationToken);
 
+    public Task<bool> ComposeSpriteSheetAsync(
+        string frameDir, string outputPath, int columns,
+        int frameWidth, int frameHeight, int jpegQuality,
+        CancellationToken cancellationToken) =>
+        thumbnails.ComposeSpriteSheetAsync(frameDir, outputPath, columns, frameWidth, frameHeight, jpegQuality, cancellationToken);
+
     public Task<(bool Thumbnail, bool Preview)> GenerateThumbnailAndPreviewAsync(
         string inputPath,
         string thumbnailPath, double thumbSeekSeconds, int thumbWidth, int thumbHeight, int thumbQuality,

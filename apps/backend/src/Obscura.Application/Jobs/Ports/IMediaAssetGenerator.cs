@@ -27,6 +27,15 @@ public interface IMediaAssetGenerator
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Composites individual trickplay frame images into a single sprite-sheet JPEG
+    /// using a tile layout with the given column count. Returns true on success.
+    /// </summary>
+    Task<bool> ComposeSpriteSheetAsync(
+        string frameDir, string outputPath, int columns,
+        int frameWidth, int frameHeight, int jpegQuality,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Generates both thumbnail and preview clip, sharing decode overhead where possible.
     /// Returns success flags for each output.
     /// </summary>

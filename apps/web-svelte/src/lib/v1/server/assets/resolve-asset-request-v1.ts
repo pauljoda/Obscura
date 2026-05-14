@@ -44,7 +44,9 @@ const KIND_TO_DISK_KEY: Record<
 };
 
 const LEGACY_NAME_MAP: Record<string, SidecarKind> = {
+  "thumb.jpg": "thumb",
   "thumbnail.jpg": "thumb",
+  "card.jpg": "card",
   "sprite.jpg": "sprite",
   "preview.mp4": "preview",
   "trickplay.vtt": "trickplay",
