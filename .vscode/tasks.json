@@ -13,26 +13,34 @@
         "panel": "shared"
       },
       "problemMatcher": [],
-      "detail": "Boots the dev Postgres container. pg-boss runs the job queue in-DB — no Redis required."
+      "detail": "Boots the dev Postgres container."
     },
     {
       "label": "Obscura: Web Build",
       "type": "shell",
       "command": "pnpm --filter @obscura/web-svelte build",
       "options": { "cwd": "${workspaceFolder}" },
+      "group": "build",
       "problemMatcher": [],
-      "detail": "Production-builds apps/web-svelte via @sveltejs/adapter-node → build/index.js."
+      "detail": "Production-builds the Svelte SPA into apps/web-svelte/build."
     },
     {
-      "label": "Obscura: Web Preview",
+      "label": "Obscura: .NET Build",
       "type": "shell",
-      "command": "node apps/web-svelte/build/index.js",
-      "options": {
-        "cwd": "${workspaceFolder}",
-        "env": { "PORT": "8008" }
-      },
-      "problemMatcher": [],
-      "detail": "Runs the adapter-node output directly on :8008. Run the build task first."
+      "command": "dotnet build apps/backend/Obscura.sln",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "detail": "Builds the entire .NET backend solution."
+    },
+    {
+      "label": "Obscura: .NET Test",
+      "type": "shell",
+      "command": "dotnet test apps/backend/Obscura.sln",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "test",
+      "problemMatcher": "$msCompile",
+      "detail": "Runs all .NET backend tests."
     },
     {
       "label": "Obscura Docs: Build",
@@ -40,15 +48,7 @@
       "command": "pnpm docs:build",
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": [],
-      "detail": "Builds the Docusaurus documentation site into documentation-site/build."
-    },
-    {
-      "label": "Obscura Docs: Serve Build",
-      "type": "shell",
-      "command": "pnpm docs:serve -- --port 3010 --host 127.0.0.1",
-      "options": { "cwd": "${workspaceFolder}" },
-      "problemMatcher": [],
-      "detail": "Serves the built Docusaurus site locally at http://127.0.0.1:3010/Obscura/. Run the build task first."
+      "detail": "Builds the Docusaurus documentation site."
     }
   ]
 }

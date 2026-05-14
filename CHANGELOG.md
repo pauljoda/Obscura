@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scan now propagates the NSFW flag from the library root to all child entities — images, audio libraries, audio tracks, book chapters, and book pages were previously missing the flag even when their parent library root was marked NSFW.
 
 ### Changed
+- VS Code launch and task configs now target the .NET backend — API, Worker, and compound "Full Stack" configs replace the old Node.js-era entries.
 - Updated Claude Code preview launch config to use the .NET backend (`pnpm dev:app`) instead of the deprecated Vite dev server.
 
 - The v2 library maintenance job now validates that expected cache assets exist on disk and removes orphaned cache directories for deleted entities, replacing the placeholder with real asset hygiene.

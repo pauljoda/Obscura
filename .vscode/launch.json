@@ -2,54 +2,18 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Obscura: Dev Stack",
-      "type": "node",
+      "name": "Obscura: API",
+      "type": "dotnet",
       "request": "launch",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev"],
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "skipFiles": ["<node_internals>/**"],
+      "projectPath": "${workspaceFolder}/apps/backend/src/Obscura.Api/Obscura.Api.csproj",
       "preLaunchTask": "Obscura: Docker Up"
     },
     {
-      "name": "Obscura: Web + Worker",
-      "type": "node",
+      "name": "Obscura: Worker",
+      "type": "dotnet",
       "request": "launch",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "turbo",
-        "run",
-        "dev",
-        "--parallel",
-        "--filter=@obscura/web-svelte",
-        "--filter=@obscura/worker"
-      ],
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "skipFiles": ["<node_internals>/**"],
-      "preLaunchTask": "Obscura: Docker Up",
-      "serverReadyAction": {
-        "pattern": "Local:\\s+(https?://\\S+)",
-        "uriFormat": "%s",
-        "action": "openExternally"
-      }
-    },
-    {
-      "name": "Obscura: Web",
-      "type": "node",
-      "request": "launch",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@obscura/web-svelte", "dev"],
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "skipFiles": ["<node_internals>/**"],
-      "preLaunchTask": "Obscura: Docker Up",
-      "serverReadyAction": {
-        "pattern": "Local:\\s+(https?://\\S+)",
-        "uriFormat": "%s",
-        "action": "openExternally"
-      }
+      "projectPath": "${workspaceFolder}/apps/backend/src/Obscura.Worker/Obscura.Worker.csproj",
+      "preLaunchTask": "Obscura: Docker Up"
     },
     {
       "name": "Obscura: Chrome",
@@ -57,11 +21,7 @@
       "request": "launch",
       "url": "http://localhost:8008",
       "webRoot": "${workspaceFolder}/apps/web-svelte",
-      "sourceMaps": true,
-      "sourceMapPathOverrides": {
-        "webpack:///./*": "${webRoot}/*",
-        "webpack:///src/*": "${webRoot}/src/*"
-      }
+      "sourceMaps": true
     },
     {
       "name": "Obscura Docs: Dev Site",
@@ -111,19 +71,22 @@
   ],
   "compounds": [
     {
-      "name": "Obscura: Web + Chrome",
+      "name": "Obscura: Full Stack",
       "configurations": [
-        "Obscura: Web",
-        "Obscura: Chrome"
+        "Obscura: API",
+        "Obscura: Worker"
       ],
+      "preLaunchTask": "Obscura: Web Build",
       "stopAll": true
     },
     {
-      "name": "Obscura: Dev Stack + Chrome",
+      "name": "Obscura: Full Stack + Chrome",
       "configurations": [
-        "Obscura: Dev Stack",
+        "Obscura: API",
+        "Obscura: Worker",
         "Obscura: Chrome"
       ],
+      "preLaunchTask": "Obscura: Web Build",
       "stopAll": true
     }
   ]
