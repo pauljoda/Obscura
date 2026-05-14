@@ -192,16 +192,23 @@
     {/if}
   </div>
 
+  <!-- Studio -->
+  {#if card.studio}
+    <section class="studio-section">
+      <h2 class="credits-heading">Studio</h2>
+      <div class="studio-row">
+        <div class="studio-card">
+          <EntityThumbnail card={creditToThumbnailCard(card.studio)} />
+        </div>
+      </div>
+    </section>
+  {/if}
+
   <!-- Credits (horizontal scroll of EntityThumbnails) -->
-  {#if card.studio || card.credits.length > 0}
+  {#if card.credits.length > 0}
     <section class="credits-section">
       <h2 class="credits-heading">Cast & Crew</h2>
       <div class="credits-scroll">
-        {#if card.studio}
-          <div class="credit-card">
-            <EntityThumbnail card={creditToThumbnailCard(card.studio)} />
-          </div>
-        {/if}
         {#each card.credits as credit (credit.id)}
           <div class="credit-card">
             <EntityThumbnail card={creditToThumbnailCard(credit)} />
@@ -810,6 +817,20 @@
     border-color: var(--detail-accent-muted);
   }
 
+  /* ── Studio row ─────────────────────────────────────────── */
+
+  .studio-section {
+    padding: 0 1.5rem 1rem;
+  }
+
+  .studio-row {
+    display: flex;
+  }
+
+  .studio-card {
+    width: 7rem;
+  }
+
   /* ── Credits (horizontal scroll) ───────────────────────── */
 
   .credits-section {
@@ -817,7 +838,7 @@
   }
 
   .credits-heading {
-    margin: 0 0 0.75rem;
+    margin: 0 0 0.6rem;
     font-family: var(--font-mono, "JetBrains Mono", monospace);
     font-size: 0.72rem;
     font-weight: 600;
@@ -828,7 +849,7 @@
 
   .credits-scroll {
     display: flex;
-    gap: 0.75rem;
+    gap: 0.5rem;
     overflow-x: auto;
     overflow-y: hidden;
     padding-bottom: 0.5rem;
@@ -850,7 +871,7 @@
 
   .credit-card {
     flex-shrink: 0;
-    width: 8.5rem;
+    width: 6rem;
   }
 
   /* ── Metadata sections ──────────────────────────────────── */
@@ -1166,6 +1187,10 @@
 
     .detail-body {
       padding: 1.25rem 2rem 2rem;
+    }
+
+    .studio-section {
+      padding: 0 2rem 1rem;
     }
 
     .credits-section {
