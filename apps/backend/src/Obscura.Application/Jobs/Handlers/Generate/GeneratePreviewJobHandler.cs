@@ -92,10 +92,8 @@ public sealed class GeneratePreviewJobHandler(
         var frameCount = (int)(duration.Value / interval);
         if (frameCount < 1) return;
 
-        var frameWidth = ScaleWidth(width ?? 1920, settings.TrickplayQuality);
-        var frameHeight = ScaleHeight(height ?? 1080, width ?? 1920, frameWidth);
-        frameWidth = frameWidth / 2 * 2;
-        frameHeight = frameHeight / 2 * 2;
+        var (frameWidth, frameHeight) = ComputeTrickplayDimensions(
+            width ?? 1920, height ?? 1080, settings.TrickplayQuality);
 
         var frameDir = assets.TrickplayFrameDir(entityId);
 
@@ -176,6 +174,27 @@ public sealed class GeneratePreviewJobHandler(
     {
         if (sourceWidth == 0) return sourceHeight;
         return targetWidth * sourceHeight / sourceWidth;
+    }
+
+    /// <summary>
+    /// Trickplay frames are small scrubber-preview thumbnails, not full-resolution images.
+    /// Capped at 320×180 regardless of source resolution (matching v1 behavior).
+    /// Quality 1 (best) = 320w, quality 5 (lowest) = 160w.
+    /// </summary>
+    private static (int Width, int Height) ComputeTrickplayDimensions(int sourceWidth, int sourceHeight, int quality)
+    {
+        const int maxWidth = 320;
+        const int minWidth = 160;
+        var q = Math.Clamp(quality, 1, 5);
+        var targetWidth = maxWidth - (q - 1) * (maxWidth - minWidth) / 4;
+        targetWidth = targetWidth / 2 * 2;
+
+        var targetHeight = sourceWidth > 0
+            ? targetWidth * sourceHeight / sourceWidth
+            : targetWidth * 9 / 16;
+        targetHeight = targetHeight / 2 * 2;
+
+        return (targetWidth, Math.Max(2, targetHeight));
     }
 
     private static int QualityToJpeg(int quality) => Math.Clamp(quality, 1, 10);

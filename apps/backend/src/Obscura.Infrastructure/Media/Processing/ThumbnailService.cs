@@ -162,9 +162,10 @@ public sealed class ThumbnailService
     }
 
     /// <summary>
-    /// Extracts all trickplay frames in a single ffmpeg pass using the fps filter.
-    /// Dramatically faster than per-frame seeking — one decode pass instead of N process spawns.
-    /// Output files are named frame-00000.jpg, frame-00001.jpg, etc. in the output directory.
+    /// Extracts trickplay frames using parallel per-frame keyframe extraction.
+    /// Uses -skip_frame nokey with input-seek (-ss before -i) so each invocation
+    /// only decodes a single keyframe — orders of magnitude faster than segment-based
+    /// fps-filter extraction which must decode the entire video.
     /// </summary>
     public async Task<int> ExtractTrickplayFramesBatchAsync(
         string inputPath, string outputDir, double duration,
@@ -173,23 +174,52 @@ public sealed class ThumbnailService
     {
         Directory.CreateDirectory(outputDir);
 
-        var fpsRate = $"1/{intervalSeconds}";
-        var outputPattern = Path.Combine(outputDir, "frame-%05d.jpg");
+        var totalFrames = (int)(duration / intervalSeconds);
+        if (totalFrames < 1) return 0;
 
-        var result = await _processExecutor.RunAsync("ffmpeg",
-            ["-hide_banner", "-loglevel", "error", "-y",
-             "-i", inputPath,
-             "-vf", $"fps={fpsRate},scale={width}:{height}:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,format=yuvj420p",
-             "-q:v", jpegQuality.ToString(),
-             outputPattern],
-            null, cancellationToken);
+        using var semaphore = new SemaphoreSlim(8);
+        var tasks = new List<Task<bool>>(totalFrames);
 
-        if (result.ExitCode != 0)
-            return 0;
+        for (var i = 0; i < totalFrames; i++)
+        {
+            var seekSeconds = i * intervalSeconds + intervalSeconds / 2.0;
+            seekSeconds = Math.Min(seekSeconds, Math.Max(0, duration - 0.5));
 
-        var expectedFrames = (int)(duration / intervalSeconds);
-        var actualFrames = Directory.GetFiles(outputDir, "frame-*.jpg").Length;
-        return actualFrames;
+            var outputPath = Path.Combine(outputDir, $"frame-{i + 1:D5}.jpg");
+            tasks.Add(ExtractSingleKeyframeAsync(
+                semaphore, inputPath, outputPath, seekSeconds,
+                width, height, jpegQuality, cancellationToken));
+        }
+
+        var results = await Task.WhenAll(tasks);
+        return results.Count(r => r);
+    }
+
+    private async Task<bool> ExtractSingleKeyframeAsync(
+        SemaphoreSlim semaphore, string inputPath, string outputPath,
+        double seekSeconds, int width, int height, int jpegQuality,
+        CancellationToken cancellationToken)
+    {
+        await semaphore.WaitAsync(cancellationToken);
+        try
+        {
+            var result = await _processExecutor.RunAsync("ffmpeg",
+                ["-hide_banner", "-loglevel", "error", "-y",
+                 "-skip_frame", "nokey",
+                 "-ss", seekSeconds.ToString("F2"),
+                 "-i", inputPath,
+                 "-frames:v", "1",
+                 "-vf", $"scale={width}:{height}:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,format=yuvj420p",
+                 "-q:v", jpegQuality.ToString(),
+                 outputPath],
+                null, cancellationToken);
+
+            return result.ExitCode == 0 && File.Exists(outputPath);
+        }
+        finally
+        {
+            semaphore.Release();
+        }
     }
 
     /// <summary>
