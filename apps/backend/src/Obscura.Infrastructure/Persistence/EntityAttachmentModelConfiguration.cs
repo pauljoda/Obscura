@@ -66,6 +66,7 @@ internal static class EntityAttachmentModelConfiguration
             entity.Property(row => row.Path).HasColumnName("path").IsRequired();
             entity.Property(row => row.MimeType).HasColumnName("mime_type").HasMaxLength(128);
             entity.Property(row => row.SizeBytes).HasColumnName("size_bytes");
+            entity.Property(row => row.Source).HasColumnName("source").HasMaxLength(16).HasDefaultValue("scan").IsRequired();
             entity.Property(row => row.CreatedAt).HasColumnName("created_at");
             entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
             entity.HasIndex(row => new { row.EntityId, row.Role }).IsUnique();

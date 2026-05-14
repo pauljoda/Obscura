@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v1-to-v2 upgrade now preserves all existing metadata instead of forcing a full rescan. Thumbnails, previews, trickplay sprites, technical metadata, fingerprints, playback history, subtitles, markers, and all taxonomy relationships are migrated automatically.
 
 ### Added
+- Entity files now track a `source` column (`scan` or `custom`) so scan jobs never overwrite user-uploaded custom assets. The v1 `-custom` filename convention is detected during legacy migration and recorded in the database.
 - Videos page now sends the client NSFW visibility mode to the backend, so switching between Off / Blur / Show re-fetches the list with server-side filtering instead of relying on client-only blur.
 
 ### Changed

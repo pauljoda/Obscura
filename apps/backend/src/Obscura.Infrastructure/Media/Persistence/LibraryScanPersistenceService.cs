@@ -457,6 +457,10 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
 
         if (existing is not null)
         {
+            // Scan-generated writes never overwrite user-uploaded custom assets.
+            if (existing.Source == "custom")
+                return;
+
             existing.Path = path;
             existing.MimeType = mimeType ?? existing.MimeType;
             existing.SizeBytes = sizeBytes ?? existing.SizeBytes;
@@ -468,7 +472,7 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
             {
                 Id = Guid.NewGuid(), EntityId = entityId, Role = role,
                 Path = path, MimeType = mimeType, SizeBytes = sizeBytes,
-                CreatedAt = now, UpdatedAt = now
+                Source = "scan", CreatedAt = now, UpdatedAt = now
             });
         }
 

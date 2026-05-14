@@ -84,7 +84,20 @@ public sealed class LegacyAssetNormalizationService : ILegacyAssetNormalizationS
 
         _logger.LogInformation("Renamed {Count} legacy asset files on disk", filesRenamed);
 
-        return new LegacyAssetNormalizationResult(pathsNormalized, filesRenamed);
+        // Phase 4: Detect v1 "-custom" filename convention and mark those rows as custom source.
+        // Runs after path normalization so both old (extensionless) and new (with extension) forms
+        // are caught by the LIKE pattern.
+        int customFilesDetected;
+        await using var conn2 = await _dataSource.OpenConnectionAsync(cancellationToken);
+        await using (var customCmd = new NpgsqlCommand(MarkCustomSourceSql, conn2))
+        {
+            customFilesDetected = await customCmd.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        if (customFilesDetected > 0)
+            _logger.LogInformation("Marked {Count} legacy entity files as custom source", customFilesDetected);
+
+        return new LegacyAssetNormalizationResult(pathsNormalized, filesRenamed, customFilesDetected);
     }
 
     private string UrlToDiskPath(string urlPath)
@@ -167,5 +180,16 @@ public sealed class LegacyAssetNormalizationService : ILegacyAssetNormalizationS
         WHERE role = 'waveform'
           AND path LIKE '/assets/%'
           AND path !~ '\.[a-zA-Z0-9]+$';
+        """;
+
+    /// <summary>
+    /// Marks entity files whose path contains the v1 <c>-custom</c> suffix as
+    /// <c>source = 'custom'</c> so scan jobs know not to overwrite them.
+    /// </summary>
+    private const string MarkCustomSourceSql = """
+        UPDATE v2.entity_files
+        SET source = 'custom'
+        WHERE source = 'scan'
+          AND path LIKE '%-custom%'
         """;
 }

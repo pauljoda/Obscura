@@ -5,4 +5,5 @@ namespace Obscura.Application.Migrations;
 /// </summary>
 /// <param name="PathsNormalized">Number of <c>v2.entity_files</c> rows whose path was updated.</param>
 /// <param name="FilesRenamed">Number of files on disk renamed from v1 to v2 naming.</param>
-public sealed record LegacyAssetNormalizationResult(int PathsNormalized, int FilesRenamed);
+/// <param name="CustomFilesDetected">Number of rows marked <c>source = 'custom'</c> based on the v1 <c>-custom</c> filename convention.</param>
+public sealed record LegacyAssetNormalizationResult(int PathsNormalized, int FilesRenamed, int CustomFilesDetected);
