@@ -41,9 +41,10 @@
 
   let pointerRatio = $state<number | null>(null);
   let imageFailed = $state(false);
+  let hoverBroken = $state(false);
   let lastSrc = $state<string | undefined>(undefined);
 
-  const asset = $derived(getThumbnailAsset(card, pointerRatio));
+  const asset = $derived(getThumbnailAsset(card, hoverBroken ? null : pointerRatio));
   const aspectRatio = $derived(toAspectRatioValue(card.aspectRatio));
   const imageFit = $derived(card.fit ?? "contain");
   const placeholderIcon = $derived(iconForKind(card.entity.kind));
@@ -56,7 +57,7 @@
       imageFailed = false;
     }
   });
-  const hoverable = $derived(hasHoverPreview(card));
+  const hoverable = $derived(hasHoverPreview(card) && !hoverBroken);
   const nsfw = $derived(isNsfw(card.entity.capabilities));
   const rating = $derived(getRatingValue(card.entity.capabilities));
   const imageOnly = $derived(card.entity.kind === "book-page");
@@ -171,7 +172,15 @@
         alt={asset.alt}
         loading="lazy"
         style:object-fit={imageFit}
-        onerror={() => { imageFailed = true; }}
+        onerror={() => {
+          imageFailed = true;
+          // A hover asset 404'd — disable hover entirely so we stop flickering
+          // between broken frames and the cover image.
+          if (pointerRatio !== null) {
+            hoverBroken = true;
+            pointerRatio = null;
+          }
+        }}
       />
     {:else}
       <div class="placeholder-glow" aria-hidden="true"></div>

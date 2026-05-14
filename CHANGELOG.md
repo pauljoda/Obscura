@@ -21,7 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The Dashboard now fetches recent items from each entity kind via the v2 API and renders horizontal scroll rows with `EntityThumbnail` cards, with NSFW-aware filtering and empty-library state.
 
 ### Fixed
-- Thumbnail hover preview now activates only when trickplay frames exist — entities without trickplay no longer attempt a broken hover swap on pointer move.
+- Thumbnail hover preview now activates only when trickplay frames exist — entities without trickplay no longer attempt a broken hover swap on pointer move. When trickplay frame images fail to load (e.g. stale migration data), hover is disabled for that card instead of flickering between broken frames and the cover.
 - SPA client-side navigation now works correctly — the `afterNavigate` callback in the root layout no longer crashes on the initial `'enter'` navigation when `from.url` is null, which was silently preventing the SvelteKit router from registering its click handler.
 - NSFW visibility mode now persists across page loads — the cookie is read on app init instead of always defaulting to "off".
 - The v2 upgrade gate consent overlay now appears on first boot when the gate is armed — previously the SPA layout never fetched gate status from the .NET backend, so the overlay never rendered.
