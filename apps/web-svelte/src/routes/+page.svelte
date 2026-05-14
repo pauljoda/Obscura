@@ -17,6 +17,7 @@
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import LogoMark from "$lib/components/LogoMark.svelte";
 
   interface DashboardSection {
     kind: string;
@@ -102,10 +103,8 @@
   </div>
 {:else if !hasAnyContent}
   <div class="min-h-[80vh] flex flex-col items-center justify-center text-center p-8">
-    <div
-      class="w-24 h-24 mb-8 text-accent-500/20 flex items-center justify-center bg-surface-2 border border-border-subtle"
-    >
-      <Film class="w-10 h-10" />
+    <div class="mb-8 opacity-80">
+      <LogoMark size={96} alt="Obscura — empty library" />
     </div>
     <h1 class="text-3xl font-bold text-text-primary mb-4">Your library is empty</h1>
     <p class="text-text-muted max-w-md mb-8">
