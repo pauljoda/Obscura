@@ -26,7 +26,7 @@ public sealed class GenerateImageThumbnailJobHandler(
         if (success)
         {
             var size = new FileInfo(thumbPath).Length;
-            await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Thumbnail, thumbPath, "image/jpeg", size, cancellationToken);
+            await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Thumbnail, assets.ImageThumbnailUrl(entityId), "image/jpeg", size, cancellationToken);
             logger.LogInformation("GenerateImageThumbnail: created thumbnail for {Label}", context.Job.TargetLabel);
         }
         else

@@ -16,6 +16,16 @@ var staticFileProvider = resolvedStaticWebRoot is not null
     ? new PhysicalFileProvider(resolvedStaticWebRoot)
     : null;
 
+var dataDir = builder.Configuration["OBSCURA_DATA_DIR"] ??
+    builder.Configuration["Obscura:DataDir"] ??
+    "/data";
+var cacheDir = builder.Configuration["OBSCURA_CACHE_DIR"] ??
+    builder.Configuration["Obscura:CacheDir"] ??
+    Path.Combine(dataDir, "cache");
+var resolvedCacheDir = Path.IsPathRooted(cacheDir)
+    ? cacheDir
+    : Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, cacheDir));
+
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 builder.Services.AddCors(options =>
@@ -52,6 +62,16 @@ else
 {
     app.UseDefaultFiles();
     app.UseStaticFiles();
+}
+
+if (Directory.Exists(resolvedCacheDir))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(resolvedCacheDir),
+        RequestPath = "/assets",
+        ServeUnknownFileTypes = false,
+    });
 }
 
 app.MapGet("/api/health", () =>

@@ -48,4 +48,12 @@ public sealed class MediaAssetGeneratorAdapter(ThumbnailService thumbnails, Asse
     public string BookPageThumbnailPath(Guid entityId) => paths.BookPageThumbnailPath(entityId);
     public string AudioWaveformPath(Guid entityId) => paths.AudioWaveformPath(entityId);
     public string SubtitleDir(Guid entityId) => paths.SubtitleDir(entityId);
+
+    public string VideoThumbnailUrl(Guid entityId) => AssetPathService.VideoThumbnailUrl(entityId);
+    public string VideoPreviewUrl(Guid entityId) => AssetPathService.VideoPreviewUrl(entityId);
+    public string VideoTrickplayVttUrl(Guid entityId) => AssetPathService.VideoTrickplayVttUrl(entityId);
+    public string ImageThumbnailUrl(Guid entityId) => AssetPathService.ImageThumbnailUrl(entityId);
+    public string BookPageThumbnailUrl(Guid entityId) => AssetPathService.BookPageThumbnailUrl(entityId);
+    public string AudioWaveformUrl(Guid entityId) => AssetPathService.AudioWaveformUrl(entityId);
+    public string SubtitleUrl(Guid entityId, string fileName) => AssetPathService.SubtitleUrl(entityId, fileName);
 }

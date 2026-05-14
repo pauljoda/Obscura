@@ -37,4 +37,12 @@ public interface IMediaAssetGenerator
     string BookPageThumbnailPath(Guid entityId);
     string AudioWaveformPath(Guid entityId);
     string SubtitleDir(Guid entityId);
+
+    string VideoThumbnailUrl(Guid entityId);
+    string VideoPreviewUrl(Guid entityId);
+    string VideoTrickplayVttUrl(Guid entityId);
+    string ImageThumbnailUrl(Guid entityId);
+    string BookPageThumbnailUrl(Guid entityId);
+    string AudioWaveformUrl(Guid entityId);
+    string SubtitleUrl(Guid entityId, string fileName);
 }
