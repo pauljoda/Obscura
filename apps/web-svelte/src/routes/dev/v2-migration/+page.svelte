@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AlertTriangle, DatabaseBackup, Palette, Play, RotateCcw, ShieldAlert, Trash2 } from "@lucide/svelte";
+  import { AlertTriangle, DatabaseBackup, Grid2x2, LayoutList, Palette, Play, RotateCcw, ShieldAlert, Trash2 } from "@lucide/svelte";
 
   interface GateStatus {
     gateId: string;
@@ -226,6 +226,14 @@
     <a href="/design-language" class="quick-link">
       <Palette class="h-4 w-4" />
       Design System
+    </a>
+    <a href="/v2/thumbnail-lab" class="quick-link">
+      <Grid2x2 class="h-4 w-4" />
+      Thumbnail Lab
+    </a>
+    <a href="/v2/detail-lab" class="quick-link">
+      <LayoutList class="h-4 w-4" />
+      Detail Lab
     </a>
   </section>
 

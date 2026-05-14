@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Added
+- Dev hub (`/dev/v2-migration`) now links to Thumbnail Lab and the new Detail Lab for quick access to all v2 testing surfaces.
+- Entity Detail Lab page (`/v2/detail-lab`) — shell testing surface for the upcoming `EntityDetail` component.
 - `pnpm dev:kill` script and VS Code task ("Obscura: Kill Orphans") to kill orphaned dev processes (.NET API/Worker, Vite, Docusaurus) and free dev ports (8008, 8010, 3010, 5173).
 - Job processing pipeline now includes per-phase timing instrumentation (`JobPhaseTimer`) — every scan, probe, fingerprint, and preview job logs structured `[METRICS]` lines with per-phase durations for performance analysis.
 - Library scan now uses batch entity upserts and batch downstream-needs checks, reducing per-file database round-trips from ~12 to ~2. Downstream jobs are enqueued in batch with a single database write per chunk.
@@ -23,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - All v2 EntityGrid browse pages now participate in SvelteKit's snapshot system — search query, active filters, sort order, view mode, and selection are preserved on back/forward navigation.
 
 ### Changed
+- Design-language page no longer renders the legacy `MediaCard` component — the old v1 card section has been removed since all browse surfaces now use `EntityThumbnail`.
 - Trickplay frames now render at fixed small dimensions (320×180 max, scaling down with quality setting) instead of using source resolution. The previous ScaleWidth formula with quality=1 produced full 3840×1920 frames for 4K content — 144× more pixels than needed for scrubber previews.
 - The v2 upgrade gate dev-mode re-arm now performs a full v2 data reset — truncates all v2 tables and purges cache directories — so the next migration test starts from a completely clean slate with no stale entities, files, or generated assets.
 - The v2 upgrade gate now warns that generated cache assets will be deleted and recommends backing up the data directory before proceeding. Stale v1 cache directories are purged during migration to free disk space.

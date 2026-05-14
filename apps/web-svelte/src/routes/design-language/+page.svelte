@@ -3,7 +3,6 @@
     Badge,
     Button,
     Checkbox,
-    MediaCard,
     Meter,
     Panel,
     StatusLed,
@@ -423,37 +422,6 @@
           </div>
         </div>
       </Panel>
-    </section>
-
-    <!-- ── MediaCard ── -->
-    <section class="space-y-4">
-      <h2 class="text-h2">MediaCard</h2>
-      <div class="grid md:grid-cols-3 gap-3">
-        <MediaCard
-          title="Sample video, brass and glass"
-          duration="32:14"
-          resolution="1080p"
-          codec="AV1"
-          hasSubtitles
-          studio="Dark Room"
-          performers={["First Performer", "Second Performer"]}
-          tags={["cinematic", "noir", "b-roll"]}
-          rating={80}
-          views={1248}
-          fileSize="2.1 GB"
-        />
-        <MediaCard
-          title="No thumbnail fallback"
-          duration="7:55"
-          resolution="720p"
-          codec="H264"
-          gradientClass="bg-gradient-to-br from-accent-900 via-accent-800 to-accent-950"
-        />
-        <MediaCard
-          title="Minimal card"
-          duration="2:02"
-        />
-      </div>
     </section>
 
     <!-- ── Design Principles ── -->
