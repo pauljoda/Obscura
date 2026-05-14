@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 
+### Added
+- The videos browse page now uses the shared `EntityGrid` and `EntityThumbnail` components backed by the v2 .NET entity API, providing built-in search, sort, filter, kind tabs, and grid/list view toggle.
+
 ### Fixed
 - Navigation between pages no longer causes a full-page reload flash. Removed legacy v1 server load files (`+page.server.ts`) that prevented SvelteKit's client-side router from intercepting link clicks.
 

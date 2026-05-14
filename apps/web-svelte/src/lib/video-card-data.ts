@@ -1,3 +1,11 @@
+import type { V2EntityCard } from "$lib/api/v2";
+import {
+  getFlagsCapability,
+  getRatingValue,
+  getTags,
+  getTechnicalCapability,
+  getThumbnailUrl,
+} from "$lib/api/capabilities";
 import { toApiUrl } from "$lib/v1/api/core-v1";
 
 export interface VideoCardPerformer {
@@ -62,6 +70,46 @@ interface VideoLike {
   seasonNumber?: number | null;
   episodeNumber?: number | null;
   updatedAt?: string;
+}
+
+function formatTimeSpan(ts: string): string {
+  const parts = ts.split(":");
+  if (parts.length < 3) return ts;
+  const hours = parseInt(parts[0], 10);
+  const minutes = parts[1];
+  const seconds = parts[2].split(".")[0];
+  return hours > 0 ? `${hours}:${minutes}:${seconds}` : `${minutes}:${seconds}`;
+}
+
+function formatResolution(width: number | string | null, height: number | string | null): string | undefined {
+  const h = typeof height === "number" ? height : parseInt(String(height), 10);
+  if (!h || isNaN(h)) return undefined;
+  if (h >= 2160) return "4K";
+  if (h >= 1440) return "1440p";
+  if (h >= 1080) return "1080p";
+  if (h >= 720) return "720p";
+  if (h >= 480) return "480p";
+  return `${h}p`;
+}
+
+export function entityCardToVideoCardData(item: V2EntityCard): VideoCardData {
+  const tech = getTechnicalCapability(item.capabilities);
+  const flags = getFlagsCapability(item.capabilities);
+  const ratingValue = getRatingValue(item.capabilities);
+  const tags = getTags(item.capabilities);
+
+  return {
+    id: item.id,
+    href: `/videos/${item.id}`,
+    title: item.title,
+    thumbnail: getThumbnailUrl(item.capabilities) ?? undefined,
+    duration: tech?.duration ? formatTimeSpan(tech.duration) : undefined,
+    resolution: tech ? formatResolution(tech.width, tech.height) : undefined,
+    codec: tech?.codec ?? undefined,
+    tags: tags.map((name) => ({ name, isNsfw: false })),
+    rating: ratingValue > 0 ? ratingValue * 20 : undefined,
+    isNsfw: flags?.isNsfw === true,
+  };
 }
 
 export function videoListItemToCardData(video: VideoLike, from?: string): VideoCardData {
