@@ -26,13 +26,26 @@
   import { hasHero, hasPoster, presentSections } from "$lib/entities/entity-detail";
   import { placeholderGradient } from "$lib/entities/entity-thumbnail";
 
+  export type EntityDetailPosterSize = "none" | "small" | "medium" | "large";
+
   interface Props {
     card: EntityDetailCard;
     onRatingChange?: (value: number | null) => void;
+    posterSize?: EntityDetailPosterSize;
     ratingBusy?: boolean;
+    showHero?: boolean;
   }
 
-  let { card, onRatingChange, ratingBusy = false }: Props = $props();
+  let {
+    card,
+    onRatingChange,
+    posterSize = "medium",
+    ratingBusy = false,
+    showHero = true,
+  }: Props = $props();
+
+  const heroVisible = $derived(showHero && hasHero(card));
+  const posterVisible = $derived(posterSize !== "none" && hasPoster(card));
 
   const sections = $derived(presentSections(card));
 
@@ -51,19 +64,19 @@
   }
 </script>
 
-<article class="entity-detail">
+<article class="entity-detail" data-poster-size={posterSize}>
   <!-- Hero / Banner -->
   <div
     class="hero"
-    class:has-image={hasHero(card)}
-    style:background-image={hasHero(card)
+    class:has-image={heroVisible}
+    style:background-image={heroVisible
       ? `url(${card.hero!.src})`
       : placeholderGradient(card.entity.title)}
   >
     <div class="hero-scrim"></div>
 
     <div class="hero-content">
-      {#if hasPoster(card)}
+      {#if posterVisible}
         <div class="poster-frame">
           <img src={card.poster!.src} alt={card.poster!.alt} />
         </div>
@@ -463,7 +476,7 @@
 
   .poster-frame {
     flex-shrink: 0;
-    width: 7rem;
+    width: var(--poster-width, 7rem);
     border: 1px solid var(--detail-border);
     background: #050505;
     box-shadow:
@@ -471,6 +484,10 @@
       0 0 0 1px var(--detail-accent-muted);
     overflow: hidden;
   }
+
+  [data-poster-size="small"] .poster-frame { --poster-width: 5rem; }
+  [data-poster-size="medium"] .poster-frame { --poster-width: 7rem; }
+  [data-poster-size="large"] .poster-frame { --poster-width: 10rem; }
 
   .poster-frame img {
     display: block;
@@ -1098,9 +1115,9 @@
       padding: 2rem;
     }
 
-    .poster-frame {
-      width: 9rem;
-    }
+    [data-poster-size="small"] .poster-frame { --poster-width: 6rem; }
+    [data-poster-size="medium"] .poster-frame { --poster-width: 9rem; }
+    [data-poster-size="large"] .poster-frame { --poster-width: 13rem; }
 
     .detail-body {
       padding: 1.25rem 2rem 2rem;
@@ -1112,9 +1129,9 @@
       min-height: 26rem;
     }
 
-    .poster-frame {
-      width: 11rem;
-    }
+    [data-poster-size="small"] .poster-frame { --poster-width: 7rem; }
+    [data-poster-size="medium"] .poster-frame { --poster-width: 11rem; }
+    [data-poster-size="large"] .poster-frame { --poster-width: 16rem; }
 
     h1 {
       font-size: 2.2rem;
