@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AlertTriangle, DatabaseBackup, Play, RotateCcw, ShieldAlert, Trash2 } from "@lucide/svelte";
+  import { AlertTriangle, DatabaseBackup, Palette, Play, RotateCcw, ShieldAlert, Trash2 } from "@lucide/svelte";
 
   interface GateStatus {
     gateId: string;
@@ -222,6 +222,13 @@
     </section>
   {/if}
 
+  <section class="quick-links">
+    <a href="/design-language" class="quick-link">
+      <Palette class="h-4 w-4" />
+      Design System
+    </a>
+  </section>
+
   <section class="tool-grid">
     <div class="tool-panel">
       <div class="tool-heading">
@@ -374,6 +381,36 @@
   .led-error {
     background: var(--color-error, #a84850);
     box-shadow: 0 0 6px color-mix(in srgb, var(--color-error, #a84850) 50%, transparent);
+  }
+
+  .quick-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .quick-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+    color: var(--color-text-muted);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 0.45rem 0.75rem;
+    transition:
+      border-color var(--duration-fast) var(--ease-mechanical),
+      box-shadow var(--duration-fast) var(--ease-mechanical),
+      color var(--duration-fast) var(--ease-mechanical);
+  }
+
+  .quick-link:hover {
+    border-color: var(--color-border-accent);
+    color: var(--color-text-accent);
+    box-shadow: var(--shadow-glow-accent);
   }
 
   .notice {

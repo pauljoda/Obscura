@@ -96,9 +96,17 @@
 
 {#if loading}
   <div class="min-h-[80vh] flex items-center justify-center">
-    <div class="flex flex-col items-center gap-4">
-      <div class="h-8 w-8 border-2 border-accent-500/30 border-t-accent-500 animate-spin"></div>
-      <p class="text-sm text-text-muted">Loading your library...</p>
+    <div class="flex flex-col items-center gap-6">
+      <div class="relative flex items-center justify-center">
+        <div class="route-loader-core-field"></div>
+        <div class="route-loader-ripples">
+          <div class="route-loader-ripple-ring"></div>
+          <div class="route-loader-ripple-ring"></div>
+          <div class="route-loader-ripple-ring"></div>
+        </div>
+        <LogoMark size={40} alt="" />
+      </div>
+      <p class="text-sm text-text-muted">Loading your library…</p>
     </div>
   </div>
 {:else if !hasAnyContent}
