@@ -4,8 +4,8 @@
     {
       "name": "web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@obscura/web-svelte", "dev", "--port", "5173"],
-      "port": 5173
+      "runtimeArgs": ["--filter", "@obscura/web-svelte", "dev"],
+      "port": 8008
     },
     {
       "name": "docker",
