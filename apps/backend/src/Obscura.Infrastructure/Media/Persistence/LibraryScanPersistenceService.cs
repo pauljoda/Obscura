@@ -91,7 +91,7 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         return id;
     }
 
-    public async Task<Guid> UpsertImageAsync(string filePath, string title, Guid? galleryEntityId, long? sizeBytes, int sortOrder, CancellationToken cancellationToken)
+    public async Task<Guid> UpsertImageAsync(string filePath, string title, Guid? galleryEntityId, long? sizeBytes, int sortOrder, bool isNsfw, CancellationToken cancellationToken)
     {
         var existing = await FindEntityBySourcePath(EntityKindRegistry.Image.Code, filePath, cancellationToken);
         if (existing is not null)
@@ -119,6 +119,11 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
                 ParentEntityId = galleryEntityId.Value, ChildEntityId = id,
                 Relationship = EntityRelationshipRegistry.Gallery.Code, SortOrder = sortOrder, CreatedAt = now
             });
+        }
+
+        if (isNsfw)
+        {
+            db.EntityFlags.Add(new EntityFlagRow { EntityId = id, IsNsfw = true, UpdatedAt = now });
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -154,7 +159,7 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         return id;
     }
 
-    public async Task<Guid> UpsertAudioTrackAsync(string filePath, string title, Guid audioLibraryId, int sortOrder, CancellationToken cancellationToken)
+    public async Task<Guid> UpsertAudioTrackAsync(string filePath, string title, Guid audioLibraryId, int sortOrder, bool isNsfw, CancellationToken cancellationToken)
     {
         var existing = await FindEntityBySourcePath(EntityKindRegistry.AudioTrack.Code, filePath, cancellationToken);
         if (existing is not null)
@@ -179,12 +184,16 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
             ParentEntityId = audioLibraryId, ChildEntityId = id,
             Relationship = EntityRelationshipRegistry.AudioLibrary.Code, SortOrder = sortOrder, CreatedAt = now
         });
+        if (isNsfw)
+        {
+            db.EntityFlags.Add(new EntityFlagRow { EntityId = id, IsNsfw = true, UpdatedAt = now });
+        }
 
         await db.SaveChangesAsync(cancellationToken);
         return id;
     }
 
-    public async Task<Guid> UpsertAudioLibraryAsync(string folderPath, string title, CancellationToken cancellationToken)
+    public async Task<Guid> UpsertAudioLibraryAsync(string folderPath, string title, bool isNsfw, CancellationToken cancellationToken)
     {
         var existing = await FindEntityBySourcePath(EntityKindRegistry.AudioLibrary.Code, folderPath, cancellationToken);
         if (existing is not null)
@@ -204,6 +213,10 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
             Id = Guid.NewGuid(), EntityId = id, Role = EntityFileRole.Source,
             Path = folderPath, CreatedAt = now, UpdatedAt = now
         });
+        if (isNsfw)
+        {
+            db.EntityFlags.Add(new EntityFlagRow { EntityId = id, IsNsfw = true, UpdatedAt = now });
+        }
 
         await db.SaveChangesAsync(cancellationToken);
         return id;
@@ -238,7 +251,7 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         return id;
     }
 
-    public async Task<Guid> UpsertBookChapterAsync(string archivePath, string title, Guid bookEntityId, int pageCount, CancellationToken cancellationToken)
+    public async Task<Guid> UpsertBookChapterAsync(string archivePath, string title, Guid bookEntityId, int pageCount, bool isNsfw, CancellationToken cancellationToken)
     {
         var existing = await FindEntityBySourcePath(EntityKindRegistry.BookChapter.Code, archivePath, cancellationToken);
         if (existing is not null)
@@ -267,12 +280,16 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         {
             EntityId = id, Code = "page_count", Value = pageCount, UpdatedAt = now
         });
+        if (isNsfw)
+        {
+            db.EntityFlags.Add(new EntityFlagRow { EntityId = id, IsNsfw = true, UpdatedAt = now });
+        }
 
         await db.SaveChangesAsync(cancellationToken);
         return id;
     }
 
-    public async Task<Guid> UpsertBookPageAsync(string filePath, string title, Guid bookEntityId, Guid chapterEntityId, int sortOrder, CancellationToken cancellationToken)
+    public async Task<Guid> UpsertBookPageAsync(string filePath, string title, Guid bookEntityId, Guid chapterEntityId, int sortOrder, bool isNsfw, CancellationToken cancellationToken)
     {
         var existing = await FindEntityBySourcePath(EntityKindRegistry.BookPage.Code, filePath, cancellationToken);
         if (existing is not null)
@@ -297,6 +314,10 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
             ParentEntityId = chapterEntityId, ChildEntityId = id,
             Relationship = EntityRelationshipRegistry.Page.Code, SortOrder = sortOrder, CreatedAt = now
         });
+        if (isNsfw)
+        {
+            db.EntityFlags.Add(new EntityFlagRow { EntityId = id, IsNsfw = true, UpdatedAt = now });
+        }
 
         await db.SaveChangesAsync(cancellationToken);
         return id;

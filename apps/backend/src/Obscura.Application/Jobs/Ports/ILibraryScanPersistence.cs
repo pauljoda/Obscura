@@ -18,13 +18,13 @@ public interface ILibraryScanPersistence
     // ── Entity upsert (returns entity ID) ──
 
     Task<Guid> UpsertVideoAsync(string filePath, string title, Guid libraryRootId, bool isNsfw, CancellationToken cancellationToken);
-    Task<Guid> UpsertImageAsync(string filePath, string title, Guid? galleryEntityId, long? sizeBytes, int sortOrder, CancellationToken cancellationToken);
+    Task<Guid> UpsertImageAsync(string filePath, string title, Guid? galleryEntityId, long? sizeBytes, int sortOrder, bool isNsfw, CancellationToken cancellationToken);
     Task<Guid> UpsertGalleryAsync(string folderPath, string title, bool isNsfw, CancellationToken cancellationToken);
-    Task<Guid> UpsertAudioTrackAsync(string filePath, string title, Guid audioLibraryId, int sortOrder, CancellationToken cancellationToken);
-    Task<Guid> UpsertAudioLibraryAsync(string folderPath, string title, CancellationToken cancellationToken);
+    Task<Guid> UpsertAudioTrackAsync(string filePath, string title, Guid audioLibraryId, int sortOrder, bool isNsfw, CancellationToken cancellationToken);
+    Task<Guid> UpsertAudioLibraryAsync(string folderPath, string title, bool isNsfw, CancellationToken cancellationToken);
     Task<Guid> UpsertBookAsync(string archivePath, string title, bool isNsfw, CancellationToken cancellationToken);
-    Task<Guid> UpsertBookChapterAsync(string archivePath, string title, Guid bookEntityId, int pageCount, CancellationToken cancellationToken);
-    Task<Guid> UpsertBookPageAsync(string filePath, string title, Guid bookEntityId, Guid chapterEntityId, int sortOrder, CancellationToken cancellationToken);
+    Task<Guid> UpsertBookChapterAsync(string archivePath, string title, Guid bookEntityId, int pageCount, bool isNsfw, CancellationToken cancellationToken);
+    Task<Guid> UpsertBookPageAsync(string filePath, string title, Guid bookEntityId, Guid chapterEntityId, int sortOrder, bool isNsfw, CancellationToken cancellationToken);
 
     // ── Stale entity cleanup ──
 

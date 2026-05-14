@@ -37,7 +37,7 @@ public sealed class ScanAudioJobHandler(
             var libraryTitle = Path.GetFileName(dirPath);
             validLibraryPaths.Add(dirPath);
 
-            var libraryId = await Persistence.UpsertAudioLibraryAsync(dirPath, libraryTitle, cancellationToken);
+            var libraryId = await Persistence.UpsertAudioLibraryAsync(dirPath, libraryTitle, root.IsNsfw, cancellationToken);
             var validTrackPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             for (var i = 0; i < audioFiles.Count; i++)
@@ -46,7 +46,7 @@ public sealed class ScanAudioJobHandler(
                 var title = Path.GetFileNameWithoutExtension(filePath);
                 validTrackPaths.Add(filePath);
 
-                var trackId = await Persistence.UpsertAudioTrackAsync(filePath, title, libraryId, i, cancellationToken);
+                var trackId = await Persistence.UpsertAudioTrackAsync(filePath, title, libraryId, i, root.IsNsfw, cancellationToken);
 
                 if (settings.AutoGenerateMetadata && !await Persistence.HasEntityTechnicalAsync(trackId, cancellationToken))
                 {

@@ -49,7 +49,7 @@ public sealed class ScanGalleryJobHandler(
                 long? size = null;
                 try { size = new FileInfo(filePath).Length; } catch { }
 
-                var imageId = await Persistence.UpsertImageAsync(filePath, title, galleryId, size, i, cancellationToken);
+                var imageId = await Persistence.UpsertImageAsync(filePath, title, galleryId, size, i, root.IsNsfw, cancellationToken);
 
                 if (settings.AutoGeneratePreview && !await Persistence.HasEntityFileAsync(imageId, EntityFileRole.Thumbnail, cancellationToken))
                 {

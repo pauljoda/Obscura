@@ -50,7 +50,7 @@ public sealed class ScanBookJobHandler(
             }
 
             var bookId = await Persistence.UpsertBookAsync(archivePath, bookTitle, root.IsNsfw, cancellationToken);
-            var chapterId = await Persistence.UpsertBookChapterAsync(archivePath, bookTitle, bookId, pageMembers.Count, cancellationToken);
+            var chapterId = await Persistence.UpsertBookChapterAsync(archivePath, bookTitle, bookId, pageMembers.Count, root.IsNsfw, cancellationToken);
 
             for (var i = 0; i < pageMembers.Count; i++)
             {
@@ -58,7 +58,7 @@ public sealed class ScanBookJobHandler(
                 var pagePath = $"{archivePath}::{memberPath}";
                 var pageTitle = Path.GetFileNameWithoutExtension(memberPath);
 
-                var pageId = await Persistence.UpsertBookPageAsync(pagePath, pageTitle, bookId, chapterId, i, cancellationToken);
+                var pageId = await Persistence.UpsertBookPageAsync(pagePath, pageTitle, bookId, chapterId, i, root.IsNsfw, cancellationToken);
 
                 if (settings.AutoGeneratePreview && !await Persistence.HasEntityFileAsync(pageId, EntityFileRole.Thumbnail, cancellationToken))
                 {
