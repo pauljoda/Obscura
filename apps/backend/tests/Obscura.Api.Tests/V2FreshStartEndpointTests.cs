@@ -124,6 +124,8 @@ public sealed class V2FreshStartEndpointTests
         }
 
         public Task ResetAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task PurgeNonSourceEntityFilesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private sealed class FakeLegacyVideoImportService : ILegacyVideoImportService

@@ -283,11 +283,14 @@ export function entityCardToThumbnailCard(
   href?: string,
 ): EntityThumbnailCard {
   const images = getImagesCapability(entity.capabilities);
+  // Use only explicit thumbnail/cover URLs from the backend. The items[0]
+  // fallback is intentionally restricted to cover/poster/thumbnail roles —
+  // generated assets like trickplay VTTs or previews should never be used as
+  // a static cover image, and source files are not displayable thumbnails.
   const coverPath =
     getThumbnailUrl(entity.capabilities) ??
     images?.coverUrl ??
-    images?.items.find((item) => item.kind === "cover")?.path ??
-    images?.items[0]?.path ??
+    images?.items.find((item) => item.kind === "cover" || item.kind === "poster" || item.kind === "thumbnail")?.path ??
     null;
   const trickplay = previewAssets(entity, ["trickplay", "sprite"]);
 

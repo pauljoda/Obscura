@@ -54,6 +54,19 @@ public sealed class V2FreshStartService : IV2FreshStartService
         PurgeStaleCacheDirectories();
     }
 
+    /// <inheritdoc />
+    public async Task PurgeNonSourceEntityFilesAsync(CancellationToken cancellationToken)
+    {
+        var deleted = await _db.Database.ExecuteSqlRawAsync(
+            FreshStartSql.PurgeNonSourceEntityFiles, cancellationToken);
+        if (deleted > 0)
+        {
+            _logger.LogInformation(
+                "Purged {Count} non-source entity_files rows left over from legacy import",
+                deleted);
+        }
+    }
+
     /// <summary>
     /// Deletes stale v1 cache subdirectories whose entity IDs no longer correspond to
     /// v2 entities. After migration, a library rescan regenerates all cache assets under

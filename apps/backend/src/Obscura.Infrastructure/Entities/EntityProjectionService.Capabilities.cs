@@ -152,7 +152,15 @@ public sealed partial class EntityProjectionService
         AddIfSupported(capabilities, kind, new CapabilityTags(tags));
         AddIfSupported(capabilities, kind, new CapabilityCredits(credits));
         AddIfSupported(capabilities, kind, new CapabilityStudio(studio));
-        AddIfSupported(capabilities, kind, new CapabilityImages(kind.ImageAssetRoles, imageAssets, thumbnailUrl, coverUrl));
+
+        // Only emit the images capability when there are actual image assets or a
+        // resolved thumbnail/cover URL. Emitting an empty images capability with
+        // null URLs is harmless but can mislead the frontend into thinking images
+        // "could" exist, leading to wasted placeholder rendering.
+        if (imageAssets.Length > 0 || thumbnailUrl is not null || coverUrl is not null)
+        {
+            AddIfSupported(capabilities, kind, new CapabilityImages(kind.ImageAssetRoles, imageAssets, thumbnailUrl, coverUrl));
+        }
         AddIfSupported(capabilities, kind, new CapabilityLinks(urls, externalIds));
         AddIfSupported(capabilities, kind, new CapabilityFlags(flag?.IsFavorite, flag?.IsNsfw, flag?.IsOrganized));
         AddIfSupported(capabilities, kind, new CapabilityFiles(files));

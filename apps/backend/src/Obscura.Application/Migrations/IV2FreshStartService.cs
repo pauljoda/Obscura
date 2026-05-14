@@ -20,4 +20,14 @@ public interface IV2FreshStartService
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>A task representing the asynchronous reset.</returns>
     Task ResetAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Deletes entity_files rows whose role is not <c>source</c>. This is a safety net
+    /// that runs after legacy imports to remove any cache-generated asset references
+    /// (thumbnails, previews, trickplay, etc.) that should not exist in a fresh
+    /// migration — the first library rescan regenerates them under the correct IDs.
+    /// </summary>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous cleanup.</returns>
+    Task PurgeNonSourceEntityFilesAsync(CancellationToken cancellationToken);
 }
