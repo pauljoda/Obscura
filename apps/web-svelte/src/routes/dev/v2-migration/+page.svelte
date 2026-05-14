@@ -1,25 +1,190 @@
 <script lang="ts">
-  import { AlertTriangle, DatabaseBackup, RotateCcw, ShieldAlert, Trash2 } from "@lucide/svelte";
-  import type { ActionData, PageData } from "./$types";
+  import { AlertTriangle, DatabaseBackup, Play, RotateCcw, ShieldAlert, Trash2 } from "@lucide/svelte";
 
-  let { data, form }: { data: PageData; form: ActionData } = $props();
-
-  const selectedBackup = $derived(data.backups[0]?.name ?? "");
-
-  function formatBytes(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    const kib = bytes / 1024;
-    if (kib < 1024) return `${kib.toFixed(1)} KiB`;
-    const mib = kib / 1024;
-    if (mib < 1024) return `${mib.toFixed(1)} MiB`;
-    return `${(mib / 1024).toFixed(2)} GiB`;
+  interface GateStatus {
+    gateId: string;
+    accepted: boolean;
   }
 
-  function formatDate(value: string): string {
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(value));
+  interface ImportCounts {
+    seriesImported?: number;
+    videosImported?: number;
+    peopleImported?: number;
+    tagsImported?: number;
+    studiosImported?: number;
+    imagesImported?: number;
+    galleriesImported?: number;
+    booksImported?: number;
+    audioLibrariesImported?: number;
+    audioTracksImported?: number;
+    collectionsImported?: number;
+    linksImported?: number;
+  }
+
+  interface FreshStartResult {
+    backupPath: string;
+    preservedLibraryRoots: number;
+    preservedSettings: boolean;
+    mediaReset: boolean;
+    videoImport: ImportCounts | null;
+    mediaImport: ImportCounts | null;
+  }
+
+  let gate: GateStatus | null = $state(null);
+  let gateError: string | null = $state(null);
+  let actionMessage: { ok: boolean; text: string; details?: string } | null = $state(null);
+  let busy: string | null = $state(null);
+
+  async function loadGate() {
+    try {
+      const res = await fetch("/api/system/v2-upgrade-gate");
+      if (res.ok) {
+        gate = await res.json();
+        gateError = null;
+      } else {
+        gateError = `Gate status ${res.status}`;
+      }
+    } catch (err) {
+      gateError = err instanceof Error ? err.message : String(err);
+    }
+  }
+
+  loadGate();
+
+  async function promptGate() {
+    busy = "promptGate";
+    actionMessage = null;
+    try {
+      const res = await fetch("/api/system/v2-upgrade-gate/prompt", { method: "POST" });
+      if (res.ok) {
+        gate = await res.json();
+        actionMessage = { ok: true, text: "Gate re-armed. Reload the app to see the consent prompt." };
+      } else if (res.status === 404) {
+        actionMessage = { ok: false, text: "Prompt endpoint returned 404 — the .NET backend may not be running in Development mode." };
+      } else {
+        actionMessage = { ok: false, text: `Prompt gate failed: ${res.status}` };
+      }
+    } catch (err) {
+      actionMessage = { ok: false, text: err instanceof Error ? err.message : String(err) };
+    } finally {
+      busy = null;
+    }
+  }
+
+  async function runFreshStart() {
+    busy = "freshStart";
+    actionMessage = null;
+    try {
+      const acceptRes = await fetch("/api/system/v2-upgrade-gate/accept", { method: "POST" });
+      if (!acceptRes.ok) {
+        actionMessage = { ok: false, text: `Accept gate failed: ${acceptRes.status}` };
+        return;
+      }
+      gate = await acceptRes.json();
+
+      const prepareRes = await fetch("/api/system/v2-fresh-start/prepare", { method: "POST" });
+      if (!prepareRes.ok) {
+        const body = await prepareRes.text();
+        actionMessage = { ok: false, text: `Fresh-start prepare failed: ${prepareRes.status}`, details: body };
+        return;
+      }
+
+      const result: FreshStartResult = await prepareRes.json();
+      const lines: string[] = [
+        `Backup: ${result.backupPath}`,
+        `Library roots preserved: ${result.preservedLibraryRoots}`,
+        `Settings preserved: ${result.preservedSettings}`,
+        `Media reset: ${result.mediaReset}`,
+      ];
+
+      if (result.videoImport) {
+        const v = result.videoImport;
+        lines.push("");
+        lines.push("Video import:");
+        if (v.seriesImported) lines.push(`  Series: ${v.seriesImported}`);
+        if (v.videosImported) lines.push(`  Videos: ${v.videosImported}`);
+        if (v.peopleImported) lines.push(`  People: ${v.peopleImported}`);
+        if (v.tagsImported) lines.push(`  Tags: ${v.tagsImported}`);
+        if (v.studiosImported) lines.push(`  Studios: ${v.studiosImported}`);
+        if (v.linksImported) lines.push(`  Links: ${v.linksImported}`);
+      }
+
+      if (result.mediaImport) {
+        const m = result.mediaImport;
+        lines.push("");
+        lines.push("Media import:");
+        if (m.imagesImported) lines.push(`  Images: ${m.imagesImported}`);
+        if (m.galleriesImported) lines.push(`  Galleries: ${m.galleriesImported}`);
+        if (m.booksImported) lines.push(`  Books: ${m.booksImported}`);
+        if (m.audioLibrariesImported) lines.push(`  Audio libraries: ${m.audioLibrariesImported}`);
+        if (m.audioTracksImported) lines.push(`  Audio tracks: ${m.audioTracksImported}`);
+        if (m.collectionsImported) lines.push(`  Collections: ${m.collectionsImported}`);
+        if (m.linksImported) lines.push(`  Links: ${m.linksImported}`);
+      }
+
+      actionMessage = {
+        ok: true,
+        text: "Fresh-start completed with legacy data migration.",
+        details: lines.join("\n"),
+      };
+    } catch (err) {
+      actionMessage = { ok: false, text: err instanceof Error ? err.message : String(err) };
+    } finally {
+      busy = null;
+    }
+  }
+
+  async function importVideosOnly() {
+    busy = "importVideos";
+    actionMessage = null;
+    try {
+      const res = await fetch("/api/system/v2-legacy-video-import", { method: "POST" });
+      if (!res.ok) {
+        actionMessage = { ok: false, text: `Video import failed: ${res.status}` };
+        return;
+      }
+      const result: ImportCounts = await res.json();
+      const lines = [
+        `Series: ${result.seriesImported ?? 0}`,
+        `Videos: ${result.videosImported ?? 0}`,
+        `People: ${result.peopleImported ?? 0}`,
+        `Tags: ${result.tagsImported ?? 0}`,
+        `Studios: ${result.studiosImported ?? 0}`,
+        `Links: ${result.linksImported ?? 0}`,
+      ];
+      actionMessage = { ok: true, text: "Legacy video import complete.", details: lines.join("\n") };
+    } catch (err) {
+      actionMessage = { ok: false, text: err instanceof Error ? err.message : String(err) };
+    } finally {
+      busy = null;
+    }
+  }
+
+  async function importMediaOnly() {
+    busy = "importMedia";
+    actionMessage = null;
+    try {
+      const res = await fetch("/api/system/v2-legacy-media-import", { method: "POST" });
+      if (!res.ok) {
+        actionMessage = { ok: false, text: `Media import failed: ${res.status}` };
+        return;
+      }
+      const result: ImportCounts = await res.json();
+      const lines = [
+        `Images: ${result.imagesImported ?? 0}`,
+        `Galleries: ${result.galleriesImported ?? 0}`,
+        `Books: ${result.booksImported ?? 0}`,
+        `Audio libraries: ${result.audioLibrariesImported ?? 0}`,
+        `Audio tracks: ${result.audioTracksImported ?? 0}`,
+        `Collections: ${result.collectionsImported ?? 0}`,
+        `Links: ${result.linksImported ?? 0}`,
+      ];
+      actionMessage = { ok: true, text: "Legacy media import complete.", details: lines.join("\n") };
+    } catch (err) {
+      actionMessage = { ok: false, text: err instanceof Error ? err.message : String(err) };
+    } finally {
+      busy = null;
+    }
   }
 </script>
 
@@ -34,110 +199,96 @@
       <h1>v2 Migration Control</h1>
     </div>
     <div class="gate-state">
-      <span class={data.gate?.awaitingBreakingConsent ? "led led-warn" : "led led-idle"}></span>
-      <span>{data.gate?.awaitingBreakingConsent ? "Gate waiting" : "Gate clear"}</span>
+      {#if gateError}
+        <span class="led led-error"></span>
+        <span>Backend unavailable</span>
+      {:else if gate}
+        <span class={gate.accepted ? "led led-idle" : "led led-warn"}></span>
+        <span>{gate.accepted ? "Gate clear" : "Gate waiting"}</span>
+      {:else}
+        <span class="led"></span>
+        <span>Loading…</span>
+      {/if}
     </div>
   </header>
 
-  {#if form?.message}
-    <section class={["notice", !form.ok && "notice-error"]} aria-live="polite">
-      <strong>{form.ok ? "Done" : "Action failed"}</strong>
-      <span>{form.message}</span>
-      {#if form.details}
-        <pre>{form.details}</pre>
+  {#if actionMessage}
+    <section class={["notice", !actionMessage.ok && "notice-error"]} aria-live="polite">
+      <strong>{actionMessage.ok ? "Done" : "Action failed"}</strong>
+      <span>{actionMessage.text}</span>
+      {#if actionMessage.details}
+        <pre>{actionMessage.details}</pre>
       {/if}
     </section>
   {/if}
 
   <section class="tool-grid">
-    <form method="POST" action="?/promptGate" class="tool-panel">
+    <div class="tool-panel">
       <div class="tool-heading">
         <ShieldAlert class="h-5 w-5" />
         <div>
           <h2>Prompt Upgrade Gate</h2>
-          <p>Remove the local consent marker, then open the app so the first-boot gate can block entry.</p>
+          <p>Remove the consent marker so the first-boot gate blocks entry on next load.</p>
         </div>
       </div>
 
       <dl>
         <div>
           <dt>Status</dt>
-          <dd>{data.gate ? (data.gate.accepted ? "Accepted" : "Awaiting consent") : "Unavailable"}</dd>
-        </div>
-        <div>
-          <dt>Gate</dt>
-          <dd>{data.gateMarkerPath}</dd>
+          <dd>{gate ? (gate.accepted ? "Accepted" : "Awaiting consent") : gateError ?? "Loading…"}</dd>
         </div>
       </dl>
 
-      <button type="submit" class="danger-action">
+      <button type="button" onclick={promptGate} disabled={busy !== null} class="danger-action">
         <AlertTriangle class="h-4 w-4" />
-        Prompt Upgrade Gate
+        {busy === "promptGate" ? "Re-arming…" : "Prompt Upgrade Gate"}
       </button>
-    </form>
+    </div>
 
-    <form method="POST" action="?/createBackup" class="tool-panel">
+    <div class="tool-panel wide-panel">
       <div class="tool-heading">
         <DatabaseBackup class="h-5 w-5" />
         <div>
-          <h2>Create Backup</h2>
-          <p>Capture the current local database before another migration pass.</p>
+          <h2>Full Migration</h2>
+          <p>Accept gate, back up DB, reset v2 tables, and import all legacy data in one pass.</p>
         </div>
       </div>
 
-      <dl>
-        <div>
-          <dt>Target</dt>
-          <dd>{data.backupDir}</dd>
-        </div>
-      </dl>
-
-      <button type="submit">
-        <DatabaseBackup class="h-4 w-4" />
-        Create Backup
-      </button>
-    </form>
-
-    <form method="POST" action="?/restoreAndClear" class="tool-panel wide-panel">
-      <div class="tool-heading">
-        <RotateCcw class="h-5 w-5" />
-        <div>
-          <h2>Restore Backup and Clear v2</h2>
-          <p>Restore one local dump, wipe v2 migration data, and re-preserve legacy roots/settings.</p>
-        </div>
-      </div>
-
-      <label>
-        <span>Backup</span>
-        <select name="backup" disabled={data.backups.length === 0}>
-          {#each data.backups as backup (backup.name)}
-            <option value={backup.name} selected={backup.name === selectedBackup}>
-              {backup.name} - {formatBytes(backup.bytes)} - {formatDate(backup.createdAt)}
-            </option>
-          {/each}
-        </select>
-      </label>
-
-      <button type="submit" class="danger-action" disabled={data.backups.length === 0}>
+      <button type="button" onclick={runFreshStart} disabled={busy !== null}>
         <RotateCcw class="h-4 w-4" />
-        Restore and Clear v2
+        {busy === "freshStart" ? "Running migration…" : "Run Full Migration"}
       </button>
-    </form>
+    </div>
 
-    <form method="POST" action="?/clearV2" class="tool-panel">
+    <div class="tool-panel">
       <div class="tool-heading">
-        <Trash2 class="h-5 w-5" />
+        <Play class="h-5 w-5" />
         <div>
-          <h2>Clear v2 Data</h2>
-          <p>Keep the current legacy database state, but reset v2 tables for another import.</p>
+          <h2>Import Videos Only</h2>
+          <p>Run the legacy video import into existing v2 tables without resetting first.</p>
         </div>
       </div>
 
-      <button type="submit" class="danger-action">
-        <Trash2 class="h-4 w-4" />
-        Clear v2 Data
+      <button type="button" onclick={importVideosOnly} disabled={busy !== null}>
+        <Play class="h-4 w-4" />
+        {busy === "importVideos" ? "Importing…" : "Import Legacy Videos"}
       </button>
-    </form>
+    </div>
+
+    <div class="tool-panel">
+      <div class="tool-heading">
+        <Play class="h-5 w-5" />
+        <div>
+          <h2>Import Media Only</h2>
+          <p>Run the legacy media import (images, galleries, books, audio, collections) without resetting.</p>
+        </div>
+      </div>
+
+      <button type="button" onclick={importMediaOnly} disabled={busy !== null}>
+        <Play class="h-4 w-4" />
+        {busy === "importMedia" ? "Importing…" : "Import Legacy Media"}
+      </button>
+    </div>
   </section>
 </main>
 
@@ -147,6 +298,7 @@
     flex-direction: column;
     gap: 1rem;
     min-height: 100%;
+    padding: 1.5rem;
     color: var(--color-text-primary);
   }
 
@@ -201,9 +353,27 @@
     text-transform: uppercase;
   }
 
+  .led {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--color-text-muted);
+  }
+
   .led-warn {
     background: var(--color-accent-500);
     box-shadow: var(--shadow-glow-accent);
+  }
+
+  .led-idle {
+    background: #4ade80;
+    box-shadow: 0 0 6px #4ade8066;
+  }
+
+  .led-error {
+    background: var(--color-error, #a84850);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--color-error, #a84850) 50%, transparent);
   }
 
   .notice {
@@ -221,7 +391,7 @@
   }
 
   pre {
-    max-height: 12rem;
+    max-height: 16rem;
     overflow: auto;
     margin: 0.25rem 0 0;
     border: 1px solid var(--color-border-subtle);
@@ -288,21 +458,6 @@
     font-size: 0.76rem;
   }
 
-  label {
-    display: grid;
-    gap: 0.35rem;
-  }
-
-  select {
-    min-height: 2.5rem;
-    border: 1px solid var(--color-border-subtle);
-    border-radius: 0;
-    background: var(--color-surface-2);
-    color: var(--color-text-primary);
-    font: inherit;
-    padding: 0 0.65rem;
-  }
-
   button {
     display: inline-flex;
     min-height: 2.4rem;
@@ -316,6 +471,8 @@
     font-family: var(--font-mono, "JetBrains Mono", monospace);
     font-size: 0.74rem;
     text-transform: uppercase;
+    cursor: pointer;
+    padding: 0 1rem;
     transition:
       border-color var(--duration-fast) var(--ease-mechanical),
       box-shadow var(--duration-fast) var(--ease-mechanical),
