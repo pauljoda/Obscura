@@ -36,12 +36,12 @@ public sealed class EntityService
     /// <returns>API-ready entity list response.</returns>
     public async Task<EntityListResponse> ListAsync(EntityListQuery query, CancellationToken cancellationToken)
     {
-        var settings = await _settings.GetAsync(cancellationToken);
+        var hideNsfw = query.HideNsfw ?? (await _settings.GetAsync(cancellationToken)).HideNsfw;
         var page = await _entities.ListAsync(
             query.Kind,
             query.Search,
             query.Cursor,
-            settings.HideNsfw,
+            hideNsfw,
             cancellationToken);
         return ContractMapper.ToEntityListResponse(page);
     }

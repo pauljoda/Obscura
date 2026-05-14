@@ -16,10 +16,11 @@ public static class EntityEndpoints
             EntityKindQuery? kind,
             string? query,
             string? cursor,
+            bool? hideNsfw,
             EntityService entities,
             CancellationToken cancellationToken) =>
             {
-                return Results.Ok(await entities.ListAsync(new EntityListQuery(kind?.Value, query, cursor), cancellationToken));
+                return Results.Ok(await entities.ListAsync(new EntityListQuery(kind?.Value, query, cursor, hideNsfw), cancellationToken));
             })
             .WithName("ListEntities")
             .WithSummary("Lists global entities with optional kind, search, and cursor filters.")

@@ -70,7 +70,8 @@ if (Directory.Exists(resolvedCacheDir))
     {
         FileProvider = new PhysicalFileProvider(resolvedCacheDir),
         RequestPath = "/assets",
-        ServeUnknownFileTypes = false,
+        ServeUnknownFileTypes = true,
+        DefaultContentType = "application/octet-stream",
     });
 }
 

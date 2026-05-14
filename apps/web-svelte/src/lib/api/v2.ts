@@ -85,10 +85,11 @@ export interface V2RequestOptions {
 }
 
 export function fetchV2Entities(
-  params?: { kind?: string; query?: string; cursor?: string },
+  params?: { kind?: string; query?: string; cursor?: string; hideNsfw?: boolean },
   options?: V2RequestOptions,
 ): Promise<V2EntityListResponse> {
-  return listEntities(params, { signal: options?.signal }).then((response) => {
+  // Cast: hideNsfw is accepted by the backend but not yet in the generated OpenAPI type.
+  return listEntities(params as Record<string, string | boolean | undefined>, { signal: options?.signal }).then((response) => {
     if (response.status !== 200) {
       throw new Error(response.data.message);
     }

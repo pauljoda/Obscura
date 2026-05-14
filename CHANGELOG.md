@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v1-to-v2 upgrade now preserves all existing metadata instead of forcing a full rescan. Thumbnails, previews, trickplay sprites, technical metadata, fingerprints, playback history, subtitles, markers, and all taxonomy relationships are migrated automatically.
 
 ### Added
+- Videos page now sends the client NSFW visibility mode to the backend, so switching between Off / Blur / Show re-fetches the list with server-side filtering instead of relying on client-only blur.
 
 ### Changed
 - The v2 upgrade gate now runs legacy video and media imports as part of the fresh-start preparation, so all v1 data flows into v2 tables during the upgrade instead of requiring a full library rescan.
@@ -18,6 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 upgrade gate consent overlay now appears on first boot when the gate is armed — previously the SPA layout never fetched gate status from the .NET backend, so the overlay never rendered.
 - Legacy media import no longer fails on the `rule_tree` column type mismatch or on book read progress referencing chapter entities that haven't been imported yet.
 - Video entity list no longer crashes on subtitle source codes `upload` and `sidecar` that were valid in v1 but missing from the v2 codec.
+- Video resolution chips now display standardized labels like "1080p" and "4K" instead of raw "WidthxHeight" dimensions.
+- Legacy v1 asset files stored without file extensions are now served correctly — the `/assets/` static file middleware now allows unknown file types instead of returning 404.
 - Entity thumbnails now show a gradient placeholder with the entity-type icon when the cover image is missing or fails to load, instead of displaying broken image alt text.
 - Generated thumbnails, previews, waveforms, and subtitles are now served via the `/assets/` HTTP route and stored as API-relative URLs — previously stored as disk paths that browsers could not resolve.
 - Trickplay hover preview now expands VTT manifest paths into individual frame URLs based on video duration, so the scrub-preview image strip renders correctly on hover.

@@ -140,6 +140,15 @@ function statIcon(code: string): EntityThumbnailMetaIcon {
 }
 
 
+function formatResolutionLabel(width: number, height: number): string {
+  if (height >= 2160) return "4K";
+  if (height >= 1440) return "1440p";
+  if (height >= 1080) return "1080p";
+  if (height >= 720) return "720p";
+  if (height >= 480) return "480p";
+  return `${width}×${height}`;
+}
+
 function aspectRatioForEntity(entity: EntityCard): EntityThumbnailCard["aspectRatio"] {
   const technical = getTechnicalCapability(entity.capabilities);
   const width = numberValue(technical?.width);
@@ -212,7 +221,7 @@ function metaForEntity(entity: EntityCard): EntityThumbnailCard["meta"] {
   const customOverlay = customOverlayForEntity(entity);
 
   if (duration) meta.push({ icon: "duration", label: duration });
-  if (width && height) meta.push({ icon: entity.kind === "video" ? "video" : "image", label: `${width}x${height}` });
+  if (width && height) meta.push({ icon: entity.kind === "video" ? "video" : "image", label: formatResolutionLabel(width, height) });
   for (const stat of stats.slice(0, 2)) {
     meta.push({ icon: statIcon(stat.code), label: statLabel(stat.code, stat.value) });
   }

@@ -4,10 +4,13 @@
   import { fetchV2Entities, type V2EntityCard } from "$lib/api/v2";
   import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
   import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
   import InfiniteLoadTrigger from "$lib/v1/media-surface/pagination/InfiniteLoadTriggerV1.svelte";
 
   type LoadState = "loading" | "ready" | "error";
+
+  const nsfw = useNsfw();
 
   let loadState: LoadState = $state("loading");
   let items: V2EntityCard[] = $state.raw([]);
@@ -20,8 +23,17 @@
     items.map((item) => entityCardToThumbnailCard(item, `/videos/${item.id}`)),
   );
 
+  let lastNsfwMode = $state(nsfw.mode);
+
   onMount(() => {
     void loadInitial();
+  });
+
+  $effect(() => {
+    if (nsfw.mode !== lastNsfwMode) {
+      lastNsfwMode = nsfw.mode;
+      void loadInitial();
+    }
   });
 
   async function loadInitial() {
@@ -31,7 +43,7 @@
     nextCursor = null;
 
     try {
-      const response = await fetchV2Entities({ kind: "video" });
+      const response = await fetchV2Entities({ kind: "video", hideNsfw: nsfw.mode === "off" });
       items = response.items;
       nextCursor = response.nextCursor;
       loadState = "ready";
@@ -50,6 +62,7 @@
       const response = await fetchV2Entities({
         kind: "video",
         cursor: nextCursor,
+        hideNsfw: nsfw.mode === "off",
       });
       items = [...items, ...response.items];
       nextCursor = response.nextCursor;
@@ -101,7 +114,7 @@
       loading={loadingMore}
       error={loadMoreError}
       nextHref="/videos"
-      loadKey={nextCursor}
+      loadKey={nextCursor ?? undefined}
       onLoad={loadMore}
     />
   {/if}
