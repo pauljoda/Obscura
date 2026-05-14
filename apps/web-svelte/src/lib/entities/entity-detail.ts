@@ -1,0 +1,449 @@
+import {
+  getCapability,
+  getDescription,
+  getImagesCapability,
+  getRatingValue,
+  getTechnicalCapability,
+  isNsfw,
+  type EntityCapabilityKind,
+} from "$lib/api/capabilities";
+import type {
+  EntityCapability,
+  EntityCard,
+  EntityDate,
+  EntityExternalId,
+  EntityFingerprint,
+  EntityMarker,
+  EntityReference,
+  EntitySource,
+  EntitySubtitle,
+  EntityUrl,
+} from "$lib/api/generated/model";
+import { getEntityKindLabel } from "./entity-grid";
+
+/** Entity payload consumed by the shared detail surface. */
+export interface EntityDetailEntity extends EntityCard {
+  capabilities: EntityCapability[];
+}
+
+/** Resolved hero/banner image displayed as a full-width backdrop at the top of the detail view. */
+export interface EntityDetailHero {
+  src: string;
+  alt: string;
+}
+
+/** Resolved poster/cover image displayed alongside the entity title and metadata. */
+export interface EntityDetailPoster {
+  src: string;
+  alt: string;
+}
+
+/** Interactive star rating state. */
+export interface EntityDetailRating {
+  value: number;
+  max: number;
+}
+
+/** Boolean flag displayed as a status badge. */
+export interface EntityDetailFlag {
+  code: "favorite" | "nsfw" | "organized";
+  label: string;
+  active: boolean;
+}
+
+/** A stat or counter item shown in the metadata grid. */
+export interface EntityDetailStat {
+  code: string;
+  label: string;
+  value: string;
+}
+
+/** A formatted date entry. */
+export interface EntityDetailDate {
+  code: string;
+  label: string;
+  value: string;
+  sortable: string | null;
+}
+
+/** Technical specification row. */
+export interface EntityDetailTechnicalRow {
+  label: string;
+  value: string;
+}
+
+/** A linked person/performer in the credits section. */
+export interface EntityDetailCredit {
+  id: string;
+  kind: string;
+  title: string;
+}
+
+/** An external link or ID. */
+export interface EntityDetailLink {
+  label: string;
+  url: string | null;
+  provider?: string;
+}
+
+/** A file entry. */
+export interface EntityDetailFile {
+  role: string;
+  path: string;
+  mimeType: string | null;
+}
+
+/** A video/audio marker. */
+export interface EntityDetailMarker {
+  id: string;
+  title: string;
+  timestamp: string;
+  seconds: number;
+  endSeconds: number | null;
+}
+
+/** A subtitle track entry. */
+export interface EntityDetailSubtitle {
+  id: string;
+  language: string;
+  label: string | null;
+  format: string;
+  source: string;
+  isDefault: boolean;
+}
+
+/** Progress state for playback/reading. */
+export interface EntityDetailProgress {
+  index: number;
+  total: number;
+  percent: number;
+  unit: string;
+  mode: string | null;
+  completed: boolean;
+}
+
+/** A position badge (season, episode, chapter, etc.). */
+export interface EntityDetailPosition {
+  code: string;
+  value: number;
+  label: string;
+}
+
+/** Classification badge. */
+export interface EntityDetailClassification {
+  value: string;
+  system: string | null;
+}
+
+/** Complete view model for one entity detail surface. */
+export interface EntityDetailCard {
+  entity: EntityDetailEntity;
+  kindLabel: string;
+  hero: EntityDetailHero | null;
+  poster: EntityDetailPoster | null;
+  description: string | null;
+  rating: EntityDetailRating | null;
+  flags: EntityDetailFlag[];
+  tags: string[];
+  studio: EntityDetailCredit | null;
+  credits: EntityDetailCredit[];
+  stats: EntityDetailStat[];
+  dates: EntityDetailDate[];
+  technical: EntityDetailTechnicalRow[];
+  links: EntityDetailLink[];
+  files: EntityDetailFile[];
+  fingerprints: EntityFingerprint[];
+  markers: EntityDetailMarker[];
+  subtitles: EntityDetailSubtitle[];
+  progress: EntityDetailProgress | null;
+  positions: EntityDetailPosition[];
+  classification: EntityDetailClassification | null;
+  sources: EntitySource[];
+  counters: EntityDetailStat[];
+  presentCapabilities: EntityCapabilityKind[];
+}
+
+function numberValue(value: number | string | null | undefined): number | null {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value !== "string" || value.trim() === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function formatDuration(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const [hours = "0", minutes = "0", seconds = "0"] = value.split(":");
+  const roundedSeconds = seconds.split(".")[0] ?? "0";
+  if (hours === "00" || hours === "0") {
+    return `${minutes.padStart(2, "0")}:${roundedSeconds.padStart(2, "0")}`;
+  }
+  return `${hours}:${minutes.padStart(2, "0")}:${roundedSeconds.padStart(2, "0")}`;
+}
+
+function durationToSeconds(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const [hours = "0", minutes = "0", seconds = "0"] = value.split(":");
+  const total = Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
+  return Number.isFinite(total) ? total : null;
+}
+
+function formatResolution(width: number, height: number): string {
+  if (height >= 2160) return `${width}×${height} (4K)`;
+  if (height >= 1440) return `${width}×${height} (1440p)`;
+  if (height >= 1080) return `${width}×${height} (1080p)`;
+  if (height >= 720) return `${width}×${height} (720p)`;
+  return `${width}×${height}`;
+}
+
+function formatDateCode(code: string): string {
+  return code.replaceAll("-", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatStatCode(code: string): string {
+  return code.replaceAll("-", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function markerTimestamp(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function resolveHero(capabilities: EntityCapability[]): EntityDetailHero | null {
+  const images = getImagesCapability(capabilities);
+  if (!images) return null;
+  if (images.coverUrl) return { src: images.coverUrl, alt: "Cover" };
+  const coverItem = images.items.find(
+    (item) => item.kind === "cover" || item.kind === "hero" || item.kind === "banner",
+  );
+  if (coverItem) return { src: coverItem.path, alt: coverItem.kind };
+  return null;
+}
+
+function resolvePoster(capabilities: EntityCapability[]): EntityDetailPoster | null {
+  const images = getImagesCapability(capabilities);
+  if (!images) return null;
+  const posterItem = images.items.find(
+    (item) => item.kind === "poster" || item.kind === "thumbnail",
+  );
+  if (posterItem) return { src: posterItem.path, alt: posterItem.kind };
+  if (images.thumbnailUrl) return { src: images.thumbnailUrl, alt: "Thumbnail" };
+  return null;
+}
+
+function resolveFlags(capabilities: EntityCapability[]): EntityDetailFlag[] {
+  const flagsCap = getCapability(capabilities, "flags");
+  if (!flagsCap) return [];
+  const result: EntityDetailFlag[] = [];
+  if (flagsCap.isFavorite != null) {
+    result.push({ code: "favorite", label: "Favorite", active: flagsCap.isFavorite });
+  }
+  if (flagsCap.isNsfw != null) {
+    result.push({ code: "nsfw", label: "NSFW", active: flagsCap.isNsfw });
+  }
+  if (flagsCap.isOrganized != null) {
+    result.push({ code: "organized", label: "Organized", active: flagsCap.isOrganized });
+  }
+  return result;
+}
+
+function resolveTechnical(capabilities: EntityCapability[]): EntityDetailTechnicalRow[] {
+  const tech = getTechnicalCapability(capabilities);
+  if (!tech) return [];
+  const rows: EntityDetailTechnicalRow[] = [];
+  const duration = formatDuration(tech.duration);
+  if (duration) rows.push({ label: "Duration", value: duration });
+  const width = numberValue(tech.width);
+  const height = numberValue(tech.height);
+  if (width && height) rows.push({ label: "Resolution", value: formatResolution(width, height) });
+  const frameRate = numberValue(tech.frameRate);
+  if (frameRate) rows.push({ label: "Frame Rate", value: `${frameRate} fps` });
+  const bitRate = numberValue(tech.bitRate);
+  if (bitRate) rows.push({ label: "Bit Rate", value: bitRate >= 1_000_000 ? `${(bitRate / 1_000_000).toFixed(1)} Mbps` : `${Math.round(bitRate / 1000)} kbps` });
+  const sampleRate = numberValue(tech.sampleRate);
+  if (sampleRate) rows.push({ label: "Sample Rate", value: `${(sampleRate / 1000).toFixed(1)} kHz` });
+  const channels = numberValue(tech.channels);
+  if (channels) rows.push({ label: "Channels", value: String(channels) });
+  if (tech.codec) rows.push({ label: "Codec", value: tech.codec });
+  if (tech.container) rows.push({ label: "Container", value: tech.container });
+  if (tech.format) rows.push({ label: "Format", value: tech.format });
+  return rows;
+}
+
+function resolveLinks(capabilities: EntityCapability[]): EntityDetailLink[] {
+  const linksCap = getCapability(capabilities, "links");
+  if (!linksCap) return [];
+  const result: EntityDetailLink[] = [];
+  for (const url of linksCap.urls) {
+    result.push({ label: url.label ?? url.url, url: url.url });
+  }
+  for (const ext of linksCap.externalIds) {
+    result.push({ label: `${ext.provider}: ${ext.value}`, url: ext.url, provider: ext.provider });
+  }
+  return result;
+}
+
+function resolveMarkers(capabilities: EntityCapability[]): EntityDetailMarker[] {
+  const markersCap = getCapability(capabilities, "markers");
+  if (!markersCap) return [];
+  return markersCap.items.map((item) => {
+    const sec = numberValue(item.seconds) ?? 0;
+    const endSec = numberValue(item.endSeconds);
+    return {
+      id: item.id,
+      title: item.title,
+      timestamp: markerTimestamp(sec),
+      seconds: sec,
+      endSeconds: endSec,
+    };
+  });
+}
+
+function resolveSubtitles(capabilities: EntityCapability[]): EntityDetailSubtitle[] {
+  const subsCap = getCapability(capabilities, "subtitles");
+  if (!subsCap) return [];
+  return subsCap.items.map((item) => ({
+    id: item.id,
+    language: item.language,
+    label: item.label,
+    format: item.format,
+    source: item.source,
+    isDefault: item.isDefault,
+  }));
+}
+
+function resolveProgress(capabilities: EntityCapability[]): EntityDetailProgress | null {
+  const progressCap = getCapability(capabilities, "progress");
+  if (!progressCap) return null;
+  const index = numberValue(progressCap.index) ?? 0;
+  const total = numberValue(progressCap.total) ?? 0;
+  const percent = total > 0 ? Math.round((index / total) * 100) : 0;
+  return {
+    index,
+    total,
+    percent,
+    unit: progressCap.unit,
+    mode: progressCap.mode,
+    completed: Boolean(progressCap.completedAt),
+  };
+}
+
+function resolvePositions(capabilities: EntityCapability[]): EntityDetailPosition[] {
+  const positionCap = getCapability(capabilities, "position");
+  if (!positionCap) return [];
+  return positionCap.items.map((item) => ({
+    code: item.code,
+    value: numberValue(item.value) ?? 0,
+    label: item.label ?? `${formatStatCode(item.code)} ${item.value}`,
+  }));
+}
+
+/**
+ * Converts a generic entity card into the complete detail view model.
+ * Reads only shared capabilities so every entity kind can flow through
+ * one detail component — the same philosophy as entityCardToThumbnailCard.
+ */
+export function entityCardToDetailCard(entity: EntityCard): EntityDetailCard {
+  const capabilities = entity.capabilities;
+  const presentCapabilities = [
+    ...new Set(capabilities.map((c) => c.kind)),
+  ] as EntityCapabilityKind[];
+
+  const tagsCap = getCapability(capabilities, "tags");
+  const creditsCap = getCapability(capabilities, "credits");
+  const studioCap = getCapability(capabilities, "studio");
+  const statsCap = getCapability(capabilities, "stats");
+  const countersCap = getCapability(capabilities, "counters");
+  const datesCap = getCapability(capabilities, "dates");
+  const filesCap = getCapability(capabilities, "files");
+  const fingerprintsCap = getCapability(capabilities, "fingerprints");
+  const sourcesCap = getCapability(capabilities, "source");
+  const classificationCap = getCapability(capabilities, "classification");
+  const ratingValue = getRatingValue(capabilities);
+
+  return {
+    entity: { ...entity, capabilities },
+    kindLabel: getEntityKindLabel(entity.kind),
+    hero: resolveHero(capabilities),
+    poster: resolvePoster(capabilities),
+    description: getDescription(capabilities),
+    rating: getCapability(capabilities, "rating")
+      ? { value: ratingValue, max: 5 }
+      : null,
+    flags: resolveFlags(capabilities),
+    tags: tagsCap?.values ?? [],
+    studio: studioCap?.value
+      ? { id: studioCap.value.id, kind: studioCap.value.kind, title: studioCap.value.title }
+      : null,
+    credits: creditsCap?.people.map((p) => ({ id: p.id, kind: p.kind, title: p.title })) ?? [],
+    stats: (statsCap?.items ?? []).map((item) => ({
+      code: item.code,
+      label: formatStatCode(item.code),
+      value: String(item.value),
+    })),
+    dates: (datesCap?.items ?? []).map((item) => ({
+      code: item.code,
+      label: formatDateCode(item.code),
+      value: item.value,
+      sortable: item.sortableValue,
+    })),
+    technical: resolveTechnical(capabilities),
+    links: resolveLinks(capabilities),
+    files: (filesCap?.items ?? []).map((item) => ({
+      role: item.role,
+      path: item.path,
+      mimeType: item.mimeType,
+    })),
+    fingerprints: fingerprintsCap?.items ?? [],
+    markers: resolveMarkers(capabilities),
+    subtitles: resolveSubtitles(capabilities),
+    progress: resolveProgress(capabilities),
+    positions: resolvePositions(capabilities),
+    classification: classificationCap?.value
+      ? { value: classificationCap.value, system: classificationCap.system }
+      : null,
+    sources: sourcesCap?.items ?? [],
+    counters: (countersCap?.items ?? []).map((item) => ({
+      code: item.code,
+      label: formatStatCode(item.code),
+      value: String(item.value),
+    })),
+    presentCapabilities,
+  };
+}
+
+/** Returns whether this detail card has any visual hero/banner imagery. */
+export function hasHero(card: EntityDetailCard): boolean {
+  return card.hero !== null;
+}
+
+/** Returns whether this detail card has a sidebar poster/cover image. */
+export function hasPoster(card: EntityDetailCard): boolean {
+  return card.poster !== null;
+}
+
+/** Returns all capability section names that have renderable content. */
+export function presentSections(card: EntityDetailCard): string[] {
+  const sections: string[] = [];
+  if (card.description) sections.push("description");
+  if (card.rating) sections.push("rating");
+  if (card.flags.length > 0) sections.push("flags");
+  if (card.tags.length > 0) sections.push("tags");
+  if (card.studio) sections.push("studio");
+  if (card.credits.length > 0) sections.push("credits");
+  if (card.stats.length > 0 || card.counters.length > 0) sections.push("stats");
+  if (card.dates.length > 0) sections.push("dates");
+  if (card.technical.length > 0) sections.push("technical");
+  if (card.links.length > 0) sections.push("links");
+  if (card.files.length > 0) sections.push("files");
+  if (card.fingerprints.length > 0) sections.push("fingerprints");
+  if (card.markers.length > 0) sections.push("markers");
+  if (card.subtitles.length > 0) sections.push("subtitles");
+  if (card.progress) sections.push("progress");
+  if (card.positions.length > 0) sections.push("positions");
+  if (card.classification) sections.push("classification");
+  if (card.sources.length > 0) sections.push("sources");
+  return sections;
+}

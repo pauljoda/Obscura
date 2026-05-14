@@ -12,6 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Added
+- `EntityDetail` component — capability-driven detail view that renders hero/poster images, markdown descriptions, interactive star rating, flag badges, tags, credits, stats, progress bars, technical specs, markers, subtitles, links, files, fingerprints, and sources. Sections appear only when an entity has the corresponding capability. Follows the same modular pattern as `EntityGrid` and `EntityThumbnail`.
+- Entity Detail Lab now renders the `EntityDetail` component with rich fixture data across 8 entity kinds (video, series, gallery, person, book, audio, studio, collection), each exercising different capability combinations.
+- `marked` library for rendering markdown in entity descriptions — plain text passes through unchanged, but descriptions can now include bold, italic, lists, blockquotes, links, and code formatting.
 - Dev hub (`/dev/v2-migration`) now links to Thumbnail Lab and the new Detail Lab for quick access to all v2 testing surfaces.
 - Entity Detail Lab page (`/v2/detail-lab`) — shell testing surface for the upcoming `EntityDetail` component.
 - `pnpm dev:kill` script and VS Code task ("Obscura: Kill Orphans") to kill orphaned dev processes (.NET API/Worker, Vite, Docusaurus) and free dev ports (8008, 8010, 3010, 5173).

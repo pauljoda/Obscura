@@ -25,6 +25,7 @@
     "drizzle-orm": "^0.45.2",
     "hls.js": "^1.6.15",
     "jassub": "2.4.2",
+    "marked": "^18.0.3",
     "postgres": "^3.4.8",
     "vidstack": "^1.12.13"
   },
