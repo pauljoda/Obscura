@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Added
+- `pnpm dev:kill` script and VS Code task ("Obscura: Kill Orphans") to kill orphaned dev processes (.NET API/Worker, Vite, Docusaurus) and free dev ports (8008, 8010, 3010, 5173).
 - Job processing pipeline now includes per-phase timing instrumentation (`JobPhaseTimer`) — every scan, probe, fingerprint, and preview job logs structured `[METRICS]` lines with per-phase durations for performance analysis.
 - Library scan now uses batch entity upserts and batch downstream-needs checks, reducing per-file database round-trips from ~12 to ~2. Downstream jobs are enqueued in batch with a single database write per chunk.
 - Trickplay extraction now uses per-frame keyframe seeking (`-skip_frame nokey` + input-seek) with 8-way concurrency and fixed 320×180 output, matching v1's proven approach. The previous fps-filter and segment-based approaches decoded the entire video; keyframe seeking decodes only one frame per extraction — orders of magnitude faster for 4K HEVC content.

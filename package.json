@@ -28,6 +28,7 @@
     "dev:db:clear-v2": "node scripts/dev/db-clear-v2.mjs",
     "dev:db:restore": "node scripts/dev/db-restore.mjs",
     "dev:seed-scroll": "node scripts/dev/seed-scroll-fixtures.mjs",
+    "dev:kill": "bash scripts/dev/kill-orphans.sh",
     "release:check": "node scripts/release/check-version.mjs",
     "release:cut": "node scripts/release/cut.mjs"
   },

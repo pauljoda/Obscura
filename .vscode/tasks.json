@@ -60,6 +60,14 @@
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": [],
       "detail": "Builds the Docusaurus documentation site."
+    },
+    {
+      "label": "Obscura: Kill Orphans",
+      "type": "shell",
+      "command": "bash scripts/dev/kill-orphans.sh",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "detail": "Kills orphaned dev processes (.NET, Vite, Docusaurus) and frees dev ports."
     }
   ]
 }
