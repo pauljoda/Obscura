@@ -12,17 +12,24 @@
   import CommandPalette from "$lib/components/CommandPalette.svelte";
   import PlaylistController from "$lib/components/PlaylistController.svelte";
 
-  import type { NsfwMode } from "$lib/nsfw/cookie";
+  import { type NsfwMode, parseNsfwModeCookie } from "$lib/nsfw/cookie";
   import { provideNsfw } from "$lib/nsfw/store.svelte";
+  import { browser } from "$app/environment";
   import { provideAppChrome } from "$lib/stores/app-chrome.svelte";
   import { providePageSnapshots, type AppPageSnapshot } from "$lib/stores/page-snapshots.svelte";
   import { provideSearch } from "$lib/stores/search.svelte";
   import { providePlaylist } from "$lib/stores/playlist.svelte";
 
+  function readNsfwCookie(): NsfwMode {
+    if (!browser) return "off";
+    const match = document.cookie.match(/(?:^|;\s*)obscura-nsfw-mode=([^;]*)/);
+    return parseNsfwModeCookie(match ? decodeURIComponent(match[1]) : undefined);
+  }
+
   const defaultLayoutData: Required<
     Pick<App.PageData, "initialNsfwMode" | "lanAutoEnable" | "initialCollapsed" | "awaitingBreakingConsent">
   > = {
-    initialNsfwMode: "off" satisfies NsfwMode,
+    initialNsfwMode: readNsfwCookie(),
     lanAutoEnable: false,
     initialCollapsed: false,
     awaitingBreakingConsent: false,
@@ -47,7 +54,7 @@
   });
 
   afterNavigate(({ from, to, type }) => {
-    if (!from || !to || type === "popstate") return;
+    if (!from?.url || !to?.url || type === "popstate") return;
     if (from.url.pathname === to.url.pathname) return;
     mainScroller?.scrollTo({ top: 0, left: 0 });
   });

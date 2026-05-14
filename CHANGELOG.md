@@ -20,6 +20,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The Dashboard now fetches recent items from each entity kind via the v2 API and renders horizontal scroll rows with `EntityThumbnail` cards, with NSFW-aware filtering and empty-library state.
 
 ### Fixed
+- SPA client-side navigation now works correctly — the `afterNavigate` callback in the root layout no longer crashes on the initial `'enter'` navigation when `from.url` is null, which was silently preventing the SvelteKit router from registering its click handler.
+- NSFW visibility mode now persists across page loads — the cookie is read on app init instead of always defaulting to "off".
 - The v2 upgrade gate consent overlay now appears on first boot when the gate is armed — previously the SPA layout never fetched gate status from the .NET backend, so the overlay never rendered.
 - Legacy media import no longer fails on the `rule_tree` column type mismatch or on book read progress referencing chapter entities that haven't been imported yet.
 - Video entity list no longer crashes on subtitle source codes `upload` and `sidecar` that were valid in v1 but missing from the v2 codec.
