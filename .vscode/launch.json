@@ -76,7 +76,7 @@
         "Obscura: API",
         "Obscura: Worker"
       ],
-      "preLaunchTask": "Obscura: Web Build",
+      "preLaunchTask": "Obscura: Full Prebuild",
       "stopAll": true
     },
     {
@@ -86,7 +86,7 @@
         "Obscura: Worker",
         "Obscura: Chrome"
       ],
-      "preLaunchTask": "Obscura: Web Build",
+      "preLaunchTask": "Obscura: Full Prebuild",
       "stopAll": true
     }
   ]

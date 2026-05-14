@@ -43,6 +43,17 @@
       "detail": "Runs all .NET backend tests."
     },
     {
+      "label": "Obscura: Full Prebuild",
+      "dependsOn": [
+        "Obscura: Docker Up",
+        "Obscura: Web Build",
+        "Obscura: .NET Build"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": [],
+      "detail": "Boots Postgres, builds the Svelte SPA, and compiles the .NET backend in parallel — guarantees fresh code on every launch."
+    },
+    {
       "label": "Obscura Docs: Build",
       "type": "shell",
       "command": "pnpm docs:build",
