@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video entity list no longer crashes on subtitle source codes `upload` and `sidecar` that were valid in v1 but missing from the v2 codec.
 - Video resolution chips now display standardized labels like "1080p" and "4K" instead of raw "WidthxHeight" dimensions.
 - Legacy v1 asset paths are now normalized to v2 standard format during migration — extensionless URLs like `/assets/videos/{id}/card` become `/assets/videos/{id}/thumb.jpg`, and the corresponding files on disk are renamed to match, so thumbnails, previews, and trickplay sprites serve correctly without middleware workarounds.
+- The favicon now uses the full Obscura aperture logo instead of a plain circle-on-square. Added apple-touch-icon, 192px and 512px PNG icons, a web app manifest, and Safari/mobile home screen support with the correct Dark Room theme color.
 - The Dashboard loading state now uses the brass ripple-ring route loader with the LogoMark instead of a plain CSS spinner, matching the Dark Room design language.
 - The empty library state on the Dashboard now displays the full Obscura aperture logo instead of a generic film icon, since the library covers all media types.
 - The design-language showcase page now covers the full token set — surface hierarchy, glass layers, accent scale, text colors, status colors, glow effects, loading animations, borders, and design principles — alongside all existing component demos. Linked from the Dev Tools page for easy access.
