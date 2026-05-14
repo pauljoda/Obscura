@@ -290,8 +290,6 @@ export function entityCardToThumbnailCard(
     images?.items[0]?.path ??
     null;
   const trickplay = previewAssets(entity, ["trickplay", "sprite"]);
-  const sequence = previewAssets(entity, ["preview", "page", "still", "poster"]);
-  const hoverAssets = trickplay.length > 0 ? trickplay : sequence;
 
   return {
     aspectRatio: aspectRatioForEntity(entity),
@@ -303,9 +301,9 @@ export function entityCardToThumbnailCard(
     },
     fit: entity.kind === "video" || entity.kind === "collection" ? "cover" : "contain",
     hover:
-      hoverAssets.length === 0
+      trickplay.length === 0
         ? { kind: "none" }
-        : { kind: trickplay.length > 0 ? "trickplay" : "image-sequence", assets: hoverAssets },
+        : { kind: "trickplay", assets: trickplay },
     href,
     meta: metaForEntity(entity),
   };
