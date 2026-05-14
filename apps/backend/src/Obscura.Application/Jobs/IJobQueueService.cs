@@ -29,6 +29,12 @@ public interface IJobQueueService
     Task<bool> HasPendingAsync(JobType type, string? targetEntityId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Enqueues multiple jobs in a single database round-trip, skipping any that
+    /// already have a pending run for the same type and target entity.
+    /// </summary>
+    Task<int> EnqueueBatchAsync(IReadOnlyList<EnqueueJobRequest> requests, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Cancels queued or running jobs, optionally scoped to one typed operation.
     /// </summary>
     Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken);

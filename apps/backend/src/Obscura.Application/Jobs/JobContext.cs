@@ -46,4 +46,11 @@ public sealed class JobContext
     /// </summary>
     public Task<JobRunSnapshot> EnqueueAsync(EnqueueJobRequest request, CancellationToken cancellationToken = default) =>
         _queue.EnqueueAsync(request, cancellationToken);
+
+    /// <summary>
+    /// Enqueues a batch of downstream jobs in a single round-trip, deduplicating against pending jobs.
+    /// Returns the number of jobs actually enqueued.
+    /// </summary>
+    public Task<int> EnqueueBatchAsync(IReadOnlyList<EnqueueJobRequest> requests, CancellationToken cancellationToken = default) =>
+        _queue.EnqueueBatchAsync(requests, cancellationToken);
 }

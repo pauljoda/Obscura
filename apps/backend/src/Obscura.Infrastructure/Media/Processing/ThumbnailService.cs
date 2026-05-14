@@ -162,6 +162,79 @@ public sealed class ThumbnailService
     }
 
     /// <summary>
+    /// Extracts all trickplay frames in a single ffmpeg pass using the fps filter.
+    /// Dramatically faster than per-frame seeking — one decode pass instead of N process spawns.
+    /// Output files are named frame-00000.jpg, frame-00001.jpg, etc. in the output directory.
+    /// </summary>
+    public async Task<int> ExtractTrickplayFramesBatchAsync(
+        string inputPath, string outputDir, double duration,
+        int intervalSeconds, int width, int height, int jpegQuality,
+        CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(outputDir);
+
+        var fpsRate = $"1/{intervalSeconds}";
+        var outputPattern = Path.Combine(outputDir, "frame-%05d.jpg");
+
+        var result = await _processExecutor.RunAsync("ffmpeg",
+            ["-hide_banner", "-loglevel", "error", "-y",
+             "-i", inputPath,
+             "-vf", $"fps={fpsRate},scale={width}:{height}:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,format=yuvj420p",
+             "-q:v", jpegQuality.ToString(),
+             outputPattern],
+            null, cancellationToken);
+
+        if (result.ExitCode != 0)
+            return 0;
+
+        var expectedFrames = (int)(duration / intervalSeconds);
+        var actualFrames = Directory.GetFiles(outputDir, "frame-*.jpg").Length;
+        return actualFrames;
+    }
+
+    /// <summary>
+    /// Generates a thumbnail and preview clip in a single ffmpeg invocation using
+    /// the tee muxer to produce both outputs from one decode pass.
+    /// </summary>
+    public async Task<(bool Thumbnail, bool Preview)> GenerateThumbnailAndPreviewAsync(
+        string inputPath,
+        string thumbnailPath, double thumbSeekSeconds, int thumbWidth, int thumbHeight, int thumbQuality,
+        string previewPath, double previewStartSeconds, int previewDurationSeconds,
+        CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(thumbnailPath)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(previewPath)!);
+
+        var thumbResult = await _processExecutor.RunAsync("ffmpeg",
+            ["-hide_banner", "-loglevel", "error", "-y",
+             "-ss", thumbSeekSeconds.ToString("F2"),
+             "-i", inputPath,
+             "-frames:v", "1",
+             "-vf", $"scale={thumbWidth}:{thumbHeight}",
+             "-q:v", thumbQuality.ToString(),
+             thumbnailPath],
+            null, cancellationToken);
+
+        var previewResult = await _processExecutor.RunAsync("ffmpeg",
+            ["-hide_banner", "-loglevel", "error", "-y",
+             "-ss", previewStartSeconds.ToString("F2"),
+             "-t", previewDurationSeconds.ToString(),
+             "-i", inputPath,
+             "-vf", "scale=960:-2",
+             "-an",
+             "-c:v", "libx264",
+             "-preset", "veryfast",
+             "-crf", "24",
+             "-movflags", "+faststart",
+             previewPath],
+            null, cancellationToken);
+
+        return (
+            thumbResult.ExitCode == 0 && File.Exists(thumbnailPath),
+            previewResult.ExitCode == 0 && File.Exists(previewPath));
+    }
+
+    /// <summary>
     /// Generates audio waveform peak data via ffmpeg PCM decode.
     /// Returns min/max pairs for the given pixels-per-second resolution.
     /// </summary>

@@ -20,17 +20,27 @@ public sealed class FingerprintJobHandler(
     protected override async Task ExecuteAsync(
         JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken)
     {
+        var timer = new JobPhaseTimer();
         await context.ReportProgressAsync(10, "Computing hashes", cancellationToken);
 
-        var hashes = await hashing.ComputeHashesAsync(filePath, cancellationToken);
-        var sourceFileId = await Persistence.GetSourceFileIdAsync(entityId, cancellationToken);
+        FileHashData hashes;
+        using (timer.Phase("hash"))
+        {
+            hashes = await hashing.ComputeHashesAsync(filePath, cancellationToken);
+        }
 
-        await context.ReportProgressAsync(80, "Storing fingerprints", cancellationToken);
+        Guid? sourceFileId;
+        using (timer.Phase("persist"))
+        {
+            sourceFileId = await Persistence.GetSourceFileIdAsync(entityId, cancellationToken);
+            await Persistence.UpsertEntityFingerprintAsync(entityId, FingerprintAlgorithm.Md5, hashes.Md5, sourceFileId, cancellationToken);
+            await Persistence.UpsertEntityFingerprintAsync(entityId, FingerprintAlgorithm.Oshash, hashes.Oshash, sourceFileId, cancellationToken);
+        }
 
-        await Persistence.UpsertEntityFingerprintAsync(entityId, FingerprintAlgorithm.Md5, hashes.Md5, sourceFileId, cancellationToken);
-        await Persistence.UpsertEntityFingerprintAsync(entityId, FingerprintAlgorithm.Oshash, hashes.Oshash, sourceFileId, cancellationToken);
-
-        logger.LogInformation("{JobType}: {Label} — md5={Md5}", Type.ToCode(), context.Job.TargetLabel, hashes.Md5[..8]);
+        var report = timer.Finish();
+        logger.LogInformation(
+            "[METRICS] {JobType} {Label} — md5={Md5} — {Timing}",
+            Type.ToCode(), context.Job.TargetLabel, hashes.Md5[..8], report.ToLogString());
 
         await context.ReportProgressAsync(100, "Fingerprint complete", cancellationToken);
     }

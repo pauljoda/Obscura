@@ -17,6 +17,25 @@ public interface IMediaAssetGenerator
         string inputPath, string outputPath, double seekSeconds,
         int width, int height, int jpegQuality, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Extracts all trickplay frames in a single ffmpeg pass using the fps filter.
+    /// Returns the number of frames actually extracted.
+    /// </summary>
+    Task<int> ExtractTrickplayFramesBatchAsync(
+        string inputPath, string outputDir, double duration,
+        int intervalSeconds, int width, int height, int jpegQuality,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Generates both thumbnail and preview clip, sharing decode overhead where possible.
+    /// Returns success flags for each output.
+    /// </summary>
+    Task<(bool Thumbnail, bool Preview)> GenerateThumbnailAndPreviewAsync(
+        string inputPath,
+        string thumbnailPath, double thumbSeekSeconds, int thumbWidth, int thumbHeight, int thumbQuality,
+        string previewPath, double previewStartSeconds, int previewDurationSeconds,
+        CancellationToken cancellationToken);
+
     Task<bool> GenerateImageThumbnailAsync(
         string inputPath, string outputPath,
         int targetWidth, int quality, CancellationToken cancellationToken);

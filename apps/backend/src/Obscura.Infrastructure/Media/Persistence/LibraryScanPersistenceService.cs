@@ -395,6 +395,93 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         return await RemoveStaleEntitiesBySourcePath(bookIds, validPaths, cancellationToken);
     }
 
+    // ── Batch upsert ──
+
+    public async Task<IReadOnlyList<Guid>> UpsertVideosBatchAsync(
+        IReadOnlyList<VideoUpsertItem> items, CancellationToken cancellationToken)
+    {
+        if (items.Count == 0) return [];
+
+        var filePaths = items.Select(i => i.FilePath).ToList();
+
+        var existingEntities = await db.EntityFiles.AsNoTracking()
+            .Where(f => f.Role == EntityFileRole.Source && filePaths.Contains(f.Path))
+            .Join(db.Entities, f => f.EntityId, e => e.Id,
+                (f, e) => new { f.Path, e.Id, Entity = e })
+            .ToDictionaryAsync(x => x.Path, x => x, cancellationToken);
+
+        var now = DateTimeOffset.UtcNow;
+        var results = new List<Guid>(items.Count);
+
+        foreach (var item in items)
+        {
+            if (existingEntities.TryGetValue(item.FilePath, out var existing))
+            {
+                var tracked = await db.Entities.FindAsync([existing.Id], cancellationToken);
+                if (tracked is not null) tracked.UpdatedAt = now;
+                results.Add(existing.Id);
+                continue;
+            }
+
+            var id = Guid.NewGuid();
+            db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.Video.Code, Title = item.Title, CreatedAt = now, UpdatedAt = now });
+            db.VideoDetails.Add(new VideoDetailRow { EntityId = id, LibraryRootId = item.LibraryRootId });
+            db.EntityFiles.Add(new EntityFileRow
+            {
+                Id = Guid.NewGuid(), EntityId = id, Role = EntityFileRole.Source,
+                Path = item.FilePath, SizeBytes = TryGetFileSize(item.FilePath), CreatedAt = now, UpdatedAt = now
+            });
+            if (item.IsNsfw)
+            {
+                db.EntityFlags.Add(new EntityFlagRow { EntityId = id, IsNsfw = true, UpdatedAt = now });
+            }
+            results.Add(id);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        return results;
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, DownstreamNeeds>> CheckDownstreamNeedsBatchAsync(
+        IReadOnlyList<Guid> entityIds, CancellationToken cancellationToken)
+    {
+        if (entityIds.Count == 0) return new Dictionary<Guid, DownstreamNeeds>();
+
+        var ids = entityIds.ToList();
+
+        var hasTechnical = (await db.EntityTechnical.AsNoTracking()
+            .Where(t => ids.Contains(t.EntityId) && t.DurationSeconds != null)
+            .Select(t => t.EntityId)
+            .ToListAsync(cancellationToken)).ToHashSet();
+
+        var hasFingerprint = (await db.EntityFileFingerprints.AsNoTracking()
+            .Where(f => ids.Contains(f.EntityId) && f.Algorithm == FingerprintAlgorithm.Md5)
+            .Select(f => f.EntityId)
+            .ToListAsync(cancellationToken)).ToHashSet();
+
+        var hasThumbnail = (await db.EntityFiles.AsNoTracking()
+            .Where(f => ids.Contains(f.EntityId) && f.Role == EntityFileRole.Thumbnail)
+            .Select(f => f.EntityId)
+            .ToListAsync(cancellationToken)).ToHashSet();
+
+        var hasSubtitles = (await db.VideoDetails.AsNoTracking()
+            .Where(v => ids.Contains(v.EntityId) && v.SubtitlesExtractedAt != null)
+            .Select(v => v.EntityId)
+            .ToListAsync(cancellationToken)).ToHashSet();
+
+        var result = new Dictionary<Guid, DownstreamNeeds>(ids.Count);
+        foreach (var id in ids)
+        {
+            result[id] = new DownstreamNeeds(
+                NeedsProbe: !hasTechnical.Contains(id),
+                NeedsFingerprint: !hasFingerprint.Contains(id),
+                NeedsPreview: !hasThumbnail.Contains(id),
+                NeedsSubtitleExtraction: !hasSubtitles.Contains(id));
+        }
+
+        return result;
+    }
+
     // ── Reads for downstream chaining decisions ──
 
     public Task<bool> HasEntityTechnicalAsync(Guid entityId, CancellationToken cancellationToken) =>

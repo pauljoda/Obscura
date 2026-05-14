@@ -56,6 +56,68 @@ public sealed class JobQueueService : IJobQueueService
         return ToSnapshot(row);
     }
 
+    public async Task<int> EnqueueBatchAsync(IReadOnlyList<EnqueueJobRequest> requests, CancellationToken cancellationToken)
+    {
+        if (requests.Count == 0) return 0;
+
+        var pendingTypes = requests.Select(r => r.Type).Distinct().ToList();
+        var pendingTargets = requests
+            .Where(r => r.TargetEntityId is not null)
+            .Select(r => r.TargetEntityId!)
+            .Distinct()
+            .ToList();
+
+        var existingPending = await _db.JobRuns
+            .AsNoTracking()
+            .Where(j => pendingTypes.Contains(j.Type) &&
+                        (j.Status == JobRunStatus.Queued || j.Status == JobRunStatus.Running) &&
+                        j.TargetEntityId != null &&
+                        pendingTargets.Contains(j.TargetEntityId))
+            .Select(j => new { j.Type, j.TargetEntityId })
+            .ToListAsync(cancellationToken);
+
+        var pendingSet = existingPending
+            .Select(p => (p.Type, p.TargetEntityId))
+            .ToHashSet();
+
+        var now = DateTimeOffset.UtcNow;
+        var enqueued = 0;
+
+        foreach (var request in requests)
+        {
+            if (request.TargetEntityId is not null &&
+                pendingSet.Contains((request.Type, request.TargetEntityId)))
+            {
+                continue;
+            }
+
+            _db.JobRuns.Add(new JobRunRow
+            {
+                Id = Guid.NewGuid(),
+                Type = request.Type,
+                Status = JobRunStatus.Queued,
+                PayloadJson = request.PayloadJson ?? "{}",
+                Priority = request.Priority,
+                Attempts = 0,
+                MaxAttempts = 3,
+                Progress = 0,
+                TargetEntityKind = request.TargetEntityKind,
+                TargetEntityId = request.TargetEntityId,
+                TargetLabel = request.TargetLabel,
+                AvailableAt = now,
+                CreatedAt = now
+            });
+            enqueued++;
+        }
+
+        if (enqueued > 0)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        return enqueued;
+    }
+
     public async Task<bool> HasPendingAsync(JobType type, string? targetEntityId, CancellationToken cancellationToken)
     {
         var query = _db.JobRuns.Where(job =>

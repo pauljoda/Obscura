@@ -7,7 +7,8 @@ namespace Obscura.Application.Jobs.Handlers.Generate;
 
 /// <summary>
 /// Generates video thumbnails, preview clips, and trickplay sprites via ffmpeg.
-/// Reads the entity's technical metadata for duration/dimensions to compute seek points and scaling.
+/// Optimized for throughput: uses batch trickplay extraction (single ffmpeg pass)
+/// and combined thumbnail+preview generation.
 /// </summary>
 public sealed class GeneratePreviewJobHandler(
     ILogger<GeneratePreviewJobHandler> logger,
@@ -19,67 +20,72 @@ public sealed class GeneratePreviewJobHandler(
     protected override async Task ExecuteAsync(
         JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken)
     {
+        var timer = new JobPhaseTimer();
         var settings = await Persistence.GetSettingsAsync(cancellationToken);
 
-        await context.ReportProgressAsync(10, "Generating thumbnail", cancellationToken);
-        await GenerateThumbnailAsync(entityId, filePath, settings, cancellationToken);
+        var (duration, width, height) = await GetDimensionsAsync(entityId, cancellationToken);
 
-        await context.ReportProgressAsync(40, "Generating preview clip", cancellationToken);
-        await GeneratePreviewClipAsync(entityId, filePath, settings, cancellationToken);
+        using (timer.Phase("thumbnail+preview"))
+        {
+            await context.ReportProgressAsync(10, "Generating thumbnail and preview", cancellationToken);
+            await GenerateThumbnailAndPreviewAsync(entityId, filePath, settings, duration, width, height, cancellationToken);
+        }
 
         if (settings.GenerateTrickplay)
         {
-            await context.ReportProgressAsync(60, "Generating trickplay sprites", cancellationToken);
-            await GenerateTrickplayAsync(entityId, filePath, settings, cancellationToken);
+            using (timer.Phase("trickplay"))
+            {
+                await context.ReportProgressAsync(50, "Generating trickplay sprites", cancellationToken);
+                await GenerateTrickplayBatchAsync(entityId, filePath, settings, duration, width, height, cancellationToken);
+            }
         }
 
-        logger.LogInformation("GeneratePreview: completed for {Label}", context.Job.TargetLabel);
+        var report = timer.Finish();
+        logger.LogInformation(
+            "[METRICS] generate-preview {Label} — {Timing}",
+            context.Job.TargetLabel, report.ToLogString());
         await context.ReportProgressAsync(100, "Preview complete", cancellationToken);
     }
 
-    private async Task GenerateThumbnailAsync(Guid entityId, string filePath, LibrarySettingsData settings, CancellationToken cancellationToken)
+    private async Task GenerateThumbnailAndPreviewAsync(
+        Guid entityId, string filePath, LibrarySettingsData settings,
+        double? duration, int? width, int? height, CancellationToken cancellationToken)
     {
         var thumbPath = assets.VideoThumbnailPath(entityId);
+        var previewPath = assets.VideoPreviewPath(entityId);
 
-        var (duration, width, height) = await GetDimensionsAsync(entityId, cancellationToken);
-        var seekTime = Math.Max(0, (duration ?? 10) * 0.18);
-        if (duration is not null && seekTime > duration.Value - 0.5)
-            seekTime = Math.Max(0, duration.Value - 0.5);
-
+        var seekTime = ComputeSeekTime(duration);
         var thumbWidth = ScaleWidth(width ?? 1920, settings.ThumbnailQuality);
         var thumbHeight = ScaleHeight(height ?? 1080, width ?? 1920, thumbWidth);
 
-        var success = await assets.GenerateVideoThumbnailAsync(
-            filePath, thumbPath, seekTime, thumbWidth, thumbHeight,
-            QualityToJpeg(settings.ThumbnailQuality), cancellationToken);
+        var clipDuration = Math.Max(4, settings.PreviewClipDurationSeconds);
+        var previewStart = (duration ?? 0) > clipDuration ? (duration!.Value * 0.1) : 0;
 
-        if (success)
+        var (thumbOk, previewOk) = await assets.GenerateThumbnailAndPreviewAsync(
+            filePath,
+            thumbPath, seekTime, thumbWidth, thumbHeight, QualityToJpeg(settings.ThumbnailQuality),
+            previewPath, previewStart, clipDuration,
+            cancellationToken);
+
+        if (thumbOk)
         {
             var size = new FileInfo(thumbPath).Length;
-            await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Thumbnail, assets.VideoThumbnailUrl(entityId), "image/jpeg", size, cancellationToken);
+            await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Thumbnail,
+                assets.VideoThumbnailUrl(entityId), "image/jpeg", size, cancellationToken);
         }
-    }
 
-    private async Task GeneratePreviewClipAsync(Guid entityId, string filePath, LibrarySettingsData settings, CancellationToken cancellationToken)
-    {
-        var previewPath = assets.VideoPreviewPath(entityId);
-        var (duration, _, _) = await GetDimensionsAsync(entityId, cancellationToken);
-        var clipDuration = Math.Max(4, settings.PreviewClipDurationSeconds);
-        var startTime = (duration ?? 0) > clipDuration ? (duration!.Value * 0.1) : 0;
-
-        var success = await assets.GeneratePreviewClipAsync(
-            filePath, previewPath, startTime, clipDuration, cancellationToken);
-
-        if (success)
+        if (previewOk)
         {
             var size = new FileInfo(previewPath).Length;
-            await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Preview, assets.VideoPreviewUrl(entityId), "video/mp4", size, cancellationToken);
+            await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Preview,
+                assets.VideoPreviewUrl(entityId), "video/mp4", size, cancellationToken);
         }
     }
 
-    private async Task GenerateTrickplayAsync(Guid entityId, string filePath, LibrarySettingsData settings, CancellationToken cancellationToken)
+    private async Task GenerateTrickplayBatchAsync(
+        Guid entityId, string filePath, LibrarySettingsData settings,
+        double? duration, int? width, int? height, CancellationToken cancellationToken)
     {
-        var (duration, width, height) = await GetDimensionsAsync(entityId, cancellationToken);
         if (duration is null or <= 0) return;
 
         var interval = Math.Max(3, settings.TrickplayIntervalSeconds);
@@ -92,24 +98,27 @@ public sealed class GeneratePreviewJobHandler(
         frameHeight = frameHeight / 2 * 2;
 
         var frameDir = assets.TrickplayFrameDir(entityId);
-        Directory.CreateDirectory(frameDir);
 
-        var jpegQuality = QualityToJpeg(settings.TrickplayQuality);
+        var extractedCount = await assets.ExtractTrickplayFramesBatchAsync(
+            filePath, frameDir, duration.Value, interval,
+            frameWidth, frameHeight, QualityToJpeg(settings.TrickplayQuality),
+            cancellationToken);
 
-        for (var i = 0; i < frameCount; i++)
+        if (extractedCount == 0)
         {
-            var seekTime = (i + 0.5) * interval;
-            seekTime = Math.Min(seekTime, duration.Value - 0.5);
-            var framePath = Path.Combine(frameDir, $"frame-{i:D5}.jpg");
-
-            await assets.ExtractTrickplayFrameAsync(
-                filePath, framePath, seekTime, frameWidth, frameHeight, jpegQuality, cancellationToken);
+            logger.LogWarning("Trickplay batch extraction produced zero frames for {EntityId}", entityId);
+            return;
         }
 
-        var vttPath = assets.VideoTrickplayVttPath(entityId);
-        await WriteTrickplayVttAsync(entityId, vttPath, frameCount, interval, frameWidth, frameHeight, cancellationToken);
+        logger.LogInformation(
+            "Trickplay: extracted {Count} frames in single pass (expected {Expected})",
+            extractedCount, frameCount);
 
-        await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Trickplay, assets.VideoTrickplayVttUrl(entityId), "text/vtt", null, cancellationToken);
+        var vttPath = assets.VideoTrickplayVttPath(entityId);
+        await WriteTrickplayVttAsync(entityId, vttPath, extractedCount, interval, frameWidth, frameHeight, cancellationToken);
+
+        await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Trickplay,
+            assets.VideoTrickplayVttUrl(entityId), "text/vtt", null, cancellationToken);
     }
 
     private static async Task WriteTrickplayVttAsync(
@@ -137,13 +146,22 @@ public sealed class GeneratePreviewJobHandler(
         await File.WriteAllLinesAsync(vttPath, lines, cancellationToken);
     }
 
-    private async Task<(double? Duration, int? Width, int? Height)> GetDimensionsAsync(Guid entityId, CancellationToken cancellationToken)
+    private async Task<(double? Duration, int? Width, int? Height)> GetDimensionsAsync(
+        Guid entityId, CancellationToken cancellationToken)
     {
         var tech = await Persistence.GetEntityTechnicalAsync(entityId, cancellationToken);
         if (tech is null)
             return (null, null, null);
 
         return (tech.DurationSeconds, tech.Width, tech.Height);
+    }
+
+    private static double ComputeSeekTime(double? duration)
+    {
+        var seekTime = Math.Max(0, (duration ?? 10) * 0.18);
+        if (duration is not null && seekTime > duration.Value - 0.5)
+            seekTime = Math.Max(0, duration.Value - 0.5);
+        return seekTime;
     }
 
     private static int ScaleWidth(int sourceWidth, int quality)

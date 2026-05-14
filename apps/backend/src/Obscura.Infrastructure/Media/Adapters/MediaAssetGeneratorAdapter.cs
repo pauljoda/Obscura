@@ -22,6 +22,20 @@ public sealed class MediaAssetGeneratorAdapter(ThumbnailService thumbnails, Asse
         int width, int height, int jpegQuality, CancellationToken cancellationToken) =>
         thumbnails.ExtractTrickplayFrameAsync(inputPath, outputPath, seekSeconds, width, height, jpegQuality, cancellationToken);
 
+    public Task<int> ExtractTrickplayFramesBatchAsync(
+        string inputPath, string outputDir, double duration,
+        int intervalSeconds, int width, int height, int jpegQuality,
+        CancellationToken cancellationToken) =>
+        thumbnails.ExtractTrickplayFramesBatchAsync(inputPath, outputDir, duration, intervalSeconds, width, height, jpegQuality, cancellationToken);
+
+    public Task<(bool Thumbnail, bool Preview)> GenerateThumbnailAndPreviewAsync(
+        string inputPath,
+        string thumbnailPath, double thumbSeekSeconds, int thumbWidth, int thumbHeight, int thumbQuality,
+        string previewPath, double previewStartSeconds, int previewDurationSeconds,
+        CancellationToken cancellationToken) =>
+        thumbnails.GenerateThumbnailAndPreviewAsync(inputPath, thumbnailPath, thumbSeekSeconds, thumbWidth, thumbHeight, thumbQuality,
+            previewPath, previewStartSeconds, previewDurationSeconds, cancellationToken);
+
     public Task<bool> GenerateImageThumbnailAsync(
         string inputPath, string outputPath, int targetWidth, int quality, CancellationToken cancellationToken) =>
         thumbnails.GenerateImageThumbnailAsync(inputPath, outputPath, targetWidth, quality, cancellationToken);

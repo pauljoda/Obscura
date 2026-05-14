@@ -14,7 +14,7 @@ public sealed class QueueWorker(
     IServiceScopeFactory scopeFactory,
     ILogger<QueueWorker> logger) : BackgroundService
 {
-    private static readonly TimeSpan IdleDelay = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan IdleDelay = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(30);
     private readonly string _workerId = $"{Environment.MachineName}-{Guid.NewGuid():N}";
 
@@ -85,11 +85,17 @@ public sealed class QueueWorker(
             return;
         }
 
+        var timer = new JobPhaseTimer();
         try
         {
             var context = new JobContext(job, queue);
             await handler.HandleAsync(context, stoppingToken);
             await queue.CompleteAsync(job.Id, "Completed", stoppingToken);
+
+            var report = timer.Finish();
+            logger.LogInformation(
+                "[METRICS] {JobType} {Label} completed — {Timing}",
+                job.Type.ToCode(), job.TargetLabel ?? job.Id.ToString(), report.ToLogString());
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
@@ -97,7 +103,11 @@ public sealed class QueueWorker(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Job {JobId} of type {JobType} failed.", job.Id, job.Type.ToCode());
+            var report = timer.Finish();
+            logger.LogError(ex,
+                "[METRICS] {JobType} {Label} FAILED after {Elapsed:F2}s — {Timing}",
+                job.Type.ToCode(), job.TargetLabel ?? job.Id.ToString(),
+                report.Total.TotalSeconds, report.ToLogString());
             await queue.FailAsync(job.Id, ex.Message, RetryDelay, stoppingToken);
         }
     }

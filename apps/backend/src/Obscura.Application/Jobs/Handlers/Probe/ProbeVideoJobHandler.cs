@@ -19,22 +19,34 @@ public sealed class ProbeVideoJobHandler(
     protected override async Task ExecuteAsync(
         JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken)
     {
+        var timer = new JobPhaseTimer();
         await context.ReportProgressAsync(10, "Probing video metadata", cancellationToken);
 
-        var probe = await mediaProbe.ProbeVideoAsync(filePath, cancellationToken);
+        VideoProbeData? probe;
+        using (timer.Phase("ffprobe"))
+        {
+            probe = await mediaProbe.ProbeVideoAsync(filePath, cancellationToken);
+        }
+
         if (probe is null)
         {
             logger.LogWarning("ProbeVideo: ffprobe failed for {Path}", filePath);
             return;
         }
 
-        await Persistence.UpsertEntityTechnicalAsync(entityId,
-            probe.DurationSeconds, probe.Width, probe.Height, probe.FrameRate, probe.BitRate,
-            probe.SampleRate, probe.Channels, probe.Codec, probe.Container, null,
-            cancellationToken);
+        using (timer.Phase("persist"))
+        {
+            await Persistence.UpsertEntityTechnicalAsync(entityId,
+                probe.DurationSeconds, probe.Width, probe.Height, probe.FrameRate, probe.BitRate,
+                probe.SampleRate, probe.Channels, probe.Codec, probe.Container, null,
+                cancellationToken);
+        }
 
-        logger.LogInformation("ProbeVideo: {Label} — {Duration:F1}s {Width}x{Height} {Codec}",
-            context.Job.TargetLabel, probe.DurationSeconds, probe.Width, probe.Height, probe.Codec);
+        var report = timer.Finish();
+        logger.LogInformation(
+            "[METRICS] probe-video {Label} — {Duration:F1}s {Width}x{Height} {Codec} — {Timing}",
+            context.Job.TargetLabel, probe.DurationSeconds, probe.Width, probe.Height, probe.Codec,
+            report.ToLogString());
 
         await context.ReportProgressAsync(100, "Probe complete", cancellationToken);
     }

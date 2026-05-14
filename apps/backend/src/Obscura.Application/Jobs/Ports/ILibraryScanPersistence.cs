@@ -36,6 +36,22 @@ public interface ILibraryScanPersistence
     Task<int> RemoveStaleBookChaptersAsync(Guid bookEntityId, IReadOnlySet<string> validArchivePaths, CancellationToken cancellationToken);
     Task<int> RemoveStaleBooksInRootAsync(Guid rootId, IReadOnlySet<string> validPaths, CancellationToken cancellationToken);
 
+    // ── Batch upsert ──
+
+    /// <summary>
+    /// Upserts a batch of video entities in a single database round-trip,
+    /// returning the entity ID for each input file path in the same order.
+    /// </summary>
+    Task<IReadOnlyList<Guid>> UpsertVideosBatchAsync(
+        IReadOnlyList<VideoUpsertItem> items, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Checks what downstream jobs are needed for a batch of entities in a single query.
+    /// Returns one <see cref="DownstreamNeeds"/> per entity ID.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, DownstreamNeeds>> CheckDownstreamNeedsBatchAsync(
+        IReadOnlyList<Guid> entityIds, CancellationToken cancellationToken);
+
     // ── Reads for downstream chaining decisions ──
 
     Task<bool> HasEntityTechnicalAsync(Guid entityId, CancellationToken cancellationToken);
@@ -100,3 +116,18 @@ public sealed record LibrarySettingsData(
     int PreviewClipDurationSeconds,
     int ThumbnailQuality,
     int TrickplayQuality);
+
+public sealed record VideoUpsertItem(
+    string FilePath,
+    string Title,
+    Guid LibraryRootId,
+    bool IsNsfw);
+
+/// <summary>
+/// Flags indicating which downstream jobs are still needed for an entity.
+/// </summary>
+public sealed record DownstreamNeeds(
+    bool NeedsProbe,
+    bool NeedsFingerprint,
+    bool NeedsPreview,
+    bool NeedsSubtitleExtraction);
