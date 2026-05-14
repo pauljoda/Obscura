@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 
+### Fixed
+- Navigation between pages no longer causes a full-page reload flash. Removed legacy v1 server load files (`+page.server.ts`) that prevented SvelteKit's client-side router from intercepting link clicks.
+
 ### Changed
 - Updated Claude Code preview launch config to use the .NET backend (`pnpm dev:app`) instead of the deprecated Vite dev server.
 
