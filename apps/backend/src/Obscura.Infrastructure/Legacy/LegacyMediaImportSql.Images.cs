@@ -42,13 +42,6 @@ public static partial class LegacyMediaImportSql
                     size_bytes = EXCLUDED.size_bytes,
                     updated_at = EXCLUDED.updated_at;
 
-                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
-                SELECT gen_random_uuid(), id, 'thumbnail', COALESCE(thumbnail_path, file_path), NULL, NULL, created_at, updated_at
-                FROM public.images
-                ON CONFLICT (entity_id, role) DO UPDATE SET
-                    path = EXCLUDED.path,
-                    updated_at = EXCLUDED.updated_at;
-
                 INSERT INTO v2.entity_descriptions (entity_id, value, updated_at)
                 SELECT id, details, updated_at
                 FROM public.images

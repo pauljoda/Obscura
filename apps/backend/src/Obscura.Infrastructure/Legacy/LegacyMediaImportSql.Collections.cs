@@ -26,14 +26,6 @@ public static partial class LegacyMediaImportSql
                     is_organized = EXCLUDED.is_organized,
                     updated_at = EXCLUDED.updated_at;
 
-                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
-                SELECT gen_random_uuid(), id, 'thumbnail', cover_image_path, NULL, NULL, created_at, updated_at
-                FROM public.collections
-                WHERE cover_image_path IS NOT NULL
-                ON CONFLICT (entity_id, role) DO UPDATE SET
-                    path = EXCLUDED.path,
-                    updated_at = EXCLUDED.updated_at;
-
                 INSERT INTO v2.entity_descriptions (entity_id, value, updated_at)
                 SELECT id, description, updated_at
                 FROM public.collections

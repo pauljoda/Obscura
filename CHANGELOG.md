@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The Dashboard now fetches recent items from each entity kind via the v2 API and renders horizontal scroll rows with `EntityThumbnail` cards, with NSFW-aware filtering and empty-library state.
 
 ### Fixed
+- Legacy import no longer creates entity_file rows for cache-generated assets (thumbnails, previews, sprites, trickplay, waveforms, posters, backdrops, logos). These files don't exist on disk after migration and caused 404 spam across all grid pages. A library rescan regenerates them correctly under the new entity IDs.
 - Thumbnail hover preview now activates only when trickplay frames exist — entities without trickplay no longer attempt a broken hover swap on pointer move. When trickplay frame images fail to load (e.g. stale migration data), hover is disabled for that card instead of flickering between broken frames and the cover.
 - SPA client-side navigation now works correctly — the `afterNavigate` callback in the root layout no longer crashes on the initial `'enter'` navigation when `from.url` is null, which was silently preventing the SvelteKit router from registering its click handler.
 - NSFW visibility mode now persists across page loads — the cookie is read on app init instead of always defaulting to "off".

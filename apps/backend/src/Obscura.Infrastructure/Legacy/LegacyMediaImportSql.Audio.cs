@@ -42,14 +42,6 @@ public static partial class LegacyMediaImportSql
                     path = EXCLUDED.path,
                     updated_at = EXCLUDED.updated_at;
 
-                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
-                SELECT gen_random_uuid(), id, 'cover', COALESCE(cover_image_path, icon_path), NULL, NULL, created_at, updated_at
-                FROM public.audio_libraries
-                WHERE COALESCE(cover_image_path, icon_path) IS NOT NULL
-                ON CONFLICT (entity_id, role) DO UPDATE SET
-                    path = EXCLUDED.path,
-                    updated_at = EXCLUDED.updated_at;
-
                 INSERT INTO v2.entity_descriptions (entity_id, value, updated_at)
                 SELECT id, details, updated_at
                 FROM public.audio_libraries
@@ -150,15 +142,6 @@ public static partial class LegacyMediaImportSql
                 ON CONFLICT (entity_id, role) DO UPDATE SET
                     path = EXCLUDED.path,
                     size_bytes = EXCLUDED.size_bytes,
-                    updated_at = EXCLUDED.updated_at;
-
-                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
-                SELECT gen_random_uuid(), id, 'waveform', waveform_path, 'application/json', NULL, created_at, updated_at
-                FROM public.audio_tracks
-                WHERE waveform_path IS NOT NULL
-                ON CONFLICT (entity_id, role) DO UPDATE SET
-                    path = EXCLUDED.path,
-                    mime_type = EXCLUDED.mime_type,
                     updated_at = EXCLUDED.updated_at;
 
                 INSERT INTO v2.entity_descriptions (entity_id, value, updated_at)

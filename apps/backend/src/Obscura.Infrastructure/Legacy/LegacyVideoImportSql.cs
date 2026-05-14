@@ -39,13 +39,6 @@ public static class LegacyVideoImportSql
                     value = EXCLUDED.value,
                     updated_at = EXCLUDED.updated_at;
 
-                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
-                SELECT gen_random_uuid(), id, 'thumbnail', COALESCE(image_path, image_url), NULL, NULL, created_at, updated_at
-                FROM public.tags
-                WHERE COALESCE(image_path, image_url) IS NOT NULL
-                ON CONFLICT (entity_id, role) DO UPDATE SET
-                    path = EXCLUDED.path,
-                    updated_at = EXCLUDED.updated_at;
             END IF;
 
             IF to_regclass('public.studios') IS NOT NULL THEN
@@ -74,13 +67,6 @@ public static class LegacyVideoImportSql
                     value = EXCLUDED.value,
                     updated_at = EXCLUDED.updated_at;
 
-                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
-                SELECT gen_random_uuid(), id, 'thumbnail', COALESCE(image_path, image_url), NULL, NULL, created_at, updated_at
-                FROM public.studios
-                WHERE COALESCE(image_path, image_url) IS NOT NULL
-                ON CONFLICT (entity_id, role) DO UPDATE SET
-                    path = EXCLUDED.path,
-                    updated_at = EXCLUDED.updated_at;
             END IF;
 
             IF to_regclass('public.performers') IS NOT NULL THEN
@@ -109,13 +95,6 @@ public static class LegacyVideoImportSql
                     value = EXCLUDED.value,
                     updated_at = EXCLUDED.updated_at;
 
-                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
-                SELECT gen_random_uuid(), id, 'thumbnail', COALESCE(image_path, image_url), NULL, NULL, created_at, updated_at
-                FROM public.performers
-                WHERE COALESCE(image_path, image_url) IS NOT NULL
-                ON CONFLICT (entity_id, role) DO UPDATE SET
-                    path = EXCLUDED.path,
-                    updated_at = EXCLUDED.updated_at;
             END IF;
 
             IF to_regclass('public.video_series') IS NOT NULL THEN
@@ -142,27 +121,6 @@ public static class LegacyVideoImportSql
                 WHERE rating IS NOT NULL
                 ON CONFLICT (entity_id) DO UPDATE SET
                     value = EXCLUDED.value,
-                    updated_at = EXCLUDED.updated_at;
-
-                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
-                SELECT gen_random_uuid(), id, 'thumbnail', poster_path, NULL, NULL, created_at, updated_at
-                FROM public.video_series
-                WHERE poster_path IS NOT NULL
-                ON CONFLICT (entity_id, role) DO UPDATE SET
-                    path = EXCLUDED.path,
-                    updated_at = EXCLUDED.updated_at;
-
-                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
-                SELECT gen_random_uuid(), series.id, asset.role, asset.path, NULL, NULL, series.created_at, series.updated_at
-                FROM public.video_series series
-                CROSS JOIN LATERAL (VALUES
-                    ('poster', series.poster_path),
-                    ('backdrop', series.backdrop_path),
-                    ('logo', series.logo_path)
-                ) AS asset(role, path)
-                WHERE asset.path IS NOT NULL
-                ON CONFLICT (entity_id, role) DO UPDATE SET
-                    path = EXCLUDED.path,
                     updated_at = EXCLUDED.updated_at;
 
                 INSERT INTO v2.entity_descriptions (entity_id, value, updated_at)
@@ -267,30 +225,6 @@ public static class LegacyVideoImportSql
                 ON CONFLICT (entity_id, role) DO UPDATE SET
                     path = EXCLUDED.path,
                     size_bytes = EXCLUDED.size_bytes,
-                    updated_at = EXCLUDED.updated_at;
-
-                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
-                SELECT gen_random_uuid(), id, 'thumbnail', COALESCE(card_thumbnail_path, thumbnail_path, poster_path), NULL, NULL, created_at, updated_at
-                FROM public.video_movies
-                WHERE COALESCE(card_thumbnail_path, thumbnail_path, poster_path) IS NOT NULL
-                ON CONFLICT (entity_id, role) DO UPDATE SET
-                    path = EXCLUDED.path,
-                    updated_at = EXCLUDED.updated_at;
-
-                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
-                SELECT gen_random_uuid(), movie.id, asset.role, asset.path, NULL, NULL, movie.created_at, movie.updated_at
-                FROM public.video_movies movie
-                CROSS JOIN LATERAL (VALUES
-                    ('poster', movie.poster_path),
-                    ('backdrop', movie.backdrop_path),
-                    ('logo', movie.logo_path),
-                    ('preview', movie.preview_path),
-                    ('sprite', movie.sprite_path),
-                    ('trickplay', movie.trickplay_vtt_path)
-                ) AS asset(role, path)
-                WHERE asset.path IS NOT NULL
-                ON CONFLICT (entity_id, role) DO UPDATE SET
-                    path = EXCLUDED.path,
                     updated_at = EXCLUDED.updated_at;
 
                 INSERT INTO v2.entity_descriptions (entity_id, value, updated_at)
@@ -470,28 +404,6 @@ public static class LegacyVideoImportSql
                 ON CONFLICT (entity_id, role) DO UPDATE SET
                     path = EXCLUDED.path,
                     size_bytes = EXCLUDED.size_bytes,
-                    updated_at = EXCLUDED.updated_at;
-
-                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
-                SELECT gen_random_uuid(), id, 'thumbnail', COALESCE(card_thumbnail_path, thumbnail_path, still_path), NULL, NULL, created_at, updated_at
-                FROM public.video_episodes
-                WHERE COALESCE(card_thumbnail_path, thumbnail_path, still_path) IS NOT NULL
-                ON CONFLICT (entity_id, role) DO UPDATE SET
-                    path = EXCLUDED.path,
-                    updated_at = EXCLUDED.updated_at;
-
-                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
-                SELECT gen_random_uuid(), episode.id, asset.role, asset.path, NULL, NULL, episode.created_at, episode.updated_at
-                FROM public.video_episodes episode
-                CROSS JOIN LATERAL (VALUES
-                    ('poster', episode.still_path),
-                    ('preview', episode.preview_path),
-                    ('sprite', episode.sprite_path),
-                    ('trickplay', episode.trickplay_vtt_path)
-                ) AS asset(role, path)
-                WHERE asset.path IS NOT NULL
-                ON CONFLICT (entity_id, role) DO UPDATE SET
-                    path = EXCLUDED.path,
                     updated_at = EXCLUDED.updated_at;
 
                 INSERT INTO v2.entity_descriptions (entity_id, value, updated_at)
