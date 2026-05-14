@@ -54,12 +54,13 @@
       </p>
       <p class="leading-relaxed mb-4">
         Your media files on disk are untouched. Before continuing, Obscura will
-        create a database backup, reset the v2 media tables, and preserve your
-        library roots and application settings so the new migration can rebuild
-        cleanly.
+        create a database backup and migrate your existing metadata into the new
+        schema. Thumbnails, previews, trickplay sprites, technical metadata,
+        fingerprints, playback history, and all relationships will be preserved
+        so you don't need a full rescan.
       </p>
       <p class="leading-relaxed mb-6 opacity-80">
-        This is a one-time early-access migration gate for the v2 rebuild.
+        This is a one-time early-access migration gate for the v2 upgrade.
       </p>
       {#if error}
         <div class="text-error-text mb-4">{error}</div>
@@ -72,7 +73,7 @@
           class="px-4 py-2 border border-border-accent bg-gradient-to-r from-accent-900 to-accent-800 text-accent-100 font-medium disabled:opacity-40 transition-all duration-fast"
         >
           {#if phase === "preparing"}
-            Backing up &amp; preparing…
+            Backing up &amp; migrating data…
           {:else if phase === "entering"}
             Entering app…
           {:else}

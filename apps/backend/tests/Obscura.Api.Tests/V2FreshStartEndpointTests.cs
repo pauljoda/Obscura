@@ -10,7 +10,7 @@ namespace Obscura.Api.Tests;
 public sealed class V2FreshStartEndpointTests
 {
     [Fact]
-    public async Task PrepareEndpointRunsFreshStartWhenGateIsAccepted()
+    public async Task PrepareEndpointRunsFreshStartAndImportsLegacyData()
     {
         using var factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
@@ -19,6 +19,8 @@ public sealed class V2FreshStartEndpointTests
                 {
                     services.AddSingleton<IV2UpgradeGate, AcceptedGate>();
                     services.AddSingleton<IV2FreshStartService, FakeFreshStartService>();
+                    services.AddSingleton<ILegacyVideoImportService, FakeLegacyVideoImportService>();
+                    services.AddSingleton<ILegacyMediaImportService, FakeLegacyMediaImportService>();
                 });
             });
         using var client = factory.CreateClient();
@@ -31,6 +33,12 @@ public sealed class V2FreshStartEndpointTests
         Assert.Equal("/data/backups/obscura-pre-v2.dump", payload.BackupPath);
         Assert.Equal(2, payload.PreservedLibraryRoots);
         Assert.True(payload.PreservedSettings);
+        Assert.NotNull(payload.VideoImport);
+        Assert.Equal(12, payload.VideoImport.VideosImported);
+        Assert.Equal(3, payload.VideoImport.SeriesImported);
+        Assert.NotNull(payload.MediaImport);
+        Assert.Equal(10, payload.MediaImport.ImagesImported);
+        Assert.Equal(3, payload.MediaImport.GalleriesImported);
     }
 
     [Fact]

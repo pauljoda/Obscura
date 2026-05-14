@@ -11,11 +11,32 @@ export interface V2UpgradeGateShellStatus {
   awaitingBreakingConsent: boolean;
 }
 
+export interface V2LegacyVideoImportResult {
+  seriesImported: number;
+  videosImported: number;
+  peopleImported: number;
+  tagsImported: number;
+  studiosImported: number;
+  linksImported: number;
+}
+
+export interface V2LegacyMediaImportResult {
+  imagesImported: number;
+  galleriesImported: number;
+  booksImported: number;
+  audioLibrariesImported: number;
+  audioTracksImported: number;
+  collectionsImported: number;
+  linksImported: number;
+}
+
 export interface V2FreshStartPrepareResult {
   backupPath: string;
   preservedLibraryRoots: number;
   preservedSettings: boolean;
   mediaReset: boolean;
+  videoImport: V2LegacyVideoImportResult | null;
+  mediaImport: V2LegacyMediaImportResult | null;
 }
 
 type ServerFetch = (input: string, init?: RequestInit) => Promise<Response>;

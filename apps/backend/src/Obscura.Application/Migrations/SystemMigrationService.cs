@@ -51,6 +51,9 @@ public sealed class SystemMigrationService
 
     /// <summary>
     /// Prepares the v2 fresh-start reset when the upgrade gate has been accepted.
+    /// Resets v2 media tables, preserves settings and library roots, then imports
+    /// all legacy v1 data so that thumbnails, technical metadata, fingerprints,
+    /// playback history, and relationships are retained without a full rescan.
     /// </summary>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>A successful response or a consent-required problem.</returns>
@@ -65,11 +68,30 @@ public sealed class SystemMigrationService
         }
 
         var result = await _freshStart.PrepareAsync(cancellationToken);
+
+        var videoImport = await _legacyVideoImport.ImportAsync(cancellationToken);
+        var mediaImport = await _legacyMediaImport.ImportAsync(cancellationToken);
+
         return PrepareFreshStartResult.Prepared(new V2FreshStartPrepareResponse(
             result.BackupPath,
             result.PreservedLibraryRoots,
             result.PreservedSettings,
-            result.MediaReset));
+            result.MediaReset,
+            new LegacyVideoImportResponse(
+                videoImport.SeriesImported,
+                videoImport.VideosImported,
+                videoImport.PeopleImported,
+                videoImport.TagsImported,
+                videoImport.StudiosImported,
+                videoImport.LinksImported),
+            new LegacyMediaImportResponse(
+                mediaImport.ImagesImported,
+                mediaImport.GalleriesImported,
+                mediaImport.BooksImported,
+                mediaImport.AudioLibrariesImported,
+                mediaImport.AudioTracksImported,
+                mediaImport.CollectionsImported,
+                mediaImport.LinksImported)));
     }
 
     /// <summary>

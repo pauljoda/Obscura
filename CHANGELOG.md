@@ -6,8 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- The v1-to-v2 upgrade now preserves all existing metadata instead of forcing a full rescan. Thumbnails, previews, trickplay sprites, technical metadata, fingerprints, playback history, subtitles, markers, and all taxonomy relationships are migrated automatically.
 
 ### Added
+
+### Changed
+- The v2 upgrade gate now runs legacy video and media imports as part of the fresh-start preparation, so all v1 data flows into v2 tables during the upgrade instead of requiring a full library rescan.
 - The videos browse page now uses the shared `EntityGrid` and `EntityThumbnail` components backed by the v2 .NET entity API, providing built-in search, sort, filter, kind tabs, and grid/list view toggle.
 
 ### Fixed
