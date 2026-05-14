@@ -41,7 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scan now propagates the NSFW flag from the library root to all child entities — images, audio libraries, audio tracks, book chapters, and book pages were previously missing the flag even when their parent library root was marked NSFW.
 
 ### Changed
-- VS Code "Full Stack" launch now explicitly builds the .NET backend solution before launching, so the running processes always use freshly compiled code instead of relying on the dotnet launcher's implicit build. Build and test tasks now reference the correct `.slnx` solution format.
+- VS Code "Full Stack" launch now explicitly builds the .NET backend solution before launching, so the running processes always use freshly compiled code instead of relying on the dotnet launcher's implicit build. Build and test tasks now reference the correct `.slnx` solution format. The API launch config and `launchSettings.json` now both use port 8008 to match the SPA's expected backend address.
 - VS Code launch and task configs now target the .NET backend — API, Worker, and compound "Full Stack" configs replace the old Node.js-era entries.
 - Updated Claude Code preview launch config to use the .NET backend (`pnpm dev:app`) instead of the deprecated Vite dev server.
 
