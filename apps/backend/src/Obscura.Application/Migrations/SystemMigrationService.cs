@@ -11,6 +11,7 @@ public sealed class SystemMigrationService
     private readonly IV2FreshStartService _freshStart;
     private readonly ILegacyVideoImportService _legacyVideoImport;
     private readonly ILegacyMediaImportService _legacyMediaImport;
+    private readonly ILegacyAssetNormalizationService _assetNormalization;
 
     /// <summary>
     /// Creates a system migration service over the migration ports implemented by infrastructure.
@@ -19,16 +20,19 @@ public sealed class SystemMigrationService
     /// <param name="freshStart">Fresh-start preparation port.</param>
     /// <param name="legacyVideoImport">Legacy video import port.</param>
     /// <param name="legacyMediaImport">Legacy non-video media import port.</param>
+    /// <param name="assetNormalization">Post-import asset path normalization port.</param>
     public SystemMigrationService(
         IV2UpgradeGate gate,
         IV2FreshStartService freshStart,
         ILegacyVideoImportService legacyVideoImport,
-        ILegacyMediaImportService legacyMediaImport)
+        ILegacyMediaImportService legacyMediaImport,
+        ILegacyAssetNormalizationService assetNormalization)
     {
         _gate = gate;
         _freshStart = freshStart;
         _legacyVideoImport = legacyVideoImport;
         _legacyMediaImport = legacyMediaImport;
+        _assetNormalization = assetNormalization;
     }
 
     /// <summary>
@@ -71,6 +75,7 @@ public sealed class SystemMigrationService
 
         var videoImport = await _legacyVideoImport.ImportAsync(cancellationToken);
         var mediaImport = await _legacyMediaImport.ImportAsync(cancellationToken);
+        await _assetNormalization.NormalizeAsync(cancellationToken);
 
         return PrepareFreshStartResult.Prepared(new V2FreshStartPrepareResponse(
             result.BackupPath,

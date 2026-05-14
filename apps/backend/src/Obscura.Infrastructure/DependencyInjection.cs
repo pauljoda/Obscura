@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Obscura.Application.Jobs;
@@ -78,6 +79,11 @@ public static class DependencyInjection
         services.AddScoped<IV2FreshStartService, V2FreshStartService>();
         services.AddScoped<ILegacyMediaImportService, LegacyMediaImportService>();
         services.AddScoped<ILegacyVideoImportService, LegacyVideoImportService>();
+        services.AddScoped<ILegacyAssetNormalizationService>(provider =>
+            new LegacyAssetNormalizationService(
+                provider.GetRequiredService<NpgsqlDataSource>(),
+                provider.GetRequiredService<AssetPathService>().CacheRoot,
+                provider.GetRequiredService<ILogger<LegacyAssetNormalizationService>>()));
         services.AddScoped<EntityProjectionService>();
         services.AddScoped<IEntityCatalog>(provider => provider.GetRequiredService<EntityProjectionService>());
         services.AddScoped<IEntityDetails>(provider => provider.GetRequiredService<EntityProjectionService>());
