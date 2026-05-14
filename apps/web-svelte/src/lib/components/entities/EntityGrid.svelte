@@ -3,6 +3,7 @@
   import { SearchX } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { createFilterPresets, type FilterPreset } from "$lib/filter-presets";
+  import { usePageSnapshots } from "$lib/stores/page-snapshots.svelte";
   import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import {
     ENTITY_GRID_ALL_KINDS,
@@ -98,10 +99,51 @@
   const selectedCount = $derived(selectedIds.length);
   const request = $derived(entityGridRequestFromState(gridState, filterOptions));
 
+  interface EntityGridSnapshot {
+    query: string;
+    activeKind: string;
+    filterIds: string[];
+    includeNsfw: boolean;
+    sortBy: EntityGridSort;
+    sortDir: EntityGridSortDir;
+    viewMode: EntityGridViewMode;
+    selectedIds: string[];
+    scale: number;
+  }
+
+  const pageSnapshots = usePageSnapshots();
+
   onMount(() => {
     scale = loadScale();
     const key = presetStorageKey();
     if (key) presets = createFilterPresets(key).load();
+
+    if (!prefsKey) return;
+    return pageSnapshots.registerSurface<EntityGridSnapshot>(`entity-grid:${prefsKey}`, {
+      capture: () => ({
+        query,
+        activeKind,
+        filterIds: [...filterIds],
+        includeNsfw,
+        sortBy,
+        sortDir,
+        viewMode,
+        selectedIds: [...selectedIds],
+        scale,
+      }),
+      restore: (snapshot) => {
+        query = snapshot.query;
+        activeKind = snapshot.activeKind;
+        filterIds = snapshot.filterIds;
+        includeNsfw = snapshot.includeNsfw;
+        sortBy = snapshot.sortBy;
+        sortDir = snapshot.sortDir;
+        viewMode = snapshot.viewMode;
+        selectedIds = snapshot.selectedIds;
+        scale = snapshot.scale;
+        onSelectionChange?.(selectedIds);
+      },
+    });
   });
 
   $effect(() => {

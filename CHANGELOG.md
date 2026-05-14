@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 - Entity files now track a `source` column (`scan` or `custom`) so scan jobs never overwrite user-uploaded custom assets. The v1 `-custom` filename convention is detected during legacy migration and recorded in the database.
 - Videos page now sends the client NSFW visibility mode to the backend, so switching between Off / Blur / Show re-fetches the list with server-side filtering instead of relying on client-only blur.
+- All v2 EntityGrid browse pages now participate in SvelteKit's snapshot system — search query, active filters, sort order, view mode, and selection are preserved on back/forward navigation.
 
 ### Changed
 - The v2 upgrade gate now runs legacy video and media imports as part of the fresh-start preparation, so all v1 data flows into v2 tables during the upgrade instead of requiring a full library rescan.

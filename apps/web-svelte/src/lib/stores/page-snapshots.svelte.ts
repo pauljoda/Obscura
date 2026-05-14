@@ -1,5 +1,4 @@
 import { getContext, setContext } from "svelte";
-import type { MediaSurfaceSnapshot, MediaSurfaceSnapshotApi } from "$lib/v1/media-surface/config-v1";
 
 const KEY = Symbol("page-snapshots");
 
@@ -10,7 +9,7 @@ interface ScrollSnapshot {
 
 export interface AppPageSnapshot {
   scroll: ScrollSnapshot;
-  surfaces: Record<string, MediaSurfaceSnapshot<{ id: string }>>;
+  surfaces: Record<string, unknown>;
 }
 
 interface PageSnapshotsOptions {
@@ -18,27 +17,30 @@ interface PageSnapshotsOptions {
   restoreScroll: (snapshot: ScrollSnapshot) => void;
 }
 
+export interface SurfaceSnapshotApi<T = unknown> {
+  capture: () => T;
+  restore: (snapshot: T) => void;
+}
+
 export class PageSnapshotsStore {
-  private surfaces = new Map<string, MediaSurfaceSnapshotApi<{ id: string }>>();
-  private pendingSurfaces = new Map<string, MediaSurfaceSnapshot<{ id: string }>>();
+  private surfaces = new Map<string, SurfaceSnapshotApi>();
+  private pendingSurfaces = new Map<string, unknown>();
 
   constructor(private options: PageSnapshotsOptions) {}
 
-  registerSurface<T extends { id: string }>(
-    surfaceId: string,
-    api: MediaSurfaceSnapshotApi<T>,
-  ): () => void {
-    const unsafeApi = api as unknown as MediaSurfaceSnapshotApi<{ id: string }>;
-    this.surfaces.set(surfaceId, unsafeApi);
+  registerSurface<T>(surfaceId: string, api: SurfaceSnapshotApi<T>): () => void {
+    this.surfaces.set(surfaceId, api as SurfaceSnapshotApi);
 
     const pending = this.pendingSurfaces.get(surfaceId);
     if (pending) {
-      unsafeApi.restore(pending);
+      api.restore(pending as T);
       this.pendingSurfaces.delete(surfaceId);
     }
 
     return () => {
-      if (this.surfaces.get(surfaceId) === unsafeApi) this.surfaces.delete(surfaceId);
+      if (this.surfaces.get(surfaceId) === (api as SurfaceSnapshotApi)) {
+        this.surfaces.delete(surfaceId);
+      }
     };
   }
 
