@@ -244,9 +244,13 @@
           </div>
           <div class="flex flex-col items-center gap-3">
             <div class="w-20 h-20 flex items-center justify-center">
-              <div class="h-8 w-8 border-2 border-accent-500/30 border-t-accent-500 animate-spin"></div>
+              <div class="spinner-inline w-8 h-8">
+                <div class="spinner-inline-outer"></div>
+                <div class="spinner-inline-inner"></div>
+                <div class="spinner-inline-core"></div>
+              </div>
             </div>
-            <span class="text-mono-sm text-text-muted">simple spinner</span>
+            <span class="text-mono-sm text-text-muted">inline spinner</span>
           </div>
           <div class="flex flex-col items-center gap-3">
             <div class="w-20 h-20 flex items-center justify-end gap-[3px] pb-4 pl-3">

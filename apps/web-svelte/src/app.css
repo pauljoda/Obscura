@@ -573,6 +573,47 @@
     50% { transform: scaleY(1); }
   }
 
+  /* Inline spinner: two concentric squares that counter-rotate with brass borders. */
+  .spinner-inline {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .spinner-inline-outer {
+    position: absolute;
+    inset: 0;
+    border: 1.5px solid rgba(196, 154, 90, 0.35);
+    animation: spinner-cw 2.8s var(--ease-mechanical) infinite;
+  }
+
+  .spinner-inline-inner {
+    position: absolute;
+    inset: 20%;
+    border: 1px solid rgba(196, 154, 90, 0.55);
+    animation: spinner-ccw 1.8s var(--ease-mechanical) infinite;
+    box-shadow: inset 0 0 6px rgba(196, 154, 90, 0.08);
+  }
+
+  .spinner-inline-core {
+    width: 3px;
+    height: 3px;
+    background: rgba(196, 154, 90, 0.7);
+    box-shadow: 0 0 6px rgba(196, 154, 90, 0.4);
+    animation: led-pulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes spinner-cw {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  @keyframes spinner-ccw {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(-360deg); }
+  }
+
   @keyframes glow-pulse {
     0%, 100% {
       box-shadow: 0 0 0 1px rgba(196,154,90,0.50),
