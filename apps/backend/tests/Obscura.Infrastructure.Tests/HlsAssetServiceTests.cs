@@ -363,6 +363,50 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task FarVirtualSegmentStartsSeparateGenerationWhenInitialGenerationIsStillRunning()
+    {
+        var videoId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var process = new BlockingInitialSegmentProcessExecutor();
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 180,
+                Width: 1920,
+                Height: 960)),
+            process,
+            NullLogger<HlsAssetService>.Instance);
+
+        var initialSegment = service.GetAssetAsync(videoId, "v/720p/seg_00000.ts", null, CancellationToken.None);
+        await process.InitialGenerationStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var farSegment = await service.GetAssetAsync(videoId, "v/720p/seg_00020.ts", null, CancellationToken.None)
+            .WaitAsync(TimeSpan.FromSeconds(5));
+
+        process.ReleaseInitialGeneration();
+        await initialSegment.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.NotNull(farSegment);
+        Assert.Equal("seg_00020.ts", Path.GetFileName(farSegment.Path));
+        Assert.Equal(2, process.ArgumentHistory.Count);
+        Assert.Contains(process.ArgumentHistory, arguments =>
+        {
+            var startNumberIndex = arguments.ToList().IndexOf("-start_number");
+            return startNumberIndex >= 0 && arguments[startNumberIndex + 1] == "0";
+        });
+        Assert.Contains(process.ArgumentHistory, arguments =>
+        {
+            var startNumberIndex = arguments.ToList().IndexOf("-start_number");
+            return startNumberIndex >= 0 && arguments[startNumberIndex + 1] == "19";
+        });
+    }
+
+    [Fact]
     public async Task VirtualSegmentsUseDefaultSourceAudioStream()
     {
         var videoId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
@@ -574,6 +618,59 @@ public sealed class HlsAssetServiceTests : IDisposable
                 var segmentPattern = arguments[segmentPatternIndex + 1];
                 await File.WriteAllTextAsync(
                     segmentPattern.Replace("%05d", (startNumber + 1).ToString("00000")),
+                    "segment",
+                    cancellationToken);
+            }
+
+            await File.WriteAllTextAsync(outputPath, "playlist", cancellationToken);
+            return new ProcessExecutionResult(0, string.Empty, string.Empty);
+        }
+    }
+
+    private sealed class BlockingInitialSegmentProcessExecutor : ProcessExecutor
+    {
+        private readonly TaskCompletionSource _releaseInitialGeneration = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource InitialGenerationStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public List<IReadOnlyList<string>> ArgumentHistory { get; } = [];
+
+        public void ReleaseInitialGeneration()
+        {
+            _releaseInitialGeneration.TrySetResult();
+        }
+
+        public override async Task<ProcessExecutionResult> RunAsync(
+            string fileName,
+            IReadOnlyList<string> arguments,
+            IReadOnlyDictionary<string, string>? environment,
+            CancellationToken cancellationToken)
+        {
+            ArgumentHistory.Add(arguments);
+            var outputPath = arguments[^1];
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+
+            var segmentPatternIndex = arguments.ToList().IndexOf("-hls_segment_filename");
+            var startNumberIndex = arguments.ToList().IndexOf("-start_number");
+            var segmentPattern = segmentPatternIndex >= 0 && segmentPatternIndex < arguments.Count - 1
+                ? arguments[segmentPatternIndex + 1]
+                : null;
+            var startNumber = startNumberIndex >= 0 &&
+                startNumberIndex < arguments.Count - 1 &&
+                int.TryParse(arguments[startNumberIndex + 1], out var parsedStart)
+                    ? parsedStart
+                    : 0;
+
+            if (startNumber == 0)
+            {
+                InitialGenerationStarted.TrySetResult();
+                await _releaseInitialGeneration.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            }
+
+            if (segmentPattern is not null)
+            {
+                var segmentToWrite = startNumber == 0 ? startNumber : startNumber + 1;
+                await File.WriteAllTextAsync(
+                    segmentPattern.Replace("%05d", segmentToWrite.ToString("00000")),
                     "segment",
                     cancellationToken);
             }

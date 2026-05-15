@@ -15,6 +15,7 @@ public sealed class HlsAssetService : IHlsAssetService
 {
     private const int SegmentDurationSeconds = 6;
     private const int VirtualCacheFormatVersion = 3;
+    private const int ActiveGenerationReuseWindowSegments = 12;
     private static readonly TimeSpan SegmentPollInterval = TimeSpan.FromMilliseconds(100);
     private static readonly ConcurrentDictionary<string, VirtualRenditionGeneration> ActiveRenditions = new();
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> VirtualCacheRefreshLocks = new();
@@ -319,13 +320,25 @@ public sealed class HlsAssetService : IHlsAssetService
         {
             if (key.StartsWith(prefix, StringComparison.Ordinal) &&
                 segmentIndex >= generation.StartSegment &&
-                segmentIndex <= generation.EndSegment)
+                segmentIndex <= generation.EndSegment &&
+                ShouldReuseActiveGeneration(generation, segmentIndex))
             {
                 return generation;
             }
         }
 
         return null;
+    }
+
+    private static bool ShouldReuseActiveGeneration(VirtualRenditionGeneration generation, int segmentIndex)
+    {
+        if (segmentIndex - generation.StartSegment <= ActiveGenerationReuseWindowSegments)
+        {
+            return true;
+        }
+
+        var stagedPath = Path.Combine(generation.StagingDirectory, $"seg_{segmentIndex:00000}.ts");
+        return File.Exists(stagedPath) && new FileInfo(stagedPath).Length > 0;
     }
 
     private VirtualRenditionGeneration StartVirtualRenditionGeneration(

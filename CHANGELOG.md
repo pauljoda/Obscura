@@ -41,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Clicking the video player no longer leaves a blue browser focus outline around the playback surface.
 - Virtual HLS now publishes generated segments atomically and refreshes older segment caches, preventing content-length crashes when users scrub past buffered playback.
 - Scrubbing beyond the current buffer now starts virtual HLS generation at the requested segment and continues forward, restoring responsive long-distance seeks without waiting for earlier segments.
+- Scrubbing far ahead while a video is still generating now starts a seek-local HLS transcode instead of waiting for the initial playback transcode to catch up.
 - Subtitle style controls now use consistent sharp menu rows and squared sliders in both the player and Settings page, with compact language-code text that no longer overpowers subtitle settings.
 - Local dev navigation now ignores browser-aborted backend requests, preventing canceled list loads during refresh/navigation from breaking the .NET debug session.
 - Video detail pages now use the shared page padding without adding a second inset around the player, giving playback more room while matching browse-page spacing.
@@ -119,6 +120,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- Adaptive HLS no longer reuses an early active rendition generation for far-ahead segment requests unless that exact segment has already been produced.
 - Video player focus styling no longer shows the native browser outline on the media surface after mouse/touch interaction.
 - Browse route preloads no longer open Vite overlays from deleted v1 infinite-load, pagination, and scraper helper imports.
 - Video detail routes no longer return dev-server import errors from global Svelte imports of deleted v1 cache, playlist, command palette, and search-result helpers.
