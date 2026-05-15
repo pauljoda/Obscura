@@ -566,15 +566,30 @@
         requestGoogleCast?: (trigger?: Event) => void;
       };
     }).remoteControl;
-    if (!remote) {
+    const castApi = (window as unknown as {
+      chrome?: { cast?: { isAvailable?: boolean } };
+    }).chrome?.cast;
+    if (!remote?.requestAirPlay && !remote?.requestGoogleCast) {
       playerNotice = "Casting is not available for this player.";
       return;
     }
     if ("WebKitPlaybackTargetAvailabilityEvent" in window) {
-      remote.requestAirPlay?.(event);
+      if (remote.requestAirPlay) {
+        remote.requestAirPlay(event);
+        return;
+      }
+      playerNotice = "AirPlay is not available for this player.";
       return;
     }
-    remote.requestGoogleCast?.(event);
+    if (!castApi?.isAvailable) {
+      playerNotice = "Google Cast is not available for this browser.";
+      return;
+    }
+    if (remote.requestGoogleCast) {
+      remote.requestGoogleCast(event);
+      return;
+    }
+    playerNotice = "Google Cast is not available for this player.";
   }
 
   function openSettings(view: SettingsView = "root") {

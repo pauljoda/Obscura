@@ -168,6 +168,52 @@ describe("VideoPlayer", () => {
     expect(screen.queryByRole("button", { name: "Cast" })).not.toBeInTheDocument();
   });
 
+  it("shows an unavailable notice when cast has no request target", async () => {
+    render(VideoPlayer, {
+      props: {
+        src: "/api/videos/video-1/hls/master.m3u8",
+        defaultPlaybackMode: "hls",
+      },
+    });
+
+    await waitFor(() => {
+      expect(document.querySelector("media-player")).toBeInTheDocument();
+    });
+
+    Object.defineProperty(document.querySelector("media-player"), "remoteControl", {
+      configurable: true,
+      value: {},
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Cast" }));
+
+    expect(screen.getByText("Casting is not available for this player.")).toBeInTheDocument();
+  });
+
+  it("shows an unavailable notice when Google Cast is not available", async () => {
+    const requestGoogleCast = vi.fn();
+    render(VideoPlayer, {
+      props: {
+        src: "/api/videos/video-1/hls/master.m3u8",
+        defaultPlaybackMode: "hls",
+      },
+    });
+
+    await waitFor(() => {
+      expect(document.querySelector("media-player")).toBeInTheDocument();
+    });
+
+    Object.defineProperty(document.querySelector("media-player"), "remoteControl", {
+      configurable: true,
+      value: { requestGoogleCast },
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Cast" }));
+
+    expect(requestGoogleCast).not.toHaveBeenCalled();
+    expect(screen.getByText("Google Cast is not available for this browser.")).toBeInTheDocument();
+  });
+
   it("waits for hls2 readiness before attaching the manifest to Vidstack", async () => {
     let resolveStatus!: (response: Response) => void;
     const statusResponse = new Promise<Response>((resolve) => {
