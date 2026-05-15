@@ -37,6 +37,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Playback settings now include preferred audio languages, so multi-audio videos can start in the user's chosen language when a matching stream is available.
 - Legacy v1 server code has been removed: Obscura now treats the .NET API, EF Core persistence, and .NET worker as the only server/runtime path. Any remaining frontend imports of v1 helpers now surface as build failures so they can be migrated deliberately.
 - Video detail pages now load again after the v1 server removal, with root layout helpers, search, and playlist UI moved onto non-v1 frontend helpers backed by the .NET API.
+- Browse pages and the plugins page now avoid deleted v1 frontend imports during route analysis, so navigation no longer trips Vite overlays from removed pagination or scraper helper files.
+- Clicking the video player no longer leaves a blue browser focus outline around the playback surface.
 - Virtual HLS now publishes generated segments atomically and refreshes older segment caches, preventing content-length crashes when users scrub past buffered playback.
 - Scrubbing beyond the current buffer now starts virtual HLS generation at the requested segment and continues forward, restoring responsive long-distance seeks without waiting for earlier segments.
 - Subtitle style controls now use consistent sharp menu rows and squared sliders in both the player and Settings page, with compact language-code text that no longer overpowers subtitle settings.
@@ -117,6 +119,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- Video player focus styling no longer shows the native browser outline on the media surface after mouse/touch interaction.
+- Browse route preloads no longer open Vite overlays from deleted v1 infinite-load, pagination, and scraper helper imports.
 - Video detail routes no longer return dev-server import errors from global Svelte imports of deleted v1 cache, playlist, command palette, and search-result helpers.
 - V2 adaptive playback no longer caps the hls.js forward/back buffer at two minutes or 60 MB, allowing long videos to continue prebuffering when the browser has capacity.
 - Video seekbar hover popups now render the trickplay frame for the hovered timestamp when a video has generated trickplay assets.

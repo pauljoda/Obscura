@@ -1,5 +1,3 @@
-import { mergeUniquePage } from "$lib/v1/media-surface/pagination/load-more-v1";
-
 export interface SeriesLoadedWindowArgs {
   loadedStart: number;
   itemCount: number;
@@ -31,5 +29,13 @@ export function applySeriesPageMerge<T extends { id: string }>(args: {
   loadedStart: number;
   total: number;
 }) {
-  return mergeUniquePage(args);
+  const existing = new Set(args.current.map((item) => item.id));
+  const next = args.incoming.filter((item) => !existing.has(item.id));
+  const items = [...args.current, ...next];
+
+  return {
+    added: next.length,
+    items,
+    total: next.length === 0 ? args.loadedStart + args.current.length : args.total,
+  };
 }

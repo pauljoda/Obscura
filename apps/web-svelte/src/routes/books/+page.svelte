@@ -7,7 +7,7 @@
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
-  import InfiniteLoadTrigger from "$lib/v1/media-surface/pagination/InfiniteLoadTriggerV1.svelte";
+  import InfiniteLoadTrigger from "$lib/components/entities/InfiniteLoadTrigger.svelte";
 
   type LoadState = "loading" | "ready" | "error";
 

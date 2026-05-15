@@ -1197,7 +1197,7 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     bind:this={containerEl}
-    class="relative surface-media-well bg-black"
+    class="obscura-player-surface relative surface-media-well bg-black"
     onmousemove={surfaceControls}
     onmouseleave={() => {
       if (playing) showControls = false;
@@ -1837,6 +1837,7 @@
 
 <style>
   .obscura-media-engine {
+    -webkit-tap-highlight-color: transparent;
     aspect-ratio: 16 / 9;
     background: #000;
     color: #f2eee7;
@@ -1846,8 +1847,28 @@
     width: 100%;
   }
 
+  .obscura-player-surface,
+  .obscura-media-engine,
   .obscura-media-engine :global(video),
   .obscura-media-engine :global(media-poster) {
+    outline: none;
+  }
+
+  .obscura-player-surface:focus,
+  .obscura-player-surface:focus-visible,
+  .obscura-media-engine:focus,
+  .obscura-media-engine:focus-visible,
+  .obscura-media-engine :global(video:focus),
+  .obscura-media-engine :global(video:focus-visible),
+  .obscura-media-engine :global(media-poster:focus),
+  .obscura-media-engine :global(media-poster:focus-visible) {
+    box-shadow: none;
+    outline: none;
+  }
+
+  .obscura-media-engine :global(video),
+  .obscura-media-engine :global(media-poster) {
+    -webkit-tap-highlight-color: transparent;
     background: #000;
     border-radius: 0;
     height: 100%;
