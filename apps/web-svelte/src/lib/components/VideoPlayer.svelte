@@ -38,7 +38,12 @@
     VolumeX,
     Wifi,
   } from "@lucide/svelte";
-  import { cn } from "@obscura/ui-svelte";
+  import {
+    cn,
+    findFrameAtTime,
+    loadTrickplayFrames,
+    type TrickplayFrame,
+  } from "@obscura/ui-svelte";
   import {
     isHLSProvider,
     type AudioTrack,
@@ -199,6 +204,8 @@
     percent: number;
     time: number;
   } | null>(null);
+  let timelineTrickplayFrames = $state<TrickplayFrame[] | null>(null);
+  let timelineTrickplayError = $state(false);
 
   let settingsMenuRendered = $state(false);
   let settingsMenuClosing = $state(false);
@@ -229,6 +236,24 @@
   const playerSrc = $derived(requestedPlayerSrc === hlsReadySrc ? requestedPlayerSrc : undefined);
   const progress = $derived(duration > 0 ? (currentTime / duration) * 100 : 0);
   const hasFilmStrip = $derived(Boolean(trickplayPlaylist && duration > 0));
+  const timelinePreviewFrame = $derived.by(() => {
+    if (
+      timelineTrickplayError ||
+      !timelineHover ||
+      !timelineTrickplayFrames ||
+      timelineTrickplayFrames.length === 0
+    ) {
+      return null;
+    }
+    return timelineTrickplayFrames[findFrameAtTime(timelineTrickplayFrames, timelineHover.time)] ?? null;
+  });
+  const timelinePreviewSpriteDims = $derived.by(() => {
+    if (!timelineTrickplayFrames) return { width: 0, height: 0 };
+    return {
+      width: timelineTrickplayFrames.reduce((max, frame) => Math.max(max, frame.x + frame.width), 0),
+      height: timelineTrickplayFrames.reduce((max, frame) => Math.max(max, frame.y + frame.height), 0),
+    };
+  });
   const activeSubtitleId = $derived(
     controlledSubtitleId !== undefined ? controlledSubtitleId : internalSubtitleId,
   );
@@ -844,6 +869,26 @@
   });
 
   $effect(() => {
+    const playlist = trickplayPlaylist;
+    timelineTrickplayFrames = null;
+    timelineTrickplayError = false;
+    if (!playlist) return;
+
+    let cancelled = false;
+    loadTrickplayFrames(playlist)
+      .then((frames) => {
+        if (!cancelled) timelineTrickplayFrames = frames;
+      })
+      .catch(() => {
+        if (!cancelled) timelineTrickplayError = true;
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  });
+
+  $effect(() => {
     if (autoSelected) return;
     if (subtitleChoiceLocked) {
       autoSelected = true;
@@ -1296,6 +1341,7 @@
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
           class="video-progress-track mobile-video-progress group/track"
+          data-testid="video-progress-track"
           data-dragging={isDragging}
           onpointerdown={(event) => {
             event.currentTarget.setPointerCapture(event.pointerId);
@@ -1328,9 +1374,24 @@
         >
           {#if timelineHover}
             <div
-              class="pointer-events-none absolute bottom-[calc(100%+0.6rem)] z-20 -translate-x-1/2 border border-white/10 bg-black/88 px-2.5 py-1.5 text-center shadow-[0_0_16px_rgba(0,0,0,0.35)]"
+              class="pointer-events-none absolute bottom-[calc(100%+0.6rem)] z-20 w-[min(11rem,54vw)] -translate-x-1/2 border border-white/10 bg-black/88 p-1.5 text-center shadow-[0_0_16px_rgba(0,0,0,0.35)]"
               style:left="{timelineHover.percent}%"
             >
+              {#if timelinePreviewFrame && timelinePreviewSpriteDims.width > 0 && timelinePreviewSpriteDims.height > 0}
+                <div
+                  class="timeline-trickplay-preview"
+                  data-testid="timeline-trickplay-preview"
+                  style:aspect-ratio="{timelinePreviewFrame.width} / {timelinePreviewFrame.height}"
+                  style:background-image="url({timelinePreviewFrame.url})"
+                  style:background-size="{(timelinePreviewSpriteDims.width / timelinePreviewFrame.width) * 100}% {(timelinePreviewSpriteDims.height / timelinePreviewFrame.height) * 100}%"
+                  style:background-position="{timelinePreviewSpriteDims.width <= timelinePreviewFrame.width
+                    ? 0
+                    : (timelinePreviewFrame.x / (timelinePreviewSpriteDims.width - timelinePreviewFrame.width)) * 100}% {timelinePreviewSpriteDims.height <= timelinePreviewFrame.height
+                    ? 0
+                    : (timelinePreviewFrame.y / (timelinePreviewSpriteDims.height - timelinePreviewFrame.height)) * 100}%"
+                  style:background-repeat="no-repeat"
+                ></div>
+              {/if}
               <div class="text-mono-tabular text-[0.65rem] text-white/82">
                 {formatTime(timelineHover.time)}
               </div>
@@ -2073,6 +2134,13 @@
   .mobile-video-progress:hover,
   .mobile-video-progress[data-dragging="true"] {
     height: 6px;
+  }
+
+  .timeline-trickplay-preview {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 0.4rem;
+    width: 100%;
   }
 
   @media (min-width: 640px) {

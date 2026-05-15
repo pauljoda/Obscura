@@ -30,6 +30,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Local trickplay generation now writes real Jellyfin tile sheets in the shared dev cache, so rescans can advertise thumbnail hover previews instead of leaving empty `Trickplay/320` folders behind.
 - Library scans now enqueue trickplay generation whenever trickplay is enabled, even if thumbnail preview generation is disabled.
 - Video player controls now give visible hover/click feedback, caption enablement opens the transcript sidecar, settings use a stable mobile sheet and desktop in-video drawer, and Cast preloads the Google sender framework before opening the device picker.
+- Video seekbar hover previews now show the matching trickplay thumbnail frame, so scrubbing from the main controls is easier without opening the full filmstrip.
+- Concurrent video playback requests no longer crash the backend when they refresh the same virtual HLS cache at the same time.
 - Local dev navigation now ignores browser-aborted backend requests, preventing canceled list loads during refresh/navigation from breaking the .NET debug session.
 - Video detail pages now use the shared page padding without adding a second inset around the player, giving playback more room while matching browse-page spacing.
 - Scheduled v2 library scans now target the intended watched folder instead of falling back to all eligible roots, and configured static web builds are served directly even in development/test hosts.
@@ -105,6 +107,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 - V2 adaptive playback no longer caps the hls.js forward/back buffer at two minutes or 60 MB, allowing long videos to continue prebuffering when the browser has capacity.
+- Video seekbar hover popups now render the trickplay frame for the hovered timestamp when a video has generated trickplay assets.
+- Virtual HLS cache refreshes are now serialized per video, preventing simultaneous playback requests from racing during stale cache directory deletion.
 - Direct playback no longer stalls the player when Vidstack/browser probes fail before `can-play`. The Jellyfin-compatible stream route now supports `HEAD`, and the player switches to adaptive HLS instead of leaving playback paused.
 - HLS playback no longer spams repeated Vidstack errors after startup. The player keeps extended forward buffering, HLS asset routes now answer media `HEAD` probes, and hls.js can reduce its buffer target when the browser hits its media quota.
 - The playlist session compatibility endpoint now returns JSON `null` when no session is stored, preventing the Svelte shell from logging an empty-response parse error.

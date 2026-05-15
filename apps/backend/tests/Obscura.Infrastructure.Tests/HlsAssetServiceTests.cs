@@ -136,6 +136,52 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ConcurrentVirtualCacheRefreshesDoNotRaceDirectoryDeletion()
+    {
+        var videoId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var virtualRoot = Path.Combine(_cacheRoot, "hlsv", videoId.ToString());
+        Directory.CreateDirectory(Path.Combine(virtualRoot, "v", "720p"));
+        await File.WriteAllTextAsync(
+            Path.Combine(virtualRoot, "metadata.json"),
+            """
+            {
+              "SourcePath": "/stale/source.mkv",
+              "SourceSize": 1,
+              "SourceModifiedUtc": "2001-01-01T00:00:00Z",
+              "DurationSeconds": 1,
+              "Renditions": ["720p"]
+            }
+            """);
+        await File.WriteAllTextAsync(Path.Combine(virtualRoot, "v", "720p", "seg_00000.ts"), "stale");
+        var source = new VideoSourceFile(
+            videoId,
+            sourcePath,
+            "video/x-matroska",
+            false,
+            DurationSeconds: 13,
+            Width: 1920,
+            Height: 960);
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot),
+            new CoordinatedVideoSourceService(source, expectedCalls: 12),
+            new ManifestWritingProcessExecutor(),
+            NullLogger<HlsAssetService>.Instance);
+
+        var requests = Enumerable.Range(0, 12)
+            .Select(index => service.GetAssetAsync(
+                videoId,
+                index % 2 == 0 ? "master.m3u8" : "v/720p/index.m3u8",
+                CancellationToken.None))
+            .ToArray();
+        var assets = await Task.WhenAll(requests);
+
+        Assert.All(assets, Assert.NotNull);
+        Assert.True(File.Exists(Path.Combine(virtualRoot, "metadata.json")));
+    }
+
+    [Fact]
     public async Task VirtualSegmentIsEncodedOnDemand()
     {
         var videoId = Guid.Parse("44444444-4444-4444-4444-444444444444");
@@ -193,6 +239,31 @@ public sealed class HlsAssetServiceTests : IDisposable
         public Task<VideoSourceFile?> GetSourceAsync(Guid id, CancellationToken cancellationToken)
         {
             return Task.FromResult(id == _source.EntityId ? _source : null);
+        }
+    }
+
+    private sealed class CoordinatedVideoSourceService : IVideoSourceService
+    {
+        private readonly VideoSourceFile _source;
+        private readonly int _expectedCalls;
+        private readonly TaskCompletionSource _allArrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _calls;
+
+        public CoordinatedVideoSourceService(VideoSourceFile source, int expectedCalls)
+        {
+            _source = source;
+            _expectedCalls = expectedCalls;
+        }
+
+        public async Task<VideoSourceFile?> GetSourceAsync(Guid id, CancellationToken cancellationToken)
+        {
+            if (Interlocked.Increment(ref _calls) >= _expectedCalls)
+            {
+                _allArrived.TrySetResult();
+            }
+
+            await _allArrived.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            return id == _source.EntityId ? _source : null;
         }
     }
 

@@ -15,6 +15,7 @@ public sealed class HlsAssetService : IHlsAssetService
 {
     private const int SegmentDurationSeconds = 6;
     private static readonly ConcurrentDictionary<string, Task<string>> ActiveSegments = new();
+    private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> VirtualCacheRefreshLocks = new();
 
     private readonly HlsAssetServiceOptions _options;
     private readonly IVideoSourceService? _sources;
@@ -184,6 +185,24 @@ public sealed class HlsAssetService : IHlsAssetService
     }
 
     private async Task EnsureVirtualCacheAsync(
+        Guid id,
+        VideoSourceFile source,
+        IReadOnlyList<VirtualHlsRendition> renditions,
+        CancellationToken cancellationToken)
+    {
+        var refreshLock = VirtualCacheRefreshLocks.GetOrAdd(id, _ => new SemaphoreSlim(1, 1));
+        await refreshLock.WaitAsync(cancellationToken);
+        try
+        {
+            await EnsureVirtualCacheUnderLockAsync(id, source, renditions, cancellationToken);
+        }
+        finally
+        {
+            refreshLock.Release();
+        }
+    }
+
+    private async Task EnsureVirtualCacheUnderLockAsync(
         Guid id,
         VideoSourceFile source,
         IReadOnlyList<VirtualHlsRendition> renditions,

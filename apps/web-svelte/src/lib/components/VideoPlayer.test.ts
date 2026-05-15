@@ -324,6 +324,64 @@ describe("VideoPlayer", () => {
     expect(source).toContain(".subtitle-control-button {\n      padding: 0;\n      width: 2.25rem;");
   });
 
+  it("shows a trickplay frame in the seekbar hover preview", async () => {
+    vi.mocked(fetch).mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes("/Trickplay/320/tiles.m3u8")) {
+        return Promise.resolve(new Response(
+          [
+            "#EXTM3U",
+            "#EXT-X-IMAGES-ONLY",
+            "#EXT-X-TILES:RESOLUTION=320x180,LAYOUT=2x1,DURATION=5",
+            "#EXTINF:10,",
+            "0.jpg"
+          ].join("\n"),
+          { headers: { "Content-Type": "application/vnd.apple.mpegurl" } },
+        ));
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ state: "ready", renditions: [] }), {
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    });
+
+    render(VideoPlayer, {
+      props: {
+        src: "/api/videos/video-1/hls/master.m3u8",
+        duration: 10,
+        defaultPlaybackMode: "hls",
+        trickplayPlaylist: "/Videos/video-1/Trickplay/320/tiles.m3u8",
+      },
+    });
+
+    const track = screen.getByTestId("video-progress-track");
+    Object.defineProperty(track, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        bottom: 10,
+        height: 10,
+        left: 0,
+        right: 200,
+        top: 0,
+        width: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }),
+    });
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith("/Videos/video-1/Trickplay/320/tiles.m3u8");
+    });
+
+    await fireEvent.pointerMove(track, { clientX: 150 });
+
+    const preview = await screen.findByTestId("timeline-trickplay-preview");
+    expect(preview.getAttribute("style")).toContain("/Videos/video-1/Trickplay/320/0.jpg");
+  });
+
   it("defines hover, focus, and click feedback for player controls", async () => {
     const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
 
