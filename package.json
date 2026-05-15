@@ -5,10 +5,9 @@
   "packageManager": "pnpm@10.30.3",
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev --parallel --filter=@obscura/web-svelte --filter=@obscura/worker",
-    "dev:backend": "dotnet watch --project apps/backend/src/Obscura.Api/Obscura.Api.csproj run --urls http://localhost:8010",
-    "dev:app": "pnpm --filter @obscura/web-svelte build && dotnet watch --project apps/backend/src/Obscura.Api/Obscura.Api.csproj run --urls http://localhost:8008",
-    "dev:backend:worker": "dotnet watch --project apps/backend/src/Obscura.Worker/Obscura.Worker.csproj run",
+    "dev": "pnpm --filter @obscura/web-svelte dev",
+    "dev:api": "dotnet watch --project apps/backend/src/Obscura.Api/Obscura.Api.csproj run",
+    "dev:worker": "dotnet watch --project apps/backend/src/Obscura.Worker/Obscura.Worker.csproj run",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "check": "turbo run lint typecheck",

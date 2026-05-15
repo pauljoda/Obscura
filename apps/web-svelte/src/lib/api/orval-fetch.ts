@@ -1,21 +1,16 @@
-import { dev } from "$app/environment";
 import { env } from "$env/dynamic/public";
 
-const DEFAULT_API_BASE = env.PUBLIC_API_URL || "/api";
-export const V2_API_BASE =
-  env.PUBLIC_V2_API_URL ||
-  (dev && DEFAULT_API_BASE === "/api" ? "http://127.0.0.1:8010/api" : DEFAULT_API_BASE);
+const API_BASE = env.PUBLIC_API_URL || "/api";
 
 export function v2ApiPath(path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${V2_API_BASE}${normalizedPath.startsWith("/api/") ? normalizedPath.slice(4) : normalizedPath}`;
+  return `${API_BASE}${normalizedPath.startsWith("/api/") ? normalizedPath.slice(4) : normalizedPath}`;
 }
 
 export function v2AssetUrl(assetPath: string | null | undefined): string {
   if (!assetPath) return "";
-  const origin = V2_API_BASE.replace(/\/api\/?$/, "");
   const normalized = assetPath.startsWith("/") ? assetPath : `/${assetPath}`;
-  return `${origin}${normalized}`;
+  return normalized;
 }
 
 export async function orvalFetch<TData>(

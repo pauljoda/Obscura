@@ -16,6 +16,27 @@
       "detail": "Boots the dev Postgres container."
     },
     {
+      "label": "Obscura: Vite Dev",
+      "type": "shell",
+      "command": "pnpm --filter @obscura/web-svelte dev",
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^\\s*VITE",
+          "endsPattern": "Local:\\s+http"
+        }
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "group": "obscura-dev"
+      },
+      "detail": "Starts the Vite dev server with HMR on port 8008. Proxies /api and /assets to the .NET backend on 8010."
+    },
+    {
       "label": "Obscura: Web Build",
       "type": "shell",
       "command": "pnpm --filter @obscura/web-svelte build",
@@ -46,12 +67,12 @@
       "label": "Obscura: Full Prebuild",
       "dependsOn": [
         "Obscura: Docker Up",
-        "Obscura: Web Build",
+        "Obscura: Vite Dev",
         "Obscura: .NET Build"
       ],
       "dependsOrder": "parallel",
       "problemMatcher": [],
-      "detail": "Boots Postgres, builds the Svelte SPA, and compiles the .NET backend in parallel — guarantees fresh code on every launch."
+      "detail": "Boots Postgres, starts the Vite dev server (HMR), and compiles the .NET backend in parallel."
     },
     {
       "label": "Obscura Docs: Build",

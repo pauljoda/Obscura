@@ -1,8 +1,7 @@
-export const DEFAULT_DEV_V2_API_BASE = "http://127.0.0.1:8010/api";
+export const DEV_API_BASE = "http://127.0.0.1:8010/api";
 
 export interface V2ApiEnvironment {
   PUBLIC_API_URL?: string;
-  PUBLIC_V2_API_URL?: string;
 }
 
 export interface V2UpgradeGateShellStatus {
@@ -42,12 +41,11 @@ export interface V2FreshStartPrepareResult {
 type ServerFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export function resolveV2ApiBase(env: V2ApiEnvironment, isDev: boolean): string {
-  const configured = env.PUBLIC_V2_API_URL || env.PUBLIC_API_URL;
-  if (configured && (configured !== "/api" || !isDev)) {
+  const configured = env.PUBLIC_API_URL;
+  if (configured && configured !== "/api") {
     return configured.replace(/\/$/, "");
   }
-
-  return isDev ? DEFAULT_DEV_V2_API_BASE : "/api";
+  return isDev ? DEV_API_BASE : "/api";
 }
 
 function v2Url(apiBase: string, path: string): string {

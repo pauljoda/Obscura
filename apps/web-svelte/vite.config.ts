@@ -7,21 +7,29 @@ export default defineConfig({
   server: {
     port: 8008,
     strictPort: false,
+    proxy: {
+      "/api": {
+        target: "http://localhost:8010",
+        changeOrigin: true,
+      },
+      "/assets": {
+        target: "http://localhost:8010",
+        changeOrigin: true,
+      },
+      "/openapi": {
+        target: "http://localhost:8010",
+        changeOrigin: true,
+      },
+    },
   },
   optimizeDeps: {
-    // jassub ships browser-only worker assets we manage separately under
-    // /static/jassub, so keep the package out of Vite's prebundle pass.
     exclude: ["jassub"],
   },
   ssr: {
-    // Don't attempt to SSR-import jassub — it has browser-only globals.
     noExternal: [],
     external: ["jassub", "jsdom"],
   },
   define: {
-    // @obscura/contracts reads these env keys at module scope. Vite does
-    // not polyfill `process` in browser bundles, so we shim the shared
-    // browser/server API base vars here.
     "process.env.PUBLIC_API_URL": JSON.stringify(""),
     "process.env.API_URL": JSON.stringify(""),
   },

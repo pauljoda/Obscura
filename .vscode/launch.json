@@ -6,7 +6,6 @@
       "type": "dotnet",
       "request": "launch",
       "projectPath": "${workspaceFolder}/apps/backend/src/Obscura.Api/Obscura.Api.csproj",
-      "args": ["--urls", "http://localhost:8008"],
       "preLaunchTask": "Obscura: Docker Up"
     },
     {

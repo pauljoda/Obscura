@@ -15,9 +15,9 @@ function jsonResponse(payload: unknown, init: ResponseInit = {}) {
 }
 
 describe("v2 system gate server client", () => {
-  it("uses the local .NET API in development when no explicit v2 URL is configured", () => {
+  it("uses the local .NET API in development when no explicit URL is configured", () => {
     expect(resolveV2ApiBase({}, true)).toBe("http://127.0.0.1:8010/api");
-    expect(resolveV2ApiBase({ PUBLIC_V2_API_URL: "http://backend/api" }, true)).toBe(
+    expect(resolveV2ApiBase({ PUBLIC_API_URL: "http://backend/api" }, true)).toBe(
       "http://backend/api",
     );
   });
