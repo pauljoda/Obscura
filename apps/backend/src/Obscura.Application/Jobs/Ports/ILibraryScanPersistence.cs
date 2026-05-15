@@ -177,4 +177,5 @@ public sealed record DownstreamNeeds(
     bool NeedsProbe,
     bool NeedsFingerprint,
     bool NeedsPreview,
+    bool NeedsTrickplay,
     bool NeedsSubtitleExtraction);

@@ -72,7 +72,7 @@ public sealed class HlsAssetServiceTests : IDisposable
         var variant = await service.GetAssetAsync(videoId, "v/720p/index.m3u8", CancellationToken.None);
 
         Assert.NotNull(master);
-        Assert.Contains("v/720p/index.m3u8", await File.ReadAllTextAsync(master.Path));
+        Assert.Contains("hls/720p/index.m3u8", await File.ReadAllTextAsync(master.Path));
         Assert.NotNull(variant);
         var playlist = await File.ReadAllTextAsync(variant.Path);
         Assert.Contains("#EXT-X-PLAYLIST-TYPE:VOD", playlist);

@@ -384,7 +384,7 @@ public sealed class HlsAssetService : IHlsAssetService
             var resolution = width is null ? "" : $",RESOLUTION={width}x{rendition.Height}";
             lines.Add(
                 $"#EXT-X-STREAM-INF:BANDWIDTH={ToBitsPerSecond(rendition.MaxRate)},AVERAGE-BANDWIDTH={ToBitsPerSecond(rendition.VideoBitrate)}{resolution},CODECS=\"avc1.4d401f,mp4a.40.2\"");
-            lines.Add($"v/{rendition.Name}/index.m3u8");
+            lines.Add($"hls/{rendition.Name}/index.m3u8");
         }
 
         lines.Add(string.Empty);

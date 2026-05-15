@@ -92,7 +92,8 @@ public sealed class ScanLibraryJobHandler(
                     if (entityNeeds.NeedsSubtitleExtraction)
                         jobRequests.Add(new EnqueueJobRequest(JobType.ExtractSubtitles, TargetEntityKind: "video", TargetEntityId: entityIdStr, TargetLabel: label, Priority: 20));
 
-                    if (settings.AutoGeneratePreview && entityNeeds.NeedsPreview)
+                    if (settings.AutoGeneratePreview &&
+                        (entityNeeds.NeedsPreview || (settings.GenerateTrickplay && entityNeeds.NeedsTrickplay)))
                         jobRequests.Add(new EnqueueJobRequest(JobType.GeneratePreview, TargetEntityKind: "video", TargetEntityId: entityIdStr, TargetLabel: label, Priority: 10));
                 }
 

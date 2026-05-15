@@ -454,6 +454,11 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
             .Select(t => t.EntityId)
             .ToListAsync(cancellationToken)).ToHashSet();
 
+        var hasMediaSource = (await db.MediaSources.AsNoTracking()
+            .Where(source => ids.Contains(source.EntityId) && source.DurationSeconds != null)
+            .Select(source => source.EntityId)
+            .ToListAsync(cancellationToken)).ToHashSet();
+
         var hasFingerprint = (await db.EntityFileFingerprints.AsNoTracking()
             .Where(f => ids.Contains(f.EntityId) && f.Algorithm == FingerprintAlgorithm.Md5)
             .Select(f => f.EntityId)
@@ -462,6 +467,11 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         var hasThumbnail = (await db.EntityFiles.AsNoTracking()
             .Where(f => ids.Contains(f.EntityId) && f.Role == EntityFileRole.Thumbnail)
             .Select(f => f.EntityId)
+            .ToListAsync(cancellationToken)).ToHashSet();
+
+        var hasTrickplay = (await db.TrickplayInfos.AsNoTracking()
+            .Where(t => ids.Contains(t.EntityId) && t.ThumbnailCount > 0)
+            .Select(t => t.EntityId)
             .ToListAsync(cancellationToken)).ToHashSet();
 
         var hasSubtitles = (await db.VideoDetails.AsNoTracking()
@@ -473,9 +483,10 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         foreach (var id in ids)
         {
             result[id] = new DownstreamNeeds(
-                NeedsProbe: !hasTechnical.Contains(id),
+                NeedsProbe: !hasTechnical.Contains(id) || !hasMediaSource.Contains(id),
                 NeedsFingerprint: !hasFingerprint.Contains(id),
                 NeedsPreview: !hasThumbnail.Contains(id),
+                NeedsTrickplay: !hasTrickplay.Contains(id),
                 NeedsSubtitleExtraction: !hasSubtitles.Contains(id));
         }
 

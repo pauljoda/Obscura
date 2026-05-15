@@ -21,6 +21,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - V2 fresh-start migration now records completion, treats repeat prepare requests as already handled, and re-arms the dev gate without immediately wiping v2 tables.
 - Local dev refreshes now keep lowercase app pages such as `/videos` on the Svelte router while preserving uppercase Jellyfin-compatible playback routes such as `/Videos/{id}/stream`.
 - Video thumbnails now use Jellyfin image-playlist trickplay maps for hover previews after scans generate tiled JPEG sheets.
+- V2 rescans now repair missing Jellyfin media-source and trickplay records, so migrated videos can populate playback metadata and hover previews after the media-pipeline replacement.
+- V2 adaptive HLS playlists now point at the public Jellyfin-compatible `/Videos/{id}/hls/...` route, fixing variant playlist 404s during playback.
 - Local dev navigation now ignores browser-aborted backend requests, preventing canceled list loads during refresh/navigation from breaking the .NET debug session.
 - Scheduled v2 library scans now target the intended watched folder instead of falling back to all eligible roots, and configured static web builds are served directly even in development/test hosts.
 - Entity detail descriptions now render markdown through a sanitized v2 helper, preserving formatting while stripping unsafe HTML and script URLs.
@@ -104,6 +106,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Refreshing `/videos` in local dev no longer returns the .NET JSON 404 caused by case-insensitive Jellyfin route matching.
 - Trickplay hover previews now read `#EXT-X-IMAGES-ONLY` playlists from the v2 trickplay asset instead of only looking for legacy sprite VTT files.
 - Browser-canceled v2 entity list requests no longer surface as unhandled `OperationCanceledException` failures while using the dev proxy.
+- V2 scans now re-run probes when a legacy technical row exists without a Jellyfin media source, and re-run preview generation when thumbnails exist without trickplay tile metadata.
+- V2 HLS master playlists now advertise `/hls/{playlistId}/index.m3u8` variant URLs instead of private cache-relative paths that had no public route.
+- The .NET API now handles the Svelte shell's playlist-session and update-check calls, removing 404 noise from video pages after the API host migration.
 - Scheduled v2 scan jobs now share a typed scan-root payload with scan handlers, including compatibility for already queued `libraryRootId` payloads, so per-root auto scans no longer expand into all-root scans.
 - Static SPA fallback now serves a configured web root without the development Vite proxy intercepting static assets or client-side routes.
 - Entity detail markdown now removes unsafe HTML blocks, event handlers, and `javascript:`/`data:` URLs before Svelte renders the generated HTML.
