@@ -485,6 +485,10 @@
     transition: color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
   }
 
+  .action-badge:focus {
+    outline: none;
+  }
+
   .action-badge:disabled {
     cursor: default;
     opacity: 0.5;
@@ -517,6 +521,9 @@
     color: #e06070;
     border-color: rgba(224, 96, 112, 0.5);
     box-shadow: 0 0 8px rgba(224, 96, 112, 0.15);
+    user-select: none;
+    -webkit-user-select: none;
+    pointer-events: none;
   }
 
   /* Organized — green when active */
@@ -605,6 +612,10 @@
   .rating-star.active {
     color: var(--detail-accent);
     filter: drop-shadow(0 0 6px var(--detail-accent-glow));
+  }
+
+  .rating-star:focus {
+    outline: none;
   }
 
   .rating-star:disabled {
