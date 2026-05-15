@@ -163,7 +163,6 @@
           <img src={card.hero!.src} alt="" aria-hidden="true" />
         </div>
         <div class="hero-blur-overlay"></div>
-        <div class="hero-bottom-fade"></div>
         {@render heroContent()}
       </div>
     {:else if heroMode === "poster-blur"}
@@ -567,7 +566,12 @@
     position: absolute;
     inset: 0;
     z-index: 1;
-    background: rgba(7, 8, 11, 0.5);
+    background: linear-gradient(
+      to bottom,
+      rgba(7, 8, 11, 0.35) 0%,
+      rgba(7, 8, 11, 0.55) 60%,
+      rgba(7, 8, 11, 0.85) 100%
+    );
   }
 
   .hero-blur-overlay::after {
@@ -589,17 +593,6 @@
     display: none;
   }
 
-  /* Bottom fade to page bg */
-  .hero-bottom-fade {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 40%;
-    z-index: 2;
-    background: linear-gradient(to top, var(--color-bg, #07080b) 0%, transparent 100%);
-    pointer-events: none;
-  }
 
   /* ── Poster-blur backdrop (no banner) ──────────────────── */
 
