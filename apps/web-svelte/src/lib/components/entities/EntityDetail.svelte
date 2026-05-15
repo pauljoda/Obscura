@@ -53,6 +53,8 @@
 
   let favoriteAnimating = $state(false);
   let organizedAnimating = $state(false);
+  let ratingAnim = $state<"fill" | "clear" | null>(null);
+  let ratingAnimCount = $state(0);
 
   const isFavorite = $derived(card.flags.find((f) => f.code === "favorite")?.active ?? false);
   const isNsfw = $derived(card.flags.find((f) => f.code === "nsfw")?.active ?? false);
@@ -93,8 +95,15 @@
 
   function handleRatingClick(value: number) {
     if (!onRatingChange || ratingBusy || !card.rating) return;
-    const nextValue = card.rating.value === value ? null : value;
+    const clearing = card.rating.value === value;
+    const nextValue = clearing ? null : value;
+
+    ratingAnim = clearing ? "clear" : "fill";
+    ratingAnimCount = clearing ? card.rating.value : value;
     onRatingChange(nextValue);
+
+    const duration = clearing ? 350 : 80 * value + 200;
+    setTimeout(() => (ratingAnim = null), duration);
   }
 </script>
 
@@ -158,10 +167,15 @@
             <div class="rating-row" role="group" aria-label="Rating">
               {#each { length: card.rating.max } as _, i (i)}
                 {@const value = i + 1}
+                {@const filling = ratingAnim === "fill" && value <= ratingAnimCount}
+                {@const clearing = ratingAnim === "clear" && value <= ratingAnimCount}
                 <button
                   type="button"
                   class="rating-star"
                   class:active={card.rating!.value >= value}
+                  class:star-fill={filling}
+                  class:star-clear={clearing}
+                  style:animation-delay={filling ? `${(value - 1) * 70}ms` : "0ms"}
                   disabled={ratingBusy || !onRatingChange}
                   aria-label={`Rate ${value}`}
                   onclick={() => handleRatingClick(value)}
@@ -616,6 +630,41 @@
 
   .rating-star:focus {
     outline: none;
+  }
+
+  .rating-star.star-fill {
+    animation: star-roll-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
+  }
+
+  .rating-star.star-clear {
+    animation: star-pop-out 0.3s ease-out;
+  }
+
+  @keyframes star-roll-in {
+    0% {
+      transform: scale(0) rotate(-90deg);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.25) rotate(10deg);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+  }
+
+  @keyframes star-pop-out {
+    0% {
+      transform: scale(1);
+    }
+    35% {
+      transform: scale(1.35);
+    }
+    100% {
+      transform: scale(1);
+    }
   }
 
   .rating-star:disabled {
