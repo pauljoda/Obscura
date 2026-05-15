@@ -18,7 +18,7 @@
   let heroSource = $state<HeroSource>("banner");
   let posterSize = $state<EntityDetailPosterSize>("medium");
   let debugNoBlur = $state(false);
-  let debugBlurPx = $state(20);
+  let debugBlurPx = $state(15);
   let hiddenSections = $state<Set<string>>(new Set());
 
   const allSectionNames = [

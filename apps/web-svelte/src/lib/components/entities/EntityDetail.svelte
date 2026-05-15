@@ -51,7 +51,7 @@
     ratingBusy = false,
     showHero = true,
     debugNoBlur = false,
-    debugBlurPx = 20,
+    debugBlurPx = 15,
   }: Props = $props();
 
   type HeroMode = "image" | "poster-blur" | "gradient";
@@ -173,7 +173,6 @@
           <img src={card.poster!.src} alt="" aria-hidden="true" />
         </div>
         <div class="hero-backdrop-blur"></div>
-        <div class="hero-backdrop-fade"></div>
       </div>
       {@render heroContent()}
     {:else}
@@ -558,14 +557,9 @@
     position: absolute;
     inset: 0;
     z-index: 1;
-    backdrop-filter: blur(var(--hero-blur, 20px)) saturate(1.3) brightness(0.5);
-    -webkit-backdrop-filter: blur(var(--hero-blur, 20px)) saturate(1.3) brightness(0.5);
-    background: linear-gradient(
-      to bottom,
-      rgba(7, 8, 11, 0.3) 0%,
-      rgba(7, 8, 11, 0.5) 60%,
-      rgba(7, 8, 11, 0.8) 100%
-    );
+    backdrop-filter: blur(var(--hero-blur, 15px)) saturate(1.3) brightness(0.5);
+    -webkit-backdrop-filter: blur(var(--hero-blur, 15px)) saturate(1.3) brightness(0.5);
+    background: rgba(7, 8, 11, 0.45);
   }
 
   .hero[data-no-blur] .hero-blur-overlay {
@@ -600,25 +594,15 @@
   .hero-backdrop-blur {
     position: absolute;
     inset: 0;
-    backdrop-filter: blur(48px) saturate(1.5) brightness(0.55);
-    -webkit-backdrop-filter: blur(48px) saturate(1.5) brightness(0.55);
-    background: rgba(7, 8, 11, 0.2);
+    backdrop-filter: blur(15px) saturate(1.3) brightness(0.5);
+    -webkit-backdrop-filter: blur(15px) saturate(1.3) brightness(0.5);
+    background: rgba(7, 8, 11, 0.45);
   }
 
   .hero[data-no-blur] .hero-backdrop-blur {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     background: none;
-  }
-
-  .hero-backdrop-fade {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 40%;
-    background: linear-gradient(to top, var(--color-bg, #07080b) 0%, transparent 100%);
-    pointer-events: none;
   }
 
   /* Gradient background when no images exist */
