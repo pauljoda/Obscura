@@ -117,41 +117,6 @@
         {/if}
 
         <div class="hero-text">
-          <div class="action-badges">
-            <button
-              type="button"
-              class="action-badge favorite"
-              class:active={isFavorite}
-              class:animating={favoriteAnimating}
-              disabled={!onFavoriteToggle}
-              aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-              onclick={(e: MouseEvent) => handleFavoriteClick(e)}
-            >
-              <Heart class="h-4 w-4" />
-            </button>
-
-            {#if isNsfw}
-              <span class="action-badge nsfw active" aria-label="NSFW">
-                <Flame class="h-4 w-4" />
-              </span>
-            {/if}
-
-            <button
-              type="button"
-              class="action-badge organized"
-              class:active={isOrganized}
-              class:animating={organizedAnimating}
-              disabled={!onOrganizedToggle}
-              aria-label={isOrganized ? "Mark as unorganized" : "Mark as organized"}
-              onclick={(e: MouseEvent) => handleOrganizedClick(e)}
-            >
-              <CheckCircle class="h-4 w-4" />
-            </button>
-
-            {#if extraFlags}
-              {@render extraFlags()}
-            {/if}
-          </div>
           <h1>{card.entity.title}</h1>
 
           {#if heroMeta}
@@ -188,6 +153,42 @@
               {@render heroBadges()}
             </div>
           {/if}
+
+          <div class="action-badges">
+            <button
+              type="button"
+              class="action-badge favorite"
+              class:active={isFavorite}
+              class:animating={favoriteAnimating}
+              disabled={!onFavoriteToggle}
+              aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+              onclick={(e: MouseEvent) => handleFavoriteClick(e)}
+            >
+              <Heart class="h-4 w-4" />
+            </button>
+
+            {#if isNsfw}
+              <span class="action-badge nsfw active" aria-label="NSFW">
+                <Flame class="h-4 w-4" />
+              </span>
+            {/if}
+
+            <button
+              type="button"
+              class="action-badge organized"
+              class:active={isOrganized}
+              class:animating={organizedAnimating}
+              disabled={!onOrganizedToggle}
+              aria-label={isOrganized ? "Mark as unorganized" : "Mark as organized"}
+              onclick={(e: MouseEvent) => handleOrganizedClick(e)}
+            >
+              <CheckCircle class="h-4 w-4" />
+            </button>
+
+            {#if extraFlags}
+              {@render extraFlags()}
+            {/if}
+          </div>
         </div>
       </div>
     {/snippet}

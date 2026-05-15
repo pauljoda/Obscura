@@ -70,6 +70,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- `EntityDetail` hero actions now render below the title, metadata, and rating controls, keeping the title stack visually grounded on detail pages.
 - Production Docker startup now serves the built Svelte app through the .NET API host and starts `Obscura.Worker.dll` for background jobs.
 - The video detail page now opens root-level Jellyfin-compatible `/Videos` and `/Sessions` routes for playback instead of the old Obscura-specific `/api/videos/{id}/hls/master.m3u8` and `PATCH /api/entities/{id}/playback` flow.
 - The .NET preview worker now stores trickplay assets under the Jellyfin-style tile directory and records `trickplay_infos` metadata for image-only HLS playlists.
