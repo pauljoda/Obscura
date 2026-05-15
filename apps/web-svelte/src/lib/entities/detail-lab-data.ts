@@ -231,8 +231,8 @@ export const baseDetailCard: EntityDetailCard = (() => {
     title: "Pete the Cat",
     capabilities: [
       images(
-        "/fixtures/banner-petethecat.svg",
-        "/fixtures/poster-petethecat.svg",
+        "/fixtures/banner-petethecat.jpg",
+        "/fixtures/poster-petethecat.jpg",
       ),
       description(
         "Pete the Cat is a groovy blue cat who never lets anything get him down. With his cool attitude and love of music, Pete faces everyday challenges with a positive outlook.\n\nBased on the **bestselling book series** by James Dean and Kimberly Dean:\n\n- Musical adventures with Pete and his friends\n- Life lessons about staying positive\n- *Far-out* groovy vibes in every episode\n\n> \"It's all good.\"\n\nA Prime Original animated series.",

@@ -97,27 +97,33 @@
 </script>
 
 <article class="entity-detail" data-poster-size={posterSize} data-hero-mode={heroMode}>
-  <!-- Hero / Banner -->
+  <!-- Hero -->
   <div class="hero" data-hero-mode={heroMode}>
-    <!-- Blurred backdrop layer -->
+
     {#if heroMode === "image"}
-      <div class="hero-backdrop">
+      <!-- Sharp visible header image -->
+      <div class="hero-banner">
+        <img src={card.hero!.src} alt="Banner" />
+      </div>
+      <!-- Blurred reflection of header behind poster/title area -->
+      <div class="hero-reflection">
         <img src={card.hero!.src} alt="" aria-hidden="true" />
       </div>
-      <div class="hero-backdrop-blur"></div>
+      <div class="hero-reflection-blur"></div>
     {:else if heroMode === "poster-blur"}
-      <div class="hero-backdrop">
+      <!-- Poster blurred as backdrop when no header exists -->
+      <div class="hero-reflection">
         <img src={card.poster!.src} alt="" aria-hidden="true" />
       </div>
-      <div class="hero-backdrop-blur"></div>
+      <div class="hero-reflection-blur"></div>
     {:else}
       <div class="hero-gradient-bg" style:background-image={placeholderGradient(card.entity.title)}></div>
     {/if}
 
-    <!-- Bottom fade — dissolves into page background -->
+    <!-- Fade between sharp banner and blurred reflection -->
     <div class="hero-fade"></div>
 
-    <!-- Content: poster + text -->
+    <!-- Poster + title overlay -->
     <div class="hero-content">
       {#if posterVisible}
         <div class="poster-frame">
@@ -484,30 +490,38 @@
 
   .hero {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
     overflow: hidden;
   }
 
-  .hero[data-hero-mode="image"],
-  .hero[data-hero-mode="poster-blur"] {
-    min-height: 20rem;
-  }
-
   .hero[data-hero-mode="gradient"] {
-    min-height: 0;
+    /* No reserved space — fits to content */
   }
 
-  /* ── Blurred backdrop (hero or poster image) ────────────── */
+  /* ── Sharp visible banner image (top portion) ──────────── */
 
-  .hero-backdrop {
+  .hero-banner {
+    position: relative;
+    z-index: 1;
+    line-height: 0;
+  }
+
+  .hero-banner img {
+    width: 100%;
+    height: auto;
+    display: block;
+    max-height: 22rem;
+    object-fit: cover;
+  }
+
+  /* ── Blurred reflection (behind poster + title area) ───── */
+
+  .hero-reflection {
     position: absolute;
     inset: -30px;
     z-index: 0;
   }
 
-  .hero-backdrop img {
+  .hero-reflection img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -515,13 +529,13 @@
     transform: scale(1.1);
   }
 
-  .hero-backdrop-blur {
+  .hero-reflection-blur {
     position: absolute;
     inset: 0;
     z-index: 1;
-    backdrop-filter: blur(44px) saturate(1.6) brightness(0.7);
-    -webkit-backdrop-filter: blur(44px) saturate(1.6) brightness(0.7);
-    background: rgba(7, 8, 11, 0.35);
+    backdrop-filter: blur(44px) saturate(1.5) brightness(0.65);
+    -webkit-backdrop-filter: blur(44px) saturate(1.5) brightness(0.65);
+    background: rgba(7, 8, 11, 0.3);
   }
 
   /* Gradient background when no images exist */
@@ -532,24 +546,25 @@
     background-size: cover;
   }
 
-  /* Soft fade at the bottom — dissolves into page bg, no hard line */
+  /* Fade: dissolves the sharp banner into the blurred reflection,
+     and dissolves the bottom into the page background */
   .hero-fade {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
-    height: 50%;
+    height: 60%;
     z-index: 2;
     background: linear-gradient(
       to top,
       var(--color-bg, #07080b) 0%,
-      rgba(7, 8, 11, 0.7) 40%,
+      rgba(7, 8, 11, 0.6) 35%,
       transparent 100%
     );
     pointer-events: none;
   }
 
-  /* ── Hero content ──────────────────────────────────────── */
+  /* ── Hero content (poster + text) ──────────────────────── */
 
   .hero-content {
     position: relative;
@@ -1235,9 +1250,8 @@
   /* ── Responsive ─────────────────────────────────────────── */
 
   @media (min-width: 640px) {
-    .hero[data-hero-mode="image"],
-    .hero[data-hero-mode="poster-blur"] {
-      min-height: 24rem;
+    .hero-banner img {
+      max-height: 28rem;
     }
 
     .hero-content {
@@ -1266,9 +1280,8 @@
   }
 
   @media (min-width: 1024px) {
-    .hero[data-hero-mode="image"],
-    .hero[data-hero-mode="poster-blur"] {
-      min-height: 28rem;
+    .hero-banner img {
+      max-height: 34rem;
     }
 
     [data-poster-size="small"] .poster-frame { --poster-width: 7rem; }
