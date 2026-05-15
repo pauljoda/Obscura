@@ -18,7 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
-- `EntityDetail` hero shows the banner image sharp and visible at the top, with a blurred reflection of it underneath as the atmospheric color backdrop for the poster and title area. A soft gradient fade dissolves the sharp banner into the blurred reflection with no hard edges. When no banner exists, the poster is blurred as the backdrop. When no images exist at all, the hero collapses to a compact gradient layout.
+- `EntityDetail` hero now uses a two-zone layout: the banner image is 80% sharp and visible at the top with a CSS mask that fades only the bottom 20% into a blurred reflection underneath. The blurred zone carries the banner's colors as atmospheric backdrop behind the poster and title. When no banner exists, the poster is blurred as the backdrop. When no images exist at all, the hero collapses to a compact gradient layout.
 - Detail Lab fixture data now uses real Pete the Cat images (poster + banner) to demonstrate the hero blur effect with vivid colors. "Hero Source" control lets you toggle between banner, poster-blur, and gradient modes.
 - .NET API `launchSettings.json` now defaults to port 8010 instead of 8008 — prevents the .NET web host from shadowing the Vite dev server when both run in local dev mode.
 - `EntityDetail` hero area now shows an inline metadata row (studio · date · count) and rating stars directly in the hero overlay, matching the established series detail layout.
