@@ -227,13 +227,13 @@
       <Palette class="h-4 w-4" />
       Design System
     </a>
-    <a href="/settings" class="quick-link">
+    <a href="/dev/thumbnail-lab" class="quick-link">
       <Grid2x2 class="h-4 w-4" />
-      Settings
+      Thumbnail Lab
     </a>
-    <a href="/jobs" class="quick-link">
+    <a href="/dev/detail-lab" class="quick-link">
       <LayoutList class="h-4 w-4" />
-      Operations
+      Detail Lab
     </a>
   </section>
 
