@@ -512,8 +512,8 @@
     position: relative;
     z-index: 2;
     line-height: 0;
-    mask-image: linear-gradient(to bottom, black 95%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, black 95%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 92%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 92%, transparent 100%);
   }
 
   .hero-banner img {
@@ -528,7 +528,7 @@
 
   .hero-lower {
     position: relative;
-    margin-top: -5%;
+    margin-top: 0;
     overflow: hidden;
   }
 
@@ -549,7 +549,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transform: scaleY(-1);
+    transform: scaleY(-1) scale(1.15);
   }
 
   /* Frosted glass: backdrop-filter blurs the reflection underneath */
