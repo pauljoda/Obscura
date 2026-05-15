@@ -511,7 +511,7 @@
     opacity: 0.5;
   }
 
-  .action-badge:not(:disabled):hover {
+  .action-badge:not(:disabled):not(.active):hover {
     color: var(--detail-text-muted);
     border-color: var(--detail-text-muted);
   }
@@ -622,8 +622,8 @@
     transition: color 0.15s, filter 0.15s;
   }
 
-  .rating-star:hover:not(:disabled) {
-    color: var(--detail-accent);
+  .rating-star:hover:not(:disabled):not(.active) {
+    color: var(--detail-text-muted);
   }
 
   .rating-star.active {
