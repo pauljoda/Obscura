@@ -38,6 +38,25 @@ public sealed class VideoStreamEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task StreamEndpointSupportsHeadProbes()
+    {
+        var filePath = Path.Combine(_tempDir, "source.mp4");
+        await File.WriteAllTextAsync(filePath, "0123456789");
+        using var factory = CreateFactory(new FakeVideoSourceService(
+            new VideoSourceFile(FakeVideoSourceService.VideoId, filePath, "video/mp4", true)));
+        using var client = factory.CreateClient();
+
+        using var response = await client.SendAsync(new HttpRequestMessage(
+            HttpMethod.Head,
+            $"/Videos/{FakeVideoSourceService.VideoId}/stream"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(10, response.Content.Headers.ContentLength);
+        Assert.Equal("video/mp4", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("bytes", response.Headers.AcceptRanges.Single());
+    }
+
+    [Fact]
     public async Task StreamEndpointRejectsNonDirectPlayableSources()
     {
         var filePath = Path.Combine(_tempDir, "source.mkv");

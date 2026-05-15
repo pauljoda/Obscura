@@ -47,6 +47,14 @@ export interface AdaptiveSeekPlan {
   hlsStartLoadAt: number | null;
 }
 
+export interface PlaybackErrorFallbackInput {
+  effectiveMode: VideoPlaybackMode;
+  hlsSrc?: string;
+  directSrc?: string;
+  directPlayable?: boolean;
+  directFailed?: boolean;
+}
+
 export function requestedModeFromQualityMode(
   qualityMode: QualityMode,
 ): VideoPlaybackMode {
@@ -156,6 +164,24 @@ export function adaptiveHlsBufferConfig(): AdaptiveHlsBufferConfig {
     maxBufferSize: browserLimit,
     startPosition: 0,
   };
+}
+
+export function fallbackPlaybackModeForError({
+  effectiveMode,
+  hlsSrc,
+  directSrc,
+  directPlayable = true,
+  directFailed = false,
+}: PlaybackErrorFallbackInput): VideoPlaybackMode | null {
+  if (effectiveMode === "direct" && hlsSrc) {
+    return "hls";
+  }
+
+  if (effectiveMode === "hls" && directSrc && directPlayable && !directFailed) {
+    return "direct";
+  }
+
+  return null;
 }
 
 export function hlsStatusUrlForSrc(src: string): string | null {

@@ -6,6 +6,7 @@ import {
   canUseDirectPlayback,
   chooseInitialPlaybackMode,
   computeVideoLoadState,
+  fallbackPlaybackModeForError,
   hlsStatusUrlForSrc,
   requestedModeFromQualityMode,
 } from "./video-player-load";
@@ -96,6 +97,28 @@ describe("video-player-load", () => {
     expect(adaptive.isNewSource).toBe(false);
     expect(adaptive.effectiveMode).toBe("hls");
     expect(adaptive.loadKey).not.toBe(direct.loadKey);
+  });
+
+  it("falls back from direct playback to adaptive hls on media errors", () => {
+    expect(
+      fallbackPlaybackModeForError({
+        effectiveMode: "direct",
+        hlsSrc: "/Videos/video-1/live.m3u8",
+        directSrc: "/Videos/video-1/stream",
+      }),
+    ).toBe("hls");
+  });
+
+  it("does not fall back to a direct source that already failed", () => {
+    expect(
+      fallbackPlaybackModeForError({
+        effectiveMode: "hls",
+        hlsSrc: "/Videos/video-1/live.m3u8",
+        directSrc: "/Videos/video-1/stream",
+        directPlayable: true,
+        directFailed: true,
+      }),
+    ).toBeNull();
   });
 
   it("keeps the same load key while changing adaptive quality levels", () => {

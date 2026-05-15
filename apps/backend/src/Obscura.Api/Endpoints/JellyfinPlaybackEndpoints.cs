@@ -29,7 +29,7 @@ public static class JellyfinPlaybackEndpoints
             .Produces<PlaybackInfoResponse>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
-        routes.MapGet("/Videos/{itemId:guid}/stream", StreamVideoAsync)
+        routes.MapMethods("/Videos/{itemId:guid}/stream", [HttpMethods.Get, HttpMethods.Head], StreamVideoAsync)
             .WithName("GetJellyfinVideoStream")
             .WithTags("Jellyfin Videos")
             .Produces(StatusCodes.Status200OK)

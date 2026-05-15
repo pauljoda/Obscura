@@ -64,6 +64,7 @@
   import {
     adaptiveHlsBufferConfig,
     canUseDirectPlayback,
+    fallbackPlaybackModeForError,
     hlsStatusUrlForSrc,
   } from "$lib/player/video-player-load";
   import {
@@ -163,6 +164,7 @@
   let pendingSeekTime: number | null = null;
   let pendingAutoPlay = false;
   let hlsReadySrc: string | undefined = $state();
+  let failedDirectSrc = $state<string | null>(null);
 
   let playbackMode = $state<PlaybackMode>("hls");
   let qualityMode = $state<QualityMode>("auto");
@@ -209,8 +211,9 @@
       canPlayType: video ? video.canPlayType.bind(video) : undefined,
     });
   });
+  const directAvailable = $derived(Boolean(directSrc && directPlayable && failedDirectSrc !== directSrc));
   const effectiveMode = $derived<PlaybackMode>(
-    playbackMode === "direct" && directSrc && directPlayable ? "direct" : "hls",
+    playbackMode === "direct" && directAvailable ? "direct" : "hls",
   );
   const requestedPlayerSrc = $derived(effectiveMode === "direct" ? directSrc : src);
   const playerSrc = $derived(requestedPlayerSrc === hlsReadySrc ? requestedPlayerSrc : undefined);
@@ -259,7 +262,7 @@
 
   function initialPlaybackMode(): PlaybackMode {
     if (defaultPlaybackMode === "hls") return "hls";
-    return directSrc && directPlayable ? "direct" : "hls";
+    return directAvailable ? "direct" : "hls";
   }
 
   function formatTime(seconds: number) {
@@ -363,7 +366,7 @@
   function refreshQualities() {
     if (!player || effectiveMode === "direct") {
       qualityOptions = [
-        ...(directSrc && directPlayable ? [{ value: "direct" as const, label: "Direct" }] : []),
+        ...(directAvailable ? [{ value: "direct" as const, label: "Direct" }] : []),
         { value: "auto" as const, label: "Auto" },
       ];
       activeQualityLabel = null;
@@ -378,7 +381,7 @@
       }))
       .sort((a, b) => b.height - a.height);
     qualityOptions = [
-      ...(directSrc && directPlayable ? [{ value: "direct" as const, label: "Direct" }] : []),
+      ...(directAvailable ? [{ value: "direct" as const, label: "Direct" }] : []),
       { value: "auto" as const, label: "Auto" },
       ...options.map(({ value, label }) => ({ value, label })),
     ];
@@ -479,8 +482,45 @@
 
   function togglePlay() {
     if (!player) return;
-    if (player.paused) void player.play();
+    if (player.paused) void playWithFallback();
     else void player.pause();
+  }
+
+  async function playWithFallback() {
+    if (!player) return;
+    try {
+      await player.play();
+    } catch (error) {
+      if (applyPlaybackFallback()) {
+        pendingAutoPlay = true;
+        return;
+      }
+      console.error("ERROR MediaPlayer [vidstack] play request failed", error);
+    }
+  }
+
+  function applyPlaybackFallback(): boolean {
+    const nextMode = fallbackPlaybackModeForError({
+      effectiveMode,
+      hlsSrc: src,
+      directSrc,
+      directPlayable: directAvailable,
+      directFailed: failedDirectSrc === directSrc,
+    });
+    if (!nextMode) return false;
+
+    pendingSeekTime = currentTime > 0.25 ? currentTime : null;
+    pendingAutoPlay = playing || autoPlay || pendingAutoPlay;
+    if (effectiveMode === "direct" && directSrc) {
+      failedDirectSrc = directSrc;
+      playerNotice = "Direct playback unavailable; trying adaptive HLS.";
+    } else {
+      playerNotice = "Adaptive playback unavailable; trying direct playback.";
+    }
+    playbackMode = nextMode;
+    qualityMode = nextMode === "direct" ? "direct" : "auto";
+    buffering = true;
+    return true;
   }
 
   function seek(delta: number) {
@@ -628,6 +668,7 @@
     const nextKey = `${src ?? ""}|${directSrc ?? ""}|${defaultPlaybackMode ?? ""}|${directPlayable ? "direct" : "adaptive"}`;
     if (nextKey === lastSourceKey) return;
     lastSourceKey = nextKey;
+    failedDirectSrc = null;
     playbackMode = initialPlaybackMode();
     qualityMode = playbackMode === "direct" ? "direct" : "auto";
     currentTime = 0;
@@ -871,7 +912,7 @@
     }
     if ((pendingAutoPlay || autoPlay) && player?.paused) {
       pendingAutoPlay = false;
-      void player.play();
+      void playWithFallback();
     }
   }
 
@@ -947,15 +988,7 @@
   function handleError(event: Event) {
     const detail = (event as MediaErrorEvent).detail;
     const message = detail instanceof Error ? detail.message : "Playback failed.";
-    if (effectiveMode === "hls" && directSrc && directPlayable) {
-      pendingSeekTime = currentTime > 0.25 ? currentTime : null;
-      pendingAutoPlay = playing || autoPlay;
-      playbackMode = "direct";
-      qualityMode = "direct";
-      playerNotice = "Adaptive playback unavailable; trying direct playback.";
-      buffering = false;
-      return;
-    }
+    if (applyPlaybackFallback()) return;
     playerNotice = `${effectiveMode === "direct" ? "Direct" : "Adaptive"} playback error: ${message}`;
     buffering = false;
   }
