@@ -285,11 +285,67 @@ public sealed class HlsAssetServiceTests : IDisposable
         Assert.Contains("-hls_segment_filename", arguments);
         Assert.Contains("-hls_flags", arguments);
         Assert.Contains("temp_file", arguments);
+        Assert.Contains("-start_number", arguments);
+        Assert.Contains("1", arguments);
         Assert.Contains("-copyts", arguments);
         Assert.Contains("-avoid_negative_ts", arguments);
         Assert.Contains("disabled", arguments);
         Assert.DoesNotContain("-output_ts_offset", arguments);
-        Assert.DoesNotContain("-ss", arguments);
+    }
+
+    [Fact]
+    public async Task FarVirtualSegmentStartsGenerationAtRequestedSegment()
+    {
+        var videoId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var process = new ManifestWritingProcessExecutor();
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 180,
+                Width: 1920,
+                Height: 960)),
+            process,
+            NullLogger<HlsAssetService>.Instance);
+
+        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00020.ts", CancellationToken.None);
+
+        Assert.NotNull(segment);
+        var arguments = Assert.Single(process.ArgumentHistory);
+        Assert.Contains("-ss", arguments);
+        Assert.Contains("120.000", arguments);
+        Assert.Contains("-start_number", arguments);
+        Assert.Contains("20", arguments);
+        Assert.DoesNotContain("-t", arguments);
+    }
+
+    [Fact]
+    public async Task MissingVirtualSegmentReturnsNullAsset()
+    {
+        var videoId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 180,
+                Width: 1920,
+                Height: 960)),
+            new MissingSegmentProcessExecutor(),
+            NullLogger<HlsAssetService>.Instance);
+
+        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00020.ts", CancellationToken.None);
+
+        Assert.Null(segment);
     }
 
     public void Dispose()
@@ -371,7 +427,13 @@ public sealed class HlsAssetServiceTests : IDisposable
                 segmentPatternIndex < arguments.Count - 1)
             {
                 var segmentPattern = arguments[segmentPatternIndex + 1];
-                for (var index = 0; index < 3; index++)
+                var startNumberIndex = arguments.ToList().IndexOf("-start_number");
+                var startNumber = startNumberIndex >= 0 &&
+                    startNumberIndex < arguments.Count - 1 &&
+                    int.TryParse(arguments[startNumberIndex + 1], out var parsedStart)
+                        ? parsedStart
+                        : 0;
+                for (var index = startNumber; index < startNumber + 5; index++)
                 {
                     await File.WriteAllTextAsync(
                         segmentPattern.Replace("%05d", index.ToString("00000")),
@@ -381,6 +443,21 @@ public sealed class HlsAssetServiceTests : IDisposable
             }
 
             await File.WriteAllTextAsync(outputPath, "segment", cancellationToken);
+            return new ProcessExecutionResult(0, string.Empty, string.Empty);
+        }
+    }
+
+    private sealed class MissingSegmentProcessExecutor : ProcessExecutor
+    {
+        public override async Task<ProcessExecutionResult> RunAsync(
+            string fileName,
+            IReadOnlyList<string> arguments,
+            IReadOnlyDictionary<string, string>? environment,
+            CancellationToken cancellationToken)
+        {
+            var outputPath = arguments[^1];
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+            await File.WriteAllTextAsync(outputPath, "playlist", cancellationToken);
             return new ProcessExecutionResult(0, string.Empty, string.Empty);
         }
     }
