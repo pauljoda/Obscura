@@ -107,7 +107,9 @@ export type V2SettingsResponse = SettingsResponse;
 export type V2LegacyVideoImportResponse = LegacyVideoImportResponse;
 export type V2LegacyMediaImportResponse = LegacyMediaImportResponse;
 export type V2MediaListResponse = MediaListResponse;
-export type V2LibrarySettings = LibrarySettingsDto;
+export type V2LibrarySettings = LibrarySettingsDto & {
+  audioPreferredLanguages: string;
+};
 export type V2LibraryRoot = LibraryRootDto;
 export type V2LibraryBrowse = LibraryBrowseDto;
 export interface V2LibraryConfigResponse {

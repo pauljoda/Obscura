@@ -177,6 +177,7 @@ public sealed class ObscuraDbContext : DbContext
             entity.Property(row => row.MetadataStorageDedicated).HasColumnName("metadata_storage_dedicated");
             entity.Property(row => row.SubtitlesAutoEnable).HasColumnName("subtitles_auto_enable");
             entity.Property(row => row.SubtitlesPreferredLanguages).HasColumnName("subtitles_preferred_languages");
+            entity.Property(row => row.AudioPreferredLanguages).HasColumnName("audio_preferred_languages");
             entity.Property(row => row.SubtitleStyle)
                 .HasColumnName("subtitle_style")
                 .HasConversion(value => value.ToCode(), value => value.DecodeAs<SubtitleStyle>());

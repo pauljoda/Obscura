@@ -298,11 +298,15 @@ public sealed class HlsAssetService : IHlsAssetService
             return outputPath;
         }
 
+        var generationStartSegment = PrerollSegmentIndex(segmentIndex);
         var generation = FindActiveRenditionGeneration(id, rendition, audioCacheKey, segmentIndex) ??
-            StartVirtualRenditionGeneration(id, source, rendition, audioCacheKey, audioStreamIndex, segmentIndex);
+            StartVirtualRenditionGeneration(id, source, rendition, audioCacheKey, audioStreamIndex, generationStartSegment);
         await WaitForVirtualSegmentAsync(id, rendition, audioCacheKey, segmentIndex, outputPath, generation, cancellationToken);
         return outputPath;
     }
+
+    private static int PrerollSegmentIndex(int requestedSegmentIndex) =>
+        requestedSegmentIndex <= 0 ? 0 : requestedSegmentIndex - 1;
 
     private static VirtualRenditionGeneration? FindActiveRenditionGeneration(
         Guid id,

@@ -52,7 +52,7 @@ public sealed class SettingsEndpointServiceTests
             "/api/settings/library",
             new LibrarySettingsUpdateRequest(
                 null, 15, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null, null, null, null, null));
         var root = await client.PostAsJsonAsync(
             "/api/libraries",
             new LibraryRootCreateRequest("/media/videos", "Videos", null, null, null, null, null, null, null));
@@ -151,6 +151,7 @@ public sealed class SettingsEndpointServiceTests
                 true,
                 false,
                 "en,eng",
+                "en,eng,en-US",
                 "stylized",
                 1,
                 88,

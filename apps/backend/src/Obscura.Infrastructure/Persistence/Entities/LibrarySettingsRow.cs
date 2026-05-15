@@ -40,6 +40,8 @@ public sealed class LibrarySettingsRow
 
     public string SubtitlesPreferredLanguages { get; set; } = "en,eng";
 
+    public string AudioPreferredLanguages { get; set; } = "en,eng,en-US";
+
     public SubtitleStyle SubtitleStyle { get; set; } = SubtitleStyle.Stylized;
 
     public float SubtitleFontScale { get; set; } = 1;

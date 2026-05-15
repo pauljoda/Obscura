@@ -287,7 +287,9 @@ public sealed class HlsAssetServiceTests : IDisposable
         Assert.Contains("-hls_flags", arguments);
         Assert.Contains("temp_file", arguments);
         Assert.Contains("-start_number", arguments);
-        Assert.Contains("1", arguments);
+        var startNumberIndex = arguments.ToList().IndexOf("-start_number");
+        Assert.True(startNumberIndex >= 0);
+        Assert.Equal("0", arguments[startNumberIndex + 1]);
         Assert.Contains("-copyts", arguments);
         Assert.Contains("-avoid_negative_ts", arguments);
         Assert.Contains("disabled", arguments);
@@ -295,7 +297,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task FarVirtualSegmentStartsGenerationAtRequestedSegment()
+    public async Task FarVirtualSegmentStartsGenerationWithOneSegmentPreroll()
     {
         var videoId = Guid.Parse("99999999-9999-9999-9999-999999999999");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
@@ -319,10 +321,45 @@ public sealed class HlsAssetServiceTests : IDisposable
         Assert.NotNull(segment);
         var arguments = Assert.Single(process.ArgumentHistory);
         Assert.Contains("-ss", arguments);
-        Assert.Contains("120.000", arguments);
+        Assert.Contains("114.000", arguments);
         Assert.Contains("-start_number", arguments);
-        Assert.Contains("20", arguments);
+        var startNumberIndex = arguments.ToList().IndexOf("-start_number");
+        Assert.True(startNumberIndex >= 0);
+        Assert.Equal("19", arguments[startNumberIndex + 1]);
         Assert.DoesNotContain("-t", arguments);
+    }
+
+    [Fact]
+    public async Task FarVirtualSegmentPrerollsSoRequestedSegmentIsGenerated()
+    {
+        var videoId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var process = new WritesOnlyNextSegmentProcessExecutor();
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 180,
+                Width: 1920,
+                Height: 960)),
+            process,
+            NullLogger<HlsAssetService>.Instance);
+
+        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00020.ts", null, CancellationToken.None);
+
+        Assert.NotNull(segment);
+        Assert.Equal("seg_00020.ts", Path.GetFileName(segment.Path));
+        var arguments = Assert.Single(process.ArgumentHistory);
+        Assert.Contains("-ss", arguments);
+        Assert.Contains("114.000", arguments);
+        Assert.Contains("-start_number", arguments);
+        var startNumberIndex = arguments.ToList().IndexOf("-start_number");
+        Assert.True(startNumberIndex >= 0);
+        Assert.Equal("19", arguments[startNumberIndex + 1]);
     }
 
     [Fact]
@@ -508,6 +545,39 @@ public sealed class HlsAssetServiceTests : IDisposable
         {
             var outputPath = arguments[^1];
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+            await File.WriteAllTextAsync(outputPath, "playlist", cancellationToken);
+            return new ProcessExecutionResult(0, string.Empty, string.Empty);
+        }
+    }
+
+    private sealed class WritesOnlyNextSegmentProcessExecutor : ProcessExecutor
+    {
+        public List<IReadOnlyList<string>> ArgumentHistory { get; } = [];
+
+        public override async Task<ProcessExecutionResult> RunAsync(
+            string fileName,
+            IReadOnlyList<string> arguments,
+            IReadOnlyDictionary<string, string>? environment,
+            CancellationToken cancellationToken)
+        {
+            ArgumentHistory.Add(arguments);
+            var outputPath = arguments[^1];
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+            var segmentPatternIndex = arguments.ToList().IndexOf("-hls_segment_filename");
+            var startNumberIndex = arguments.ToList().IndexOf("-start_number");
+            if (segmentPatternIndex >= 0 &&
+                startNumberIndex >= 0 &&
+                segmentPatternIndex < arguments.Count - 1 &&
+                startNumberIndex < arguments.Count - 1 &&
+                int.TryParse(arguments[startNumberIndex + 1], out var startNumber))
+            {
+                var segmentPattern = arguments[segmentPatternIndex + 1];
+                await File.WriteAllTextAsync(
+                    segmentPattern.Replace("%05d", (startNumber + 1).ToString("00000")),
+                    "segment",
+                    cancellationToken);
+            }
+
             await File.WriteAllTextAsync(outputPath, "playlist", cancellationToken);
             return new ProcessExecutionResult(0, string.Empty, string.Empty);
         }

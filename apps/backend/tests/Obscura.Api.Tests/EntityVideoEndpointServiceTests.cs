@@ -424,6 +424,7 @@ public sealed class EntityVideoEndpointServiceTests
                 true,
                 false,
                 "en,eng",
+                "en,eng,en-US",
                 "stylized",
                 1,
                 88,

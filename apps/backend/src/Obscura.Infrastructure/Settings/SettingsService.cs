@@ -77,6 +77,7 @@ public sealed class SettingsService : ISettingsService
         if (request.MetadataStorageDedicated is { } metadataStorageDedicated) row.MetadataStorageDedicated = metadataStorageDedicated;
         if (request.SubtitlesAutoEnable is { } subtitlesAutoEnable) row.SubtitlesAutoEnable = subtitlesAutoEnable;
         if (request.SubtitlesPreferredLanguages is not null) row.SubtitlesPreferredLanguages = request.SubtitlesPreferredLanguages;
+        if (request.AudioPreferredLanguages is not null) row.AudioPreferredLanguages = request.AudioPreferredLanguages;
         if (request.SubtitleStyle is not null && request.SubtitleStyle.TryDecodeAs<SubtitleStyle>(out var subtitleStyle)) row.SubtitleStyle = subtitleStyle;
         if (request.SubtitleFontScale is { } subtitleFontScale) row.SubtitleFontScale = Math.Clamp(subtitleFontScale, 0.5f, 3f);
         if (request.SubtitlePositionPercent is { } subtitlePositionPercent) row.SubtitlePositionPercent = Math.Clamp(subtitlePositionPercent, 0, 100);
@@ -246,6 +247,7 @@ public sealed class SettingsService : ISettingsService
             row.MetadataStorageDedicated,
             row.SubtitlesAutoEnable,
             row.SubtitlesPreferredLanguages,
+            row.AudioPreferredLanguages,
             row.SubtitleStyle.ToCode(),
             row.SubtitleFontScale,
             row.SubtitlePositionPercent,

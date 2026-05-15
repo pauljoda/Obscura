@@ -51,6 +51,7 @@
       metadataStorageDedicated: s.metadataStorageDedicated ?? true,
       subtitlesAutoEnable: s.subtitlesAutoEnable ?? false,
       subtitlesPreferredLanguages: s.subtitlesPreferredLanguages ?? "en,eng",
+      audioPreferredLanguages: s.audioPreferredLanguages ?? "en,eng,en-US",
       subtitleStyle: (s.subtitleStyle ?? "stylized") as SubtitleDisplayStyle,
       subtitleFontScale: s.subtitleFontScale ?? 1,
       subtitlePositionPercent: s.subtitlePositionPercent ?? 88,
@@ -78,6 +79,7 @@
     metadataStorageDedicated: true,
     subtitlesAutoEnable: false,
     subtitlesPreferredLanguages: "en,eng",
+    audioPreferredLanguages: "en,eng,en-US",
     subtitleStyle: "stylized",
     subtitleFontScale: 1,
     subtitlePositionPercent: 88,
@@ -93,6 +95,7 @@
   let scraperCount = $state(0);
 
   let savedMetadataStorageDedicated = $state(defaultSettings.metadataStorageDedicated);
+  let audioLangDraft = $state(defaultSettings.audioPreferredLanguages);
 
   let message = $state<string | null>(null);
   let error = $state<string | null>(null);
@@ -114,6 +117,10 @@
     roots = data.config.roots;
     scraperCount = data.scraperCount ?? 0;
     savedMetadataStorageDedicated = normalized.metadataStorageDedicated;
+  });
+
+  $effect(() => {
+    audioLangDraft = settings.audioPreferredLanguages ?? "en,eng,en-US";
   });
 
   onMount(() => {
@@ -248,6 +255,14 @@
       subtitlePositionPercent: next.positionPercent,
       subtitleOpacity: next.opacity,
     });
+  }
+
+  function commitAudioLanguages(el: HTMLInputElement) {
+    const next = audioLangDraft.trim();
+    if (next !== (settings.audioPreferredLanguages ?? "")) {
+      settings = { ...settings, audioPreferredLanguages: next };
+      void autoSaveSetting({ audioPreferredLanguages: next });
+    }
   }
 </script>
 
@@ -457,6 +472,27 @@
         void autoSaveSetting({ showCastControls: checked });
       }}
     />
+
+    <div class="surface-card no-lift p-3.5 flex flex-col justify-between min-h-[100px]">
+      <div>
+        <label class="control-label" for="audio-lang-input">Preferred audio languages</label>
+        <p class="text-[0.68rem] text-text-muted mt-1">
+          Comma-separated priority list (e.g. <code class="language-code-token">en,eng,en-US</code>). If a
+          track has no code, Obscura guesses from its title before falling back to the media default.
+        </p>
+      </div>
+      <input
+        id="audio-lang-input"
+        type="text"
+        bind:value={audioLangDraft}
+        onblur={(e) => commitAudioLanguages(e.currentTarget)}
+        onkeydown={(e) => {
+          if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+        }}
+        class="allow-compact-input-text language-code-input mt-3 border border-border-default bg-surface-1 px-2.5 py-1.5 text-text-primary focus:border-border-accent focus:outline-none"
+        placeholder="en,eng,en-US"
+      />
+    </div>
   </section>
 
   <div class="border-t border-border-subtle"></div>

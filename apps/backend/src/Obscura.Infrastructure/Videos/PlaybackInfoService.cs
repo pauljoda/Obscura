@@ -1,3 +1,4 @@
+using Obscura.Application.Settings;
 using Obscura.Application.Videos;
 using Obscura.Contracts.Playback;
 
@@ -8,13 +9,31 @@ namespace Obscura.Infrastructure.Videos;
 /// </summary>
 public sealed class PlaybackInfoService : IPlaybackInfoService
 {
+    private static readonly IReadOnlyDictionary<string, string[]> LanguageAliases = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["en"] = ["en", "eng", "english"],
+        ["es"] = ["es", "spa", "spn", "spanish", "espanol"],
+        ["fr"] = ["fr", "fre", "fra", "french", "francais"],
+        ["de"] = ["de", "ger", "deu", "german", "deutsch"],
+        ["it"] = ["it", "ita", "italian", "italiano"],
+        ["ja"] = ["ja", "jpn", "japanese"],
+        ["ko"] = ["ko", "kor", "korean"],
+        ["pt"] = ["pt", "por", "portuguese", "portugues"],
+        ["zh"] = ["zh", "chi", "zho", "chinese", "mandarin"],
+    };
+
     private readonly IVideoSourceService _sources;
     private readonly ITranscodeSessionService _transcodes;
+    private readonly ISettingsService? _settings;
 
-    public PlaybackInfoService(IVideoSourceService sources, ITranscodeSessionService transcodes)
+    public PlaybackInfoService(
+        IVideoSourceService sources,
+        ITranscodeSessionService transcodes,
+        ISettingsService? settings = null)
     {
         _sources = sources;
         _transcodes = transcodes;
+        _settings = settings;
     }
 
     /// <inheritdoc />
@@ -42,7 +61,10 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
         }
 
         var fileInfo = new FileInfo(source.Path);
-        var selectedAudioStream = SelectAudioStream(source, request?.AudioStreamIndex);
+        var preferredAudioLanguages = _settings is null
+            ? null
+            : (await _settings.GetLibraryConfigAsync(cancellationToken)).Settings.AudioPreferredLanguages;
+        var selectedAudioStream = SelectAudioStream(source, request?.AudioStreamIndex, preferredAudioLanguages);
         var sourceInfo = new MediaSourceInfo(
             mediaSourceId,
             source.Path,
@@ -77,7 +99,10 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
         return audioStreamIndex is null ? url : $"{url}&AudioStreamIndex={audioStreamIndex.Value}";
     }
 
-    private static VideoSourceStream? SelectAudioStream(VideoSourceFile source, int? requestedIndex)
+    private static VideoSourceStream? SelectAudioStream(
+        VideoSourceFile source,
+        int? requestedIndex,
+        string? preferredLanguages)
     {
         var audioStreams = source.Streams?
             .Where(stream => stream.Type.Equals("Audio", StringComparison.OrdinalIgnoreCase))
@@ -89,8 +114,100 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
         }
 
         return audioStreams.FirstOrDefault(stream => stream.StreamIndex == requestedIndex) ??
+            SelectPreferredAudioStream(audioStreams, preferredLanguages) ??
             audioStreams.FirstOrDefault(stream => stream.IsDefault) ??
             audioStreams[0];
+    }
+
+    private static VideoSourceStream? SelectPreferredAudioStream(
+        IReadOnlyList<VideoSourceStream> audioStreams,
+        string? preferredLanguages)
+    {
+        var preferences = ParseLanguagePreferences(preferredLanguages);
+        if (preferences.Count == 0)
+        {
+            return null;
+        }
+
+        foreach (var preference in preferences)
+        {
+            var match = audioStreams.FirstOrDefault(stream =>
+                AudioStreamLanguageCandidates(stream).Contains(preference));
+            if (match is not null)
+            {
+                return match;
+            }
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<string> ParseLanguagePreferences(string? preferredLanguages)
+    {
+        if (string.IsNullOrWhiteSpace(preferredLanguages))
+        {
+            return [];
+        }
+
+        return preferredLanguages
+            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Select(NormalizeLanguageToken)
+            .Where(token => token.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static HashSet<string> AudioStreamLanguageCandidates(VideoSourceStream stream)
+    {
+        var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        AddLanguageCandidate(candidates, stream.Language);
+        AddLanguageCandidate(candidates, stream.Title);
+        AddBestGuessLanguageCandidates(candidates, stream.Title);
+        return candidates;
+    }
+
+    private static void AddLanguageCandidate(ISet<string> candidates, string? value)
+    {
+        var normalized = NormalizeLanguageToken(value);
+        if (normalized.Length > 0)
+        {
+            candidates.Add(normalized);
+        }
+    }
+
+    private static void AddBestGuessLanguageCandidates(ISet<string> candidates, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        var text = value.ToLowerInvariant();
+        foreach (var (language, aliases) in LanguageAliases)
+        {
+            if (aliases.Any(alias => text.Contains(alias, StringComparison.OrdinalIgnoreCase)))
+            {
+                candidates.Add(language);
+            }
+        }
+    }
+
+    private static string NormalizeLanguageToken(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var token = value.Trim().Replace('_', '-').ToLowerInvariant();
+        if (token.Contains('-', StringComparison.Ordinal))
+        {
+            token = token.Split('-', StringSplitOptions.RemoveEmptyEntries)[0];
+        }
+
+        return LanguageAliases.FirstOrDefault(pair =>
+            pair.Key.Equals(token, StringComparison.OrdinalIgnoreCase) ||
+            pair.Value.Any(alias => alias.Equals(token, StringComparison.OrdinalIgnoreCase))).Key ?? token;
     }
 
     private static IReadOnlyList<MediaStreamInfo> BuildStreams(
