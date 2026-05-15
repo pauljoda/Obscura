@@ -146,9 +146,9 @@
   <!-- Footer actions -->
   <div class="shrink-0 space-y-1 border-t border-border-subtle px-3 py-3">
     <a
-      href="/design-language"
-      aria-label="Open design language"
-      title={!isExpanded ? "Design Language" : undefined}
+      href="/dev/v2-migration"
+      aria-label="Open dev tools"
+      title={!isExpanded ? "Dev Tools" : undefined}
       class="group flex h-8 items-center overflow-hidden whitespace-nowrap text-text-muted transition-colors duration-fast hover:bg-surface-2 hover:text-text-primary"
     >
       <div class="flex w-8 shrink-0 items-center justify-center">
@@ -161,7 +161,7 @@
         )}
       >
         <span class="text-mono-sm text-text-disabled transition-colors group-hover:text-text-accent">
-          Design Language
+          Dev Tools
         </span>
       </div>
     </a>
