@@ -548,8 +548,8 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transform: scaleY(-1) scale(1.2);
-    filter: blur(48px) saturate(1.3) brightness(0.5);
+    transform: scaleY(-1) scale(1.12);
+    filter: blur(32px) saturate(1.3) brightness(0.5);
   }
 
   .hero[data-no-blur] .hero-reflection {
