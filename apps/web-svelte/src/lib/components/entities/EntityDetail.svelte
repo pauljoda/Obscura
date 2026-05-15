@@ -536,8 +536,6 @@
     inset: 0;
     z-index: 0;
     overflow: hidden;
-    mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 100%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 100%);
   }
 
   .hero-reflection img {
@@ -547,50 +545,28 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transform: scaleY(-1) scale(1.08);
-    filter: blur(16px) saturate(1.2) brightness(0.45);
-  }
-
-  .hero[data-no-blur] .hero-reflection {
-    mask-image: none;
-    -webkit-mask-image: none;
-  }
-
-  .hero[data-no-blur] .hero-reflection img {
-    filter: none;
     transform: scaleY(-1);
   }
 
-  /* Scrim + noise grain to break color banding */
+  /* Frosted glass: backdrop-filter blurs the reflection underneath */
   .hero-blur-overlay {
     position: absolute;
     inset: 0;
     z-index: 1;
+    backdrop-filter: blur(20px) saturate(1.3) brightness(0.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.3) brightness(0.5);
     background: linear-gradient(
       to bottom,
-      rgba(7, 8, 11, 0.35) 0%,
-      rgba(7, 8, 11, 0.55) 60%,
-      rgba(7, 8, 11, 0.85) 100%
+      rgba(7, 8, 11, 0.3) 0%,
+      rgba(7, 8, 11, 0.5) 60%,
+      rgba(7, 8, 11, 0.8) 100%
     );
   }
 
-  .hero-blur-overlay::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    opacity: 0.04;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    background-size: 200px 200px;
-    pointer-events: none;
-  }
-
   .hero[data-no-blur] .hero-blur-overlay {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     background: none;
-  }
-
-  .hero[data-no-blur] .hero-blur-overlay::after {
-    display: none;
   }
 
 
