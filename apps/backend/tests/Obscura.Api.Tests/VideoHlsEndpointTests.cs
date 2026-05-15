@@ -24,7 +24,7 @@ public sealed class VideoHlsEndpointTests : IDisposable
             new HlsAsset(filePath, "application/vnd.apple.mpegurl", "public, max-age=60")));
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync($"/api/videos/{FakeHlsAssetService.VideoId}/hls/master.m3u8");
+        using var response = await client.GetAsync($"/Videos/{FakeHlsAssetService.VideoId}/live.m3u8");
         var body = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -39,7 +39,7 @@ public sealed class VideoHlsEndpointTests : IDisposable
         using var factory = CreateFactory(new FakeHlsAssetService(null));
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync($"/api/videos/{FakeHlsAssetService.VideoId}/hls/v/720p/seg_00000.ts");
+        using var response = await client.GetAsync($"/Videos/{FakeHlsAssetService.VideoId}/hls/720p/seg_00000.ts");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);

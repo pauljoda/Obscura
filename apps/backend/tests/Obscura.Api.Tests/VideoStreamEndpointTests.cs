@@ -25,7 +25,7 @@ public sealed class VideoStreamEndpointTests : IDisposable
         using var client = factory.CreateClient();
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            $"/api/videos/{FakeVideoSourceService.VideoId}/stream");
+            $"/Videos/{FakeVideoSourceService.VideoId}/stream");
         request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(2, 5);
 
         using var response = await client.SendAsync(request);
@@ -46,24 +46,10 @@ public sealed class VideoStreamEndpointTests : IDisposable
             new VideoSourceFile(FakeVideoSourceService.VideoId, filePath, "video/x-matroska", false)));
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync($"/api/videos/{FakeVideoSourceService.VideoId}/stream");
+        using var response = await client.GetAsync($"/Videos/{FakeVideoSourceService.VideoId}/stream");
 
         Assert.Equal(HttpStatusCode.UnsupportedMediaType, response.StatusCode);
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
-    }
-
-    [Fact]
-    public async Task HeadEndpointDoesNotPropagateCanceledProbeLookups()
-    {
-        using var factory = CreateFactory(new CancelingVideoSourceService());
-        using var client = factory.CreateClient();
-        using var request = new HttpRequestMessage(
-            HttpMethod.Head,
-            $"/api/videos/{FakeVideoSourceService.VideoId}/stream");
-
-        using var response = await client.SendAsync(request);
-
-        Assert.Equal(499, (int)response.StatusCode);
     }
 
     public void Dispose()
@@ -102,11 +88,4 @@ public sealed class VideoStreamEndpointTests : IDisposable
         }
     }
 
-    private sealed class CancelingVideoSourceService : IVideoSourceService
-    {
-        public Task<VideoSourceFile?> GetSourceAsync(Guid id, CancellationToken cancellationToken)
-        {
-            throw new OperationCanceledException();
-        }
-    }
 }

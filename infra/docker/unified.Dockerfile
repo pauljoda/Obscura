@@ -67,8 +67,17 @@ RUN git clone --depth 1 https://github.com/bbc/audiowaveform.git /build/audiowav
   && make -j"$(nproc)" \
   && make install
 
-# ── Stage 4: Unified production image ────────────────────────────
-FROM node:22-alpine3.20 AS runner
+# ── Stage 4: Publish .NET API and worker ─────────────────────────
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS dotnet-builder
+
+WORKDIR /src
+COPY . .
+COPY --from=builder /app/apps/web-svelte/build ./apps/web-svelte/build
+RUN dotnet publish apps/backend/src/Obscura.Api/Obscura.Api.csproj -c Release -o /out/api \
+  && dotnet publish apps/backend/src/Obscura.Worker/Obscura.Worker.csproj -c Release -o /out/worker
+
+# ── Stage 5: Unified production image ────────────────────────────
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runner
 
 # Install runtime dependencies (including audiowaveform runtime libs)
 RUN apk add --no-cache \
@@ -91,14 +100,17 @@ ENV OBSCURA_PHASH_BIN=/usr/local/bin/obscura-phash
 
 WORKDIR /app
 
-ENV NODE_ENV=production
 # Explicit path so the changelog API route never has to guess
 ENV CHANGELOG_PATH=/app/CHANGELOG.md
 ENV PUBLIC_APP_URL=http://localhost:8008
 ENV PUBLIC_API_URL=/api
+ENV ASPNETCORE_URLS=http://0.0.0.0:8008
+ENV OBSCURA_STATIC_WEB_ROOT=/app/wwwroot
 
-# Copy the ENTIRE built workspace — pnpm virtual store and symlinks intact
-COPY --from=builder /app ./
+COPY --from=dotnet-builder /out/api ./api
+COPY --from=dotnet-builder /out/worker ./worker
+COPY --from=builder /app/apps/web-svelte/build ./wwwroot
+COPY CHANGELOG.md ./CHANGELOG.md
 COPY infra/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

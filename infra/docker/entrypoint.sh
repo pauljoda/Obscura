@@ -61,33 +61,27 @@ su-exec postgres pg_ctl -D "$PGDATA" -l /data/postgres/log -w -t 30 start
 su-exec postgres psql -h 127.0.0.1 -tc "SELECT 1 FROM pg_database WHERE datname = 'obscura'" | grep -q 1 || \
   su-exec postgres createdb -h 127.0.0.1 obscura
 
-# Note: database migrations run automatically in the shared runtime
-# used by the worker and SvelteKit server.
-#
-# pg-boss creates its own `pgboss` schema lazily on first API/worker start
-# and is independent of drizzle — no action needed here.
+# Note: database migrations run automatically in the shared .NET runtime
+# used by the API and worker.
 
 # ── Start worker ──────────────────────────────────────────────────
 echo "[obscura] Starting background worker..."
-cd /app/apps/worker
 DATABASE_URL="postgresql://postgres@127.0.0.1:5432/obscura" \
 OBSCURA_CACHE_DIR="$CACHE_DIR" \
 OBSCURA_DATA_DIR="/data" \
-NODE_ENV=production \
-  node_modules/.bin/tsx src/index.ts &
+OBSCURA_SECRET="$OBSCURA_SECRET" \
+  dotnet /app/worker/Obscura.Worker.dll &
 
-# ── Start SvelteKit (foreground — keeps container alive) ──────────
-echo "[obscura] Starting SvelteKit frontend on port 8008..."
+# ── Start .NET API (foreground — keeps container alive) ───────────
+echo "[obscura] Starting .NET API and web frontend on port 8008..."
 echo "[obscura] Ready — http://localhost:8008"
-cd /app/apps/web-svelte
 exec env \
   DATABASE_URL="postgresql://postgres@127.0.0.1:5432/obscura" \
   OBSCURA_CACHE_DIR="$CACHE_DIR" \
   OBSCURA_DATA_DIR="/data" \
   OBSCURA_SECRET="$OBSCURA_SECRET" \
+  OBSCURA_STATIC_WEB_ROOT="${OBSCURA_STATIC_WEB_ROOT:-/app/wwwroot}" \
   PUBLIC_APP_URL="http://localhost:8008" \
   PUBLIC_API_URL="/api" \
-  HOST="0.0.0.0" \
-  PORT=8008 \
-  NODE_ENV=production \
-  node build/index.js
+  ASPNETCORE_URLS="${ASPNETCORE_URLS:-http://0.0.0.0:8008}" \
+  dotnet /app/api/Obscura.Api.dll

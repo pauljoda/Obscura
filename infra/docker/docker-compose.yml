@@ -18,23 +18,6 @@ services:
     volumes:
       - cache-data:/data/cache
 
-  worker:
-    build:
-      context: ../..
-      dockerfile: infra/docker/worker.Dockerfile
-      target: builder
-    command: pnpm --filter @obscura/worker dev
-    env_file:
-      - ../../.env.example
-    environment:
-      DATABASE_URL: postgresql://obscura:obscura@postgres:5432/obscura
-      OBSCURA_CACHE_DIR: /data/cache
-      OBSCURA_DATA_DIR: /data
-    depends_on:
-      - postgres
-    volumes:
-      - cache-data:/data/cache
-
   backend:
     image: mcr.microsoft.com/dotnet/sdk:10.0
     working_dir: /app
