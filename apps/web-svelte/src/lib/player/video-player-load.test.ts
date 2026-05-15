@@ -146,6 +146,7 @@ describe("video-player-load", () => {
       hlsStatusUrlForSrc("/api/video-stream/video-1/hls2/master.m3u8?token=abc"),
     ).toBe("/api/video-stream/video-1/hls2/status?token=abc");
     expect(hlsStatusUrlForSrc("/api/video-stream/video-1/source")).toBeNull();
+    expect(hlsStatusUrlForSrc("/api/videos/video-1/hls/master.m3u8")).toBeNull();
   });
 
   it("asks hls.js to load from an out-of-buffer adaptive seek instead of clamping", () => {

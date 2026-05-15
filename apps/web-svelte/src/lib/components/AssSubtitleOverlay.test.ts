@@ -15,7 +15,7 @@ const { fetchVideoSubtitleSource, jassubCtor, destroy, loadJassub } = vi.hoisted
   };
 });
 
-vi.mock("$lib/v1/api/videos-v1", () => ({
+vi.mock("$lib/player/video-subtitles", () => ({
   fetchVideoSubtitleSource,
 }));
 
@@ -37,8 +37,7 @@ describe("AssSubtitleOverlay", () => {
     const { rerender } = render(AssSubtitleOverlay, {
       props: {
         videoEl: null,
-        videoId: "video-1",
-        trackId: "track-1",
+        sourceUrl: "/assets/videos/video-1/subtitles/track-1.ass",
       },
     });
 
@@ -51,12 +50,13 @@ describe("AssSubtitleOverlay", () => {
 
     await rerender({
       videoEl: video,
-      videoId: "video-1",
-      trackId: "track-1",
+      sourceUrl: "/assets/videos/video-1/subtitles/track-1.ass",
     });
 
     await waitFor(() => {
-      expect(fetchVideoSubtitleSource).toHaveBeenCalledWith("video-1", "track-1");
+      expect(fetchVideoSubtitleSource).toHaveBeenCalledWith(
+        "/assets/videos/video-1/subtitles/track-1.ass",
+      );
       expect(jassubCtor).toHaveBeenCalledTimes(1);
     });
 

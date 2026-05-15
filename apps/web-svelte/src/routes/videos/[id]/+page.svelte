@@ -3,7 +3,10 @@
   import { page } from "$app/state";
   import { ArrowLeft, Users } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-  import type { SubtitleAppearance, SubtitleDisplayStyle } from "@obscura/contracts";
+  import type {
+    SubtitleAppearance,
+    SubtitleDisplayStyle,
+  } from "$lib/player/subtitle-types";
   import {
     fetchV2Video,
     fetchV2LibraryConfig,

@@ -1,8 +1,12 @@
-import type { VideoSubtitleTrackDto, SubtitleSourceFormat } from "@obscura/contracts";
 import type { EntityCapability } from "$lib/api/generated/model";
 import type { VideoPlayerMarker } from "$lib/components/VideoPlayer.svelte";
 import { getCapability } from "$lib/api/capabilities";
 import { v2ApiPath, v2AssetUrl } from "$lib/api/orval-fetch";
+import type {
+  SubtitleSource,
+  SubtitleSourceFormat,
+  VideoSubtitleTrack,
+} from "$lib/player/subtitle-types";
 import { CAPABILITY_KIND, ENTITY_FILE_ROLE } from "./v2-codes";
 
 export interface VideoPlayerProps {
@@ -14,7 +18,7 @@ export interface VideoPlayerProps {
   duration: number;
   trickplaySprite: string;
   trickplayVtt: string;
-  subtitleTracks: VideoSubtitleTrackDto[];
+  subtitleTracks: VideoSubtitleTrack[];
 }
 
 export function extractVideoPlayerProps(
@@ -65,12 +69,9 @@ function mapEntitySubtitle(
     sourcePath: string | null;
     isDefault: boolean;
   },
-): VideoSubtitleTrackDto {
-  const sourceFormat = (sub.sourceFormat ?? "vtt") as SubtitleSourceFormat;
-  const hasAssSource = sourceFormat === "ass" || sourceFormat === "ssa";
-  const sourceUrl = hasAssSource
-    ? deriveAssSourceUrl(sub.storagePath, sourceFormat)
-    : null;
+): VideoSubtitleTrack {
+  const sourceFormat = parseSubtitleSourceFormat(sub.sourceFormat);
+  const sourceUrl = isServedAssetPath(sub.sourcePath) ? v2AssetUrl(sub.sourcePath) : null;
 
   return {
     id: sub.id,
@@ -78,7 +79,7 @@ function mapEntitySubtitle(
     language: sub.language,
     label: sub.label,
     format: "vtt",
-    source: sub.source as "embedded" | "sidecar" | "upload",
+    source: parseSubtitleSource(sub.source),
     sourceFormat,
     isDefault: sub.isDefault,
     url: v2AssetUrl(sub.storagePath),
@@ -87,12 +88,36 @@ function mapEntitySubtitle(
   };
 }
 
-function deriveAssSourceUrl(
-  vttPath: string,
-  sourceFormat: string,
-): string | null {
-  const assPath = vttPath.replace(/\.vtt$/, `.${sourceFormat}`);
-  return assPath !== vttPath ? v2AssetUrl(assPath) : null;
+function parseSubtitleSource(value: string): SubtitleSource {
+  switch (value) {
+    case "manual":
+    case "embedded":
+    case "generated":
+    case "provider":
+    case "upload":
+    case "sidecar":
+      return value;
+    default:
+      return "manual";
+  }
+}
+
+function parseSubtitleSourceFormat(
+  value: string | null | undefined,
+): SubtitleSourceFormat {
+  switch (value) {
+    case "srt":
+    case "ass":
+    case "ssa":
+    case "vtt":
+      return value;
+    default:
+      return "vtt";
+  }
+}
+
+function isServedAssetPath(value: string | null | undefined): value is string {
+  return value?.startsWith("/assets/") === true;
 }
 
 function parseDotnetTimeSpan(value: string | null | undefined): number {

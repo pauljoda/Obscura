@@ -52,14 +52,10 @@
   import {
     subtitleDisplayStyles,
     type SubtitleAppearance,
-    type VideoSubtitleTrackDto,
-  } from "@obscura/contracts";
-  import {
-    HLS_RETRY_AFTER_SECONDS,
-    type HlsStatus,
-  } from "@obscura/contracts/media";
-  import type { SubtitleCueDto } from "$lib/v1/api/types-v1";
-  import { fetchVideoSubtitleCues } from "$lib/v1/api/videos-v1";
+    type SubtitleCue,
+    type VideoSubtitleTrack,
+  } from "$lib/player/subtitle-types";
+  import { fetchVideoSubtitleCues } from "$lib/player/video-subtitles";
   import {
     enterMediaFullscreen,
     exitDocumentFullscreen,
@@ -92,7 +88,7 @@
     onTimeUpdate?: (time: number) => void;
     trickplaySprite?: string;
     trickplayVtt?: string;
-    subtitleTracks?: VideoSubtitleTrackDto[];
+    subtitleTracks?: VideoSubtitleTrack[];
     activeSubtitleTrackId?: string | null;
     onActiveSubtitleTrackIdChange?: (id: string | null) => void;
     onActiveCueChange?: (cue: ActiveCue | null) => void;
@@ -112,6 +108,10 @@
   type PlaybackMode = "direct" | "hls";
   type QualityMode = "direct" | "auto" | number;
   type SettingsView = "root" | "quality" | "speed" | "audio" | "captions" | "subtitle-style";
+  type HlsStatus = {
+    state: "idle" | "pending" | "ready" | "error";
+    error?: string | null;
+  };
 
   interface QualityOption {
     value: QualityMode;
@@ -151,6 +151,7 @@
   }: Props = $props();
 
   const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2];
+  const HLS_RETRY_AFTER_SECONDS = 2;
 
   let containerEl: HTMLDivElement | undefined = $state();
   let player: MediaPlayerElement | undefined = $state();
@@ -197,7 +198,7 @@
   let settingsCloseTimer: number | null = null;
 
   let internalSubtitleId = $state<string | null>(null);
-  let activeTrackCues = $state<SubtitleCueDto[]>([]);
+  let activeTrackCues = $state<SubtitleCue[]>([]);
   let activeCueText = $state<string | null>(null);
   let localAppearance = $state<Partial<SubtitleAppearance> | null>(null);
   let autoSelected = false;
@@ -290,7 +291,7 @@
 
   function isAssTrackActive(
     id: string | null | undefined,
-    tracks: readonly VideoSubtitleTrackDto[],
+    tracks: readonly VideoSubtitleTrack[],
   ): boolean {
     if (!id) return false;
     const track = tracks.find((x) => x.id === id);
@@ -728,7 +729,7 @@
       return;
     }
     const track = subtitleTracks.find((candidate) => candidate.id === activeSubtitleId);
-    if (!track || track.sourceFormat === "ass" || track.sourceFormat === "ssa") {
+    if (!track || isAssTrackActive(track.id, subtitleTracks)) {
       activeTrackCues = [];
       activeCueText = null;
       onActiveCueChange?.(null);
@@ -736,7 +737,7 @@
     }
 
     let cancelled = false;
-    fetchVideoSubtitleCues(track.videoId, track.id)
+    fetchVideoSubtitleCues(track)
       .then(({ cues }) => {
         if (!cancelled) activeTrackCues = cues;
       })
@@ -948,6 +949,15 @@
   function handleError(event: Event) {
     const detail = (event as MediaErrorEvent).detail;
     const message = detail instanceof Error ? detail.message : "Playback failed.";
+    if (effectiveMode === "hls" && directSrc && directPlayable) {
+      pendingSeekTime = currentTime > 0.25 ? currentTime : null;
+      pendingAutoPlay = playing || autoPlay;
+      playbackMode = "direct";
+      qualityMode = "direct";
+      playerNotice = "Adaptive playback unavailable; trying direct playback.";
+      buffering = false;
+      return;
+    }
     playerNotice = `${effectiveMode === "direct" ? "Direct" : "Adaptive"} playback error: ${message}`;
     buffering = false;
   }
@@ -1006,8 +1016,7 @@
       {#key assTrackForRender.id}
         <AssSubtitleOverlay
           videoEl={videoEl ?? null}
-          videoId={assTrackForRender.videoId}
-          trackId={assTrackForRender.id}
+          sourceUrl={assTrackForRender.sourceUrl ?? ""}
           opacity={appearance.opacity}
         />
       {/key}

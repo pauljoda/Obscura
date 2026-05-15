@@ -1,7 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import VideoPlayer from "./VideoPlayer.svelte";
-import type { SubtitleAppearance, VideoSubtitleTrackDto } from "@obscura/contracts";
+import type {
+  SubtitleAppearance,
+  VideoSubtitleTrack,
+} from "$lib/player/subtitle-types";
 
 vi.mock("vidstack/player", () => ({}));
 vi.mock("vidstack/player/layouts", () => ({}));
@@ -29,7 +32,7 @@ function makeTrack(
   id: string,
   language: string,
   videoId = "video-1",
-): VideoSubtitleTrackDto {
+): VideoSubtitleTrack {
   return {
     id,
     videoId,
@@ -199,5 +202,24 @@ describe("VideoPlayer", () => {
         "/api/video-stream/video-1/hls2/master.m3u8",
       );
     });
+  });
+
+  it("attaches v2 manifests directly because the .NET API has no readiness endpoint", async () => {
+    render(VideoPlayer, {
+      props: {
+        src: "/api/videos/video-1/hls/master.m3u8",
+        defaultPlaybackMode: "hls",
+      },
+    });
+
+    await waitFor(() => {
+      expect(document.querySelector("media-player")?.getAttribute("src")).toBe(
+        "/api/videos/video-1/hls/master.m3u8",
+      );
+    });
+    expect(fetch).not.toHaveBeenCalledWith(
+      "/api/videos/video-1/hls/status",
+      expect.anything(),
+    );
   });
 });

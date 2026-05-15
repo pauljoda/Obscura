@@ -159,6 +159,10 @@ export function adaptiveHlsBufferConfig(): AdaptiveHlsBufferConfig {
 }
 
 export function hlsStatusUrlForSrc(src: string): string | null {
+  if (!/\/video-stream\/[^/]+\/hls2\/master\.m3u8(?:\?.*)?$/.test(src)) {
+    return null;
+  }
+
   const statusUrl = src.replace(/\/master\.m3u8(\?.*)?$/, "/status$1");
   return statusUrl === src ? null : statusUrl;
 }

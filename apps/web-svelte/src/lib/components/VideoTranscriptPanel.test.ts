@@ -1,11 +1,9 @@
 import { render, screen, waitFor } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
 import VideoTranscriptPanel from "./VideoTranscriptPanel.svelte";
-import type { VideoSubtitleTrackDto } from "@obscura/contracts";
+import type { VideoSubtitleTrack } from "$lib/player/subtitle-types";
 
-vi.mock("$lib/v1/api/videos-v1", () => ({
-  deleteVideoSubtitle: vi.fn(),
-  extractVideoSubtitles: vi.fn(),
+vi.mock("$lib/player/video-subtitles", () => ({
   fetchVideoSubtitleCues: vi.fn().mockResolvedValue({
     cues: [
       { start: 0, end: 1, text: "First line" },
@@ -17,11 +15,9 @@ vi.mock("$lib/v1/api/videos-v1", () => ({
       { start: 6, end: 7, text: "Hidden later line" },
     ],
   }),
-  updateVideoSubtitle: vi.fn(),
-  uploadVideoSubtitle: vi.fn(),
 }));
 
-const track: VideoSubtitleTrackDto = {
+const track: VideoSubtitleTrack = {
   id: "track-1",
   videoId: "video-1",
   language: "en",

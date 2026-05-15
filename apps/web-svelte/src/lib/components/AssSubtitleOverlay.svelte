@@ -1,22 +1,20 @@
 <script lang="ts">
-  import { fetchVideoSubtitleSource } from "$lib/v1/api/videos-v1";
+  import { fetchVideoSubtitleSource } from "$lib/player/video-subtitles";
   import { loadJassub } from "$lib/vendor/load-jassub";
 
   interface Props {
     videoEl: HTMLVideoElement | null | undefined;
-    videoId: string;
-    trackId: string;
+    sourceUrl: string;
     opacity?: number;
   }
 
-  let { videoEl, videoId, trackId, opacity = 1 }: Props = $props();
+  let { videoEl, sourceUrl, opacity = 1 }: Props = $props();
 
   let instance: { destroy?: () => Promise<void> | void } | null = null;
 
   $effect(() => {
     const video = videoEl;
-    const currentVideoId = videoId;
-    const currentTrackId = trackId;
+    const currentSourceUrl = sourceUrl;
     if (!video) return;
 
     let cancelled = false;
@@ -24,7 +22,7 @@
 
     async function boot() {
       try {
-        const subContent = await fetchVideoSubtitleSource(currentVideoId, currentTrackId);
+        const subContent = await fetchVideoSubtitleSource(currentSourceUrl);
         if (cancelled) return;
         const JASSUB = await loadJassub();
         if (cancelled) return;

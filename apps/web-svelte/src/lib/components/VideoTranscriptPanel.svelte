@@ -15,18 +15,12 @@
     X,
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-  import type { VideoSubtitleTrackDto, SubtitleCueDto } from "@obscura/contracts";
-  import {
-    deleteVideoSubtitle,
-    extractVideoSubtitles,
-    fetchVideoSubtitleCues,
-    updateVideoSubtitle,
-    uploadVideoSubtitle,
-  } from "$lib/v1/api/videos-v1";
+  import type { SubtitleCue, VideoSubtitleTrack } from "$lib/player/subtitle-types";
+  import { fetchVideoSubtitleCues } from "$lib/player/video-subtitles";
 
   interface Props {
     videoId: string;
-    tracks: VideoSubtitleTrackDto[];
+    tracks: VideoSubtitleTrack[];
     activeTrackId: string | null;
     onActiveTrackIdChange: (id: string | null) => void;
     currentTime: number;
@@ -38,13 +32,11 @@
   }
 
   let {
-    videoId,
     tracks,
     activeTrackId,
     onActiveTrackIdChange,
     currentTime,
     onSeek,
-    onTracksChanged,
     variant = "full",
     isDocked = false,
     onDockToggle,
@@ -55,7 +47,7 @@
   const isListOnly = $derived(variant === "list-only");
   const isCompact = $derived(variant === "compact");
 
-  let cues = $state<SubtitleCueDto[]>([]);
+  let cues = $state<SubtitleCue[]>([]);
   let loadingCues = $state(false);
   let cuesError = $state<string | null>(null);
   let uploading = $state(false);
@@ -103,10 +95,16 @@
       return;
     }
     const trackId = activeTrackId;
+    const track = tracks.find((candidate) => candidate.id === trackId);
+    if (!track) {
+      cues = [];
+      cuesError = "Subtitle track was not found.";
+      return;
+    }
     let cancelled = false;
     loadingCues = true;
     cuesError = null;
-    fetchVideoSubtitleCues(videoId, trackId)
+    fetchVideoSubtitleCues(track)
       .then((res) => {
         if (cancelled) return;
         cues = res.cues;
@@ -173,43 +171,21 @@
     const input = event.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-    uploading = true;
-    try {
-      await uploadVideoSubtitle(videoId, file, uploadLanguage);
-      onTracksChanged();
-    } catch (err) {
-      cuesError = (err as Error).message;
-    } finally {
-      uploading = false;
-      if (fileInput) fileInput.value = "";
-    }
+    cuesError = "Subtitle editing is waiting on the v2 API.";
+    if (fileInput) fileInput.value = "";
   }
 
   async function handleExtract() {
     if (extractState !== "idle") return;
-    extractState = "queued";
-    try {
-      await extractVideoSubtitles(videoId);
-    } catch (err) {
-      cuesError = (err as Error).message;
-    }
-    setTimeout(() => {
-      extractState = "idle";
-      onTracksChanged();
-    }, 2500);
+    cuesError = "Subtitle extraction is waiting on the v2 API.";
   }
 
   async function handleDelete(trackId: string) {
-    try {
-      await deleteVideoSubtitle(videoId, trackId);
-      if (activeTrackId === trackId) onActiveTrackIdChange(null);
-      onTracksChanged();
-    } catch (err) {
-      cuesError = (err as Error).message;
-    }
+    void trackId;
+    cuesError = "Subtitle editing is waiting on the v2 API.";
   }
 
-  function startEditingTrack(track: VideoSubtitleTrackDto) {
+  function startEditingTrack(track: VideoSubtitleTrack) {
     editingTrackId = track.id;
     editDraftLabel = track.label ?? "";
     editDraftLanguage = track.language;
@@ -228,13 +204,9 @@
       label: editDraftLabel.trim() === "" ? null : editDraftLabel.trim(),
     };
     if (editDraftLanguage.trim()) patch.language = editDraftLanguage.trim();
-    try {
-      await updateVideoSubtitle(videoId, trackId, patch);
-      cancelEditingTrack();
-      onTracksChanged();
-    } catch (err) {
-      cuesError = (err as Error).message;
-    }
+    void trackId;
+    void patch;
+    cuesError = "Subtitle editing is waiting on the v2 API.";
   }
 </script>
 

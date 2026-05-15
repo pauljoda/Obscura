@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- V2 video playback now falls back to direct streaming when adaptive HLS is not ready, and subtitle transcripts load from v2 subtitle assets instead of the removed v1 API routes.
 - V2 upgrade consent now persists in the database, so restarting the dev backend no longer re-opens the upgrade prompt or re-runs the destructive fresh-start reset.
 - Scheduled v2 library scans now target the intended watched folder instead of falling back to all eligible roots, and configured static web builds are served directly even in development/test hosts.
 - Entity detail descriptions now render markdown through a sanitized v2 helper, preserving formatting while stripping unsafe HTML and script URLs.
@@ -70,6 +71,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- V2 video pages no longer block forever on a missing HLS status route. The player now only uses the legacy readiness probe for legacy `hls2` URLs, attaches v2 manifests directly, and falls back to direct streaming when adaptive playback fails.
+- V2 subtitle display and transcript panels now read cue text from the normalized `/assets/...` WebVTT files exposed by the v2 subtitle capability, including ASS/SSA tracks that only have a generated VTT fallback.
 - V2 data now persists across backend container/app restarts in dev Docker. The upgrade gate no longer depends only on `/data/upgrade-markers`, which was not mounted by the dev compose backend and could disappear while Postgres data remained.
 - Scheduled v2 scan jobs now share a typed scan-root payload with scan handlers, including compatibility for already queued `libraryRootId` payloads, so per-root auto scans no longer expand into all-root scans.
 - Static SPA fallback now serves a configured web root without the development Vite proxy intercepting static assets or client-side routes.

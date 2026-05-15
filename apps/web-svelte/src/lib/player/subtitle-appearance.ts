@@ -3,7 +3,7 @@ import {
   subtitleDisplayStyles,
   type SubtitleAppearance,
   type SubtitleDisplayStyle,
-} from "@obscura/contracts";
+} from "./subtitle-types";
 
 export { defaultSubtitleAppearance, subtitleDisplayStyles };
 export type { SubtitleAppearance, SubtitleDisplayStyle };
