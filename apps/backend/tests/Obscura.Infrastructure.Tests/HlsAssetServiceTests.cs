@@ -11,6 +11,7 @@ namespace Obscura.Infrastructure.Tests;
 
 public sealed class HlsAssetServiceTests : IDisposable
 {
+    private const string SegmentLengthText = "6";
     private readonly string _cacheRoot = Path.Combine(Path.GetTempPath(), $"obscura-hls-assets-{Guid.NewGuid():N}");
 
     public HlsAssetServiceTests()
@@ -80,7 +81,8 @@ public sealed class HlsAssetServiceTests : IDisposable
         Assert.NotNull(variant);
         var playlist = await File.ReadAllTextAsync(variant.Path);
         Assert.Contains("#EXT-X-PLAYLIST-TYPE:VOD", playlist);
-        Assert.Contains("#EXTINF:1.000,", playlist);
+        Assert.Contains("#EXT-X-TARGETDURATION:6", playlist);
+        Assert.Contains("#EXTINF:1.000000,", playlist);
         Assert.Contains("#EXT-X-ENDLIST", playlist);
         Assert.False(process.WasCalled);
     }
@@ -182,7 +184,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task VirtualSegmentIsEncodedOnDemand()
+    public async Task VirtualSegmentStartsContinuousRenditionGeneration()
     {
         var videoId = Guid.Parse("44444444-4444-4444-4444-444444444444");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
@@ -207,7 +209,43 @@ public sealed class HlsAssetServiceTests : IDisposable
         Assert.Equal("video/mp2t", segment.ContentType);
         Assert.True(process.WasCalled);
         Assert.Contains(process.ArgumentHistory, arguments =>
-            arguments.Contains("-ss") && arguments.Contains("0.000"));
+            arguments.Contains("-hls_segment_filename"));
+    }
+
+    [Fact]
+    public async Task VirtualSegmentsAreGeneratedByOneContinuousHlsMuxer()
+    {
+        var videoId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var process = new ManifestWritingProcessExecutor();
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 13,
+                Width: 1920,
+                Height: 960)),
+            process,
+            NullLogger<HlsAssetService>.Instance);
+
+        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00001.ts", CancellationToken.None);
+
+        Assert.NotNull(segment);
+        var arguments = Assert.Single(process.ArgumentHistory);
+        Assert.Contains("-f", arguments);
+        Assert.Contains("hls", arguments);
+        Assert.Contains("-hls_time", arguments);
+        Assert.Contains(SegmentLengthText, arguments);
+        Assert.Contains("-hls_segment_filename", arguments);
+        Assert.Contains("-copyts", arguments);
+        Assert.Contains("-avoid_negative_ts", arguments);
+        Assert.Contains("disabled", arguments);
+        Assert.DoesNotContain("-output_ts_offset", arguments);
+        Assert.DoesNotContain("-ss", arguments);
     }
 
     public void Dispose()
@@ -284,6 +322,20 @@ public sealed class HlsAssetServiceTests : IDisposable
             ArgumentHistory.Add(arguments);
             var outputPath = arguments[^1];
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+            var segmentPatternIndex = arguments.ToList().IndexOf("-hls_segment_filename");
+            if (segmentPatternIndex >= 0 &&
+                segmentPatternIndex < arguments.Count - 1)
+            {
+                var segmentPattern = arguments[segmentPatternIndex + 1];
+                for (var index = 0; index < 3; index++)
+                {
+                    await File.WriteAllTextAsync(
+                        segmentPattern.Replace("%05d", index.ToString("00000")),
+                        "segment",
+                        cancellationToken);
+                }
+            }
+
             await File.WriteAllTextAsync(outputPath, "segment", cancellationToken);
             return new ProcessExecutionResult(0, string.Empty, string.Empty);
         }

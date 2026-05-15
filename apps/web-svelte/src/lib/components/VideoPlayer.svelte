@@ -505,6 +505,12 @@
     selectSubtitle(preferred ?? subtitleTracks[0]?.id ?? null);
   }
 
+  function rangeProgress(value: number, min: number, max: number): string {
+    if (max <= min) return "0%";
+    const pct = ((value - min) / (max - min)) * 100;
+    return `${Math.max(0, Math.min(100, pct))}%`;
+  }
+
   function handleAppearanceChange(next: SubtitleAppearance) {
     localAppearance = next;
     writeLocalSubtitleAppearance(next);
@@ -1697,74 +1703,75 @@
             </button>
           {/each}
         {:else if settingsView === "subtitle-style"}
-          <div class="space-y-3 p-2">
-            <div class="grid gap-1.5">
-              {#each subtitleDisplayStyles as style (style)}
-                <button
-                  type="button"
-                  onclick={() => handleAppearanceChange({ ...appearance, style })}
-                  class={cn("player-settings-option", appearance.style === style && "is-active")}
-                >
-                  <span class="capitalize">{style}</span>
-                  {#if appearance.style === style}<span>On</span>{/if}
-                </button>
-              {/each}
-            </div>
-
-            <label class="player-settings-slider">
-              <span>Text size</span>
-              <span>{appearance.fontScale.toFixed(2)}x</span>
-              <input
-                type="range"
-                min="0.5"
-                max="3"
-                step="0.05"
-                value={appearance.fontScale}
-                oninput={(event) =>
-                  handleAppearanceChange({ ...appearance, fontScale: Number(event.currentTarget.value) })}
-              />
-            </label>
-
-            <label class="player-settings-slider">
-              <span>Position</span>
-              <span>{Math.round(appearance.positionPercent)}%</span>
-              <input
-                type="range"
-                min="10"
-                max="98"
-                step="1"
-                value={appearance.positionPercent}
-                oninput={(event) =>
-                  handleAppearanceChange({
-                    ...appearance,
-                    positionPercent: Number(event.currentTarget.value),
-                  })}
-              />
-            </label>
-
-            <label class="player-settings-slider">
-              <span>Opacity</span>
-              <span>{Math.round(appearance.opacity * 100)}%</span>
-              <input
-                type="range"
-                min="0.2"
-                max="1"
-                step="0.05"
-                value={appearance.opacity}
-                oninput={(event) =>
-                  handleAppearanceChange({ ...appearance, opacity: Number(event.currentTarget.value) })}
-              />
-            </label>
-
+          {#each subtitleDisplayStyles as style (style)}
             <button
               type="button"
-              onclick={handleAppearanceReset}
-              disabled={localAppearance == null}
-              class={cn("player-settings-reset", localAppearance == null && "is-disabled")}
+              onclick={() => handleAppearanceChange({ ...appearance, style })}
+              class={cn("player-settings-option", appearance.style === style && "is-active")}
             >
-              Reset to library defaults
+              <span class="capitalize">{style}</span>
+              {#if appearance.style === style}<span>On</span>{/if}
             </button>
-          </div>
+          {/each}
+
+          <div class="player-settings-separator"></div>
+
+          <label class="player-settings-control">
+            <span>Text size</span>
+            <span class="player-settings-control-value">{appearance.fontScale.toFixed(2)}x</span>
+            <input
+              type="range"
+              min="0.5"
+              max="3"
+              step="0.05"
+              value={appearance.fontScale}
+              style={`--range-progress: ${rangeProgress(appearance.fontScale, 0.5, 3)}`}
+              oninput={(event) =>
+                handleAppearanceChange({ ...appearance, fontScale: Number(event.currentTarget.value) })}
+            />
+          </label>
+
+          <label class="player-settings-control">
+            <span>Position</span>
+            <span class="player-settings-control-value">{Math.round(appearance.positionPercent)}%</span>
+            <input
+              type="range"
+              min="10"
+              max="98"
+              step="1"
+              value={appearance.positionPercent}
+              style={`--range-progress: ${rangeProgress(appearance.positionPercent, 10, 98)}`}
+              oninput={(event) =>
+                handleAppearanceChange({
+                  ...appearance,
+                  positionPercent: Number(event.currentTarget.value),
+                })}
+            />
+          </label>
+
+          <label class="player-settings-control">
+            <span>Opacity</span>
+            <span class="player-settings-control-value">{Math.round(appearance.opacity * 100)}%</span>
+            <input
+              type="range"
+              min="0.2"
+              max="1"
+              step="0.05"
+              value={appearance.opacity}
+              style={`--range-progress: ${rangeProgress(appearance.opacity, 0.2, 1)}`}
+              oninput={(event) =>
+                handleAppearanceChange({ ...appearance, opacity: Number(event.currentTarget.value) })}
+            />
+          </label>
+
+          <button
+            type="button"
+            onclick={handleAppearanceReset}
+            disabled={localAppearance == null}
+            class={cn("player-settings-option player-settings-reset", localAppearance == null && "is-disabled")}
+          >
+            <span>Reset to library defaults</span>
+          </button>
         {/if}
       </div>
     {/if}
@@ -2034,33 +2041,64 @@
     white-space: nowrap;
   }
 
-  .player-settings-slider {
-    color: rgba(255, 255, 255, 0.78);
+  .player-settings-separator {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin: 0.2rem 0;
+  }
+
+  .player-settings-control {
+    border: 1px solid transparent;
+    color: rgba(255, 255, 255, 0.82);
     display: grid;
-    font-size: 0.72rem;
-    gap: 0.45rem;
-    grid-template-columns: 1fr auto;
+    font-size: 0.74rem;
+    gap: 0.55rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.65rem 0.7rem 0.75rem;
   }
 
-  .player-settings-slider input {
-    accent-color: var(--color-accent-500);
+  .player-settings-control-value {
+    color: var(--color-accent-300);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+  }
+
+  .player-settings-control input[type="range"] {
+    appearance: none;
+    background:
+      linear-gradient(
+        to right,
+        var(--color-accent-400) 0 var(--range-progress),
+        rgba(255, 255, 255, 0.22) var(--range-progress) 100%
+      );
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    border-radius: 0;
     grid-column: 1 / -1;
+    height: 0.45rem;
     width: 100%;
   }
 
-  .player-settings-reset {
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    color: rgba(255, 255, 255, 0.78);
-    padding: 0.55rem 0.75rem;
-    transition:
-      border-color 120ms ease,
-      color 120ms ease;
-    width: 100%;
+  .player-settings-control input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    background: var(--color-accent-400);
+    border: 1px solid rgba(0, 0, 0, 0.45);
+    border-radius: 0;
+    box-shadow: 0 0 14px rgba(196, 154, 90, 0.34);
+    height: 1rem;
+    width: 0.55rem;
+  }
+
+  .player-settings-control input[type="range"]::-moz-range-thumb {
+    background: var(--color-accent-400);
+    border: 1px solid rgba(0, 0, 0, 0.45);
+    border-radius: 0;
+    box-shadow: 0 0 14px rgba(196, 154, 90, 0.34);
+    height: 1rem;
+    width: 0.55rem;
   }
 
   .player-settings-reset:hover {
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
   }
 
   .player-settings-reset.is-disabled {

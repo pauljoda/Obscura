@@ -14,7 +14,8 @@ namespace Obscura.Infrastructure.Videos;
 public sealed class HlsAssetService : IHlsAssetService
 {
     private const int SegmentDurationSeconds = 6;
-    private static readonly ConcurrentDictionary<string, Task<string>> ActiveSegments = new();
+    private static readonly TimeSpan SegmentPollInterval = TimeSpan.FromMilliseconds(100);
+    private static readonly ConcurrentDictionary<string, Task> ActiveRenditions = new();
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> VirtualCacheRefreshLocks = new();
 
     private readonly HlsAssetServiceOptions _options;
@@ -270,92 +271,91 @@ public sealed class HlsAssetService : IHlsAssetService
         var outputPath = VirtualPath(id, "v", rendition.Name, $"seg_{segmentIndex:00000}.ts");
         if (File.Exists(outputPath) && new FileInfo(outputPath).Length > 0)
         {
-            _ = PrefetchVirtualSegmentAsync(id, source, rendition, segmentIndex + 1);
             return outputPath;
         }
 
-        var key = $"{id}/{rendition.Name}/{segmentIndex}";
-        var segmentTask = ActiveSegments.GetOrAdd(
-            key,
-            _ => EncodeVirtualSegmentAsync(id, source, rendition, segmentIndex, outputPath, cancellationToken));
-
-        try
-        {
-            var path = await segmentTask;
-            _ = PrefetchVirtualSegmentAsync(id, source, rendition, segmentIndex + 1);
-            return path;
-        }
-        finally
-        {
-            ActiveSegments.TryRemove(key, out var _);
-        }
+        var generationTask = StartVirtualRenditionGeneration(id, source, rendition);
+        await WaitForVirtualSegmentAsync(id, rendition, segmentIndex, outputPath, generationTask, cancellationToken);
+        return outputPath;
     }
 
-    private Task PrefetchVirtualSegmentAsync(
+    private Task StartVirtualRenditionGeneration(
         Guid id,
         VideoSourceFile source,
-        VirtualHlsRendition rendition,
-        int segmentIndex)
+        VirtualHlsRendition rendition)
     {
-        if (segmentIndex < 0 || segmentIndex >= SegmentCount(source.DurationSeconds!.Value))
-        {
-            return Task.CompletedTask;
-        }
-
-        var outputPath = VirtualPath(id, "v", rendition.Name, $"seg_{segmentIndex:00000}.ts");
-        if (File.Exists(outputPath) && new FileInfo(outputPath).Length > 0)
-        {
-            return Task.CompletedTask;
-        }
-
-        var key = $"{id}/{rendition.Name}/{segmentIndex}";
-        ActiveSegments.GetOrAdd(
-            key,
-            _ => EncodeVirtualSegmentAsync(id, source, rendition, segmentIndex, outputPath, CancellationToken.None));
-        return Task.CompletedTask;
+        var key = $"{id}/{rendition.Name}";
+        return ActiveRenditions.GetOrAdd(key, _ => GenerateVirtualRenditionAsync(id, source, rendition));
     }
 
-    private async Task<string> EncodeVirtualSegmentAsync(
+    private async Task GenerateVirtualRenditionAsync(
         Guid id,
         VideoSourceFile source,
-        VirtualHlsRendition rendition,
-        int segmentIndex,
-        string outputPath,
-        CancellationToken cancellationToken)
+        VirtualHlsRendition rendition)
     {
         if (_processes is null)
         {
-            throw new InvalidOperationException("HLS segment encoding requires a process executor.");
+            throw new InvalidOperationException("HLS rendition generation requires a process executor.");
         }
 
-        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-        var tempPath = $"{outputPath}.{Guid.NewGuid():N}.tmp";
-        var segmentStart = segmentIndex * SegmentDurationSeconds;
-        var result = await _processes.RunAsync(
-            "ffmpeg",
-            VirtualSegmentArguments(source.Path, rendition, segmentStart, tempPath),
-            environment: null,
-            cancellationToken);
+        var playlistPath = VirtualPath(id, "v", rendition.Name, "index.generated.m3u8");
+        var segmentPattern = VirtualPath(id, "v", rendition.Name, "seg_%05d.ts");
+        Directory.CreateDirectory(Path.GetDirectoryName(playlistPath)!);
+
+        ProcessExecutionResult result;
+        try
+        {
+            result = await _processes.RunAsync(
+                "ffmpeg",
+                VirtualRenditionArguments(source, rendition, playlistPath, segmentPattern),
+                environment: null,
+                CancellationToken.None);
+        }
+        finally
+        {
+            ActiveRenditions.TryRemove($"{id}/{rendition.Name}", out var _);
+        }
 
         if (result.ExitCode != 0)
         {
-            File.Delete(tempPath);
             _logger?.LogWarning(
-                "Virtual HLS segment generation failed for {VideoId} segment {Segment}: {Error}",
+                "Virtual HLS rendition generation failed for {VideoId} rendition {Rendition}: {Error}",
                 id,
-                segmentIndex,
+                rendition.Name,
                 result.StandardError);
-            throw new InvalidOperationException("HLS segment generation failed.");
+            throw new InvalidOperationException("HLS rendition generation failed.");
         }
+    }
 
-        if (!File.Exists(tempPath) || new FileInfo(tempPath).Length == 0)
+    private static async Task WaitForVirtualSegmentAsync(
+        Guid id,
+        VirtualHlsRendition rendition,
+        int segmentIndex,
+        string outputPath,
+        Task generationTask,
+        CancellationToken cancellationToken)
+    {
+        while (true)
         {
-            File.Delete(tempPath);
-            throw new InvalidOperationException("HLS segment generation produced an empty file.");
-        }
+            if (File.Exists(outputPath) && new FileInfo(outputPath).Length > 0)
+            {
+                return;
+            }
 
-        File.Move(tempPath, outputPath, overwrite: true);
-        return outputPath;
+            if (generationTask.IsCompleted)
+            {
+                await generationTask;
+                if (File.Exists(outputPath) && new FileInfo(outputPath).Length > 0)
+                {
+                    return;
+                }
+
+                throw new FileNotFoundException(
+                    $"HLS rendition generation completed without segment {segmentIndex} for {id}/{rendition.Name}.");
+            }
+
+            await Task.Delay(SegmentPollInterval, cancellationToken);
+        }
     }
 
     private static string? NormalizeAssetPath(string assetPath)
@@ -459,20 +459,26 @@ public sealed class HlsAssetService : IHlsAssetService
 
     private static string BuildVirtualVariantPlaylist(double durationSeconds)
     {
+        var total = SegmentCount(durationSeconds);
+        var durations = Enumerable.Range(0, total)
+            .Select(index => SegmentDuration(durationSeconds, index))
+            .ToArray();
+        var targetDuration = durations.Length == 0
+            ? SegmentDurationSeconds
+            : (int)Math.Ceiling(durations.Max());
         var lines = new List<string>
         {
             "#EXTM3U",
             "#EXT-X-VERSION:6",
             "#EXT-X-PLAYLIST-TYPE:VOD",
-            $"#EXT-X-TARGETDURATION:{SegmentDurationSeconds + 1}",
+            $"#EXT-X-TARGETDURATION:{targetDuration}",
             "#EXT-X-MEDIA-SEQUENCE:0",
             "#EXT-X-INDEPENDENT-SEGMENTS"
         };
 
-        var total = SegmentCount(durationSeconds);
         for (var index = 0; index < total; index++)
         {
-            lines.Add($"#EXTINF:{SegmentDuration(durationSeconds, index):0.000},");
+            lines.Add($"#EXTINF:{SegmentDuration(durationSeconds, index):0.000000},");
             lines.Add($"seg_{index:00000}.ts");
         }
 
@@ -481,23 +487,26 @@ public sealed class HlsAssetService : IHlsAssetService
         return string.Join('\n', lines);
     }
 
-    private static IReadOnlyList<string> VirtualSegmentArguments(
-        string sourcePath,
+    private static IReadOnlyList<string> VirtualRenditionArguments(
+        VideoSourceFile source,
         VirtualHlsRendition rendition,
-        int segmentStart,
-        string outputPath) =>
+        string playlistPath,
+        string segmentPattern)
+    {
+        var gop = Math.Max(1, (int)Math.Ceiling(SegmentDurationSeconds * (source.FrameRate ?? 24)));
+        return
         [
             "-hide_banner",
             "-y",
             "-loglevel",
             "error",
             "-nostats",
-            "-ss",
-            segmentStart.ToString("0.000"),
             "-i",
-            sourcePath,
-            "-t",
-            SegmentDurationSeconds.ToString(),
+            source.Path,
+            "-map_metadata",
+            "-1",
+            "-map_chapters",
+            "-1",
             "-vf",
             $"scale=w=-2:h={rendition.Height}:force_original_aspect_ratio=decrease:force_divisible_by=2,format=yuv420p",
             "-map",
@@ -514,10 +523,12 @@ public sealed class HlsAssetService : IHlsAssetService
             "main",
             "-pix_fmt",
             "yuv420p",
+            "-force_key_frames:0",
+            $"expr:gte(t,n_forced*{SegmentDurationSeconds})",
             "-g",
-            "144",
+            gop.ToString(),
             "-keyint_min",
-            "144",
+            gop.ToString(),
             "-sc_threshold",
             "0",
             "-b:v",
@@ -534,16 +545,28 @@ public sealed class HlsAssetService : IHlsAssetService
             "2",
             "-ar",
             "48000",
-            "-output_ts_offset",
-            segmentStart.ToString("0.000"),
-            "-muxdelay",
-            "0",
-            "-muxpreload",
-            "0",
+            "-copyts",
+            "-avoid_negative_ts",
+            "disabled",
+            "-max_muxing_queue_size",
+            "128",
             "-f",
+            "hls",
+            "-max_delay",
+            "5000000",
+            "-hls_time",
+            SegmentDurationSeconds.ToString(),
+            "-hls_segment_type",
             "mpegts",
-            outputPath
+            "-hls_playlist_type",
+            "vod",
+            "-hls_list_size",
+            "0",
+            "-hls_segment_filename",
+            segmentPattern,
+            playlistPath
         ];
+    }
 
     private static int SegmentCount(double durationSeconds) =>
         !double.IsFinite(durationSeconds) || durationSeconds <= 0

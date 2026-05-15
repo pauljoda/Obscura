@@ -324,6 +324,16 @@ describe("VideoPlayer", () => {
     expect(source).toContain(".subtitle-control-button {\n      padding: 0;\n      width: 2.25rem;");
   });
 
+  it("uses menu-row subtitle style controls with square range inputs", async () => {
+    const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
+
+    expect(source).toContain("player-settings-control");
+    expect(source).toContain("player-settings-separator");
+    expect(source).toContain("style={`--range-progress: ${rangeProgress");
+    expect(source).toContain('.player-settings-control input[type="range"]');
+    expect(source).toContain("border-radius: 0;");
+  });
+
   it("shows a trickplay frame in the seekbar hover preview", async () => {
     vi.mocked(fetch).mockImplementation((input) => {
       const url = String(input);
