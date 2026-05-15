@@ -34,6 +34,10 @@ export interface AdaptiveHlsBufferConfig {
   startPosition: number;
 }
 
+const ExtendedHlsMaxBufferLengthSeconds = 120;
+const ExtendedHlsMaxMaxBufferLengthSeconds = 600;
+const ExtendedHlsMaxBufferSizeBytes = 180 * 1000 * 1000;
+
 export interface AdaptiveSeekPlanInput {
   streamMode: VideoPlaybackMode;
   target: number;
@@ -155,13 +159,12 @@ export function adaptiveAutoLevelSelection(): AdaptiveAutoLevelSelection {
 }
 
 export function adaptiveHlsBufferConfig(): AdaptiveHlsBufferConfig {
-  const browserLimit = Number.MAX_SAFE_INTEGER;
   return {
-    backBufferLength: browserLimit,
+    backBufferLength: Infinity,
     frontBufferFlushThreshold: Infinity,
-    maxBufferLength: browserLimit,
-    maxMaxBufferLength: browserLimit,
-    maxBufferSize: browserLimit,
+    maxBufferLength: ExtendedHlsMaxBufferLengthSeconds,
+    maxMaxBufferLength: ExtendedHlsMaxMaxBufferLengthSeconds,
+    maxBufferSize: ExtendedHlsMaxBufferSizeBytes,
     startPosition: 0,
   };
 }

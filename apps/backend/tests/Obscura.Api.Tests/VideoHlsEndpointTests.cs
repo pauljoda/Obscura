@@ -34,6 +34,25 @@ public sealed class VideoHlsEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task HlsAssetEndpointsSupportHeadProbes()
+    {
+        var filePath = Path.Combine(_tempDir, "seg_00000.ts");
+        await File.WriteAllTextAsync(filePath, "0123456789");
+        using var factory = CreateFactory(new FakeHlsAssetService(
+            new HlsAsset(filePath, "video/mp2t", "public, max-age=31536000, immutable")));
+        using var client = factory.CreateClient();
+
+        using var response = await client.SendAsync(new HttpRequestMessage(
+            HttpMethod.Head,
+            $"/Videos/{FakeHlsAssetService.VideoId}/hls/720p/seg_00000.ts"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(10, response.Content.Headers.ContentLength);
+        Assert.Equal("video/mp2t", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("public, max-age=31536000, immutable", response.Headers.CacheControl?.ToString());
+    }
+
+    [Fact]
     public async Task HlsAssetEndpointReturnsProblemDetailsWhenMissing()
     {
         using var factory = CreateFactory(new FakeHlsAssetService(null));

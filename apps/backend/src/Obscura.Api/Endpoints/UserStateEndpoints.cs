@@ -37,9 +37,9 @@ public static class UserStateEndpoints
             var row = await db.UiPreferences.AsNoTracking()
                 .FirstOrDefaultAsync(pref => pref.Key == PlaylistSessionKey, cancellationToken);
 
-            return row is null
-                ? Results.Json(null)
-                : Results.Text(row.ValueJson, "application/json");
+            return Results.Text(
+                row is null || string.IsNullOrWhiteSpace(row.ValueJson) ? "null" : row.ValueJson,
+                "application/json");
         })
             .WithName("GetPlaylistSession")
             .WithTags("User State")

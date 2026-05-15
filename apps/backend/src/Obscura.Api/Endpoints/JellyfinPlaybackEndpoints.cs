@@ -37,7 +37,7 @@ public static class JellyfinPlaybackEndpoints
             .Produces<ApiProblem>(StatusCodes.Status404NotFound)
             .Produces<ApiProblem>(StatusCodes.Status415UnsupportedMediaType);
 
-        routes.MapGet("/Videos/{itemId:guid}/live.m3u8", (
+        routes.MapMethods("/Videos/{itemId:guid}/live.m3u8", [HttpMethods.Get, HttpMethods.Head], (
             Guid itemId,
             IHlsAssetService hlsAssets,
             HttpContext httpContext,
@@ -46,7 +46,7 @@ public static class JellyfinPlaybackEndpoints
             .WithName("GetJellyfinVideoLivePlaylist")
             .WithTags("Jellyfin Videos");
 
-        routes.MapGet("/Videos/{itemId:guid}/hls/{playlistId}/{segmentId}.{container}", (
+        routes.MapMethods("/Videos/{itemId:guid}/hls/{playlistId}/{segmentId}.{container}", [HttpMethods.Get, HttpMethods.Head], (
             Guid itemId,
             string playlistId,
             string segmentId,
@@ -58,7 +58,7 @@ public static class JellyfinPlaybackEndpoints
             .WithName("GetJellyfinVideoHlsSegment")
             .WithTags("Jellyfin Videos");
 
-        routes.MapGet("/Videos/{itemId:guid}/v/{playlistId}/{segmentId}.{container}", (
+        routes.MapMethods("/Videos/{itemId:guid}/v/{playlistId}/{segmentId}.{container}", [HttpMethods.Get, HttpMethods.Head], (
             Guid itemId,
             string playlistId,
             string segmentId,

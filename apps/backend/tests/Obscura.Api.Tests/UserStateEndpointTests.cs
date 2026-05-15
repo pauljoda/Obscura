@@ -27,5 +27,18 @@ public sealed class UserStateEndpointTests : IClassFixture<WebApplicationFactory
         Assert.False(payload.UpdateAvailable);
     }
 
+    [Fact]
+    public async Task PlaylistSessionEndpointReturnsJsonNullWhenEmpty()
+    {
+        using var client = _factory.CreateClient();
+
+        using var response = await client.GetAsync("/api/playlist-session");
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("null", body);
+    }
+
     private sealed record UpdateCheckResponse(string Status, bool UpdateAvailable);
 }
