@@ -34,6 +34,17 @@ public sealed class MediaAssetGeneratorAdapter(ThumbnailService thumbnails, Asse
         CancellationToken cancellationToken) =>
         thumbnails.ComposeSpriteSheetAsync(frameDir, outputPath, columns, frameWidth, frameHeight, jpegQuality, cancellationToken);
 
+    public Task<int> ComposeTiledJpegSheetsAsync(
+        string frameDir,
+        string outputDir,
+        int columns,
+        int rows,
+        int frameWidth,
+        int frameHeight,
+        int jpegQuality,
+        CancellationToken cancellationToken) =>
+        thumbnails.ComposeTiledJpegSheetsAsync(frameDir, outputDir, columns, rows, frameWidth, frameHeight, jpegQuality, cancellationToken);
+
     public Task<(bool Thumbnail, bool Preview)> GenerateThumbnailAndPreviewAsync(
         string inputPath,
         string thumbnailPath, double thumbSeekSeconds, int thumbWidth, int thumbHeight, int thumbQuality,
@@ -64,6 +75,7 @@ public sealed class MediaAssetGeneratorAdapter(ThumbnailService thumbnails, Asse
     public string VideoSpritePath(Guid entityId) => paths.VideoSpritePath(entityId);
     public string VideoTrickplayVttPath(Guid entityId) => paths.VideoTrickplayVttPath(entityId);
     public string TrickplayFrameDir(Guid entityId) => paths.TrickplayFrameDir(entityId);
+    public string TrickplayTileDir(Guid entityId, int width) => paths.TrickplayTileDir(entityId, width);
     public string ImageThumbnailPath(Guid entityId) => paths.ImageThumbnailPath(entityId);
     public string BookPageThumbnailPath(Guid entityId) => paths.BookPageThumbnailPath(entityId);
     public string AudioWaveformPath(Guid entityId) => paths.AudioWaveformPath(entityId);
@@ -72,6 +84,7 @@ public sealed class MediaAssetGeneratorAdapter(ThumbnailService thumbnails, Asse
     public string VideoThumbnailUrl(Guid entityId) => AssetPathService.VideoThumbnailUrl(entityId);
     public string VideoPreviewUrl(Guid entityId) => AssetPathService.VideoPreviewUrl(entityId);
     public string VideoTrickplayVttUrl(Guid entityId) => AssetPathService.VideoTrickplayVttUrl(entityId);
+    public string TrickplayPlaylistUrl(Guid entityId, int width) => AssetPathService.TrickplayPlaylistUrl(entityId, width);
     public string ImageThumbnailUrl(Guid entityId) => AssetPathService.ImageThumbnailUrl(entityId);
     public string BookPageThumbnailUrl(Guid entityId) => AssetPathService.BookPageThumbnailUrl(entityId);
     public string AudioWaveformUrl(Guid entityId) => AssetPathService.AudioWaveformUrl(entityId);

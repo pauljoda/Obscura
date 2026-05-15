@@ -72,6 +72,11 @@ public interface ILibraryScanPersistence
         IReadOnlyList<MediaStreamProbeData> streams,
         CancellationToken cancellationToken);
 
+    Task UpsertTrickplayInfoAsync(
+        Guid entityId,
+        TrickplayInfoData info,
+        CancellationToken cancellationToken);
+
     Task UpsertEntityFileAsync(Guid entityId, EntityFileRole role, string path, string? mimeType, long? sizeBytes, CancellationToken cancellationToken);
 
     Task UpsertEntityFingerprintAsync(Guid entityId, FingerprintAlgorithm algorithm, string value, Guid? entityFileId, CancellationToken cancellationToken);
@@ -138,6 +143,15 @@ public sealed record MediaStreamProbeData(
     int? Channels,
     bool IsDefault,
     bool IsForced);
+
+public sealed record TrickplayInfoData(
+    int Width,
+    int Height,
+    int TileWidth,
+    int TileHeight,
+    int ThumbnailCount,
+    double IntervalSeconds,
+    int Bandwidth);
 
 public sealed record LibrarySettingsData(
     bool AutoGenerateMetadata,

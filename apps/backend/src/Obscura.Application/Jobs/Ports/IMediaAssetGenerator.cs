@@ -35,6 +35,16 @@ public interface IMediaAssetGenerator
         int frameWidth, int frameHeight, int jpegQuality,
         CancellationToken cancellationToken);
 
+    Task<int> ComposeTiledJpegSheetsAsync(
+        string frameDir,
+        string outputDir,
+        int columns,
+        int rows,
+        int frameWidth,
+        int frameHeight,
+        int jpegQuality,
+        CancellationToken cancellationToken);
+
     /// <summary>
     /// Generates both thumbnail and preview clip, sharing decode overhead where possible.
     /// Returns success flags for each output.
@@ -61,6 +71,7 @@ public interface IMediaAssetGenerator
     string VideoSpritePath(Guid entityId);
     string VideoTrickplayVttPath(Guid entityId);
     string TrickplayFrameDir(Guid entityId);
+    string TrickplayTileDir(Guid entityId, int width);
     string ImageThumbnailPath(Guid entityId);
     string BookPageThumbnailPath(Guid entityId);
     string AudioWaveformPath(Guid entityId);
@@ -69,6 +80,7 @@ public interface IMediaAssetGenerator
     string VideoThumbnailUrl(Guid entityId);
     string VideoPreviewUrl(Guid entityId);
     string VideoTrickplayVttUrl(Guid entityId);
+    string TrickplayPlaylistUrl(Guid entityId, int width);
     string ImageThumbnailUrl(Guid entityId);
     string BookPageThumbnailUrl(Guid entityId);
     string AudioWaveformUrl(Guid entityId);

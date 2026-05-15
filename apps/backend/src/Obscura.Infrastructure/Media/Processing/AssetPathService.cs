@@ -31,6 +31,9 @@ public sealed class AssetPathService
     public string TrickplayFrameDir(Guid entityId) =>
         Path.Combine(_cacheRoot, "videos", entityId.ToString(), "trickplay-frames");
 
+    public string TrickplayTileDir(Guid entityId, int width) =>
+        Path.Combine(_cacheRoot, "trickplay", entityId.ToString(), width.ToString());
+
     public string ImageThumbnailPath(Guid entityId) =>
         Path.Combine(_cacheRoot, "images", entityId.ToString(), "thumb.jpg");
 
@@ -51,6 +54,9 @@ public sealed class AssetPathService
 
     public static string VideoTrickplayVttUrl(Guid entityId) =>
         $"/assets/videos/{entityId}/trickplay.vtt";
+
+    public static string TrickplayPlaylistUrl(Guid entityId, int width) =>
+        $"/Videos/{entityId}/Trickplay/{width}/tiles.m3u8";
 
     public static string ImageThumbnailUrl(Guid entityId) =>
         $"/assets/images/{entityId}/thumb.jpg";

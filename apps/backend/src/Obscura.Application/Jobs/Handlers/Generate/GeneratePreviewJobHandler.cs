@@ -6,7 +6,7 @@ using Obscura.Domain.Entities;
 namespace Obscura.Application.Jobs.Handlers.Generate;
 
 /// <summary>
-/// Generates video thumbnails, preview clips, and trickplay sprites via ffmpeg.
+/// Generates video thumbnails, preview clips, and Jellyfin-style trickplay tiles via ffmpeg.
 /// Optimized for throughput: uses batch trickplay extraction (single ffmpeg pass)
 /// and combined thumbnail+preview generation.
 /// </summary>
@@ -35,7 +35,7 @@ public sealed class GeneratePreviewJobHandler(
         {
             using (timer.Phase("trickplay"))
             {
-                await context.ReportProgressAsync(50, "Generating trickplay sprites", cancellationToken);
+                await context.ReportProgressAsync(50, "Generating trickplay tiles", cancellationToken);
                 await GenerateTrickplayBatchAsync(entityId, filePath, settings, duration, width, height, cancellationToken);
             }
         }
@@ -113,47 +113,32 @@ public sealed class GeneratePreviewJobHandler(
             extractedCount, frameCount);
 
         const int columns = 5;
-        var spritePath = assets.VideoSpritePath(entityId);
-        var spriteOk = await assets.ComposeSpriteSheetAsync(
-            frameDir, spritePath, columns, frameWidth, frameHeight,
+        const int rows = 5;
+        var tileDir = assets.TrickplayTileDir(entityId, frameWidth);
+        var tileCount = await assets.ComposeTiledJpegSheetsAsync(
+            frameDir, tileDir, columns, rows, frameWidth, frameHeight,
             QualityToJpeg(settings.TrickplayQuality), cancellationToken);
 
-        if (!spriteOk)
+        if (tileCount == 0)
         {
-            logger.LogWarning("Failed to compose trickplay sprite for {EntityId}", entityId);
+            logger.LogWarning("Failed to compose trickplay tiles for {EntityId}", entityId);
             return;
         }
 
-        var vttPath = assets.VideoTrickplayVttPath(entityId);
-        await WriteTrickplayVttAsync(entityId, vttPath, extractedCount, interval, frameWidth, frameHeight, cancellationToken);
+        await Persistence.UpsertTrickplayInfoAsync(
+            entityId,
+            new TrickplayInfoData(
+                frameWidth,
+                frameHeight,
+                columns,
+                rows,
+                extractedCount,
+                interval,
+                EstimateTrickplayBandwidth(tileDir, tileCount, extractedCount, interval)),
+            cancellationToken);
 
         await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Trickplay,
-            assets.VideoTrickplayVttUrl(entityId), "text/vtt", null, cancellationToken);
-    }
-
-    private static async Task WriteTrickplayVttAsync(
-        Guid entityId, string vttPath, int frameCount, int interval,
-        int frameWidth, int frameHeight, CancellationToken cancellationToken)
-    {
-        const int columns = 5;
-        var lines = new List<string> { "WEBVTT", "" };
-
-        for (var i = 0; i < frameCount; i++)
-        {
-            var start = TimeSpan.FromSeconds(i * interval);
-            var end = TimeSpan.FromSeconds((i + 1) * interval);
-            var col = i % columns;
-            var row = i / columns;
-            var x = col * frameWidth;
-            var y = row * frameHeight;
-
-            lines.Add($"{FormatVttTime(start)} --> {FormatVttTime(end)}");
-            lines.Add($"/assets/videos/{entityId}/sprite#xywh={x},{y},{frameWidth},{frameHeight}");
-            lines.Add("");
-        }
-
-        Directory.CreateDirectory(Path.GetDirectoryName(vttPath)!);
-        await File.WriteAllLinesAsync(vttPath, lines, cancellationToken);
+            assets.TrickplayPlaylistUrl(entityId, frameWidth), "application/vnd.apple.mpegurl", null, cancellationToken);
     }
 
     private async Task<(double? Duration, int? Width, int? Height)> GetDimensionsAsync(
@@ -211,6 +196,12 @@ public sealed class GeneratePreviewJobHandler(
 
     private static int QualityToJpeg(int quality) => Math.Clamp(quality, 1, 10);
 
-    private static string FormatVttTime(TimeSpan ts) =>
-        $"{(int)ts.TotalHours:D2}:{ts.Minutes:D2}:{ts.Seconds:D2}.{ts.Milliseconds:D3}";
+    private static int EstimateTrickplayBandwidth(string tileDir, int tileCount, int thumbnailCount, int interval)
+    {
+        var totalBytes = Directory.GetFiles(tileDir, "*.jpg")
+            .Take(tileCount)
+            .Sum(path => new FileInfo(path).Length);
+        var totalSeconds = Math.Max(interval, thumbnailCount * interval);
+        return (int)Math.Ceiling(totalBytes * 8d / totalSeconds);
+    }
 }

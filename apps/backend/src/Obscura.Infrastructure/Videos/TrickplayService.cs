@@ -1,5 +1,8 @@
 using System.Globalization;
+using Microsoft.EntityFrameworkCore;
 using Obscura.Application.Videos;
+using Obscura.Infrastructure.Persistence;
+using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Videos;
 
@@ -12,10 +15,17 @@ public sealed class TrickplayService : ITrickplayService
     private const int DefaultTileRows = 5;
     private const double DefaultIntervalSeconds = 10;
     private readonly string _cacheRoot;
+    private readonly ObscuraDbContext? _db;
 
     public TrickplayService(HlsAssetServiceOptions options)
     {
         _cacheRoot = Path.GetFullPath(options.CacheRoot);
+    }
+
+    public TrickplayService(HlsAssetServiceOptions options, ObscuraDbContext db)
+        : this(options)
+    {
+        _db = db;
     }
 
     /// <inheritdoc />
@@ -50,7 +60,8 @@ public sealed class TrickplayService : ITrickplayService
             return null;
         }
 
-        return new TrickplayPlaylist(BuildImagesOnlyPlaylist(tiles.Count, width), "public, max-age=60");
+        var info = await GetInfoAsync(itemId, width, tiles.Count, cancellationToken);
+        return new TrickplayPlaylist(BuildImagesOnlyPlaylist(tiles.Count, info), "public, max-age=60");
     }
 
     /// <inheritdoc />
@@ -71,24 +82,51 @@ public sealed class TrickplayService : ITrickplayService
     private string TrickplayRoot(Guid itemId, int width) =>
         Path.Combine(_cacheRoot, "trickplay", itemId.ToString(), width.ToString(CultureInfo.InvariantCulture));
 
-    private static string BuildImagesOnlyPlaylist(int tileCount, int width)
+    private async Task<TrickplayInfoRow> GetInfoAsync(
+        Guid itemId,
+        int width,
+        int tileCount,
+        CancellationToken cancellationToken)
     {
-        var thumbnailCount = tileCount * DefaultTileColumns * DefaultTileRows;
-        var height = Math.Max(1, (int)Math.Round(width * 9 / 16d));
+        if (_db is not null)
+        {
+            var persisted = await _db.TrickplayInfos.AsNoTracking()
+                .FirstOrDefaultAsync(row => row.EntityId == itemId && row.Width == width, cancellationToken);
+            if (persisted is not null)
+            {
+                return persisted;
+            }
+        }
+
+        return new TrickplayInfoRow
+        {
+            EntityId = itemId,
+            Width = width,
+            Height = Math.Max(1, (int)Math.Round(width * 9 / 16d)),
+            TileWidth = DefaultTileColumns,
+            TileHeight = DefaultTileRows,
+            ThumbnailCount = tileCount * DefaultTileColumns * DefaultTileRows,
+            IntervalSeconds = DefaultIntervalSeconds,
+            Bandwidth = 0
+        };
+    }
+
+    private static string BuildImagesOnlyPlaylist(int tileCount, TrickplayInfoRow info)
+    {
+        var durationPerTile = info.IntervalSeconds * info.TileWidth * info.TileHeight;
         var lines = new List<string>
         {
             "#EXTM3U",
             "#EXT-X-VERSION:7",
             "#EXT-X-PLAYLIST-TYPE:VOD",
             "#EXT-X-IMAGES-ONLY",
-            "#EXT-X-TARGETDURATION:250",
-            $"#EXT-X-TILES:RESOLUTION={width}x{height},LAYOUT={DefaultTileColumns}x{DefaultTileRows},DURATION={DefaultIntervalSeconds:0.###}"
+            $"#EXT-X-TARGETDURATION:{Math.Max(1, (int)Math.Ceiling(durationPerTile))}",
+            $"#EXT-X-TILES:RESOLUTION={info.Width}x{info.Height},LAYOUT={info.TileWidth}x{info.TileHeight},DURATION={info.IntervalSeconds:0.###}"
         };
 
         for (var index = 0; index < tileCount; index++)
         {
-            var duration = DefaultIntervalSeconds * DefaultTileColumns * DefaultTileRows;
-            lines.Add($"#EXTINF:{duration:0.###},");
+            lines.Add($"#EXTINF:{durationPerTile:0.###},");
             lines.Add($"{index}.jpg");
         }
 

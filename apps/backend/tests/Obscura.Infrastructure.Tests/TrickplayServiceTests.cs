@@ -1,4 +1,8 @@
 using Obscura.Infrastructure.Videos;
+using Microsoft.EntityFrameworkCore;
+using Obscura.Domain.Entities;
+using Obscura.Infrastructure.Persistence;
+using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Tests;
 
@@ -48,11 +52,59 @@ public sealed class TrickplayServiceTests : IDisposable
         Assert.Equal("public, max-age=31536000, immutable", tile.CacheControl);
     }
 
+    [Fact]
+    public async Task PlaylistUsesPersistedTrickplayInfoWhenAvailable()
+    {
+        await using var db = CreateContext();
+        var itemId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        db.Entities.Add(new EntityRow
+        {
+            Id = itemId,
+            KindCode = EntityKindRegistry.Video.Code,
+            Title = "Video",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        db.TrickplayInfos.Add(new TrickplayInfoRow
+        {
+            EntityId = itemId,
+            Width = 240,
+            Height = 134,
+            TileWidth = 4,
+            TileHeight = 4,
+            ThumbnailCount = 16,
+            IntervalSeconds = 7,
+            Bandwidth = 1234,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+        var tileRoot = Path.Combine(_cacheRoot, "trickplay", itemId.ToString(), "240");
+        Directory.CreateDirectory(tileRoot);
+        await File.WriteAllTextAsync(Path.Combine(tileRoot, "0.jpg"), "tile0");
+        var service = new TrickplayService(new HlsAssetServiceOptions(_cacheRoot), db);
+
+        var playlist = await service.GetPlaylistAsync(itemId, 240, CancellationToken.None);
+
+        Assert.NotNull(playlist);
+        Assert.Contains("#EXT-X-TILES:RESOLUTION=240x134,LAYOUT=4x4,DURATION=7", playlist.Content);
+        Assert.Contains("#EXT-X-TARGETDURATION:112", playlist.Content);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_cacheRoot))
         {
             Directory.Delete(_cacheRoot, recursive: true);
         }
+    }
+
+    private static ObscuraDbContext CreateContext()
+    {
+        var options = new DbContextOptionsBuilder<ObscuraDbContext>()
+            .UseInMemoryDatabase($"trickplay-{Guid.NewGuid():N}")
+            .Options;
+
+        return new ObscuraDbContext(options);
     }
 }

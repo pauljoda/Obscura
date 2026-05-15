@@ -230,6 +230,55 @@ public sealed class ThumbnailService
         return result.ExitCode == 0 && File.Exists(outputPath);
     }
 
+    /// <summary>
+    /// Composites extracted trickplay frames into numbered Jellyfin-style JPEG tile sheets.
+    /// Each sheet contains up to <paramref name="columns"/> × <paramref name="rows"/> thumbnails.
+    /// </summary>
+    public async Task<int> ComposeTiledJpegSheetsAsync(
+        string frameDir,
+        string outputDir,
+        int columns,
+        int rows,
+        int frameWidth,
+        int frameHeight,
+        int jpegQuality,
+        CancellationToken cancellationToken)
+    {
+        var frames = Directory.GetFiles(frameDir, "frame-*.jpg")
+            .OrderBy(f => f, StringComparer.Ordinal)
+            .ToArray();
+        if (frames.Length == 0) return 0;
+
+        Directory.CreateDirectory(outputDir);
+        var framesPerSheet = columns * rows;
+        var sheetCount = 0;
+
+        foreach (var chunk in frames.Chunk(framesPerSheet))
+        {
+            var outputPath = Path.Combine(outputDir, $"{sheetCount}.jpg");
+            var concatList = Path.Combine(outputDir, $"_concat_{sheetCount}.txt");
+            await File.WriteAllLinesAsync(concatList, chunk.Select(f => $"file '{f}'"), cancellationToken);
+
+            var result = await _processExecutor.RunAsync("ffmpeg",
+                ["-hide_banner", "-loglevel", "error", "-y",
+                 "-f", "concat", "-safe", "0", "-i", concatList,
+                 "-vf", $"scale={frameWidth}:{frameHeight},tile={columns}x{rows}",
+                 "-q:v", jpegQuality.ToString(),
+                 outputPath],
+                null, cancellationToken);
+
+            File.Delete(concatList);
+            if (result.ExitCode != 0 || !File.Exists(outputPath))
+            {
+                break;
+            }
+
+            sheetCount++;
+        }
+
+        return sheetCount;
+    }
+
     private async Task<bool> ExtractSingleKeyframeAsync(
         SemaphoreSlim semaphore, string inputPath, string outputPath,
         double seekSeconds, int width, int height, int jpegQuality,

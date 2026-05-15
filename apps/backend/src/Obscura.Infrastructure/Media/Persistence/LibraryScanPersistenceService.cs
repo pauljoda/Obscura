@@ -606,6 +606,34 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task UpsertTrickplayInfoAsync(
+        Guid entityId,
+        TrickplayInfoData info,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var existing = await db.TrickplayInfos.FindAsync([entityId, info.Width], cancellationToken);
+        if (existing is null)
+        {
+            existing = new TrickplayInfoRow
+            {
+                EntityId = entityId,
+                Width = info.Width,
+                CreatedAt = now
+            };
+            db.TrickplayInfos.Add(existing);
+        }
+
+        existing.Height = info.Height;
+        existing.TileWidth = info.TileWidth;
+        existing.TileHeight = info.TileHeight;
+        existing.ThumbnailCount = info.ThumbnailCount;
+        existing.IntervalSeconds = info.IntervalSeconds;
+        existing.Bandwidth = info.Bandwidth;
+        existing.UpdatedAt = now;
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task UpsertEntityFileAsync(Guid entityId, EntityFileRole role, string path, string? mimeType, long? sizeBytes, CancellationToken cancellationToken)
     {
         var existing = await db.EntityFiles
