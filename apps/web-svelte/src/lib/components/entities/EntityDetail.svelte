@@ -536,6 +536,13 @@
     inset: 0;
     z-index: 0;
     overflow: hidden;
+    mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 100%);
+  }
+
+  .hero[data-no-blur] .hero-reflection {
+    mask-image: none;
+    -webkit-mask-image: none;
   }
 
   .hero-reflection img {
