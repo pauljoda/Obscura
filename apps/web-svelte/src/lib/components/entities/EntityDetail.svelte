@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { marked } from "marked";
   import type { Snippet } from "svelte";
   import {
     Star,
@@ -11,6 +10,7 @@
     Link,
   } from "@lucide/svelte";
   import type { EntityDetailCard } from "$lib/entities/entity-detail";
+  import { renderEntityDescriptionMarkdown } from "$lib/entities/entity-detail-markdown";
   import { hasHero, hasPoster } from "$lib/entities/entity-detail";
   import { placeholderGradient } from "$lib/entities/entity-thumbnail";
 
@@ -87,13 +87,7 @@
 
   const posterVisible = $derived(posterSize !== "none" && hasPoster(card));
 
-  const renderedDescription = $derived.by(() => {
-    if (!card.description) return null;
-    const renderer = new marked.Renderer();
-    renderer.link = ({ href, text }) =>
-      `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
-    return marked.parse(card.description, { renderer, async: false, gfm: true, breaks: true }) as string;
-  });
+  const renderedDescription = $derived(renderEntityDescriptionMarkdown(card.description));
 
   function handleRatingClick(e: MouseEvent, value: number) {
     if (!onRatingChange || ratingBusy || !card.rating) return;
@@ -339,10 +333,6 @@
     overflow: hidden;
   }
 
-  .hero[data-hero-mode="gradient"] {
-    /* No reserved space — fits to content */
-  }
-
   /* ── Sharp banner (mask fades bottom 10% into reflection) ── */
 
   .hero-banner {
@@ -566,23 +556,6 @@
     gap: 0.15rem 0;
     font-size: 0.82rem;
     color: var(--detail-text-muted);
-  }
-
-  .meta-item {
-    white-space: nowrap;
-  }
-
-  .meta-item.is-studio {
-    color: var(--detail-accent);
-  }
-
-  .meta-sep {
-    display: inline-block;
-    width: 3px;
-    height: 3px;
-    margin: 0 0.5rem;
-    background: var(--detail-text-muted);
-    opacity: 0.5;
   }
 
   /* ── Rating (in hero) ──────────────────────────────────── */

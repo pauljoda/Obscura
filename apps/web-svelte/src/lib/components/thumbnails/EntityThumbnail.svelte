@@ -28,6 +28,7 @@
     type EntityThumbnailCard,
     type EntityThumbnailMetaIcon,
   } from "$lib/entities/entity-thumbnail";
+  import { ENTITY_KIND } from "$lib/entities/v2-codes";
   import { loadTrickplayFrames, type TrickplayFrame } from "@obscura/ui-svelte";
 
   interface Props {
@@ -94,7 +95,7 @@
   const hoverable = $derived(hasHoverPreview(card) && !hoverBroken && !spriteError);
   const nsfw = $derived(isNsfw(card.entity.capabilities));
   const rating = $derived(getRatingValue(card.entity.capabilities));
-  const imageOnly = $derived(card.entity.kind === "book-page");
+  const imageOnly = $derived(card.entity.kind === ENTITY_KIND.bookPage);
   const bottomLeft = $derived(card.custom?.bottomLeft);
 
   function fitTitle(node: HTMLHeadingElement, _title: string) {
@@ -227,7 +228,7 @@
     {:else}
       <div class="placeholder-glow" aria-hidden="true"></div>
       <div class="placeholder" aria-hidden="true">
-        {@render PlaceholderIcon({ kind: card.entity.kind })}
+        {@render PlaceholderIcon({ icon: placeholderIcon })}
       </div>
     {/if}
 
@@ -309,29 +310,29 @@
   {/if}
 </svelte:element>
 
-{#snippet PlaceholderIcon({ kind }: { kind: string })}
-  {#if kind.startsWith("video")}
+{#snippet PlaceholderIcon({ icon }: { icon: EntityThumbnailMetaIcon })}
+  {#if icon === "video"}
     <div class="placeholder-frame">
       <Film class="placeholder-icon-framed" />
     </div>
-  {:else if kind.startsWith("audio")}
+  {:else if icon === "audio"}
     <div class="placeholder-audio">
       <Disc3 class="placeholder-disc" />
       <Music class="placeholder-note" />
     </div>
-  {:else if kind === "person"}
+  {:else if icon === "person"}
     <Users class="placeholder-icon" />
-  {:else if kind.startsWith("book")}
+  {:else if icon === "book"}
     <BookOpen class="placeholder-icon" />
-  {:else if kind === "gallery"}
+  {:else if icon === "gallery"}
     <Layers class="placeholder-icon" />
-  {:else if kind === "image"}
+  {:else if icon === "image"}
     <Image class="placeholder-icon" />
-  {:else if kind === "studio"}
+  {:else if icon === "studio"}
     <Building2 class="placeholder-icon" />
-  {:else if kind === "tag"}
+  {:else if icon === "tag"}
     <Tag class="placeholder-icon" />
-  {:else if kind === "collection"}
+  {:else if icon === "collection"}
     <FolderOpen class="placeholder-icon" />
   {:else}
     <Hash class="placeholder-icon" />

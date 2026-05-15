@@ -19,6 +19,7 @@ import type {
   EntitySubtitle,
   EntityUrl,
 } from "$lib/api/generated/model";
+import { CAPABILITY_KIND, ENTITY_FILE_ROLE } from "./v2-codes";
 import { getEntityKindLabel } from "./entity-grid";
 
 /** Entity payload consumed by the shared detail surface. */
@@ -221,7 +222,7 @@ function resolveHero(capabilities: EntityCapability[]): EntityDetailHero | null 
   if (!images) return null;
   if (images.coverUrl) return { src: images.coverUrl, alt: "Cover" };
   const coverItem = images.items.find(
-    (item) => item.kind === "cover" || item.kind === "hero" || item.kind === "banner",
+    (item) => item.kind === ENTITY_FILE_ROLE.cover || item.kind === ENTITY_FILE_ROLE.hero || item.kind === ENTITY_FILE_ROLE.banner,
   );
   if (coverItem) return { src: coverItem.path, alt: coverItem.kind };
   return null;
@@ -231,7 +232,7 @@ function resolvePoster(capabilities: EntityCapability[]): EntityDetailPoster | n
   const images = getImagesCapability(capabilities);
   if (!images) return null;
   const posterItem = images.items.find(
-    (item) => item.kind === "poster" || item.kind === "thumbnail",
+    (item) => item.kind === ENTITY_FILE_ROLE.poster || item.kind === ENTITY_FILE_ROLE.thumbnail,
   );
   if (posterItem) return { src: posterItem.path, alt: posterItem.kind };
   if (images.thumbnailUrl) return { src: images.thumbnailUrl, alt: "Thumbnail" };
@@ -239,7 +240,7 @@ function resolvePoster(capabilities: EntityCapability[]): EntityDetailPoster | n
 }
 
 function resolveFlags(capabilities: EntityCapability[]): EntityDetailFlag[] {
-  const flagsCap = getCapability(capabilities, "flags");
+  const flagsCap = getCapability(capabilities, CAPABILITY_KIND.flags);
   if (!flagsCap) return [];
   const result: EntityDetailFlag[] = [];
   if (flagsCap.isFavorite != null) {
@@ -278,7 +279,7 @@ function resolveTechnical(capabilities: EntityCapability[]): EntityDetailTechnic
 }
 
 function resolveLinks(capabilities: EntityCapability[]): EntityDetailLink[] {
-  const linksCap = getCapability(capabilities, "links");
+  const linksCap = getCapability(capabilities, CAPABILITY_KIND.links);
   if (!linksCap) return [];
   const result: EntityDetailLink[] = [];
   for (const url of linksCap.urls) {
@@ -291,7 +292,7 @@ function resolveLinks(capabilities: EntityCapability[]): EntityDetailLink[] {
 }
 
 function resolveMarkers(capabilities: EntityCapability[]): EntityDetailMarker[] {
-  const markersCap = getCapability(capabilities, "markers");
+  const markersCap = getCapability(capabilities, CAPABILITY_KIND.markers);
   if (!markersCap) return [];
   return markersCap.items.map((item) => {
     const sec = numberValue(item.seconds) ?? 0;
@@ -307,7 +308,7 @@ function resolveMarkers(capabilities: EntityCapability[]): EntityDetailMarker[] 
 }
 
 function resolveSubtitles(capabilities: EntityCapability[]): EntityDetailSubtitle[] {
-  const subsCap = getCapability(capabilities, "subtitles");
+  const subsCap = getCapability(capabilities, CAPABILITY_KIND.subtitles);
   if (!subsCap) return [];
   return subsCap.items.map((item) => ({
     id: item.id,
@@ -320,7 +321,7 @@ function resolveSubtitles(capabilities: EntityCapability[]): EntityDetailSubtitl
 }
 
 function resolveProgress(capabilities: EntityCapability[]): EntityDetailProgress | null {
-  const progressCap = getCapability(capabilities, "progress");
+  const progressCap = getCapability(capabilities, CAPABILITY_KIND.progress);
   if (!progressCap) return null;
   const index = numberValue(progressCap.index) ?? 0;
   const total = numberValue(progressCap.total) ?? 0;
@@ -336,7 +337,7 @@ function resolveProgress(capabilities: EntityCapability[]): EntityDetailProgress
 }
 
 function resolvePositions(capabilities: EntityCapability[]): EntityDetailPosition[] {
-  const positionCap = getCapability(capabilities, "position");
+  const positionCap = getCapability(capabilities, CAPABILITY_KIND.position);
   if (!positionCap) return [];
   return positionCap.items.map((item) => ({
     code: item.code,
@@ -356,16 +357,16 @@ export function entityCardToDetailCard(entity: EntityCard): EntityDetailCardFull
     ...new Set(capabilities.map((c) => c.kind)),
   ] as EntityCapabilityKind[];
 
-  const tagsCap = getCapability(capabilities, "tags");
-  const creditsCap = getCapability(capabilities, "credits");
-  const studioCap = getCapability(capabilities, "studio");
-  const statsCap = getCapability(capabilities, "stats");
-  const countersCap = getCapability(capabilities, "counters");
-  const datesCap = getCapability(capabilities, "dates");
-  const filesCap = getCapability(capabilities, "files");
-  const fingerprintsCap = getCapability(capabilities, "fingerprints");
-  const sourcesCap = getCapability(capabilities, "source");
-  const classificationCap = getCapability(capabilities, "classification");
+  const tagsCap = getCapability(capabilities, CAPABILITY_KIND.tags);
+  const creditsCap = getCapability(capabilities, CAPABILITY_KIND.credits);
+  const studioCap = getCapability(capabilities, CAPABILITY_KIND.studio);
+  const statsCap = getCapability(capabilities, CAPABILITY_KIND.stats);
+  const countersCap = getCapability(capabilities, CAPABILITY_KIND.counters);
+  const datesCap = getCapability(capabilities, CAPABILITY_KIND.dates);
+  const filesCap = getCapability(capabilities, CAPABILITY_KIND.files);
+  const fingerprintsCap = getCapability(capabilities, CAPABILITY_KIND.fingerprints);
+  const sourcesCap = getCapability(capabilities, CAPABILITY_KIND.source);
+  const classificationCap = getCapability(capabilities, CAPABILITY_KIND.classification);
   const ratingValue = getRatingValue(capabilities);
 
   return {
@@ -374,7 +375,7 @@ export function entityCardToDetailCard(entity: EntityCard): EntityDetailCardFull
     hero: resolveHero(capabilities),
     poster: resolvePoster(capabilities),
     description: getDescription(capabilities),
-    rating: getCapability(capabilities, "rating")
+    rating: getCapability(capabilities, CAPABILITY_KIND.rating)
       ? { value: ratingValue, max: 5 }
       : null,
     flags: resolveFlags(capabilities),

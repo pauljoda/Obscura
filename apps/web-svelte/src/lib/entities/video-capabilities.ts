@@ -3,6 +3,7 @@ import type { EntityCapability } from "$lib/api/generated/model";
 import type { VideoPlayerMarker } from "$lib/components/VideoPlayer.svelte";
 import { getCapability } from "$lib/api/capabilities";
 import { v2ApiPath, v2AssetUrl } from "$lib/api/orval-fetch";
+import { CAPABILITY_KIND, ENTITY_FILE_ROLE } from "./v2-codes";
 
 export interface VideoPlayerProps {
   src: string;
@@ -20,13 +21,13 @@ export function extractVideoPlayerProps(
   videoId: string,
   capabilities: EntityCapability[],
 ): VideoPlayerProps {
-  const technical = getCapability(capabilities, "technical");
-  const images = getCapability(capabilities, "images");
-  const files = getCapability(capabilities, "files");
-  const markers = getCapability(capabilities, "markers");
-  const subtitles = getCapability(capabilities, "subtitles");
+  const technical = getCapability(capabilities, CAPABILITY_KIND.technical);
+  const images = getCapability(capabilities, CAPABILITY_KIND.images);
+  const files = getCapability(capabilities, CAPABILITY_KIND.files);
+  const markers = getCapability(capabilities, CAPABILITY_KIND.markers);
+  const subtitles = getCapability(capabilities, CAPABILITY_KIND.subtitles);
 
-  const trickplayFile = files?.items.find((f) => f.role === "trickplay");
+  const trickplayFile = files?.items.find((f) => f.role === ENTITY_FILE_ROLE.trickplay);
   const trickplayVttUrl = trickplayFile ? v2AssetUrl(trickplayFile.path) : "";
   const spriteUrl = trickplayVttUrl
     ? v2AssetUrl(`/assets/videos/${videoId}/sprite.jpg`)
@@ -112,7 +113,7 @@ export function getCounterValue(
   capabilities: EntityCapability[],
   code: string,
 ): number {
-  const counters = getCapability(capabilities, "counters");
+  const counters = getCapability(capabilities, CAPABILITY_KIND.counters);
   const counter = counters?.items.find((c) => c.code === code);
   return counter ? Number(counter.value) : 0;
 }
@@ -128,21 +129,14 @@ export interface PlaybackState {
 export function getPlaybackState(
   capabilities: EntityCapability[],
 ): PlaybackState | null {
-  const cap = capabilities.find((c) => c.kind === "playback") as
-    | (EntityCapability & {
-        playCount?: number;
-        playDurationSeconds?: number;
-        resumeSeconds?: number;
-        lastPlayedAt?: string | null;
-        completedAt?: string | null;
-      })
-    | undefined;
+  const cap = getCapability(capabilities, CAPABILITY_KIND.progress);
   if (!cap) return null;
+  const resumeSeconds = cap.unit === "seconds" ? Number(cap.index) : 0;
   return {
-    playCount: cap.playCount ?? 0,
-    playDurationSeconds: cap.playDurationSeconds ?? 0,
-    resumeSeconds: cap.resumeSeconds ?? 0,
-    lastPlayedAt: cap.lastPlayedAt ?? null,
+    playCount: 0,
+    playDurationSeconds: 0,
+    resumeSeconds: Number.isFinite(resumeSeconds) ? resumeSeconds : 0,
+    lastPlayedAt: cap.updatedAt,
     completedAt: cap.completedAt ?? null,
   };
 }

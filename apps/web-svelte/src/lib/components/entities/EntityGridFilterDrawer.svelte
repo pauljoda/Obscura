@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Building2, CalendarRange, Search, Tag, Users, X } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
+  import { CAPABILITY_KIND } from "$lib/entities/v2-codes";
   import type { EntityGridFilterOption } from "$lib/entities/entity-grid";
 
   interface Props {
@@ -18,24 +19,24 @@
   const optionMap = $derived(new Map(filterOptions.map((option) => [option.id, option])));
 
   const hasTechnicalFilters = $derived(
-    filterOptions.some((option) => option.capabilityKind === "technical"),
+    filterOptions.some((option) => option.capabilityKind === CAPABILITY_KIND.technical),
   );
   const hasRatingFilters = $derived(
-    filterOptions.some((option) => option.capabilityKind === "rating"),
+    filterOptions.some((option) => option.capabilityKind === CAPABILITY_KIND.rating),
   );
   const hasDateFilters = $derived(
-    filterOptions.some((option) => option.capabilityKind === "dates"),
+    filterOptions.some((option) => option.capabilityKind === CAPABILITY_KIND.dates),
   );
   const hasPlaybackOrFileFilters = $derived(
-    filterOptions.some((option) => option.capabilityKind === "files" || option.capabilityKind === "progress"),
+    filterOptions.some((option) => option.capabilityKind === CAPABILITY_KIND.files || option.capabilityKind === CAPABILITY_KIND.progress),
   );
   const hasFlagFilters = $derived(
-    filterOptions.some((option) => option.capabilityKind === "flags"),
+    filterOptions.some((option) => option.capabilityKind === CAPABILITY_KIND.flags),
   );
 
-  const tagOptions = $derived(filterOptions.filter((option) => option.capabilityKind === "tags"));
-  const peopleOptions = $derived(filterOptions.filter((option) => option.capabilityKind === "credits"));
-  const studioOptions = $derived(filterOptions.filter((option) => option.capabilityKind === "studio"));
+  const tagOptions = $derived(filterOptions.filter((option) => option.capabilityKind === CAPABILITY_KIND.tags));
+  const peopleOptions = $derived(filterOptions.filter((option) => option.capabilityKind === CAPABILITY_KIND.credits));
+  const studioOptions = $derived(filterOptions.filter((option) => option.capabilityKind === CAPABILITY_KIND.studio));
   const filteredPeopleOptions = $derived.by(() => {
     const query = peopleSearch.trim().toLowerCase();
     if (!query) return peopleOptions;

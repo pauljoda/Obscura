@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 - Scheduled v2 library scans now target the intended watched folder instead of falling back to all eligible roots, and configured static web builds are served directly even in development/test hosts.
+- Entity detail descriptions now render markdown through a sanitized v2 helper, preserving formatting while stripping unsafe HTML and script URLs.
 - Videos now track playback state on the v2 backend — play count, accumulated watch time, and resume position are persisted per entity. Navigating back to a video resumes from where you left off, and the position is updated every 10 seconds during playback.
 - Every entity type now has a dedicated detail page using the v2 entity API — videos, series, galleries, images, books, audio libraries, performers, studios, tags, and collections all render through the shared `EntityDetail` component with kind-specific sections (credits, reading progress, track lists, bio details) composed via snippet slots. The temporary `/v2/` route prefix has been removed; all detail pages now live at their canonical paths (e.g. `/videos/{id}`, `/performers/{id}`).
 - All browse pages and the dashboard link directly to detail pages via a centralized entity route registry that mirrors the backend hierarchy definitions.
@@ -34,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- Shared v2 entity UI now centralizes entity kind, capability, file-role, label, and route codes in typed frontend registries instead of spreading raw string checks through `EntityThumbnail`, `EntityGrid`, and `EntityDetail`.
 - All entity detail pages consolidated from temporary `/v2/` staging routes to canonical paths (`/videos/[id]`, `/series/[id]`, `/galleries/[id]`, etc.) — the entity route registry now resolves directly to standard routes, fixing back-navigation that previously landed on the old v2 test page.
 - Sidebar footer link now points to the dev tools hub (`/dev/v2-migration`) with migration controls, gate management, and quick links to design system, settings, and operations.
 - Dev stack unified to a single port (8008) — the .NET API now serves everything on 8008 in both dev and production. In development, a SPA proxy middleware forwards page and asset requests to the Vite dev server on 5173 for HMR, while API and cache-asset routes are handled directly by .NET. No more hardcoded port hacks in the client, no more Vite-to-.NET proxy hops for API calls. VS Code "Full Stack" launch starts Postgres, Vite (background HMR), .NET API, and Worker in one action.
@@ -69,6 +71,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 - Scheduled v2 scan jobs now share a typed scan-root payload with scan handlers, including compatibility for already queued `libraryRootId` payloads, so per-root auto scans no longer expand into all-root scans.
 - Static SPA fallback now serves a configured web root without the development Vite proxy intercepting static assets or client-side routes.
+- Entity detail markdown now removes unsafe HTML blocks, event handlers, and `javascript:`/`data:` URLs before Svelte renders the generated HTML.
 - Video stream HEAD requests no longer return 500. The .NET backend now has an explicit HEAD handler that returns Content-Type, Content-Length, and Accept-Ranges headers without opening a file stream — fixing direct playback probe failures.
 - Entity thumbnails in browse grids now navigate to detail pages when clicked. Previously, `selectable` mode caused cards to render as non-clickable `<article>` elements instead of `<a>` links — clicking did nothing. Cards now always render as links when an href is set; the selection checkbox remains independent via event propagation isolation.
 - `EntityDetail` no longer causes horizontal page scroll on mobile — grid children now constrain their width to the viewport instead of blowing out the layout.

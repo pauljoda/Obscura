@@ -1,4 +1,5 @@
 import type { EntityCapability, EntityCard } from "$lib/api/generated/model";
+import { ENTITY_KIND } from "./v2-codes";
 
 /** Standard thumbnail shapes used by global entity cards before route-specific layout chooses a size. */
 export type EntityThumbnailAspectRatio =
@@ -124,14 +125,14 @@ export function pickHoverAsset(card: EntityThumbnailCard, pointerRatio: number):
 
 /** Maps an entity kind code to the closest matching thumbnail meta icon for placeholder display. */
 export function iconForKind(kind: string): EntityThumbnailMetaIcon {
-  if (kind.startsWith("audio")) return "audio";
-  if (kind.startsWith("book")) return "book";
-  if (kind.startsWith("video")) return "video";
-  if (kind === "gallery") return "gallery";
-  if (kind === "image") return "image";
-  if (kind === "person") return "person";
-  if (kind === "studio") return "studio";
-  if (kind === "tag") return "tag";
+  if (kind === ENTITY_KIND.audio || kind === ENTITY_KIND.audioLibrary || kind === ENTITY_KIND.audioTrack) return "audio";
+  if (kind === ENTITY_KIND.book || kind === ENTITY_KIND.bookChapter || kind === ENTITY_KIND.bookPage || kind === ENTITY_KIND.bookVolume) return "book";
+  if (kind === ENTITY_KIND.video || kind === ENTITY_KIND.videoSeason || kind === ENTITY_KIND.videoSeries) return "video";
+  if (kind === ENTITY_KIND.gallery) return "gallery";
+  if (kind === ENTITY_KIND.image) return "image";
+  if (kind === ENTITY_KIND.person) return "person";
+  if (kind === ENTITY_KIND.studio) return "studio";
+  if (kind === ENTITY_KIND.tag) return "tag";
   return "collection";
 }
 
