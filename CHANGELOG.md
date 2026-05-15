@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- .NET API `launchSettings.json` now defaults to port 8010 instead of 8008 — prevents the .NET web host from shadowing the Vite dev server when both run in local dev mode.
 - `EntityDetail` hero area now shows an inline metadata row (studio · date · count) and rating stars directly in the hero overlay, matching the established series detail layout.
 - Credits section now renders as a horizontal scroll row of `EntityThumbnail` cards instead of a flat text grid, making referenced entities (performers, studios) visually consistent with the rest of the app.
 - `EntityDetailCredit` model now includes a `thumbnail` field for displaying entity images in credit cards.

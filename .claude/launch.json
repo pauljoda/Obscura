@@ -8,13 +8,6 @@
       "port": 8008
     },
     {
-      "name": "docker",
-      "runtimeExecutable": "docker",
-      "runtimeArgs": ["compose", "-f", "infra/docker/docker-compose.yml", "up"],
-      "port": 8008,
-      "autoPort": false
-    },
-    {
       "name": "docs",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["docs:dev"],
