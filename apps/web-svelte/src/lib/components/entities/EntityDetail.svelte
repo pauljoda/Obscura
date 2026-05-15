@@ -40,8 +40,6 @@
     posterSize?: EntityDetailPosterSize;
     ratingBusy?: boolean;
     showHero?: boolean;
-    debugNoBlur?: boolean;
-    debugBlurPx?: number;
   }
 
   let {
@@ -50,8 +48,6 @@
     posterSize = "medium",
     ratingBusy = false,
     showHero = true,
-    debugNoBlur = false,
-    debugBlurPx = 15,
   }: Props = $props();
 
   type HeroMode = "image" | "poster-blur" | "gradient";
@@ -102,7 +98,7 @@
 
 <article class="entity-detail" data-poster-size={posterSize} data-hero-mode={heroMode}>
   <!-- Hero -->
-  <div class="hero" data-hero-mode={heroMode} data-no-blur={debugNoBlur || undefined}>
+  <div class="hero" data-hero-mode={heroMode}>
 
     {#snippet heroContent()}
       <div class="hero-content">
@@ -164,7 +160,7 @@
         <div class="hero-reflection">
           <img src={card.hero!.src} alt="" aria-hidden="true" />
         </div>
-        <div class="hero-blur-overlay" style:--hero-blur="{debugBlurPx}px"></div>
+        <div class="hero-blur-overlay"></div>
         {@render heroContent()}
       </div>
     {:else if heroMode === "poster-blur"}
@@ -557,15 +553,9 @@
     position: absolute;
     inset: 0;
     z-index: 1;
-    backdrop-filter: blur(var(--hero-blur, 15px)) saturate(1.3) brightness(0.5);
-    -webkit-backdrop-filter: blur(var(--hero-blur, 15px)) saturate(1.3) brightness(0.5);
+    backdrop-filter: blur(15px) saturate(1.3) brightness(0.5);
+    -webkit-backdrop-filter: blur(15px) saturate(1.3) brightness(0.5);
     background: rgba(7, 8, 11, 0.45);
-  }
-
-  .hero[data-no-blur] .hero-blur-overlay {
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    background: none;
   }
 
 
@@ -599,11 +589,6 @@
     background: rgba(7, 8, 11, 0.45);
   }
 
-  .hero[data-no-blur] .hero-backdrop-blur {
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    background: none;
-  }
 
   /* Gradient background when no images exist */
   .hero-gradient-bg {
