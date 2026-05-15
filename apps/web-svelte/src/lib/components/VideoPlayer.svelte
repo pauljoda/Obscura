@@ -460,16 +460,15 @@
     activeQualityLabel = quality ? qualityLabel(quality, nextQualityMode) : activeQualityLabel;
   }
 
-  function selectSubtitle(id: string | null, options: { notify?: boolean } = {}) {
+  function selectSubtitle(id: string | null) {
     if (controlledSubtitleId === undefined) internalSubtitleId = id;
     onActiveSubtitleTrackIdChange?.(id);
-    if (options.notify) playerNotice = id ? "Captions on." : "Captions off.";
     closeMenus();
   }
 
   function toggleSubtitles() {
     if (activeSubtitleId) {
-      selectSubtitle(null, { notify: true });
+      selectSubtitle(null);
       return;
     }
     const preferred = subtitleDefaults
@@ -478,7 +477,7 @@
           subtitleDefaults.preferredLanguages,
         )
       : null;
-    selectSubtitle(preferred ?? subtitleTracks[0]?.id ?? null, { notify: true });
+    selectSubtitle(preferred ?? subtitleTracks[0]?.id ?? null);
   }
 
   function handleAppearanceChange(next: SubtitleAppearance) {
@@ -654,7 +653,7 @@
     }
     if ("WebKitPlaybackTargetAvailabilityEvent" in window) {
       if (remote.requestAirPlay) {
-        playerNotice = "Opening AirPlay...";
+        playerNotice = null;
         remote.requestAirPlay(event);
         return;
       }
@@ -667,14 +666,13 @@
       return;
     }
 
-    playerNotice = "Opening Cast...";
     if (!(await loadGoogleCastFramework())) {
       playerNotice = "Google Cast is not available for this browser.";
       return;
     }
     try {
       remote.requestGoogleCast(event);
-      playerNotice = "Choose a Cast device from your browser.";
+      playerNotice = null;
       return;
     } catch (error) {
       console.error("ERROR MediaPlayer [vidstack] Google Cast request failed", error);
@@ -715,7 +713,6 @@
       return;
     }
     if (!containerEl) return;
-    playerNotice = "Entering fullscreen...";
     const entered = await enterMediaFullscreen(containerEl, videoEl);
     playerNotice = entered ? null : "Fullscreen is not available for this browser.";
   }
@@ -1614,7 +1611,7 @@
                   {:else if settingsView === "captions"}
                     <button
                       type="button"
-                      onclick={() => selectSubtitle(null, { notify: true })}
+                      onclick={() => selectSubtitle(null)}
                       class={cn("player-settings-option", !activeSubtitleId && "is-active")}
                     >
                       <span>Off</span>
@@ -1626,7 +1623,7 @@
                       {@const displayName = track.label ? `${lang} - ${track.label}` : lang}
                       <button
                         type="button"
-                        onclick={() => selectSubtitle(track.id, { notify: true })}
+                        onclick={() => selectSubtitle(track.id)}
                         class={cn("player-settings-option", isActive && "is-active")}
                       >
                         <span class="min-w-0 flex-1 truncate">{displayName}</span>

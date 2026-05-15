@@ -28,4 +28,11 @@ describe("/videos/[id] detail layout", () => {
     expect(detailPageRule).toContain("max-width: none;");
     expect(detailPageRule).toContain("margin: 0;");
   });
+
+  it("opens the transcript sidecar whenever captions are enabled", () => {
+    const pageSource = readLocalSource("./+page.svelte");
+
+    expect(pageSource).toContain("if (id) userWantsDock = true;");
+    expect(pageSource).toContain('if (id) window.localStorage.setItem("obscura:transcript-docked", "1");');
+  });
 });

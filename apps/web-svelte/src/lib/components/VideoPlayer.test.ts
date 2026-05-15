@@ -266,7 +266,7 @@ describe("VideoPlayer", () => {
     });
   });
 
-  it("announces direct caption toggles", async () => {
+  it("toggles captions without showing a non-error notice", async () => {
     const onActiveSubtitleTrackIdChange = vi.fn();
     render(VideoPlayer, {
       props: {
@@ -281,7 +281,7 @@ describe("VideoPlayer", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Turn captions on" }));
 
     expect(onActiveSubtitleTrackIdChange).toHaveBeenCalledWith("track-en");
-    expect(screen.getByText("Captions on.")).toBeInTheDocument();
+    expect(screen.queryByText("Captions on.")).not.toBeInTheDocument();
   });
 
   it("shows a notice when fullscreen cannot be entered", async () => {

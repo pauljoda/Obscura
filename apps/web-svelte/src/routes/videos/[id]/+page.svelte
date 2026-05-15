@@ -327,8 +327,10 @@
   function handleActiveSubtitleChange(id: string | null) {
     activeSubtitleId = id;
     subtitleChoiceLocked = true;
+    if (id) userWantsDock = true;
     if (typeof window !== "undefined" && video) {
       window.localStorage.setItem(`obscura:subtitle-lang:${video.id}`, id ?? "__off__");
+      if (id) window.localStorage.setItem("obscura:transcript-docked", "1");
     }
   }
 
