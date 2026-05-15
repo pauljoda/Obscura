@@ -6,7 +6,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "pnpm --filter @obscura/web-svelte dev",
-    "dev:api": "dotnet watch --project apps/backend/src/Obscura.Api/Obscura.Api.csproj run --urls http://localhost:8008",
+    "dev:api": "dotnet watch --project apps/backend/src/Obscura.Api/Obscura.Api.csproj run",
     "dev:worker": "dotnet watch --project apps/backend/src/Obscura.Worker/Obscura.Worker.csproj run",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
