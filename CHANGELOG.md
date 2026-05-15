@@ -47,6 +47,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 - `EntityDetail` no longer causes horizontal page scroll on mobile — grid children now constrain their width to the viewport instead of blowing out the layout.
+
+### Changed
+- Detail Lab "Base" tab now shows only the 7 universal capabilities shared by every entity kind (images, description, rating, flags, tags, links, files), providing a clean foundation for the shared detail surface. Kind-specific sections (studio, credits, stats, technical, markers, subtitles, etc.) are exercised only in the "Examples" tab.
 - Video thumbnails and trickplay scrub previews now work correctly on fresh v2 installs. The .NET backend's `thumb.jpg` URL format is now recognized by the SvelteKit asset resolver, the .NET cache directory is searched alongside legacy paths, and trickplay hover uses the composite sprite sheet + VTT instead of fabricating individual frame URLs that never existed on disk. Existing videos need a preview re-run to generate the sprite sheet.
 - Eliminated 404 spam for thumbnail and trickplay assets after v2 migration by adding a multi-layer safety net: the migration now purges any non-source entity_files after legacy import (catching stale compiled SQL), the backend omits the images capability entirely when no image assets exist, and the frontend only uses explicit cover/poster/thumbnail paths instead of falling back to arbitrary first items.
 - Legacy import no longer creates entity_file rows for cache-generated assets (thumbnails, previews, sprites, trickplay, waveforms, posters, backdrops, logos). These files don't exist on disk after migration and caused 404 spam across all grid pages. A library rescan regenerates them correctly under the new entity IDs.

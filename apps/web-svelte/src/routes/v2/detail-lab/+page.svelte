@@ -24,21 +24,8 @@
     "rating",
     "flags",
     "tags",
-    "studio",
-    "credits",
-    "stats",
-    "progress",
-    "dates",
-    "technical",
-    "markers",
-    "subtitles",
     "links",
     "files",
-    "fingerprints",
-    "sources",
-    "positions",
-    "classification",
-    "counters",
   ];
 
   const baseCard = $derived.by((): EntityDetailCard => {
@@ -51,21 +38,8 @@
     if (hiddenSections.has("rating")) card.rating = null;
     if (hiddenSections.has("flags")) card.flags = [];
     if (hiddenSections.has("tags")) card.tags = [];
-    if (hiddenSections.has("studio")) card.studio = null;
-    if (hiddenSections.has("credits")) card.credits = [];
-    if (hiddenSections.has("stats")) card.stats = [];
-    if (hiddenSections.has("counters")) card.counters = [];
-    if (hiddenSections.has("progress")) card.progress = null;
-    if (hiddenSections.has("dates")) card.dates = [];
-    if (hiddenSections.has("technical")) card.technical = [];
-    if (hiddenSections.has("markers")) card.markers = [];
-    if (hiddenSections.has("subtitles")) card.subtitles = [];
     if (hiddenSections.has("links")) card.links = [];
     if (hiddenSections.has("files")) card.files = [];
-    if (hiddenSections.has("fingerprints")) card.fingerprints = [];
-    if (hiddenSections.has("sources")) card.sources = [];
-    if (hiddenSections.has("positions")) card.positions = [];
-    if (hiddenSections.has("classification")) card.classification = null;
 
     return card;
   });
