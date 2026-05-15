@@ -13,6 +13,24 @@ public interface IV2FreshStartService
     Task<V2FreshStartResult> PrepareAsync(CancellationToken cancellationToken);
 
     /// <summary>
+    /// Marks the destructive fresh-start flow as completed after legacy data import
+    /// and cleanup have succeeded. Future prepare requests become idempotent until
+    /// the development re-arm flow clears this marker.
+    /// </summary>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous marker write.</returns>
+    Task MarkPreparedAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Clears the completed fresh-start marker without deleting any v2 data. Used
+    /// when the development upgrade gate is re-armed so the next accepted prepare
+    /// request can intentionally run the migration again.
+    /// </summary>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous marker removal.</returns>
+    Task ClearPreparedAsync(CancellationToken cancellationToken);
+
+    /// <summary>
     /// Performs a full destructive reset of all v2 data — entities, files, settings,
     /// library roots, and cache directories — without creating a backup. Intended for
     /// development-mode gate re-arming so the next migration starts completely fresh.

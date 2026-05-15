@@ -29,7 +29,7 @@ public static class SystemEndpoints
                 ? Results.Ok(await migrations.PromptUpgradeGateAsync(cancellationToken))
                 : Results.NotFound())
             .WithName("PromptV2UpgradeGate")
-            .WithSummary("Re-arms the v2 global entity upgrade gate for local migration testing. Wipes all v2 data and cache.");
+            .WithSummary("Re-arms the v2 global entity upgrade gate for local migration testing without deleting existing v2 data.");
 
         group.MapPost("/v2-fresh-start/prepare", async (
             SystemMigrationService migrations,

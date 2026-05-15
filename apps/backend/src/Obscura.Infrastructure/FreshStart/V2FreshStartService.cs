@@ -3,11 +3,14 @@ using Microsoft.Extensions.Logging;
 using Obscura.Application.Migrations;
 using Obscura.Infrastructure.Backups;
 using Obscura.Infrastructure.Persistence;
+using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.FreshStart;
 
 public sealed class V2FreshStartService : IV2FreshStartService
 {
+    private const string PreparedPreferenceKey = "system:v2-fresh-start:v2-global-entities:prepared";
+
     private readonly ObscuraDbContext _db;
     private readonly DatabaseBackupService _backupService;
     private readonly string _cacheDir;
@@ -27,6 +30,12 @@ public sealed class V2FreshStartService : IV2FreshStartService
 
     public async Task<V2FreshStartResult> PrepareAsync(CancellationToken cancellationToken)
     {
+        var existingResult = await GetExistingPreparationResultAsync(cancellationToken);
+        if (existingResult is not null)
+        {
+            return existingResult;
+        }
+
         var backup = await _backupService.CreateBackupAsync(cancellationToken);
 
         await _db.Database.ExecuteSqlRawAsync(FreshStartSql.PreserveConfiguration, cancellationToken);
@@ -44,11 +53,48 @@ public sealed class V2FreshStartService : IV2FreshStartService
     }
 
     /// <inheritdoc />
+    public async Task MarkPreparedAsync(CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var row = await _db.UiPreferences.FindAsync([PreparedPreferenceKey], cancellationToken);
+        if (row is null)
+        {
+            _db.UiPreferences.Add(new UiPreferenceRow
+            {
+                Key = PreparedPreferenceKey,
+                ValueJson = """{"prepared":true}""",
+                UpdatedAt = now
+            });
+        }
+        else
+        {
+            row.ValueJson = """{"prepared":true}""";
+            row.UpdatedAt = now;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task ClearPreparedAsync(CancellationToken cancellationToken)
+    {
+        var row = await _db.UiPreferences.FindAsync([PreparedPreferenceKey], cancellationToken);
+        if (row is null)
+        {
+            return;
+        }
+
+        _db.UiPreferences.Remove(row);
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task ResetAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Resetting all v2 data for development gate re-arm");
 
         await _db.Database.ExecuteSqlRawAsync(FreshStartSql.ResetAllV2Data, cancellationToken);
+        await ClearPreparedAsync(cancellationToken);
         _logger.LogInformation("Truncated all v2 schema tables");
 
         PurgeStaleCacheDirectories();
@@ -121,4 +167,43 @@ public sealed class V2FreshStartService : IV2FreshStartService
         catch (IOException) { /* skip inaccessible directories */ }
         return size;
     }
+
+    private async Task<bool> IsMarkedPreparedAsync(CancellationToken cancellationToken)
+    {
+        return await _db.UiPreferences.FindAsync([PreparedPreferenceKey], cancellationToken) is not null;
+    }
+
+    private async Task<V2FreshStartResult?> GetExistingPreparationResultAsync(CancellationToken cancellationToken)
+    {
+        var roots = await _db.LibraryRoots.CountAsync(cancellationToken);
+        var hasSettings = await _db.LibrarySettings.AnyAsync(cancellationToken);
+        var isMarkedPrepared = await IsMarkedPreparedAsync(cancellationToken);
+
+        if (!isMarkedPrepared && (!hasSettings || roots == 0))
+        {
+            return null;
+        }
+
+        if (!isMarkedPrepared)
+        {
+            _logger.LogInformation(
+                "Marking v2 fresh-start as prepared because preserved settings and library roots already exist");
+            await MarkPreparedAsync(cancellationToken);
+        }
+        else
+        {
+            _logger.LogInformation("Skipping v2 fresh-start prepare because it has already completed");
+        }
+
+        return new V2FreshStartResult(
+            BackupPath: string.Empty,
+            PreservedLibraryRoots: roots,
+            PreservedSettings: hasSettings,
+            MediaReset: false,
+            CachePurged: false)
+        {
+            AlreadyPrepared = true
+        };
+    }
+
 }

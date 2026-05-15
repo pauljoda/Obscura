@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - V2 subtitle playback now reads tracks through video subtitle API routes, so migrated subtitle files with absolute cache paths can still render in the player and transcript.
 - Local v2 development now serves the live Svelte app through Vite again, so player fixes and route changes appear immediately instead of using a stale production build.
 - V2 upgrade consent now persists in the database, so restarting the dev backend no longer re-opens the upgrade prompt or re-runs the destructive fresh-start reset.
+- V2 fresh-start migration now records completion, treats repeat prepare requests as already handled, and re-arms the dev gate without immediately wiping v2 tables.
 - Scheduled v2 library scans now target the intended watched folder instead of falling back to all eligible roots, and configured static web builds are served directly even in development/test hosts.
 - Entity detail descriptions now render markdown through a sanitized v2 helper, preserving formatting while stripping unsafe HTML and script URLs.
 - Videos now track playback state on the v2 backend — play count, accumulated watch time, and resume position are persisted per entity. Navigating back to a video resumes from where you left off, and the position is updated every 10 seconds during playback.
@@ -96,6 +97,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Local .NET development no longer serves the stale `apps/web-svelte/build` bundle by default; page requests proxy to the running Vite dev server unless a static web root is explicitly configured.
 - V2 subtitle display and transcript panels now read cue text from the normalized `/assets/...` WebVTT files exposed by the v2 subtitle capability, including ASS/SSA tracks that only have a generated VTT fallback.
 - V2 data now persists across backend container/app restarts in dev Docker. The upgrade gate no longer depends only on `/data/upgrade-markers`, which was not mounted by the dev compose backend and could disappear while Postgres data remained.
+- Re-running the v2 fresh-start prepare endpoint no longer backs up, truncates, and re-imports v2 data after a successful migration. The dev gate re-arm now only clears the consent/prepared markers; the destructive reset happens only when the migration prepare step is accepted.
 - Scheduled v2 scan jobs now share a typed scan-root payload with scan handlers, including compatibility for already queued `libraryRootId` payloads, so per-root auto scans no longer expand into all-root scans.
 - Static SPA fallback now serves a configured web root without the development Vite proxy intercepting static assets or client-side routes.
 - Entity detail markdown now removes unsafe HTML blocks, event handlers, and `javascript:`/`data:` URLs before Svelte renders the generated HTML.

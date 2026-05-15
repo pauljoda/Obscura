@@ -13,4 +13,11 @@ public sealed record V2FreshStartResult(
     int PreservedLibraryRoots,
     bool PreservedSettings,
     bool MediaReset,
-    bool CachePurged);
+    bool CachePurged)
+{
+    /// <summary>
+    /// Gets whether a prior completed fresh-start migration was detected and no
+    /// destructive reset was performed for this request.
+    /// </summary>
+    public bool AlreadyPrepared { get; init; }
+}
