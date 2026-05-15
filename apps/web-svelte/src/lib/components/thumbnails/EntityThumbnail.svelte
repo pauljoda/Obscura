@@ -176,10 +176,10 @@
 </script>
 
 <svelte:element
-  this={card.href && !selectable ? "a" : "article"}
-  href={card.href && !selectable ? card.href : undefined}
-  role={card.href && !selectable ? undefined : "group"}
-  tabindex={card.href && !selectable ? undefined : 0}
+  this={card.href ? "a" : "article"}
+  href={card.href || undefined}
+  role={card.href ? undefined : "group"}
+  tabindex={card.href ? undefined : 0}
   class="entity-thumbnail"
   class:is-hovering={pointerRatio !== null}
   class:is-image-only={imageOnly}

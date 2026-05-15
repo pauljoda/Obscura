@@ -56,6 +56,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- Entity thumbnails in browse grids now navigate to detail pages when clicked. Previously, `selectable` mode caused cards to render as non-clickable `<article>` elements instead of `<a>` links — clicking did nothing. Cards now always render as links when an href is set; the selection checkbox remains independent via event propagation isolation.
 - `EntityDetail` no longer causes horizontal page scroll on mobile — grid children now constrain their width to the viewport instead of blowing out the layout.
 
 ### Changed
