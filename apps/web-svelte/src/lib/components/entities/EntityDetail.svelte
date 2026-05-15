@@ -506,8 +506,8 @@
     position: relative;
     z-index: 2;
     line-height: 0;
-    mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
   }
 
   .hero-banner img {
@@ -538,10 +538,10 @@
     object-fit: cover;
   }
 
-  /* Banner mode: flip vertically so the bottom of the banner reflects downward */
+  /* Banner mode: same orientation as banner, aligned so colors match at the seam */
   .hero[data-hero-mode="image"] .hero-backdrop-img img {
-    object-position: center bottom;
-    transform: scale(1.15) scaleY(-1);
+    object-position: center center;
+    transform: scale(1.2);
   }
 
   /* Poster-blur mode: scale to fill, center on poster content */
@@ -553,16 +553,16 @@
   .hero-backdrop-blur {
     position: absolute;
     inset: 0;
-    backdrop-filter: blur(44px) saturate(1.5) brightness(0.55);
-    -webkit-backdrop-filter: blur(44px) saturate(1.5) brightness(0.55);
-    background: rgba(7, 8, 11, 0.25);
+    backdrop-filter: blur(28px) saturate(1.4) brightness(0.6);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4) brightness(0.6);
+    background: rgba(7, 8, 11, 0.15);
   }
 
-  /* Poster-blur: softer, smoother blur */
+  /* Poster-blur: slightly heavier blur since the poster has sharp edges */
   .hero[data-hero-mode="poster-blur"] .hero-backdrop-blur {
-    backdrop-filter: blur(64px) saturate(1.6) brightness(0.5);
-    -webkit-backdrop-filter: blur(64px) saturate(1.6) brightness(0.5);
-    background: rgba(7, 8, 11, 0.35);
+    backdrop-filter: blur(48px) saturate(1.5) brightness(0.55);
+    -webkit-backdrop-filter: blur(48px) saturate(1.5) brightness(0.55);
+    background: rgba(7, 8, 11, 0.2);
   }
 
   .hero-backdrop-fade {
