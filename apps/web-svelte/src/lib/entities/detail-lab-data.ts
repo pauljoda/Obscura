@@ -273,7 +273,7 @@ export const detailLabRows: EntityDetailLabRow[] = [
               "Pete the Cat is a groovy blue cat who never lets anything get him down. With his cool attitude and love of music, Pete faces everyday challenges with a positive outlook.\n\nBased on the **bestselling book series** by James Dean and Kimberly Dean:\n\n- Musical adventures with Pete and his friends\n- Life lessons about staying positive\n- *Far-out* groovy vibes in every episode\n\n> \"It's all good.\"\n\nA Prime Original animated series.",
             ),
             rating(4),
-            flags({ isFavorite: true, isNsfw: false, isOrganized: true }),
+            flags({ isFavorite: true, isNsfw: true, isOrganized: true }),
             tags(["animation", "comedy", "short-film", "open-source", "blender"]),
             studio("studio-blender", "Blender Foundation"),
             credits([

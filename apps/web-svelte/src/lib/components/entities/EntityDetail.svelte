@@ -4,7 +4,7 @@
   import {
     Star,
     Heart,
-    ShieldAlert,
+    Flame,
     CheckCircle,
     ExternalLink,
     FileText,
@@ -19,6 +19,8 @@
   interface Props {
     card: EntityDetailCard;
     onRatingChange?: (value: number | null) => void;
+    onFavoriteToggle?: () => void;
+    onOrganizedToggle?: () => void;
     posterSize?: EntityDetailPosterSize;
     ratingBusy?: boolean;
     showHero?: boolean;
@@ -37,6 +39,8 @@
   let {
     card,
     onRatingChange,
+    onFavoriteToggle,
+    onOrganizedToggle,
     posterSize = "medium",
     ratingBusy = false,
     showHero = true,
@@ -46,6 +50,27 @@
     afterBody,
     extraSections,
   }: Props = $props();
+
+  let favoriteAnimating = $state(false);
+  let organizedAnimating = $state(false);
+
+  const isFavorite = $derived(card.flags.find((f) => f.code === "favorite")?.active ?? false);
+  const isNsfw = $derived(card.flags.find((f) => f.code === "nsfw")?.active ?? false);
+  const isOrganized = $derived(card.flags.find((f) => f.code === "organized")?.active ?? false);
+
+  function handleFavoriteClick() {
+    if (!onFavoriteToggle) return;
+    favoriteAnimating = true;
+    onFavoriteToggle();
+    setTimeout(() => (favoriteAnimating = false), 400);
+  }
+
+  function handleOrganizedClick() {
+    if (!onOrganizedToggle) return;
+    organizedAnimating = true;
+    onOrganizedToggle();
+    setTimeout(() => (organizedAnimating = false), 400);
+  }
 
   type HeroMode = "image" | "poster-blur" | "gradient";
 
@@ -86,7 +111,41 @@
         {/if}
 
         <div class="hero-text">
-          <span class="kind-badge">{card.kindLabel}</span>
+          <div class="action-badges">
+            <button
+              type="button"
+              class="action-badge favorite"
+              class:active={isFavorite}
+              class:animating={favoriteAnimating}
+              disabled={!onFavoriteToggle}
+              aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+              onclick={handleFavoriteClick}
+            >
+              <Heart class="h-4 w-4" />
+            </button>
+
+            {#if isNsfw}
+              <span class="action-badge nsfw active" aria-label="NSFW">
+                <Flame class="h-4 w-4" />
+              </span>
+            {/if}
+
+            <button
+              type="button"
+              class="action-badge organized"
+              class:active={isOrganized}
+              class:animating={organizedAnimating}
+              disabled={!onOrganizedToggle}
+              aria-label={isOrganized ? "Mark as unorganized" : "Mark as organized"}
+              onclick={handleOrganizedClick}
+            >
+              <CheckCircle class="h-4 w-4" />
+            </button>
+
+            {#if extraFlags}
+              {@render extraFlags()}
+            {/if}
+          </div>
           <h1>{card.entity.title}</h1>
 
           {#if heroMeta}
@@ -150,28 +209,6 @@
   </div>
 
   <div class="detail-body">
-    <!-- Flags row -->
-    {#if card.flags.length > 0}
-      <div class="flags-row">
-        {#each card.flags as flag (flag.code)}
-          <span class="flag-badge" class:active={flag.active} data-flag={flag.code}>
-            {#if flag.code === "favorite"}
-              <Heart class="h-3.5 w-3.5" />
-            {:else if flag.code === "nsfw"}
-              <ShieldAlert class="h-3.5 w-3.5" />
-            {:else}
-              <CheckCircle class="h-3.5 w-3.5" />
-            {/if}
-            {flag.label}
-          </span>
-        {/each}
-
-        {#if extraFlags}
-          {@render extraFlags()}
-        {/if}
-      </div>
-    {/if}
-
     <!-- Description -->
     {#if renderedDescription}
       <div class="description-content markdown-body">
@@ -427,18 +464,81 @@
     min-width: 0;
   }
 
-  .kind-badge {
-    display: inline-block;
-    width: fit-content;
-    padding: 0.15rem 0.5rem;
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.65rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--detail-accent);
-    border: 1px solid var(--detail-accent-muted);
-    background: rgba(196, 154, 90, 0.08);
+  /* ── Action badges (favorite, nsfw, organized) ──────── */
+
+  .action-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .action-badge {
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border: 1px solid var(--detail-border);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--detail-text-disabled);
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+
+  .action-badge:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  .action-badge:not(:disabled):hover {
+    color: var(--detail-text-muted);
+    border-color: var(--detail-text-muted);
+  }
+
+  /* Favorite — red when active */
+  .action-badge.favorite.active {
+    color: #e06070;
+    border-color: rgba(224, 96, 112, 0.5);
+    box-shadow: 0 0 10px rgba(224, 96, 112, 0.2);
+  }
+
+  .action-badge.favorite.active:not(:disabled):hover {
+    color: #e06070;
+    border-color: rgba(224, 96, 112, 0.7);
+  }
+
+  .action-badge.favorite.animating {
+    animation: badge-pop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  /* NSFW — red fire, display only */
+  .action-badge.nsfw {
+    cursor: default;
+    color: #e06070;
+    border-color: rgba(224, 96, 112, 0.5);
+    box-shadow: 0 0 8px rgba(224, 96, 112, 0.15);
+  }
+
+  /* Organized — green when active */
+  .action-badge.organized.active {
+    color: #80b898;
+    border-color: rgba(78, 138, 98, 0.5);
+    box-shadow: 0 0 10px rgba(78, 138, 98, 0.2);
+  }
+
+  .action-badge.organized.active:not(:disabled):hover {
+    color: #80b898;
+    border-color: rgba(78, 138, 98, 0.7);
+  }
+
+  .action-badge.organized.animating {
+    animation: badge-pop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  @keyframes badge-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.3); }
+    100% { transform: scale(1); }
   }
 
   h1 {
@@ -524,51 +624,6 @@
     display: grid;
     gap: 0;
     padding: 1rem 1.5rem 1.5rem;
-  }
-
-  /* ── Flags row ─────────────────────────────────────────── */
-
-  .flags-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-    padding-bottom: 0.85rem;
-  }
-
-  .flag-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 0.2rem 0.5rem;
-    font-size: 0.72rem;
-    font-weight: 500;
-    color: var(--detail-text-muted);
-    border: 1px solid var(--detail-border);
-    background: var(--detail-surface-raised);
-  }
-
-  .flag-badge.active {
-    color: var(--detail-text);
-    border-color: var(--detail-accent-muted);
-  }
-
-  .flag-badge.active[data-flag="favorite"] {
-    color: #e06070;
-    border-color: rgba(224, 96, 112, 0.4);
-    box-shadow: 0 0 10px rgba(224, 96, 112, 0.15);
-  }
-
-  .flag-badge.active[data-flag="nsfw"] {
-    color: #e06070;
-    border-color: rgba(224, 96, 112, 0.4);
-    box-shadow: 0 0 10px rgba(224, 96, 112, 0.15);
-  }
-
-  .flag-badge.active[data-flag="organized"] {
-    color: #80b898;
-    border-color: rgba(78, 138, 98, 0.4);
-    box-shadow: 0 0 10px rgba(78, 138, 98, 0.15);
   }
 
   /* ── Description (markdown) ─────────────────────────────── */

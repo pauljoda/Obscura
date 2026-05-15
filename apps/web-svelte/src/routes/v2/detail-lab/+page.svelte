@@ -19,6 +19,11 @@
   let posterSize = $state<EntityDetailPosterSize>("medium");
   let hiddenSections = $state<Set<string>>(new Set());
 
+  // ── Optimistic flag/rating state for the lab (no real backend) ──
+  let ratingOverride = $state<number | null>(null);
+  let favoriteOverride = $state<boolean | null>(null);
+  let organizedOverride = $state<boolean | null>(null);
+
   const allSectionNames = [
     "description",
     "rating",
@@ -44,12 +49,43 @@
     return card;
   });
 
-  const activeCard = $derived(activeTab === "base" ? baseCard : exampleCards[exampleIndex]);
+  const activeCard = $derived.by(() => {
+    const raw = activeTab === "base" ? baseCard : exampleCards[exampleIndex];
+    if (!raw) return raw;
+
+    const card = { ...raw };
+
+    if (ratingOverride !== null && card.rating) {
+      card.rating = { ...card.rating, value: ratingOverride };
+    }
+
+    if (favoriteOverride !== null || organizedOverride !== null) {
+      card.flags = card.flags.map((f) => {
+        if (f.code === "favorite" && favoriteOverride !== null) return { ...f, active: favoriteOverride };
+        if (f.code === "organized" && organizedOverride !== null) return { ...f, active: organizedOverride };
+        return f;
+      });
+    }
+
+    return card;
+  });
+
   const sections = $derived(activeCard ? presentSections(activeCard) : []);
 
   function handleRatingChange(value: number | null) {
     ratingBusy = true;
+    ratingOverride = value ?? 0;
     setTimeout(() => (ratingBusy = false), 400);
+  }
+
+  function handleFavoriteToggle() {
+    const current = favoriteOverride ?? (activeCard?.flags.find((f) => f.code === "favorite")?.active ?? false);
+    favoriteOverride = !current;
+  }
+
+  function handleOrganizedToggle() {
+    const current = organizedOverride ?? (activeCard?.flags.find((f) => f.code === "organized")?.active ?? false);
+    organizedOverride = !current;
   }
 
   function toggleSection(name: string) {
@@ -175,6 +211,8 @@
     <EntityDetail
       card={activeCard}
       onRatingChange={handleRatingChange}
+      onFavoriteToggle={handleFavoriteToggle}
+      onOrganizedToggle={handleOrganizedToggle}
       {ratingBusy}
       {posterSize}
       showHero={true}
