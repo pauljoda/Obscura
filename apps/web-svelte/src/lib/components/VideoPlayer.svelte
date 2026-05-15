@@ -112,6 +112,12 @@
     state: "idle" | "pending" | "ready" | "error";
     error?: string | null;
   };
+  type CastWindow = Window &
+    typeof globalThis & {
+      chrome?: { cast?: { isAvailable?: boolean } };
+      cast?: { framework?: unknown };
+      __onGCastApiAvailable?: (isAvailable: boolean) => void;
+    };
 
   interface QualityOption {
     value: QualityMode;
@@ -151,6 +157,8 @@
 
   const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2];
   const HLS_RETRY_AFTER_SECONDS = 2;
+  const GOOGLE_CAST_SENDER_URL =
+    "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1";
 
   let containerEl: HTMLDivElement | undefined = $state();
   let player: MediaPlayerElement | undefined = $state();
@@ -202,6 +210,8 @@
   let activeCueText = $state<string | null>(null);
   let localAppearance = $state<Partial<SubtitleAppearance> | null>(null);
   let autoSelected = false;
+  let googleCastFrameworkPromise: Promise<boolean> | null = null;
+  let googleCastFrameworkAvailable = false;
 
   const directPlayable = $derived.by(() => {
     const video = (videoEl ?? directCapabilityProbe) as HTMLVideoElement | null;
@@ -450,15 +460,16 @@
     activeQualityLabel = quality ? qualityLabel(quality, nextQualityMode) : activeQualityLabel;
   }
 
-  function selectSubtitle(id: string | null) {
+  function selectSubtitle(id: string | null, options: { notify?: boolean } = {}) {
     if (controlledSubtitleId === undefined) internalSubtitleId = id;
     onActiveSubtitleTrackIdChange?.(id);
+    if (options.notify) playerNotice = id ? "Captions on." : "Captions off.";
     closeMenus();
   }
 
   function toggleSubtitles() {
     if (activeSubtitleId) {
-      selectSubtitle(null);
+      selectSubtitle(null, { notify: true });
       return;
     }
     const preferred = subtitleDefaults
@@ -467,7 +478,7 @@
           subtitleDefaults.preferredLanguages,
         )
       : null;
-    selectSubtitle(preferred ?? subtitleTracks[0]?.id ?? null);
+    selectSubtitle(preferred ?? subtitleTracks[0]?.id ?? null, { notify: true });
   }
 
   function handleAppearanceChange(next: SubtitleAppearance) {
@@ -558,7 +569,78 @@
     closeMenus();
   }
 
-  function requestCast(event: MouseEvent) {
+  function castWindow(): CastWindow | null {
+    if (typeof window === "undefined") return null;
+    return window as CastWindow;
+  }
+
+  function isGoogleCastFrameworkAvailable(): boolean {
+    const target = castWindow();
+    return Boolean(googleCastFrameworkAvailable || target?.chrome?.cast?.isAvailable);
+  }
+
+  function loadGoogleCastFramework(): Promise<boolean> {
+    const target = castWindow();
+    if (!target || typeof document === "undefined") return Promise.resolve(false);
+    if (isGoogleCastFrameworkAvailable()) {
+      googleCastFrameworkAvailable = true;
+      return Promise.resolve(true);
+    }
+    if (googleCastFrameworkPromise) return googleCastFrameworkPromise;
+
+    googleCastFrameworkPromise = new Promise<boolean>((resolve) => {
+      let settled = false;
+      let timeoutId: number;
+      const finish = (available: boolean) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeoutId);
+        googleCastFrameworkAvailable = available;
+        resolve(available);
+      };
+      const previousCallback = target.__onGCastApiAvailable;
+      target.__onGCastApiAvailable = (available: boolean) => {
+        previousCallback?.(available);
+        finish(Boolean(available));
+      };
+      timeoutId = window.setTimeout(
+        () => finish(Boolean(target.chrome?.cast?.isAvailable)),
+        10000,
+      );
+      let script = document.querySelector<HTMLScriptElement>(
+        `script[src="${GOOGLE_CAST_SENDER_URL}"]`,
+      );
+      if (!script) {
+        script = document.createElement("script");
+        script.src = GOOGLE_CAST_SENDER_URL;
+        script.async = true;
+        document.head.appendChild(script);
+      }
+      script.addEventListener("error", () => finish(false), { once: true });
+      script.addEventListener(
+        "load",
+        () => {
+          if (target.chrome?.cast?.isAvailable) finish(true);
+        },
+        { once: true },
+      );
+    }).finally(() => {
+      googleCastFrameworkPromise = null;
+    });
+
+    return googleCastFrameworkPromise;
+  }
+
+  function animateControlPress(event: MouseEvent) {
+    const target = event.currentTarget;
+    if (!(target instanceof HTMLElement)) return;
+    target.classList.remove("is-pressed");
+    void target.offsetWidth;
+    target.classList.add("is-pressed");
+    window.setTimeout(() => target.classList.remove("is-pressed"), 180);
+  }
+
+  async function requestCast(event: MouseEvent) {
     if (!player) return;
     const remote = (player as unknown as {
       remoteControl?: {
@@ -566,30 +648,38 @@
         requestGoogleCast?: (trigger?: Event) => void;
       };
     }).remoteControl;
-    const castApi = (window as unknown as {
-      chrome?: { cast?: { isAvailable?: boolean } };
-    }).chrome?.cast;
     if (!remote?.requestAirPlay && !remote?.requestGoogleCast) {
       playerNotice = "Casting is not available for this player.";
       return;
     }
     if ("WebKitPlaybackTargetAvailabilityEvent" in window) {
       if (remote.requestAirPlay) {
+        playerNotice = "Opening AirPlay...";
         remote.requestAirPlay(event);
         return;
       }
       playerNotice = "AirPlay is not available for this player.";
       return;
     }
-    if (!castApi?.isAvailable) {
+
+    if (!remote.requestGoogleCast) {
+      playerNotice = "Google Cast is not available for this player.";
+      return;
+    }
+
+    playerNotice = "Opening Cast...";
+    if (!(await loadGoogleCastFramework())) {
       playerNotice = "Google Cast is not available for this browser.";
       return;
     }
-    if (remote.requestGoogleCast) {
+    try {
       remote.requestGoogleCast(event);
+      playerNotice = "Choose a Cast device from your browser.";
       return;
+    } catch (error) {
+      console.error("ERROR MediaPlayer [vidstack] Google Cast request failed", error);
+      playerNotice = "Google Cast is not available for this browser.";
     }
-    playerNotice = "Google Cast is not available for this player.";
   }
 
   function openSettings(view: SettingsView = "root") {
@@ -619,13 +709,15 @@
     openSettings();
   }
 
-  function toggleFullscreen() {
+  async function toggleFullscreen() {
     if (isDocumentFullscreen()) {
       exitDocumentFullscreen();
       return;
     }
     if (!containerEl) return;
-    enterMediaFullscreen(containerEl, videoEl);
+    playerNotice = "Entering fullscreen...";
+    const entered = await enterMediaFullscreen(containerEl, videoEl);
+    playerNotice = entered ? null : "Fullscreen is not available for this browser.";
   }
 
   function updateTimelineHover(clientX: number, rect: DOMRect) {
@@ -862,6 +954,7 @@
     directCapabilityProbe = document.createElement("video");
     localAppearance = readLocalSubtitleAppearance();
     syncVideoElement();
+    if (showCastControls) void loadGoogleCastFramework();
 
     const handleKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
@@ -888,7 +981,7 @@
           toggleMute();
           break;
         case "f":
-          toggleFullscreen();
+          void toggleFullscreen();
           break;
       }
     };
@@ -1353,11 +1446,16 @@
               {#if subtitleTracks.length > 0}
                 <button
                   type="button"
-                  onclick={toggleSubtitles}
+                  onclick={(event) => {
+                    animateControlPress(event);
+                    toggleSubtitles();
+                  }}
                   aria-label={activeSubtitleId ? "Turn captions off" : "Turn captions on"}
                   class={cn(
-                    "player-control-button subtitle-control-button text-[0.56rem] transition-colors hover:border-white/20 hover:text-white sm:text-[0.72rem]",
-                    activeSubtitleId ? "text-accent-100" : "text-white/82",
+                    "player-control-button subtitle-control-button text-[0.56rem] sm:text-[0.72rem]",
+                    activeSubtitleId
+                      ? "border-accent-500/45 bg-accent-500/12 text-accent-100 shadow-[var(--shadow-glow-accent)]"
+                      : "text-white/82",
                   )}
                 >
                   <Captions class="h-3 w-3 sm:h-3.5 sm:w-3.5" />
@@ -1368,9 +1466,12 @@
             <div class="relative flex min-w-0 items-center justify-end gap-2">
               <button
                 type="button"
-                onclick={toggleSettings}
+                onclick={(event) => {
+                  animateControlPress(event);
+                  toggleSettings();
+                }}
                 class={cn(
-                  "player-control-button justify-center p-0 text-white/80 transition-colors hover:border-white/20 hover:text-white",
+                  "player-control-button justify-center p-0 text-white/80",
                   settingsMenuRendered &&
                     !settingsMenuClosing &&
                     "border-accent-500/40 text-accent-100 shadow-[var(--shadow-glow-accent)]",
@@ -1384,8 +1485,11 @@
               {#if showCastControls}
                 <button
                   type="button"
-                  onclick={requestCast}
-                  class="player-control-button justify-center p-0 text-white/80 transition-colors hover:border-white/20 hover:text-white"
+                  onclick={(event) => {
+                    animateControlPress(event);
+                    void requestCast(event);
+                  }}
+                  class="player-control-button justify-center p-0 text-white/80"
                   aria-label="Cast"
                   title="Cast"
                 >
@@ -1395,8 +1499,11 @@
 
               <button
                 type="button"
-                onclick={toggleFullscreen}
-                class="player-control-button justify-center p-0 text-white/80 transition-colors hover:border-white/20 hover:text-white"
+                onclick={(event) => {
+                  animateControlPress(event);
+                  void toggleFullscreen();
+                }}
+                class="player-control-button justify-center p-0 text-white/80"
                 aria-label="Fullscreen"
               >
                 <Maximize class="h-3 w-3 sm:h-4 sm:w-4" />
@@ -1507,7 +1614,7 @@
                   {:else if settingsView === "captions"}
                     <button
                       type="button"
-                      onclick={() => selectSubtitle(null)}
+                      onclick={() => selectSubtitle(null, { notify: true })}
                       class={cn("player-settings-option", !activeSubtitleId && "is-active")}
                     >
                       <span>Off</span>
@@ -1519,7 +1626,7 @@
                       {@const displayName = track.label ? `${lang} - ${track.label}` : lang}
                       <button
                         type="button"
-                        onclick={() => selectSubtitle(track.id)}
+                        onclick={() => selectSubtitle(track.id, { notify: true })}
                         class={cn("player-settings-option", isActive && "is-active")}
                       >
                         <span class="min-w-0 flex-1 truncate">{displayName}</span>
@@ -1678,6 +1785,39 @@
     height: 1.75rem;
     min-height: 1.75rem;
     min-width: 1.75rem;
+    transform: translateY(0) scale(1);
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease,
+      box-shadow 120ms ease,
+      color 120ms ease,
+      transform 120ms ease;
+  }
+
+  .player-control-button:hover,
+  .player-control-button:focus-visible {
+    background: rgba(26, 31, 41, 0.96);
+    border-color: rgba(196, 154, 90, 0.42);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 0 18px rgba(196, 154, 90, 0.28),
+      0 4px 16px rgba(0, 0, 0, 0.36);
+    color: white;
+  }
+
+  .player-control-button:focus-visible {
+    outline: 1px solid rgba(196, 154, 90, 0.72);
+    outline-offset: 2px;
+  }
+
+  .player-control-button:active,
+  .player-control-button.is-pressed {
+    background: rgba(33, 39, 51, 0.98);
+    border-color: rgba(196, 154, 90, 0.58);
+    box-shadow:
+      inset 0 0 14px rgba(196, 154, 90, 0.18),
+      0 0 20px rgba(196, 154, 90, 0.34);
+    transform: translateY(1px) scale(0.94);
   }
 
   .play-glyph {
@@ -1728,16 +1868,19 @@
 
   .player-settings-menu {
     animation: player-settings-sheet-in 180ms ease-out;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 5rem);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 4.5rem);
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    max-height: min(64dvh, 28rem);
-    min-width: min(25rem, calc(100vw - 1.5rem));
+    max-height: min(72dvh, calc(100dvh - 6rem));
+    min-width: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 0.35rem;
     position: fixed;
-    right: 0.75rem;
+    right: max(0.75rem, env(safe-area-inset-right, 0px));
+    transform-origin: bottom right;
+    width: min(25rem, calc(100vw - 1.5rem));
     z-index: 210;
   }
 
@@ -1950,12 +2093,13 @@
 
     .player-settings-menu {
       animation: player-settings-flyout-in 160ms ease-out;
-      bottom: 3rem;
-      min-width: 19rem;
+      bottom: max(4.75rem, env(safe-area-inset-bottom, 0px));
+      max-height: min(72dvh, calc(100dvh - 6rem));
+      min-width: min(19rem, calc(100vw - 2rem));
       transform-origin: bottom right;
-      position: absolute;
-      right: 0;
-      width: 22rem;
+      position: fixed;
+      right: max(1rem, env(safe-area-inset-right, 0px));
+      width: min(22rem, calc(100vw - 2rem));
     }
 
     .player-settings-menu.is-closing {

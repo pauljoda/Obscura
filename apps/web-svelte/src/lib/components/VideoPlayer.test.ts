@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import VideoPlayer from "./VideoPlayer.svelte";
@@ -27,6 +28,9 @@ const subtitleDefaults: {
     opacity: 1,
   },
 };
+
+const googleCastSenderUrl =
+  "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1";
 
 function makeTrack(
   id: string,
@@ -76,6 +80,13 @@ describe("VideoPlayer", () => {
   });
 
   afterEach(() => {
+    document
+      .querySelectorAll(`script[src="${googleCastSenderUrl}"]`)
+      .forEach((script) => script.remove());
+    Reflect.deleteProperty(window, "__onGCastApiAvailable");
+    Reflect.deleteProperty(window, "chrome");
+    Reflect.deleteProperty(window, "cast");
+    Reflect.deleteProperty(HTMLElement.prototype, "requestFullscreen");
     vi.unstubAllGlobals();
   });
 
@@ -190,7 +201,7 @@ describe("VideoPlayer", () => {
     expect(screen.getByText("Casting is not available for this player.")).toBeInTheDocument();
   });
 
-  it("shows an unavailable notice when Google Cast is not available", async () => {
+  it("loads the Google Cast sender framework and requests Cast once available", async () => {
     const requestGoogleCast = vi.fn();
     render(VideoPlayer, {
       props: {
@@ -208,10 +219,104 @@ describe("VideoPlayer", () => {
       value: { requestGoogleCast },
     });
 
+    await waitFor(() => {
+      expect(document.querySelector(`script[src="${googleCastSenderUrl}"]`)).toBeInTheDocument();
+    });
+
+    (window as unknown as { __onGCastApiAvailable?: (available: boolean) => void })
+      .__onGCastApiAvailable?.(true);
+
+    await fireEvent.click(screen.getByRole("button", { name: "Cast" }));
+
+    await waitFor(() => {
+      expect(requestGoogleCast).toHaveBeenCalled();
+    });
+  });
+
+  it("shows an unavailable notice when Google Cast cannot load", async () => {
+    const requestGoogleCast = vi.fn();
+    render(VideoPlayer, {
+      props: {
+        src: "/api/videos/video-1/hls/master.m3u8",
+        defaultPlaybackMode: "hls",
+      },
+    });
+
+    await waitFor(() => {
+      expect(document.querySelector("media-player")).toBeInTheDocument();
+    });
+
+    Object.defineProperty(document.querySelector("media-player"), "remoteControl", {
+      configurable: true,
+      value: { requestGoogleCast },
+    });
+
+    await waitFor(() => {
+      expect(document.querySelector(`script[src="${googleCastSenderUrl}"]`)).toBeInTheDocument();
+    });
+
+    (window as unknown as { __onGCastApiAvailable?: (available: boolean) => void })
+      .__onGCastApiAvailable?.(false);
+
     await fireEvent.click(screen.getByRole("button", { name: "Cast" }));
 
     expect(requestGoogleCast).not.toHaveBeenCalled();
-    expect(screen.getByText("Google Cast is not available for this browser.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Google Cast is not available for this browser.")).toBeInTheDocument();
+    });
+  });
+
+  it("announces direct caption toggles", async () => {
+    const onActiveSubtitleTrackIdChange = vi.fn();
+    render(VideoPlayer, {
+      props: {
+        subtitleTracks: [makeTrack("track-en", "en")],
+        subtitleDefaults,
+        activeSubtitleTrackId: null,
+        subtitleChoiceLocked: true,
+        onActiveSubtitleTrackIdChange,
+      },
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Turn captions on" }));
+
+    expect(onActiveSubtitleTrackIdChange).toHaveBeenCalledWith("track-en");
+    expect(screen.getByText("Captions on.")).toBeInTheDocument();
+  });
+
+  it("shows a notice when fullscreen cannot be entered", async () => {
+    Object.defineProperty(HTMLElement.prototype, "requestFullscreen", {
+      configurable: true,
+      value: vi.fn().mockRejectedValue(new Error("Fullscreen blocked")),
+    });
+
+    render(VideoPlayer, {
+      props: {
+        src: "/api/videos/video-1/hls/master.m3u8",
+        defaultPlaybackMode: "hls",
+      },
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Fullscreen" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Fullscreen is not available for this browser.")).toBeInTheDocument();
+    });
+  });
+
+  it("keeps the settings flyout fixed to the viewport with screen-fit bounds", async () => {
+    const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
+
+    expect(source).toContain("max-height: min(72dvh, calc(100dvh - 6rem))");
+    expect(source).not.toMatch(/\.player-settings-menu\s*\{[^}]*position:\s*absolute/s);
+  });
+
+  it("defines hover, focus, and click feedback for player controls", async () => {
+    const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
+
+    expect(source).toContain(".player-control-button:hover");
+    expect(source).toContain(".player-control-button:focus-visible");
+    expect(source).toContain(".player-control-button.is-pressed");
   });
 
   it("waits for hls2 readiness before attaching the manifest to Vidstack", async () => {

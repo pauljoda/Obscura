@@ -51,16 +51,36 @@ export function exitDocumentFullscreen(): void {
 }
 
 /** Enter fullscreen: try the container (keeps custom controls on desktop), then the video element, then WebKit native video fullscreen (iOS). */
-export function enterMediaFullscreen(container: Element, video: HTMLVideoElement | null): void {
+export async function enterMediaFullscreen(
+  container: Element,
+  video: HTMLVideoElement | null,
+): Promise<boolean> {
   const videoWebKit = video as VideoWithWebKit | null;
 
-  void requestFullscreenOn(container)
-    .catch(() => (video ? requestFullscreenOn(video) : Promise.reject(new Error("no video"))))
-    .catch(() => {
-      try {
-        videoWebKit?.webkitEnterFullscreen?.();
-      } catch {
-        /* noop — e.g. no loaded media */
-      }
-    });
+  try {
+    await requestFullscreenOn(container);
+    return true;
+  } catch {
+    /* try the video element next */
+  }
+
+  if (video) {
+    try {
+      await requestFullscreenOn(video);
+      return true;
+    } catch {
+      /* fall through to WebKit native video fullscreen */
+    }
+  }
+
+  try {
+    if (videoWebKit?.webkitEnterFullscreen) {
+      videoWebKit.webkitEnterFullscreen();
+      return true;
+    }
+  } catch {
+    /* noop — e.g. no loaded media */
+  }
+
+  return false;
 }
