@@ -29,7 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Adaptive HLS playback now uses larger practical buffer limits without disabling browser quota recovery, reducing repeated player error logs during playback.
 - Local trickplay generation now writes real Jellyfin tile sheets in the shared dev cache, so rescans can advertise thumbnail hover previews instead of leaving empty `Trickplay/320` folders behind.
 - Library scans now enqueue trickplay generation whenever trickplay is enabled, even if thumbnail preview generation is disabled.
-- Video player controls now give visible hover/click feedback, caption enablement opens the transcript sidecar, and Cast preloads the Google sender framework before opening the device picker.
+- Video player controls now give visible hover/click feedback, caption enablement opens the transcript sidecar, settings use a stable mobile sheet and desktop in-video drawer, and Cast preloads the Google sender framework before opening the device picker.
 - Local dev navigation now ignores browser-aborted backend requests, preventing canceled list loads during refresh/navigation from breaking the .NET debug session.
 - Video detail pages now use the shared page padding without adding a second inset around the player, giving playback more room while matching browse-page spacing.
 - Scheduled v2 library scans now target the intended watched folder instead of falling back to all eligible roots, and configured static web builds are served directly even in development/test hosts.
@@ -120,7 +120,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The video Cast button now loads the Google Cast sender framework before requesting Cast and reports when the browser still cannot provide it.
 - Turning captions on now opens the transcript sidecar automatically, restoring the docked transcript view without requiring a separate dock toggle first.
 - Video captions, fullscreen, and Cast controls now rely on button feedback for successful clicks and only use the player notice chip for errors.
-- The video player settings flyout now stays fixed to the viewport and scrolls within the screen instead of clipping inside the player surface.
+- The video player settings menu now renders above playback controls on mobile and as a semitransparent in-video drawer on desktop, with long caption labels wrapping instead of clipping.
+- The captions control now uses the same square dimensions as the other video control buttons.
 - Local .NET development no longer serves the stale `apps/web-svelte/build` bundle by default; page requests proxy to the running Vite dev server unless a static web root is explicitly configured.
 - V2 subtitle display and transcript panels now read cue text from the normalized `/assets/...` WebVTT files exposed by the v2 subtitle capability, including ASS/SSA tracks that only have a generated VTT fallback.
 - V2 data now persists across backend container/app restarts in dev Docker. The upgrade gate no longer depends only on `/data/upgrade-markers`, which was not mounted by the dev compose backend and could disappear while Postgres data remained.

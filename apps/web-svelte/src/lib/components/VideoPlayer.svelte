@@ -1505,208 +1505,208 @@
               >
                 <Maximize class="h-3 w-3 sm:h-4 sm:w-4" />
               </button>
-
-              {#if settingsMenuRendered}
-                <button
-                  type="button"
-                  class={cn("player-settings-backdrop", settingsMenuClosing && "is-closing")}
-                  aria-label="Close player settings"
-                  onclick={(event) => {
-                    event.stopPropagation();
-                    closeSettings();
-                  }}
-                ></button>
-                <div
-                  class={cn("player-settings-menu player-dropdown", settingsMenuClosing && "is-closing")}
-                  role="menu"
-                  aria-label="Player settings menu"
-                >
-                  {#if settingsView !== "root"}
-                    <button
-                      type="button"
-                      class="player-settings-back"
-                      onclick={() => (settingsView = "root")}
-                    >
-                      <ChevronLeft class="h-4 w-4" />
-                      <span>
-                        {settingsView === "quality"
-                          ? "Quality"
-                          : settingsView === "speed"
-                            ? "Speed"
-                            : settingsView === "audio"
-                              ? "Audio"
-                              : settingsView === "captions"
-                                ? "Captions"
-                                : "Subtitle style"}
-                      </span>
-                    </button>
-                  {/if}
-
-                  {#if settingsView === "root"}
-                    <button type="button" class="player-settings-row" onclick={() => openSettings("quality")}>
-                      <Gauge class="h-4 w-4" />
-                      <span>Quality</span>
-                      <span class="player-settings-value">{selectedQualityLabel ?? "Auto"}</span>
-                      <ChevronDown class="h-3.5 w-3.5 -rotate-90" />
-                    </button>
-                    <button type="button" class="player-settings-row" onclick={() => openSettings("speed")}>
-                      <RotateCw class="h-4 w-4" />
-                      <span>Speed</span>
-                      <span class="player-settings-value">{playbackRate === 1 ? "Normal" : `${playbackRate}x`}</span>
-                      <ChevronDown class="h-3.5 w-3.5 -rotate-90" />
-                    </button>
-                    <button type="button" class="player-settings-row" onclick={() => openSettings("audio")}>
-                      <Volume2 class="h-4 w-4" />
-                      <span>Audio</span>
-                      <span class="player-settings-value">{displayedAudioTrackLabel}</span>
-                      <ChevronDown class="h-3.5 w-3.5 -rotate-90" />
-                    </button>
-                    {#if subtitleTracks.length > 0}
-                      <button type="button" class="player-settings-row" onclick={() => openSettings("captions")}>
-                        <Captions class="h-4 w-4" />
-                        <span>Captions</span>
-                        <span class="player-settings-value">{activeSubtitleLabel}</span>
-                        <ChevronDown class="h-3.5 w-3.5 -rotate-90" />
-                      </button>
-                      <button type="button" class="player-settings-row" onclick={() => openSettings("subtitle-style")}>
-                        <Sliders class="h-4 w-4" />
-                        <span>Subtitle style</span>
-                        <span class="player-settings-value">Custom</span>
-                        <ChevronDown class="h-3.5 w-3.5 -rotate-90" />
-                      </button>
-                    {/if}
-                  {:else if settingsView === "quality"}
-                    {#each qualityOptions as option (String(option.value))}
-                      <button
-                        type="button"
-                        onclick={() => requestPlaybackMode(option.value)}
-                        class={cn("player-settings-option", qualityMode === option.value && "is-active")}
-                      >
-                        <span>{option.label}</span>
-                        {#if qualityMode === option.value}<span>On</span>{/if}
-                      </button>
-                    {/each}
-                  {:else if settingsView === "speed"}
-                    {#each PLAYBACK_RATES as rate (rate)}
-                      <button
-                        type="button"
-                        onclick={() => applyPlaybackRate(rate)}
-                        class={cn("player-settings-option", playbackRate === rate && "is-active")}
-                      >
-                        <span>{rate === 1 ? "Normal" : `${rate}x`}</span>
-                        {#if playbackRate === rate}<span>On</span>{/if}
-                      </button>
-                    {/each}
-                  {:else if settingsView === "audio"}
-                    {#each displayedAudioTracks as track (track.id)}
-                      <button
-                        type="button"
-                        onclick={() => selectAudioTrack(track.index)}
-                        class={cn("player-settings-option", track.selected && "is-active")}
-                      >
-                        <span class="min-w-0 truncate">{track.label}</span>
-                        {#if track.selected}<span>On</span>{/if}
-                      </button>
-                    {/each}
-                  {:else if settingsView === "captions"}
-                    <button
-                      type="button"
-                      onclick={() => selectSubtitle(null)}
-                      class={cn("player-settings-option", !activeSubtitleId && "is-active")}
-                    >
-                      <span>Off</span>
-                      {#if !activeSubtitleId}<span>On</span>{/if}
-                    </button>
-                    {#each subtitleTracks as track (track.id)}
-                      {@const isActive = activeSubtitleId === track.id}
-                      {@const lang = languageLabel(track.language)}
-                      {@const displayName = track.label ? `${lang} - ${track.label}` : lang}
-                      <button
-                        type="button"
-                        onclick={() => selectSubtitle(track.id)}
-                        class={cn("player-settings-option", isActive && "is-active")}
-                      >
-                        <span class="min-w-0 flex-1 truncate">{displayName}</span>
-                        <span>{isActive ? "On" : track.source}</span>
-                      </button>
-                    {/each}
-                  {:else if settingsView === "subtitle-style"}
-                    <div class="space-y-3 p-2">
-                      <div class="grid gap-1.5">
-                        {#each subtitleDisplayStyles as style (style)}
-                          <button
-                            type="button"
-                            onclick={() => handleAppearanceChange({ ...appearance, style })}
-                            class={cn("player-settings-option", appearance.style === style && "is-active")}
-                          >
-                            <span class="capitalize">{style}</span>
-                            {#if appearance.style === style}<span>On</span>{/if}
-                          </button>
-                        {/each}
-                      </div>
-
-                      <label class="player-settings-slider">
-                        <span>Text size</span>
-                        <span>{appearance.fontScale.toFixed(2)}x</span>
-                        <input
-                          type="range"
-                          min="0.5"
-                          max="3"
-                          step="0.05"
-                          value={appearance.fontScale}
-                          oninput={(event) =>
-                            handleAppearanceChange({ ...appearance, fontScale: Number(event.currentTarget.value) })}
-                        />
-                      </label>
-
-                      <label class="player-settings-slider">
-                        <span>Position</span>
-                        <span>{Math.round(appearance.positionPercent)}%</span>
-                        <input
-                          type="range"
-                          min="10"
-                          max="98"
-                          step="1"
-                          value={appearance.positionPercent}
-                          oninput={(event) =>
-                            handleAppearanceChange({
-                              ...appearance,
-                              positionPercent: Number(event.currentTarget.value),
-                            })}
-                        />
-                      </label>
-
-                      <label class="player-settings-slider">
-                        <span>Opacity</span>
-                        <span>{Math.round(appearance.opacity * 100)}%</span>
-                        <input
-                          type="range"
-                          min="0.2"
-                          max="1"
-                          step="0.05"
-                          value={appearance.opacity}
-                          oninput={(event) =>
-                            handleAppearanceChange({ ...appearance, opacity: Number(event.currentTarget.value) })}
-                        />
-                      </label>
-
-                      <button
-                        type="button"
-                        onclick={handleAppearanceReset}
-                        disabled={localAppearance == null}
-                        class={cn("player-settings-reset", localAppearance == null && "is-disabled")}
-                      >
-                        Reset to library defaults
-                      </button>
-                    </div>
-                  {/if}
-                </div>
-              {/if}
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    {#if settingsMenuRendered}
+      <button
+        type="button"
+        class={cn("player-settings-backdrop", settingsMenuClosing && "is-closing")}
+        aria-label="Close player settings"
+        onclick={(event) => {
+          event.stopPropagation();
+          closeSettings();
+        }}
+      ></button>
+      <div
+        class={cn("player-settings-menu player-dropdown", settingsMenuClosing && "is-closing")}
+        role="menu"
+        aria-label="Player settings menu"
+      >
+        {#if settingsView !== "root"}
+          <button
+            type="button"
+            class="player-settings-back"
+            onclick={() => (settingsView = "root")}
+          >
+            <ChevronLeft class="h-4 w-4" />
+            <span>
+              {settingsView === "quality"
+                ? "Quality"
+                : settingsView === "speed"
+                  ? "Speed"
+                  : settingsView === "audio"
+                    ? "Audio"
+                    : settingsView === "captions"
+                      ? "Captions"
+                      : "Subtitle style"}
+            </span>
+          </button>
+        {/if}
+
+        {#if settingsView === "root"}
+          <button type="button" class="player-settings-row" onclick={() => openSettings("quality")}>
+            <Gauge class="h-4 w-4" />
+            <span>Quality</span>
+            <span class="player-settings-value">{selectedQualityLabel ?? "Auto"}</span>
+            <ChevronDown class="h-3.5 w-3.5 -rotate-90" />
+          </button>
+          <button type="button" class="player-settings-row" onclick={() => openSettings("speed")}>
+            <RotateCw class="h-4 w-4" />
+            <span>Speed</span>
+            <span class="player-settings-value">{playbackRate === 1 ? "Normal" : `${playbackRate}x`}</span>
+            <ChevronDown class="h-3.5 w-3.5 -rotate-90" />
+          </button>
+          <button type="button" class="player-settings-row" onclick={() => openSettings("audio")}>
+            <Volume2 class="h-4 w-4" />
+            <span>Audio</span>
+            <span class="player-settings-value">{displayedAudioTrackLabel}</span>
+            <ChevronDown class="h-3.5 w-3.5 -rotate-90" />
+          </button>
+          {#if subtitleTracks.length > 0}
+            <button type="button" class="player-settings-row" onclick={() => openSettings("captions")}>
+              <Captions class="h-4 w-4" />
+              <span>Captions</span>
+              <span class="player-settings-value">{activeSubtitleLabel}</span>
+              <ChevronDown class="h-3.5 w-3.5 -rotate-90" />
+            </button>
+            <button type="button" class="player-settings-row" onclick={() => openSettings("subtitle-style")}>
+              <Sliders class="h-4 w-4" />
+              <span>Subtitle style</span>
+              <span class="player-settings-value">Custom</span>
+              <ChevronDown class="h-3.5 w-3.5 -rotate-90" />
+            </button>
+          {/if}
+        {:else if settingsView === "quality"}
+          {#each qualityOptions as option (String(option.value))}
+            <button
+              type="button"
+              onclick={() => requestPlaybackMode(option.value)}
+              class={cn("player-settings-option", qualityMode === option.value && "is-active")}
+            >
+              <span>{option.label}</span>
+              {#if qualityMode === option.value}<span>On</span>{/if}
+            </button>
+          {/each}
+        {:else if settingsView === "speed"}
+          {#each PLAYBACK_RATES as rate (rate)}
+            <button
+              type="button"
+              onclick={() => applyPlaybackRate(rate)}
+              class={cn("player-settings-option", playbackRate === rate && "is-active")}
+            >
+              <span>{rate === 1 ? "Normal" : `${rate}x`}</span>
+              {#if playbackRate === rate}<span>On</span>{/if}
+            </button>
+          {/each}
+        {:else if settingsView === "audio"}
+          {#each displayedAudioTracks as track (track.id)}
+            <button
+              type="button"
+              onclick={() => selectAudioTrack(track.index)}
+              class={cn("player-settings-option", track.selected && "is-active")}
+            >
+              <span class="min-w-0 truncate">{track.label}</span>
+              {#if track.selected}<span>On</span>{/if}
+            </button>
+          {/each}
+        {:else if settingsView === "captions"}
+          <button
+            type="button"
+            onclick={() => selectSubtitle(null)}
+            class={cn("player-settings-option", !activeSubtitleId && "is-active")}
+          >
+            <span>Off</span>
+            {#if !activeSubtitleId}<span>On</span>{/if}
+          </button>
+          {#each subtitleTracks as track (track.id)}
+            {@const isActive = activeSubtitleId === track.id}
+            {@const lang = languageLabel(track.language)}
+            {@const displayName = track.label ? `${lang} - ${track.label}` : lang}
+            <button
+              type="button"
+              onclick={() => selectSubtitle(track.id)}
+              class={cn("player-settings-option", isActive && "is-active")}
+            >
+              <span class="player-settings-option-label min-w-0 flex-1">{displayName}</span>
+              <span>{isActive ? "On" : track.source}</span>
+            </button>
+          {/each}
+        {:else if settingsView === "subtitle-style"}
+          <div class="space-y-3 p-2">
+            <div class="grid gap-1.5">
+              {#each subtitleDisplayStyles as style (style)}
+                <button
+                  type="button"
+                  onclick={() => handleAppearanceChange({ ...appearance, style })}
+                  class={cn("player-settings-option", appearance.style === style && "is-active")}
+                >
+                  <span class="capitalize">{style}</span>
+                  {#if appearance.style === style}<span>On</span>{/if}
+                </button>
+              {/each}
+            </div>
+
+            <label class="player-settings-slider">
+              <span>Text size</span>
+              <span>{appearance.fontScale.toFixed(2)}x</span>
+              <input
+                type="range"
+                min="0.5"
+                max="3"
+                step="0.05"
+                value={appearance.fontScale}
+                oninput={(event) =>
+                  handleAppearanceChange({ ...appearance, fontScale: Number(event.currentTarget.value) })}
+              />
+            </label>
+
+            <label class="player-settings-slider">
+              <span>Position</span>
+              <span>{Math.round(appearance.positionPercent)}%</span>
+              <input
+                type="range"
+                min="10"
+                max="98"
+                step="1"
+                value={appearance.positionPercent}
+                oninput={(event) =>
+                  handleAppearanceChange({
+                    ...appearance,
+                    positionPercent: Number(event.currentTarget.value),
+                  })}
+              />
+            </label>
+
+            <label class="player-settings-slider">
+              <span>Opacity</span>
+              <span>{Math.round(appearance.opacity * 100)}%</span>
+              <input
+                type="range"
+                min="0.2"
+                max="1"
+                step="0.05"
+                value={appearance.opacity}
+                oninput={(event) =>
+                  handleAppearanceChange({ ...appearance, opacity: Number(event.currentTarget.value) })}
+              />
+            </label>
+
+            <button
+              type="button"
+              onclick={handleAppearanceReset}
+              disabled={localAppearance == null}
+              class={cn("player-settings-reset", localAppearance == null && "is-disabled")}
+            >
+              Reset to library defaults
+            </button>
+          </div>
+        {/if}
+      </div>
+    {/if}
   </div>
 
   {#if hasFilmStrip}
@@ -1848,9 +1848,8 @@
 
   .subtitle-control-button {
     justify-content: center;
-    padding-left: 0.125rem;
-    padding-right: 0.25rem;
-    width: 2.125rem;
+    padding: 0;
+    width: 1.75rem;
   }
 
   .subtitle-control-glyph {
@@ -1865,11 +1864,19 @@
 
   .player-settings-menu {
     animation: player-settings-sheet-in 180ms ease-out;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 4.5rem);
+    backdrop-filter: blur(18px);
+    background: rgba(7, 10, 16, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 20px 60px rgba(0, 0, 0, 0.55);
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    max-height: min(72dvh, calc(100dvh - 6rem));
+    height: min(34dvh, 18rem);
+    left: max(0.75rem, env(safe-area-inset-left, 0px));
+    max-height: calc(100dvh - 1.5rem);
     min-width: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -1877,8 +1884,9 @@
     position: fixed;
     right: max(0.75rem, env(safe-area-inset-right, 0px));
     transform-origin: bottom right;
-    width: min(25rem, calc(100vw - 1.5rem));
-    z-index: 210;
+    top: auto;
+    width: auto;
+    z-index: 1005;
   }
 
   .player-settings-menu.is-closing {
@@ -1893,7 +1901,7 @@
     position: fixed;
     right: 0;
     top: 0;
-    z-index: 205;
+    z-index: 1000;
   }
 
   .player-settings-backdrop.is-closing {
@@ -1919,11 +1927,17 @@
   }
 
   .player-settings-row {
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-columns: auto minmax(5rem, 1fr) minmax(0, 52%) auto;
+    overflow: hidden;
   }
 
   .player-settings-option {
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .player-settings-option-label {
+    line-height: 1.18;
+    overflow-wrap: anywhere;
   }
 
   .player-settings-back {
@@ -2031,24 +2045,24 @@
   @keyframes player-settings-flyout-in {
     from {
       opacity: 0;
-      transform: translateY(0.45rem) scaleY(0.96);
+      transform: translateX(1.25rem);
     }
 
     to {
       opacity: 1;
-      transform: translateY(0) scaleY(1);
+      transform: translateX(0);
     }
   }
 
   @keyframes player-settings-flyout-out {
     from {
       opacity: 1;
-      transform: translateY(0) scaleY(1);
+      transform: translateX(0);
     }
 
     to {
       opacity: 0;
-      transform: translateY(0.45rem) scaleY(0.96);
+      transform: translateX(1.25rem);
     }
   }
 
@@ -2078,9 +2092,8 @@
     }
 
     .subtitle-control-button {
-      padding-left: 0.5rem;
-      padding-right: 0.55rem;
-      width: 3rem;
+      padding: 0;
+      width: 2.25rem;
     }
 
     .subtitle-control-glyph {
@@ -2090,13 +2103,18 @@
 
     .player-settings-menu {
       animation: player-settings-flyout-in 160ms ease-out;
-      bottom: max(4.75rem, env(safe-area-inset-bottom, 0px));
-      max-height: min(72dvh, calc(100dvh - 6rem));
+      background: rgba(7, 10, 16, 0.76);
+      bottom: 7.25rem;
+      height: auto;
+      left: auto;
+      max-height: none;
       min-width: min(19rem, calc(100vw - 2rem));
       transform-origin: bottom right;
-      position: fixed;
-      right: max(1rem, env(safe-area-inset-right, 0px));
-      width: min(22rem, calc(100vw - 2rem));
+      position: absolute;
+      right: 1rem;
+      top: 4.75rem;
+      width: min(28rem, calc(100% - 2rem));
+      z-index: 60;
     }
 
     .player-settings-menu.is-closing {
@@ -2104,7 +2122,9 @@
     }
 
     .player-settings-backdrop {
-      display: none;
+      background: transparent;
+      position: absolute;
+      z-index: 55;
     }
   }
 </style>

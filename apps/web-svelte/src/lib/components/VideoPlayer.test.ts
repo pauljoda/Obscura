@@ -304,11 +304,24 @@ describe("VideoPlayer", () => {
     });
   });
 
-  it("keeps the settings flyout fixed to the viewport with screen-fit bounds", async () => {
+  it("keeps mobile settings top-level and desktop settings inside the video drawer", async () => {
     const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
 
-    expect(source).toContain("max-height: min(72dvh, calc(100dvh - 6rem))");
-    expect(source).not.toMatch(/\.player-settings-menu\s*\{[^}]*position:\s*absolute/s);
+    expect(source).toContain("z-index: 1005");
+    expect(source).toContain("height: min(34dvh, 18rem)");
+    expect(source).toContain("max-height: calc(100dvh - 1.5rem)");
+    expect(source).toContain("top: auto");
+    expect(source).toContain("bottom: 7.25rem");
+    expect(source).toContain("height: auto");
+    expect(source).toContain("position: absolute");
+    expect(source).toContain("animation: player-settings-flyout-in 160ms ease-out");
+  });
+
+  it("keeps the captions button square like the other player controls", async () => {
+    const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
+
+    expect(source).toContain(".subtitle-control-button {\n    justify-content: center;\n    padding: 0;\n    width: 1.75rem;");
+    expect(source).toContain(".subtitle-control-button {\n      padding: 0;\n      width: 2.25rem;");
   });
 
   it("defines hover, focus, and click feedback for player controls", async () => {
