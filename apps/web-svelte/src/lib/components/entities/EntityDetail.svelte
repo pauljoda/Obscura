@@ -528,7 +528,7 @@
 
   .hero-lower {
     position: relative;
-    margin-top: 0;
+    margin-top: -5%;
     overflow: hidden;
   }
 
@@ -549,7 +549,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transform: scaleY(-1) scale(1.15);
+    transform: scaleY(-1) scale(1.25);
   }
 
   /* Frosted glass: backdrop-filter blurs the reflection underneath */
