@@ -20,7 +20,7 @@
   let loadMoreError: string | null = $state(null);
 
   const cards: EntityThumbnailCard[] = $derived(
-    items.map((item) => entityCardToThumbnailCard(item, `/v2/series/${item.id}`)),
+    items.map((item) => entityCardToThumbnailCard(item, `/series/${item.id}`)),
   );
 
   let lastNsfwMode = $state(nsfw.mode);

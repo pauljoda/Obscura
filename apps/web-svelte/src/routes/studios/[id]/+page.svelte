@@ -1,309 +1,190 @@
 <script lang="ts">
-  import {
-    AlertTriangle,
-    Building2,
-    Edit3,
-    ExternalLink,
-    FileText,
-    Link,
-    Star,
-    Tag as TagIcon,
-    X,
-  } from "@lucide/svelte";
-  import { Badge } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/v1/api/core-v1";
-  import { updateStudio } from "$lib/v1/api/entities-v1";
+  import { onMount } from "svelte";
   import { page } from "$app/state";
-  import MediaTabs from "$lib/v1/media-surface/tabs/MediaTabsV1.svelte";
-  import { detailTabsFor } from "$lib/v1/media-surface/tabs/detail-tabs-v1";
+  import { ArrowLeft, Film } from "@lucide/svelte";
   import {
-    EditFormShell,
-    FormField,
-    SearchSelect,
-    TextAreaField,
-    TextField,
-    ToggleChip,
-  } from "$lib/components/forms";
-  import { buildStudioEditPatch } from "$lib/entity-edit-patch";
+    fetchV2Studio,
+    fetchV2Entities,
+    updateV2EntityRating,
+    updateV2EntityFlags,
+    type V2StudioDetail,
+  } from "$lib/api/v2";
+  import {
+    getCapability,
+    withFlagCapability,
+    withRatingCapability,
+  } from "$lib/api/capabilities";
+  import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
+  import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
+  import { resolveEntityHref } from "$lib/entities/entity-routes";
+  import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
+  import type { EntityCard } from "$lib/api/generated/model";
+  import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
+  import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
 
-  type StudioPageStudio = {
-    id: string;
-    name: string;
-    description?: string | null;
-    url?: string | null;
-    imagePath?: string | null;
-    imageUrl?: string | null;
-    aliases?: string | null;
-    favorite?: boolean;
-    rating?: number | null;
-    isNsfw?: boolean;
-    videoCount?: number;
-    imageAppearanceCount?: number;
-    audioLibraryCount?: number;
-    parentId?: string | null;
-    parent?: { id: string; name: string } | null;
-  };
+  type LoadState = "loading" | "ready" | "error";
 
-  let { data } = $props();
-  let localPatch = $state<Record<string, unknown>>({});
-  let editing = $state(false);
-  let savingEdit = $state(false);
-  let editError = $state<string | null>(null);
-  let editName = $state("");
-  let editDescription = $state("");
-  let editAliases = $state("");
-  let editUrl = $state("");
-  let editParentId = $state<string | null>(null);
-  let editParentName = $state("");
-  let editFavorite = $state(false);
-  let editIsNsfw = $state(false);
+  let loadState: LoadState = $state("loading");
+  let studio = $state<V2StudioDetail | null>(null);
+  let relatedCards = $state<EntityThumbnailCard[]>([]);
+  let errorMessage: string | null = $state(null);
+  let ratingBusy = $state(false);
 
-  const baseStudio = $derived(data.studio);
-  const s = $derived({
-    ...(baseStudio as Record<string, unknown>),
-    ...localPatch,
-  } as StudioPageStudio);
-  const studioOptions = $derived(
-    (data.allStudios as Array<{ id: string; name: string; videoCount?: number }>).map((studio) => ({
-      id: studio.id,
-      name: studio.name,
-      count: studio.videoCount,
-    })),
-  );
+  const card = $derived.by((): EntityDetailCardFull | null => {
+    if (!studio) return null;
+    return entityCardToDetailCard(studio);
+  });
 
-  const tabs = $derived(
-    detailTabsFor({
-      entityKind: "studio",
-      entityId: s.id,
-      entityName: s.name,
-      nsfwMode: "show",
-      totals: {
-        videos: data.totalVideos,
-        series: data.totalSeries,
-        books: data.totalBooks,
-        galleries: data.totalGalleries,
-        images: data.totalImages,
-        "audio-libraries": data.totalAudioLibraries,
-        "audio-tracks": data.totalAudioTracks,
-      },
-      initialActive: page.url.searchParams.get("tab") === null
-        ? {
-            tabId: "videos",
-            items: data.videos as unknown[],
-            total: data.totalVideos,
-          }
-        : undefined,
-    }),
-  );
+  const dates = $derived.by(() => {
+    if (!studio) return [];
+    const cap = getCapability(studio.capabilities, "dates");
+    return cap?.items ?? [];
+  });
 
-  function beginEdit() {
-    editName = s.name ?? "";
-    editDescription = s.description ?? "";
-    editAliases = s.aliases ?? "";
-    editUrl = s.url ?? "";
-    editParentId = s.parentId ?? null;
-    editParentName = s.parent?.name ?? "";
-    editFavorite = s.favorite ?? false;
-    editIsNsfw = s.isNsfw ?? false;
-    editError = null;
-    editing = true;
-  }
+  onMount(() => {
+    void loadStudio();
+  });
 
-  function handleParentChange(name: string) {
-    editParentName = name;
-    editParentId = studioOptions.find((option) => option.name === name)?.id ?? null;
-  }
-
-  async function saveEdit() {
-    if (!editName.trim() || savingEdit) return;
-    savingEdit = true;
-    editError = null;
-    const patch = buildStudioEditPatch({
-      name: editName,
-      description: editDescription,
-      aliases: editAliases,
-      url: editUrl,
-      parentId: editParentId,
-      favorite: editFavorite,
-      isNsfw: editIsNsfw,
-    });
-
+  async function loadStudio() {
+    loadState = "loading";
+    errorMessage = null;
     try {
-      await updateStudio(s.id, patch);
-      localPatch = {
-        ...localPatch,
-        ...patch,
-        parentId: patch.parentId,
-        parent: patch.parentId
-          ? {
-              id: patch.parentId,
-              name: editParentName,
-              imagePath: null,
-              imageUrl: null,
-            }
-          : null,
-      };
-      editing = false;
+      const id = page.params.id ?? "";
+      studio = await fetchV2Studio(id);
+      await loadRelated(id);
+      loadState = "ready";
     } catch (err) {
-      editError = err instanceof Error ? err.message : "Failed to save studio";
+      errorMessage = err instanceof Error ? err.message : String(err);
+      loadState = "error";
+    }
+  }
+
+  async function loadRelated(studioId: string) {
+    try {
+      const response = await fetchV2Entities({ query: studioId });
+      relatedCards = response.items
+        .filter((item: EntityCard) => {
+          const studioCap = getCapability(item.capabilities, "studio");
+          return studioCap?.value?.id === studioId;
+        })
+        .map((item: EntityCard) => entityCardToThumbnailCard(item, resolveEntityHref(item.kind, item.id)));
+    } catch {
+      relatedCards = [];
+    }
+  }
+
+  async function handleRatingChange(value: number | null) {
+    if (!studio || ratingBusy) return;
+    const previous = studio;
+    ratingBusy = true;
+    studio = { ...studio, capabilities: withRatingCapability(studio.capabilities, value) };
+    try {
+      await updateV2EntityRating(studio.id, value);
+    } catch {
+      studio = previous;
     } finally {
-      savingEdit = false;
+      ratingBusy = false;
+    }
+  }
+
+  async function handleFavoriteToggle() {
+    if (!studio) return;
+    const previous = studio;
+    const flagsCap = getCapability(studio.capabilities, "flags");
+    const next = !(flagsCap?.isFavorite ?? false);
+    studio = { ...studio, capabilities: withFlagCapability(studio.capabilities, "isFavorite", next) };
+    try {
+      await updateV2EntityFlags(studio.id, { isFavorite: next });
+    } catch {
+      studio = previous;
+    }
+  }
+
+  async function handleOrganizedToggle() {
+    if (!studio) return;
+    const previous = studio;
+    const flagsCap = getCapability(studio.capabilities, "flags");
+    const next = !(flagsCap?.isOrganized ?? false);
+    studio = { ...studio, capabilities: withFlagCapability(studio.capabilities, "isOrganized", next) };
+    try {
+      await updateV2EntityFlags(studio.id, { isOrganized: next });
+    } catch {
+      studio = previous;
     }
   }
 </script>
 
 <svelte:head>
-  <title>Obscura</title>
+  <title>{studio?.title ?? "Studio"} · Obscura</title>
 </svelte:head>
 
-<div class="space-y-6">
-  <div class="flex flex-col sm:flex-row gap-4 items-start">
-    <div class="w-48 aspect-video shrink-0 bg-surface-1 border border-border-subtle overflow-hidden">
-      {#if s.imagePath || s.imageUrl}
-        <img
-          src={toApiUrl(s.imagePath) ?? s.imageUrl ?? undefined}
-          alt=""
-          class="h-full w-full object-contain"
+<div class="detail-page">
+  <a href="/studios" class="back-link">
+    <ArrowLeft class="h-4 w-4" />
+    Studios
+  </a>
+
+  {#if loadState === "loading"}
+    <div class="loading-shell" aria-busy="true"></div>
+  {:else if loadState === "error"}
+    <div class="error-notice">
+      <p>{errorMessage ?? "Failed to load studio."}</p>
+      <button type="button" onclick={() => void loadStudio()}>Retry</button>
+    </div>
+  {:else if card && studio}
+    <EntityDetail
+      {card}
+      onRatingChange={handleRatingChange}
+      onFavoriteToggle={handleFavoriteToggle}
+      onOrganizedToggle={handleOrganizedToggle}
+      {ratingBusy}
+      posterSize="large"
+    >
+      {#snippet heroMeta()}
+        {#each dates as date, i (date.code)}
+          {#if i > 0}<span class="meta-sep"></span>{/if}
+          <span class="meta-item">{date.value}</span>
+        {/each}
+        {#if relatedCards.length > 0}
+          {#if dates.length > 0}<span class="meta-sep"></span>{/if}
+          <span class="meta-item">{relatedCards.length} {relatedCards.length === 1 ? "title" : "titles"}</span>
+        {/if}
+      {/snippet}
+    </EntityDetail>
+
+    {#if relatedCards.length > 0}
+      <section class="content-section">
+        <h2 class="content-heading">
+          <Film class="h-4 w-4" />
+          Content
+          <span class="content-count">{relatedCards.length}</span>
+        </h2>
+        <EntityGrid
+          cards={relatedCards}
+          prefsKey={`studio-${studio?.id}-content`}
+          selectable={false}
+          emptyTitle="No content"
+          emptyMessage="No content linked to this studio."
         />
-      {:else}
-        <div class="flex h-full items-center justify-center">
-          <Building2 class="h-10 w-10 text-text-disabled" />
-        </div>
-      {/if}
-    </div>
-    <div class="flex-1 min-w-0 space-y-2">
-      <div class="flex items-start justify-between gap-3">
-        <div class="min-w-0">
-          <h1 class="flex items-center gap-2.5 text-text-primary">
-            <Building2 class="h-5 w-5 text-text-accent" />
-            {s.name}
-            {#if s.favorite}
-              <Star class="h-4 w-4 text-accent-500 fill-current" />
-            {/if}
-          </h1>
-          {#if s.parent}
-            <p class="mt-1 text-[0.72rem] text-text-muted">
-              Parent studio: <a href={`/studios/${s.parent.id}`} class="text-text-accent hover:text-accent-400">{s.parent.name}</a>
-            </p>
-          {/if}
-        </div>
-
-        <button
-          type="button"
-          aria-label={editing ? "Cancel studio edit" : "Edit studio"}
-          title={editing ? "Cancel studio edit" : "Edit studio"}
-          onclick={() => (editing ? (editing = false) : beginEdit())}
-          class="flex h-8 w-8 shrink-0 items-center justify-center border border-border-subtle bg-surface-2 text-text-muted transition-colors duration-fast hover:border-border-accent hover:text-text-accent"
-        >
-          {#if editing}
-            <X class="h-4 w-4" />
-          {:else}
-            <Edit3 class="h-4 w-4" />
-          {/if}
-        </button>
-      </div>
-
-      {#if s.url}
-        <a
-          href={s.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="inline-flex items-center gap-1 text-[0.78rem] text-text-accent hover:text-accent-400 transition-colors duration-fast"
-        >
-          <ExternalLink class="h-3 w-3" />
-          {s.url}
-        </a>
-      {/if}
-
-      <div class="flex flex-wrap gap-1 pt-1">
-        {#if (s.videoCount ?? 0) > 0}
-          <Badge>
-            {#snippet children()}
-              {s.videoCount} {s.videoCount === 1 ? "video" : "videos"}
-            {/snippet}
-          </Badge>
-        {/if}
-        {#if (s.imageAppearanceCount ?? 0) > 0}
-          <Badge>
-            {#snippet children()}
-              {s.imageAppearanceCount} {s.imageAppearanceCount === 1 ? "image" : "images"}
-            {/snippet}
-          </Badge>
-        {/if}
-        {#if (s.audioLibraryCount ?? 0) > 0}
-          <Badge>
-            {#snippet children()}
-              {s.audioLibraryCount} {s.audioLibraryCount === 1 ? "album" : "albums"}
-            {/snippet}
-          </Badge>
-        {/if}
-        {#if s.isNsfw}
-          <Badge variant="warning">
-            {#snippet children()}NSFW{/snippet}
-          </Badge>
-        {/if}
-      </div>
-
-      {#if s.description}
-        <p class="mt-3 text-[0.82rem] text-text-secondary leading-relaxed whitespace-pre-wrap max-w-2xl">
-          {s.description}
-        </p>
-      {/if}
-      {#if s.aliases}
-        <p class="text-[0.72rem] text-text-muted">Aliases: {s.aliases}</p>
-      {/if}
-    </div>
-  </div>
-
-  {#if editing}
-    <div class="max-w-4xl">
-      <EditFormShell
-        title="Studio metadata"
-        onSave={saveEdit}
-        onCancel={() => (editing = false)}
-        saving={savingEdit}
-        saveDisabled={!editName.trim()}
-        saveLabel="Save studio"
-        error={editError}
-      >
-        <div class="grid gap-4 md:grid-cols-2">
-          <TextField label="Name" icon={Building2} value={editName} onChange={(v) => (editName = v)} required />
-          <TextField label="URL" icon={Link} value={editUrl} onChange={(v) => (editUrl = v)} type="url" />
-        </div>
-        <TextAreaField
-          label="Description"
-          icon={FileText}
-          value={editDescription}
-          onChange={(v) => (editDescription = v)}
-          rows={4}
-        />
-        <div class="grid gap-4 md:grid-cols-2">
-          <TextField label="Aliases" icon={TagIcon} value={editAliases} onChange={(v) => (editAliases = v)} />
-          <SearchSelect
-            label="Parent Studio"
-            icon={Building2}
-            value={editParentName}
-            onChange={handleParentChange}
-            options={studioOptions}
-            placeholder="No parent studio"
-            emptyText="No matching studios"
-          />
-        </div>
-        <FormField label="Flags">
-          <div class="flex flex-wrap gap-2">
-            <ToggleChip value={editFavorite} onChange={(v) => (editFavorite = v)} onLabel="Favorite" icon={Star} />
-            <ToggleChip
-              value={editIsNsfw}
-              onChange={(v) => (editIsNsfw = v)}
-              onLabel="NSFW"
-              icon={AlertTriangle}
-              variant="warning"
-            />
-          </div>
-        </FormField>
-      </EditFormShell>
-    </div>
+      </section>
+    {/if}
   {/if}
-
-  <MediaTabs tabs={tabs} defaultTabId="videos" />
 </div>
+
+<style>
+  .detail-page { display: grid; gap: 1.25rem; padding: clamp(1rem, 3vw, 2rem); max-width: 72rem; margin: 0 auto; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--color-text-muted, #8a93a6); font-size: 0.78rem; text-decoration: none; font-family: var(--font-mono, "JetBrains Mono", monospace); text-transform: uppercase; letter-spacing: 0.04em; transition: color 0.15s; }
+  .back-link:hover { color: var(--color-text-primary, #f2eed8); }
+  .loading-shell { min-height: 28rem; border: 1px solid var(--color-border, #1c2235); background: var(--color-surface-2, #101420); animation: pulse 1.2s ease-in-out infinite; }
+  .error-notice { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid color-mix(in srgb, #ef4444 50%, var(--color-border, #1c2235)); background: var(--color-surface-2, #101420); color: var(--color-text-muted, #8a93a6); font-size: 0.85rem; }
+  .error-notice button { border: 1px solid var(--color-border, #1c2235); background: var(--color-surface-3, #151a28); color: var(--color-text-muted, #8a93a6); padding: 0.4rem 0.8rem; font-size: 0.78rem; cursor: pointer; }
+
+  :global(.meta-item) { white-space: nowrap; font-size: 0.82rem; }
+  :global(.meta-sep) { display: inline-block; width: 3px; height: 3px; margin: 0 0.5rem; background: var(--color-text-muted, #8a93a6); opacity: 0.5; }
+
+  .content-section { display: grid; gap: 0.75rem; }
+  .content-heading { display: flex; align-items: center; gap: 0.5rem; margin: 0; font-family: var(--font-heading, Geist, sans-serif); font-size: 1.1rem; font-weight: 600; color: var(--color-text-primary, #f2eed8); }
+  .content-count { font-family: var(--font-mono, "JetBrains Mono", monospace); font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted, #8a93a6); padding: 0.1rem 0.4rem; border: 1px solid var(--color-border, #1c2235); background: var(--color-surface-3, #151a28); }
+
+  @keyframes pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.85; } }
+</style>

@@ -1,461 +1,242 @@
 <script lang="ts">
-  import {
-    Users,
-    Star,
-    Film,
-    Music,
-    Image as ImageIcon,
-    Edit3,
-    X,
-    User,
-    Globe,
-    Calendar,
-    Tag as TagIcon,
-    FileText,
-    Ruler,
-  } from "@lucide/svelte";
-  import { Badge } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/v1/api/core-v1";
-  import { updatePerformer } from "$lib/v1/api/entities-v1";
-  import type { VideoListItem } from "$lib/v1/api/types-v1";
-  import type {
-    VideoSeriesListItemDto,
-    GalleryListItemDto,
-    ImageListItemDto,
-    AudioLibraryListItemDto,
-    AudioTrackListItemDto,
-    PerformerKnownForDto,
-  } from "@obscura/contracts";
+  import { onMount } from "svelte";
   import { page } from "$app/state";
-  import InlineRating from "$lib/components/InlineRating.svelte";
-  import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
-  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
-  import MediaTabs from "$lib/v1/media-surface/tabs/MediaTabsV1.svelte";
-  import { detailTabsFor } from "$lib/v1/media-surface/tabs/detail-tabs-v1";
+  import { ArrowLeft, Film, Layers, BookOpen, Music } from "@lucide/svelte";
   import {
-    DateField,
-    EditFormShell,
-    TextAreaField,
-    TextField,
-    ToggleChip,
-  } from "$lib/components/forms";
-  import { formatVideoCount } from "$lib/terminology";
+    fetchV2Person,
+    fetchV2Entities,
+    updateV2EntityRating,
+    updateV2EntityFlags,
+    type V2PersonDetail,
+  } from "$lib/api/v2";
+  import {
+    getCapability,
+    withFlagCapability,
+    withRatingCapability,
+  } from "$lib/api/capabilities";
+  import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
+  import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
+  import { resolveEntityHref } from "$lib/entities/entity-routes";
+  import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
+  import type { EntityCard } from "$lib/api/generated/model";
+  import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
+  import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
 
-  let { data } = $props();
-  let overrideRating = $state<number | null | undefined>(undefined);
-  let localPatch = $state<Record<string, unknown>>({});
-  let editing = $state(false);
-  let savingEdit = $state(false);
-  let editError = $state<string | null>(null);
-  let editName = $state("");
-  let editDisambiguation = $state("");
-  let editAliases = $state("");
-  let editGender = $state("");
-  let editCountry = $state("");
-  let editBirthdate = $state("");
-  let editEthnicity = $state("");
-  let editHeight = $state("");
-  let editWeight = $state("");
-  let editEyeColor = $state("");
-  let editHairColor = $state("");
-  let editDetails = $state("");
-  let editFavorite = $state(false);
-  let editIsNsfw = $state(false);
+  type LoadState = "loading" | "ready" | "error";
 
-  const p = $derived((overrideRating === undefined
-    ? data.performer
-    : { ...(data.performer as Record<string, unknown>), rating: overrideRating }) as Record<string, unknown> & {
-    id: string;
-    name: string;
-    disambiguation?: string | null;
-    aliases?: string | null;
-    gender?: string | null;
-    birthdate?: string | null;
-    country?: string | null;
-    ethnicity?: string | null;
-    height?: string | null;
-    weight?: string | null;
-    eyeColor?: string | null;
-    hairColor?: string | null;
-    imagePath?: string | null;
-    favorite?: boolean;
-    rating?: number | null;
-    isNsfw?: boolean;
-    videoCount?: number;
-    imageAppearanceCount?: number;
-    audioLibraryCount?: number;
-    details?: string | null;
-    knownFor?: PerformerKnownForDto[];
+  let loadState: LoadState = $state("loading");
+  let person = $state<V2PersonDetail | null>(null);
+  let relatedCards = $state<EntityThumbnailCard[]>([]);
+  let errorMessage: string | null = $state(null);
+  let ratingBusy = $state(false);
+
+  const card = $derived.by((): EntityDetailCardFull | null => {
+    if (!person) return null;
+    return entityCardToDetailCard(person);
   });
-  const patchedP = $derived({ ...p, ...localPatch } as typeof p);
 
-  const tabs = $derived(
-    detailTabsFor({
-      entityKind: "performer",
-      entityId: patchedP.id,
-      entityName: patchedP.name,
-      nsfwMode: "show",
-      totals: {
-        videos: data.totalVideos,
-        series: data.totalSeries,
-        books: data.totalBooks,
-        galleries: data.totalGalleries,
-        images: data.totalImages,
-        "audio-libraries": data.totalAudioLibraries,
-        "audio-tracks": data.totalAudioTracks,
-      },
-      initialActive: page.url.searchParams.get("tab") === null
-        ? {
-            tabId: "videos",
-            items: data.videos as unknown[],
-            total: data.totalVideos,
-          }
-        : undefined,
-    }),
-  );
+  const dates = $derived.by(() => {
+    if (!person) return [];
+    const cap = getCapability(person.capabilities, "dates");
+    return cap?.items ?? [];
+  });
 
-  function knownForHref(entry: PerformerKnownForDto) {
-    return entry.sourceType === "series"
-      ? `/series?series=${entry.sourceId}`
-      : `/videos/${entry.sourceId}`;
-  }
+  interface DetailRow { label: string; value: string }
+  const bioRows = $derived.by((): DetailRow[] => {
+    if (!person) return [];
+    const rows: DetailRow[] = [];
+    if (person.gender) rows.push({ label: "Gender", value: person.gender });
+    if (person.birthdate) rows.push({ label: "Birthdate", value: person.birthdate });
+    if (person.country) rows.push({ label: "Country", value: person.country });
+    if (person.ethnicity) rows.push({ label: "Ethnicity", value: person.ethnicity });
+    if (person.eyeColor) rows.push({ label: "Eyes", value: person.eyeColor });
+    if (person.hairColor) rows.push({ label: "Hair", value: person.hairColor });
+    if (person.height != null) rows.push({ label: "Height", value: `${person.height} cm` });
+    if (person.weight != null) rows.push({ label: "Weight", value: `${person.weight} kg` });
+    if (person.measurements) rows.push({ label: "Measurements", value: person.measurements });
+    if (person.tattoos) rows.push({ label: "Tattoos", value: person.tattoos });
+    if (person.piercings) rows.push({ label: "Piercings", value: person.piercings });
+    if (person.careerStart != null) rows.push({ label: "Career Start", value: String(person.careerStart) });
+    if (person.careerEnd != null) rows.push({ label: "Career End", value: String(person.careerEnd) });
+    if (person.disambiguation) rows.push({ label: "Disambiguation", value: person.disambiguation });
+    return rows;
+  });
 
-  function knownForContext(entry: PerformerKnownForDto) {
-    if (entry.sourceType === "movie") return "Movie";
-    if (entry.sourceType === "series") return "Series";
+  onMount(() => {
+    void loadPerson();
+  });
 
-    const episodeNumber =
-      entry.seasonNumber !== null && entry.episodeNumber !== null
-        ? `S${entry.seasonNumber} E${entry.episodeNumber}`
-        : null;
-    return [entry.seriesTitle, episodeNumber].filter(Boolean).join(" · ");
-  }
-
-  async function handleRatingSave(next: number | null) {
-    const previous = (data.performer as { rating?: number | null }).rating ?? null;
-    overrideRating = next;
+  async function loadPerson() {
+    loadState = "loading";
+    errorMessage = null;
     try {
-      await updatePerformer(patchedP.id, { rating: next });
-    } catch {
-      overrideRating = previous;
-      throw new Error("Failed to update rating");
+      const id = page.params.id ?? "";
+      person = await fetchV2Person(id);
+      const statsCapability = getCapability(person.capabilities, "stats");
+      const creditCount = statsCapability?.items.find((i) => i.code === "credit-count");
+      if (creditCount && Number(creditCount.value) > 0) {
+        await loadRelated(id);
+      }
+      loadState = "ready";
+    } catch (err) {
+      errorMessage = err instanceof Error ? err.message : String(err);
+      loadState = "error";
     }
   }
 
-  function nullableTrim(value: string) {
-    const trimmed = value.trim();
-    return trimmed ? trimmed : null;
-  }
-
-  function nullableNumber(value: string) {
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    const parsed = Number(trimmed);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-
-  function beginEdit() {
-    editName = patchedP.name ?? "";
-    editDisambiguation = patchedP.disambiguation ?? "";
-    editAliases = patchedP.aliases ?? "";
-    editGender = patchedP.gender ?? "";
-    editCountry = patchedP.country ?? "";
-    editBirthdate = patchedP.birthdate ?? "";
-    editEthnicity = patchedP.ethnicity ?? "";
-    editHeight = patchedP.height === null || patchedP.height === undefined ? "" : String(patchedP.height);
-    editWeight = patchedP.weight === null || patchedP.weight === undefined ? "" : String(patchedP.weight);
-    editEyeColor = patchedP.eyeColor ?? "";
-    editHairColor = patchedP.hairColor ?? "";
-    editDetails = patchedP.details ?? "";
-    editFavorite = patchedP.favorite ?? false;
-    editIsNsfw = patchedP.isNsfw ?? false;
-    editError = null;
-    editing = true;
-  }
-
-  async function saveEdit() {
-    if (!editName.trim() || savingEdit) return;
-    savingEdit = true;
-    editError = null;
-    const patch = {
-      name: editName.trim(),
-      disambiguation: nullableTrim(editDisambiguation),
-      aliases: nullableTrim(editAliases),
-      gender: nullableTrim(editGender),
-      country: nullableTrim(editCountry),
-      birthdate: nullableTrim(editBirthdate),
-      ethnicity: nullableTrim(editEthnicity),
-      height: nullableNumber(editHeight),
-      weight: nullableNumber(editWeight),
-      eyeColor: nullableTrim(editEyeColor),
-      hairColor: nullableTrim(editHairColor),
-      details: nullableTrim(editDetails),
-      favorite: editFavorite,
-      isNsfw: editIsNsfw,
-    };
-
+  async function loadRelated(personId: string) {
     try {
-      await updatePerformer(patchedP.id, patch);
-      localPatch = { ...localPatch, ...patch };
-      editing = false;
-    } catch (err) {
-      editError = err instanceof Error ? err.message : "Failed to save actor";
+      const response = await fetchV2Entities({ query: personId });
+      relatedCards = response.items
+        .filter((item: EntityCard) => {
+          const creditsCap = getCapability(item.capabilities, "credits");
+          return creditsCap?.people.some((p) => p.id === personId) ?? false;
+        })
+        .map((item: EntityCard) => entityCardToThumbnailCard(item, resolveEntityHref(item.kind, item.id)));
+    } catch {
+      relatedCards = [];
+    }
+  }
+
+  async function handleRatingChange(value: number | null) {
+    if (!person || ratingBusy) return;
+    const previous = person;
+    ratingBusy = true;
+    person = { ...person, capabilities: withRatingCapability(person.capabilities, value) };
+    try {
+      await updateV2EntityRating(person.id, value);
+    } catch {
+      person = previous;
     } finally {
-      savingEdit = false;
+      ratingBusy = false;
+    }
+  }
+
+  async function handleFavoriteToggle() {
+    if (!person) return;
+    const previous = person;
+    const flagsCap = getCapability(person.capabilities, "flags");
+    const next = !(flagsCap?.isFavorite ?? false);
+    person = { ...person, capabilities: withFlagCapability(person.capabilities, "isFavorite", next) };
+    try {
+      await updateV2EntityFlags(person.id, { isFavorite: next });
+    } catch {
+      person = previous;
+    }
+  }
+
+  async function handleOrganizedToggle() {
+    if (!person) return;
+    const previous = person;
+    const flagsCap = getCapability(person.capabilities, "flags");
+    const next = !(flagsCap?.isOrganized ?? false);
+    person = { ...person, capabilities: withFlagCapability(person.capabilities, "isOrganized", next) };
+    try {
+      await updateV2EntityFlags(person.id, { isOrganized: next });
+    } catch {
+      person = previous;
     }
   }
 </script>
 
 <svelte:head>
-  <title>Obscura</title>
+  <title>{person?.title ?? "Performer"} · Obscura</title>
 </svelte:head>
 
-<div class="space-y-6">
-  <div class="flex flex-col sm:flex-row gap-4 items-start">
-    <div class="w-32 sm:w-40 shrink-0 bg-surface-1 border border-border-subtle overflow-hidden">
-      <EntityThumbnail
-        kind="performer"
-        performer={patchedP}
-        showChips={false}
-      />
+<div class="detail-page">
+  <a href="/performers" class="back-link">
+    <ArrowLeft class="h-4 w-4" />
+    Performers
+  </a>
+
+  {#if loadState === "loading"}
+    <div class="loading-shell" aria-busy="true"></div>
+  {:else if loadState === "error"}
+    <div class="error-notice">
+      <p>{errorMessage ?? "Failed to load performer."}</p>
+      <button type="button" onclick={() => void loadPerson()}>Retry</button>
     </div>
-    <div class="flex-1 min-w-0 space-y-2">
-      <div class="flex items-start justify-between gap-3">
-        <div class="min-w-0">
-          <h1 class="flex items-center gap-2.5 text-text-primary flex-wrap">
-            <Users class="h-5 w-5 text-text-accent" />
-            {patchedP.name}
-            {#if patchedP.disambiguation}
-              <span class="text-text-muted text-sm">({patchedP.disambiguation})</span>
-            {/if}
-            {#if patchedP.favorite}
-              <Star class="h-4 w-4 text-accent-500 fill-current" />
-            {/if}
-          </h1>
-
-          {#if patchedP.aliases}
-            <p class="text-[0.72rem] text-text-muted mt-1">Aliases: {patchedP.aliases}</p>
-          {/if}
-        </div>
-
-        <div class="shrink-0 pt-1 flex items-center gap-2">
-          <InlineRating
-            value={patchedP.rating ?? null}
-            onSave={handleRatingSave}
-            ariaLabelPrefix="Rate performer with"
-          />
-          <button
-            type="button"
-            aria-label={editing ? "Cancel actor edit" : "Edit actor"}
-            title={editing ? "Cancel actor edit" : "Edit actor"}
-            onclick={() => (editing ? (editing = false) : beginEdit())}
-            class="flex h-8 w-8 items-center justify-center border border-border-subtle bg-surface-2 text-text-muted hover:border-border-accent hover:text-text-accent transition-colors duration-fast"
-          >
-            {#if editing}
-              <X class="h-4 w-4" />
-            {:else}
-              <Edit3 class="h-4 w-4" />
-            {/if}
-          </button>
-        </div>
-      </div>
-
-      <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-[0.78rem] text-text-secondary mt-2">
-        {#if patchedP.gender}
-          <div class="flex gap-2">
-            <dt class="text-text-muted">Gender:</dt>
-            <dd>{patchedP.gender.replaceAll("_", " ")}</dd>
-          </div>
+  {:else if card && person}
+    <EntityDetail
+      {card}
+      onRatingChange={handleRatingChange}
+      onFavoriteToggle={handleFavoriteToggle}
+      onOrganizedToggle={handleOrganizedToggle}
+      {ratingBusy}
+      posterSize="large"
+    >
+      {#snippet heroMeta()}
+        {#if person?.gender}
+          <span class="meta-item">{person.gender}</span>
         {/if}
-        {#if patchedP.country}
-          <div class="flex gap-2">
-            <dt class="text-text-muted">Country:</dt>
-            <dd>{patchedP.country}</dd>
-          </div>
+        {#if person?.country}
+          {#if person.gender}<span class="meta-sep"></span>{/if}
+          <span class="meta-item">{person.country}</span>
         {/if}
-        {#if patchedP.birthdate}
-          <div class="flex gap-2">
-            <dt class="text-text-muted">Born:</dt>
-            <dd>{patchedP.birthdate}</dd>
-          </div>
-        {/if}
-        {#if patchedP.ethnicity}
-          <div class="flex gap-2">
-            <dt class="text-text-muted">Ethnicity:</dt>
-            <dd>{patchedP.ethnicity}</dd>
-          </div>
-        {/if}
-        {#if patchedP.height}
-          <div class="flex gap-2">
-            <dt class="text-text-muted">Height:</dt>
-            <dd>{patchedP.height}</dd>
-          </div>
-        {/if}
-        {#if patchedP.weight}
-          <div class="flex gap-2">
-            <dt class="text-text-muted">Weight:</dt>
-            <dd>{patchedP.weight}</dd>
-          </div>
-        {/if}
-        {#if patchedP.eyeColor}
-          <div class="flex gap-2">
-            <dt class="text-text-muted">Eyes:</dt>
-            <dd>{patchedP.eyeColor}</dd>
-          </div>
-        {/if}
-        {#if patchedP.hairColor}
-          <div class="flex gap-2">
-            <dt class="text-text-muted">Hair:</dt>
-            <dd>{patchedP.hairColor}</dd>
-          </div>
-        {/if}
-      </dl>
-
-      <div class="flex flex-wrap gap-1 pt-1">
-        {#if (patchedP.videoCount ?? 0) > 0}
-          <Badge>
-            {#snippet children()}
-              {patchedP.videoCount} {patchedP.videoCount === 1 ? "video" : "videos"}
-            {/snippet}
-          </Badge>
-        {/if}
-        {#if (patchedP.imageAppearanceCount ?? 0) > 0}
-          <Badge>
-            {#snippet children()}
-              {patchedP.imageAppearanceCount} {patchedP.imageAppearanceCount === 1 ? "image" : "images"}
-            {/snippet}
-          </Badge>
-        {/if}
-        {#if (patchedP.audioLibraryCount ?? 0) > 0}
-          <Badge>
-            {#snippet children()}
-              {patchedP.audioLibraryCount} {patchedP.audioLibraryCount === 1 ? "album" : "albums"}
-            {/snippet}
-          </Badge>
-        {/if}
-        {#if patchedP.isNsfw}
-          <Badge variant="warning">
-            {#snippet children()}NSFW{/snippet}
-          </Badge>
-        {/if}
-      </div>
-
-      {#if patchedP.details}
-        <p class="mt-3 text-[0.82rem] text-text-secondary leading-relaxed max-w-2xl">
-          {patchedP.details}
-        </p>
-      {/if}
-    </div>
-  </div>
-
-  {#if editing}
-    <div class="max-w-4xl">
-      <EditFormShell
-        title="Actor metadata"
-        onSave={saveEdit}
-        onCancel={() => (editing = false)}
-        saving={savingEdit}
-        saveDisabled={!editName.trim()}
-        saveLabel="Save actor"
-        error={editError}
-      >
-        <div class="grid gap-4 md:grid-cols-2">
-          <TextField label="Name" icon={User} value={editName} onChange={(v) => (editName = v)} required />
-          <TextField label="Disambiguation" value={editDisambiguation} onChange={(v) => (editDisambiguation = v)} />
-        </div>
-        <TextAreaField
-          label="Details"
-          icon={FileText}
-          value={editDetails}
-          onChange={(v) => (editDetails = v)}
-          rows={4}
-        />
-        <div class="grid gap-4 md:grid-cols-2">
-          <TextField label="Aliases" icon={TagIcon} value={editAliases} onChange={(v) => (editAliases = v)} />
-          <TextField label="Gender" icon={Users} value={editGender} onChange={(v) => (editGender = v)} />
-          <TextField label="Country" icon={Globe} value={editCountry} onChange={(v) => (editCountry = v)} />
-          <DateField label="Birthdate" icon={Calendar} value={editBirthdate} onChange={(v) => (editBirthdate = v)} />
-          <TextField label="Ethnicity" value={editEthnicity} onChange={(v) => (editEthnicity = v)} />
-          <TextField label="Eyes" value={editEyeColor} onChange={(v) => (editEyeColor = v)} />
-          <TextField label="Hair" value={editHairColor} onChange={(v) => (editHairColor = v)} />
-          <TextField
-            label="Height"
-            icon={Ruler}
-            type="number"
-            value={editHeight}
-            onChange={(v) => (editHeight = v)}
-          />
-          <TextField
-            label="Weight"
-            type="number"
-            value={editWeight}
-            onChange={(v) => (editWeight = v)}
-          />
-        </div>
-        <div class="flex flex-wrap gap-2">
-          <ToggleChip value={editFavorite} onChange={(v) => (editFavorite = v)} onLabel="Favorite" icon={Star} />
-          <ToggleChip
-            value={editIsNsfw}
-            onChange={(v) => (editIsNsfw = v)}
-            onLabel="NSFW"
-            variant="warning"
-          />
-        </div>
-      </EditFormShell>
-    </div>
-  {/if}
-
-  {#if patchedP.knownFor && patchedP.knownFor.length > 0}
-    <HierarchySection title="Known For">
-      {#snippet children()}
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-          {#each patchedP.knownFor as entry (`${entry.sourceType}:${entry.sourceId}`)}
-            {@const href = knownForHref(entry)}
-            <a
-              {href}
-              class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
-            >
-              {#if entry.sourceType === "series"}
-                <EntityThumbnail
-                  kind="video-series"
-                  title={entry.sourceTitle}
-                  coverImagePath={entry.thumbnailPath}
-                  class="aspect-[2/3]"
-                  showCount={false}
-                />
-              {:else}
-                <EntityThumbnail
-                  kind="video"
-                  video={{
-                    id: entry.sourceId,
-                    href,
-                    title: entry.sourceTitle,
-                    thumbnail: toApiUrl(entry.thumbnailPath) ?? undefined,
-                    cardThumbnail: toApiUrl(entry.cardThumbnailPath) ?? undefined,
-                    seasonNumber: entry.seasonNumber ?? undefined,
-                    episodeNumber: entry.episodeNumber ?? undefined,
-                  }}
-                  size="hero"
-                  class="aspect-[2/3]"
-                />
-              {/if}
-              <div class="p-2 space-y-0.5">
-                <h4 class="truncate text-[0.78rem] font-medium text-text-primary">
-                  {entry.sourceTitle}
-                </h4>
-                <p class="truncate text-[0.65rem] text-text-disabled">
-                  {knownForContext(entry)}
-                </p>
-                {#if entry.character}
-                  <p class="truncate text-[0.65rem] text-text-muted">as {entry.character}</p>
-                {/if}
-              </div>
-            </a>
-          {/each}
-        </div>
+        {#each dates as date, i (date.code)}
+          <span class="meta-sep"></span>
+          <span class="meta-item">{date.value}</span>
+        {/each}
       {/snippet}
-    </HierarchySection>
-  {/if}
 
-  <MediaTabs tabs={tabs} defaultTabId="videos" />
+      {#snippet afterBody()}
+        {#if bioRows.length > 0}
+          <div class="bio-section">
+            <h2 class="section-label">Details</h2>
+            <dl class="bio-grid">
+              {#each bioRows as row (row.label)}
+                <div class="bio-row">
+                  <dt>{row.label}</dt>
+                  <dd>{row.value}</dd>
+                </div>
+              {/each}
+            </dl>
+          </div>
+        {/if}
+      {/snippet}
+    </EntityDetail>
+
+    {#if relatedCards.length > 0}
+      <section class="content-section">
+        <h2 class="content-heading">
+          <Film class="h-4 w-4" />
+          Appearances
+          <span class="content-count">{relatedCards.length}</span>
+        </h2>
+        <EntityGrid
+          cards={relatedCards}
+          prefsKey={`performer-${person?.id}-appearances`}
+          selectable={false}
+          emptyTitle="No appearances"
+          emptyMessage="No content linked to this performer."
+        />
+      </section>
+    {/if}
+  {/if}
 </div>
+
+<style>
+  .detail-page { display: grid; gap: 1.25rem; padding: clamp(1rem, 3vw, 2rem); max-width: 72rem; margin: 0 auto; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--color-text-muted, #8a93a6); font-size: 0.78rem; text-decoration: none; font-family: var(--font-mono, "JetBrains Mono", monospace); text-transform: uppercase; letter-spacing: 0.04em; transition: color 0.15s; }
+  .back-link:hover { color: var(--color-text-primary, #f2eed8); }
+  .loading-shell { min-height: 28rem; border: 1px solid var(--color-border, #1c2235); background: var(--color-surface-2, #101420); animation: pulse 1.2s ease-in-out infinite; }
+  .error-notice { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid color-mix(in srgb, #ef4444 50%, var(--color-border, #1c2235)); background: var(--color-surface-2, #101420); color: var(--color-text-muted, #8a93a6); font-size: 0.85rem; }
+  .error-notice button { border: 1px solid var(--color-border, #1c2235); background: var(--color-surface-3, #151a28); color: var(--color-text-muted, #8a93a6); padding: 0.4rem 0.8rem; font-size: 0.78rem; cursor: pointer; }
+
+  :global(.meta-item) { white-space: nowrap; font-size: 0.82rem; }
+  :global(.meta-sep) { display: inline-block; width: 3px; height: 3px; margin: 0 0.5rem; background: var(--color-text-muted, #8a93a6); opacity: 0.5; }
+
+  .bio-section { padding: 1rem 1.5rem; border-top: 1px solid var(--color-border, #1c2235); }
+  .section-label { display: flex; align-items: center; gap: 0.45rem; margin: 0 0 0.75rem; font-family: var(--font-mono, "JetBrains Mono", monospace); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-muted, #8a93a6); }
+  .bio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0.5rem 1.5rem; margin: 0; }
+  .bio-row { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.3rem 0; border-bottom: 1px solid var(--color-border-subtle, rgba(28, 34, 53, 0.5)); }
+  .bio-row dt { font-family: var(--font-mono, "JetBrains Mono", monospace); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-text-muted, #8a93a6); }
+  .bio-row dd { margin: 0; font-size: 0.8rem; color: var(--color-text-secondary, #c4c9d4); text-align: right; }
+
+  .content-section { display: grid; gap: 0.75rem; }
+  .content-heading { display: flex; align-items: center; gap: 0.5rem; margin: 0; font-family: var(--font-heading, Geist, sans-serif); font-size: 1.1rem; font-weight: 600; color: var(--color-text-primary, #f2eed8); }
+  .content-count { font-family: var(--font-mono, "JetBrains Mono", monospace); font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted, #8a93a6); padding: 0.1rem 0.4rem; border: 1px solid var(--color-border, #1c2235); background: var(--color-surface-3, #151a28); }
+
+  @media (min-width: 640px) { .bio-section { padding: 1rem 2rem; } }
+  @keyframes pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.85; } }
+</style>

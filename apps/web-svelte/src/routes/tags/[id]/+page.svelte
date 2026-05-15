@@ -1,319 +1,184 @@
 <script lang="ts">
-  import {
-    AlertTriangle,
-    Edit3,
-    FileText,
-    Image as ImageIcon,
-    Loader2,
-    Star,
-    Tag as TagIcon,
-    Trash2,
-    Upload,
-    X,
-  } from "@lucide/svelte";
-  import { invalidate } from "$app/navigation";
-  import { Badge } from "@obscura/ui-svelte";
-  import {
-    deleteTagImage,
-    updateTag,
-    uploadTagImage,
-  } from "$lib/v1/api/entities-v1";
+  import { onMount } from "svelte";
   import { page } from "$app/state";
-  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
-  import MediaTabs from "$lib/v1/media-surface/tabs/MediaTabsV1.svelte";
-  import { detailTabsFor } from "$lib/v1/media-surface/tabs/detail-tabs-v1";
+  import { ArrowLeft, Film } from "@lucide/svelte";
   import {
-    EditFormShell,
-    FormField,
-    TextAreaField,
-    TextField,
-    ToggleChip,
-  } from "$lib/components/forms";
-  import { buildTagEditPatch } from "$lib/entity-edit-patch";
+    fetchV2Tag,
+    fetchV2Entities,
+    updateV2EntityRating,
+    updateV2EntityFlags,
+    type V2TagDetail,
+  } from "$lib/api/v2";
+  import {
+    getCapability,
+    withFlagCapability,
+    withRatingCapability,
+  } from "$lib/api/capabilities";
+  import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
+  import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
+  import { resolveEntityHref } from "$lib/entities/entity-routes";
+  import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
+  import type { EntityCard } from "$lib/api/generated/model";
+  import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
+  import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
 
-  let { data } = $props();
-  let localPatch = $state<Record<string, unknown>>({});
-  let editing = $state(false);
-  let savingEdit = $state(false);
-  let editError = $state<string | null>(null);
-  let editName = $state("");
-  let editDescription = $state("");
-  let editAliases = $state("");
-  let editFavorite = $state(false);
-  let editIsNsfw = $state(false);
-  let editIgnoreAutoTag = $state(false);
-  let imageInput = $state<HTMLInputElement | null>(null);
-  let imageUploading = $state(false);
-  let imageError = $state<string | null>(null);
-  let imageCacheBust = $state<string>("");
+  type LoadState = "loading" | "ready" | "error";
 
-  const baseTag = $derived(data.tag);
-  const t = $derived({
-    ...(baseTag as Record<string, unknown>),
-    ...localPatch,
-  } as typeof baseTag);
+  let loadState: LoadState = $state("loading");
+  let tag = $state<V2TagDetail | null>(null);
+  let relatedCards = $state<EntityThumbnailCard[]>([]);
+  let errorMessage: string | null = $state(null);
+  let ratingBusy = $state(false);
 
-  const tabs = $derived(
-    detailTabsFor({
-      entityKind: "tag",
-      entityId: t.id,
-      entityName: t.name,
-      nsfwMode: "show",
-      totals: {
-        videos: data.totalVideos,
-        series: data.totalSeries,
-        books: data.totalBooks,
-        galleries: data.totalGalleries,
-        images: data.totalImages,
-        "audio-libraries": data.totalAudioLibraries,
-        "audio-tracks": data.totalAudioTracks,
-        performers: 0,
-      },
-      initialActive: page.url.searchParams.get("tab") === null
-        ? {
-            tabId: "videos",
-            items: data.videos as unknown[],
-            total: data.totalVideos,
-          }
-        : undefined,
-    }),
-  );
+  const card = $derived.by((): EntityDetailCardFull | null => {
+    if (!tag) return null;
+    return entityCardToDetailCard(tag);
+  });
 
-  function beginEdit() {
-    editName = t.name ?? "";
-    editDescription = t.description ?? "";
-    editAliases = t.aliases ?? "";
-    editFavorite = t.favorite ?? false;
-    editIsNsfw = t.isNsfw ?? false;
-    editIgnoreAutoTag = t.ignoreAutoTag ?? false;
-    editError = null;
-    editing = true;
-  }
+  onMount(() => {
+    void loadTag();
+  });
 
-  async function saveEdit() {
-    if (!editName.trim() || savingEdit) return;
-    savingEdit = true;
-    editError = null;
-    const patch = buildTagEditPatch({
-      name: editName,
-      description: editDescription,
-      aliases: editAliases,
-      favorite: editFavorite,
-      isNsfw: editIsNsfw,
-      ignoreAutoTag: editIgnoreAutoTag,
-    });
-
+  async function loadTag() {
+    loadState = "loading";
+    errorMessage = null;
     try {
-      await updateTag(t.id, patch);
-      localPatch = { ...localPatch, ...patch };
-      editing = false;
+      const id = page.params.id ?? "";
+      tag = await fetchV2Tag(id);
+      await loadRelated(id, tag.title);
+      loadState = "ready";
     } catch (err) {
-      editError = err instanceof Error ? err.message : "Failed to save tag";
-    } finally {
-      savingEdit = false;
+      errorMessage = err instanceof Error ? err.message : String(err);
+      loadState = "error";
     }
   }
 
-  async function handleImageUpload(event: Event) {
-    const input = event.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = "";
-    if (!file) return;
-
-    imageUploading = true;
-    imageError = null;
+  async function loadRelated(tagId: string, tagTitle: string) {
     try {
-      const result = await uploadTagImage(t.id, file);
-      localPatch = { ...localPatch, imagePath: result.imagePath };
-      imageCacheBust = new Date().toISOString();
-      await invalidate(`tags:${t.id}`);
-    } catch (err) {
-      imageError = err instanceof Error ? err.message : "Failed to upload image";
-    } finally {
-      imageUploading = false;
+      const response = await fetchV2Entities({ query: tagTitle });
+      relatedCards = response.items
+        .filter((item: EntityCard) => {
+          const tagsCap = getCapability(item.capabilities, "tags");
+          return tagsCap?.values.some((t) => t.toLowerCase() === tagTitle.toLowerCase()) ?? false;
+        })
+        .map((item: EntityCard) => entityCardToThumbnailCard(item, resolveEntityHref(item.kind, item.id)));
+    } catch {
+      relatedCards = [];
     }
   }
 
-  async function handleImageClear() {
-    imageUploading = true;
-    imageError = null;
+  async function handleRatingChange(value: number | null) {
+    if (!tag || ratingBusy) return;
+    const previous = tag;
+    ratingBusy = true;
+    tag = { ...tag, capabilities: withRatingCapability(tag.capabilities, value) };
     try {
-      await deleteTagImage(t.id);
-      localPatch = { ...localPatch, imagePath: null };
-      imageCacheBust = new Date().toISOString();
-      await invalidate(`tags:${t.id}`);
-    } catch (err) {
-      imageError = err instanceof Error ? err.message : "Failed to clear image";
+      await updateV2EntityRating(tag.id, value);
+    } catch {
+      tag = previous;
     } finally {
-      imageUploading = false;
+      ratingBusy = false;
+    }
+  }
+
+  async function handleFavoriteToggle() {
+    if (!tag) return;
+    const previous = tag;
+    const flagsCap = getCapability(tag.capabilities, "flags");
+    const next = !(flagsCap?.isFavorite ?? false);
+    tag = { ...tag, capabilities: withFlagCapability(tag.capabilities, "isFavorite", next) };
+    try {
+      await updateV2EntityFlags(tag.id, { isFavorite: next });
+    } catch {
+      tag = previous;
+    }
+  }
+
+  async function handleOrganizedToggle() {
+    if (!tag) return;
+    const previous = tag;
+    const flagsCap = getCapability(tag.capabilities, "flags");
+    const next = !(flagsCap?.isOrganized ?? false);
+    tag = { ...tag, capabilities: withFlagCapability(tag.capabilities, "isOrganized", next) };
+    try {
+      await updateV2EntityFlags(tag.id, { isOrganized: next });
+    } catch {
+      tag = previous;
     }
   }
 </script>
 
 <svelte:head>
-  <title>Obscura</title>
+  <title>{tag?.title ?? "Tag"} · Obscura</title>
 </svelte:head>
 
-<div class="space-y-6">
-  <div class="flex flex-col sm:flex-row gap-4 items-start">
-    <div class="w-32 shrink-0">
-      <EntityThumbnail kind="tag" tag={t} cacheBust={imageCacheBust || null} showLabel={false} />
+<div class="detail-page">
+  <a href="/tags" class="back-link">
+    <ArrowLeft class="h-4 w-4" />
+    Tags
+  </a>
+
+  {#if loadState === "loading"}
+    <div class="loading-shell" aria-busy="true"></div>
+  {:else if loadState === "error"}
+    <div class="error-notice">
+      <p>{errorMessage ?? "Failed to load tag."}</p>
+      <button type="button" onclick={() => void loadTag()}>Retry</button>
     </div>
-    <div class="flex-1 min-w-0 space-y-2">
-      <div class="flex items-start justify-between gap-3">
-        <h1 class="flex items-center gap-2.5 text-text-primary flex-wrap">
-          <TagIcon class="h-5 w-5 text-text-accent" />
-          {t.name}
-          {#if t.favorite}
-            <Star class="h-4 w-4 text-accent-500 fill-current" />
-          {/if}
-        </h1>
-
-        <button
-          type="button"
-          aria-label={editing ? "Cancel tag edit" : "Edit tag"}
-          title={editing ? "Cancel tag edit" : "Edit tag"}
-          onclick={() => (editing ? (editing = false) : beginEdit())}
-          class="flex h-8 w-8 shrink-0 items-center justify-center border border-border-subtle bg-surface-2 text-text-muted transition-colors duration-fast hover:border-border-accent hover:text-text-accent"
-        >
-          {#if editing}
-            <X class="h-4 w-4" />
-          {:else}
-            <Edit3 class="h-4 w-4" />
-          {/if}
-        </button>
-      </div>
-
-      <div class="flex flex-wrap gap-1">
-        {#if (t.videoCount ?? 0) > 0}
-          <Badge>
-            {#snippet children()}
-              {t.videoCount} {t.videoCount === 1 ? "video" : "videos"}
-            {/snippet}
-          </Badge>
+  {:else if card && tag}
+    <EntityDetail
+      {card}
+      onRatingChange={handleRatingChange}
+      onFavoriteToggle={handleFavoriteToggle}
+      onOrganizedToggle={handleOrganizedToggle}
+      {ratingBusy}
+      posterSize="large"
+    >
+      {#snippet heroMeta()}
+        {#if relatedCards.length > 0}
+          <span class="meta-item">{relatedCards.length} {relatedCards.length === 1 ? "item" : "items"}</span>
         {/if}
-        {#if (t.imageCount ?? 0) > 0}
-          <Badge>
-            {#snippet children()}
-              {t.imageCount} {t.imageCount === 1 ? "image" : "images"}
-            {/snippet}
-          </Badge>
+        {#if tag?.ignoreAutoTag}
+          {#if relatedCards.length > 0}<span class="meta-sep"></span>{/if}
+          <span class="meta-item is-muted">Auto-tag ignored</span>
         {/if}
-        {#if t.isNsfw}
-          <Badge variant="warning">
-            {#snippet children()}NSFW{/snippet}
-          </Badge>
-        {/if}
-      </div>
+      {/snippet}
+    </EntityDetail>
 
-      {#if t.description}
-        <p class="mt-2 text-[0.82rem] text-text-secondary leading-relaxed whitespace-pre-wrap max-w-2xl">
-          {t.description}
-        </p>
-      {/if}
-
-      {#if t.aliases}
-        <p class="text-[0.72rem] text-text-muted">Aliases: {t.aliases}</p>
-      {/if}
-    </div>
-  </div>
-
-  {#if editing}
-    <div class="max-w-4xl">
-      <EditFormShell
-        title="Tag metadata"
-        onSave={saveEdit}
-        onCancel={() => (editing = false)}
-        saving={savingEdit}
-        saveDisabled={!editName.trim()}
-        saveLabel="Save tag"
-        error={editError}
-      >
-        <TextField label="Name" icon={TagIcon} value={editName} onChange={(v) => (editName = v)} required />
-        <TextAreaField
-          label="Description"
-          icon={FileText}
-          value={editDescription}
-          onChange={(v) => (editDescription = v)}
-          rows={4}
+    {#if relatedCards.length > 0}
+      <section class="content-section">
+        <h2 class="content-heading">
+          <Film class="h-4 w-4" />
+          Tagged Content
+          <span class="content-count">{relatedCards.length}</span>
+        </h2>
+        <EntityGrid
+          cards={relatedCards}
+          prefsKey={`tag-${tag?.id}-content`}
+          selectable={false}
+          emptyTitle="No content"
+          emptyMessage="No content tagged with this tag."
         />
-        <TextField label="Aliases" value={editAliases} onChange={(v) => (editAliases = v)} />
-        <FormField label="Image" icon={ImageIcon}>
-          <div class="flex items-start gap-3">
-            <div class="w-24 h-24 shrink-0 bg-surface-1 border border-border-subtle overflow-hidden flex items-center justify-center">
-              <EntityThumbnail
-                kind="tag"
-                tag={t}
-                cacheBust={imageCacheBust || null}
-                showLabel={false}
-                aspectClass="h-full w-full"
-              />
-            </div>
-            <div class="flex-1 min-w-0 space-y-2">
-              <div class="flex flex-wrap gap-2">
-                <input
-                  bind:this={imageInput}
-                  class="hidden"
-                  type="file"
-                  accept="image/*"
-                  onchange={handleImageUpload}
-                />
-                <button
-                  type="button"
-                  onclick={() => imageInput?.click()}
-                  disabled={imageUploading}
-                  class="inline-flex items-center gap-1.5 border border-border-default px-3 py-1.5 text-[0.75rem] text-text-secondary transition-colors hover:border-border-accent hover:text-text-accent disabled:opacity-50"
-                >
-                  {#if imageUploading}
-                    <Loader2 class="h-3.5 w-3.5 animate-spin" />
-                  {:else}
-                    <Upload class="h-3.5 w-3.5" />
-                  {/if}
-                  Upload
-                </button>
-                {#if t.imagePath}
-                  <button
-                    type="button"
-                    onclick={() => void handleImageClear()}
-                    disabled={imageUploading}
-                    class="inline-flex items-center gap-1.5 border border-border-default px-3 py-1.5 text-[0.75rem] text-text-secondary transition-colors hover:border-error/40 hover:text-error-text disabled:opacity-50"
-                  >
-                    <Trash2 class="h-3.5 w-3.5" />
-                    Remove
-                  </button>
-                {/if}
-              </div>
-              {#if imageError}
-                <p class="text-[0.72rem] text-error-text">{imageError}</p>
-              {:else}
-                <p class="text-[0.7rem] text-text-disabled">
-                  Upload a custom image to represent this tag in grids and detail pages.
-                </p>
-              {/if}
-            </div>
-          </div>
-        </FormField>
-        <FormField label="Flags">
-          <div class="flex flex-wrap gap-2">
-            <ToggleChip value={editFavorite} onChange={(v) => (editFavorite = v)} onLabel="Favorite" icon={Star} />
-            <ToggleChip
-              value={editIsNsfw}
-              onChange={(v) => (editIsNsfw = v)}
-              onLabel="NSFW"
-              icon={AlertTriangle}
-              variant="warning"
-            />
-            <ToggleChip
-              value={editIgnoreAutoTag}
-              onChange={(v) => (editIgnoreAutoTag = v)}
-              onLabel="Ignored for auto-tag"
-              offLabel="Ignore for auto-tag"
-            />
-          </div>
-        </FormField>
-      </EditFormShell>
-    </div>
+      </section>
+    {/if}
   {/if}
-
-  <MediaTabs tabs={tabs} defaultTabId="videos" />
 </div>
+
+<style>
+  .detail-page { display: grid; gap: 1.25rem; padding: clamp(1rem, 3vw, 2rem); max-width: 72rem; margin: 0 auto; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--color-text-muted, #8a93a6); font-size: 0.78rem; text-decoration: none; font-family: var(--font-mono, "JetBrains Mono", monospace); text-transform: uppercase; letter-spacing: 0.04em; transition: color 0.15s; }
+  .back-link:hover { color: var(--color-text-primary, #f2eed8); }
+  .loading-shell { min-height: 28rem; border: 1px solid var(--color-border, #1c2235); background: var(--color-surface-2, #101420); animation: pulse 1.2s ease-in-out infinite; }
+  .error-notice { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid color-mix(in srgb, #ef4444 50%, var(--color-border, #1c2235)); background: var(--color-surface-2, #101420); color: var(--color-text-muted, #8a93a6); font-size: 0.85rem; }
+  .error-notice button { border: 1px solid var(--color-border, #1c2235); background: var(--color-surface-3, #151a28); color: var(--color-text-muted, #8a93a6); padding: 0.4rem 0.8rem; font-size: 0.78rem; cursor: pointer; }
+
+  :global(.meta-item) { white-space: nowrap; font-size: 0.82rem; }
+  :global(.meta-item.is-muted) { color: var(--color-text-muted, #8a93a6); opacity: 0.7; font-style: italic; }
+  :global(.meta-sep) { display: inline-block; width: 3px; height: 3px; margin: 0 0.5rem; background: var(--color-text-muted, #8a93a6); opacity: 0.5; }
+
+  .content-section { display: grid; gap: 0.75rem; }
+  .content-heading { display: flex; align-items: center; gap: 0.5rem; margin: 0; font-family: var(--font-heading, Geist, sans-serif); font-size: 1.1rem; font-weight: 600; color: var(--color-text-primary, #f2eed8); }
+  .content-count { font-family: var(--font-mono, "JetBrains Mono", monospace); font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted, #8a93a6); padding: 0.1rem 0.4rem; border: 1px solid var(--color-border, #1c2235); background: var(--color-surface-3, #151a28); }
+
+  @keyframes pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.85; } }
+</style>

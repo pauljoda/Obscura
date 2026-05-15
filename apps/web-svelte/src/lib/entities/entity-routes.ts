@@ -11,20 +11,20 @@ interface EntityRouteRule {
 }
 
 const ROUTE_RULES: EntityRouteRule[] = [
-  { kind: "video", topLevel: true, browsePath: "/v2/videos", resolve: (id) => `/v2/videos/${id}` },
-  { kind: "video-series", topLevel: true, browsePath: "/v2/series", resolve: (id) => `/v2/series/${id}` },
-  { kind: "video-season", topLevel: false, browsePath: "/v2/series", resolve: (id, p) => `/v2/series/${p!.id}/seasons/${id}` },
-  { kind: "gallery", topLevel: true, browsePath: "/v2/galleries", resolve: (id) => `/v2/galleries/${id}` },
-  { kind: "book", topLevel: true, browsePath: "/v2/books", resolve: (id) => `/v2/books/${id}` },
-  { kind: "book-volume", topLevel: false, browsePath: "/v2/books", resolve: (id, p) => `/v2/books/${p!.id}/volumes/${id}` },
-  { kind: "book-chapter", topLevel: false, browsePath: "/v2/books", resolve: (id, p) => `/v2/books/${p!.id}/chapters/${id}` },
-  { kind: "image", topLevel: true, browsePath: "/v2/images", resolve: (id) => `/v2/images/${id}` },
-  { kind: "audio-library", topLevel: true, browsePath: "/v2/audio", resolve: (id) => `/v2/audio/${id}` },
-  { kind: "audio-track", topLevel: false, browsePath: "/v2/audio", resolve: (id, p) => `/v2/audio/${p!.id}/tracks/${id}` },
-  { kind: "person", topLevel: true, browsePath: "/v2/performers", resolve: (id) => `/v2/performers/${id}` },
-  { kind: "studio", topLevel: true, browsePath: "/v2/studios", resolve: (id) => `/v2/studios/${id}` },
-  { kind: "tag", topLevel: true, browsePath: "/v2/tags", resolve: (id) => `/v2/tags/${id}` },
-  { kind: "collection", topLevel: true, browsePath: "/v2/collections", resolve: (id) => `/v2/collections/${id}` },
+  { kind: "video", topLevel: true, browsePath: "/videos", resolve: (id) => `/videos/${id}` },
+  { kind: "video-series", topLevel: true, browsePath: "/series", resolve: (id) => `/series/${id}` },
+  { kind: "video-season", topLevel: false, browsePath: "/series", resolve: (id, p) => `/series/${p!.id}/seasons/${id}` },
+  { kind: "gallery", topLevel: true, browsePath: "/galleries", resolve: (id) => `/galleries/${id}` },
+  { kind: "book", topLevel: true, browsePath: "/books", resolve: (id) => `/books/${id}` },
+  { kind: "book-volume", topLevel: false, browsePath: "/books", resolve: (id, p) => `/books/${p!.id}/volumes/${id}` },
+  { kind: "book-chapter", topLevel: false, browsePath: "/books", resolve: (id, p) => `/books/${p!.id}/chapters/${id}` },
+  { kind: "image", topLevel: true, browsePath: "/images", resolve: (id) => `/images/${id}` },
+  { kind: "audio-library", topLevel: true, browsePath: "/audio", resolve: (id) => `/audio/${id}` },
+  { kind: "audio-track", topLevel: false, browsePath: "/audio", resolve: (id, p) => `/audio/${p!.id}/tracks/${id}` },
+  { kind: "person", topLevel: true, browsePath: "/performers", resolve: (id) => `/performers/${id}` },
+  { kind: "studio", topLevel: true, browsePath: "/studios", resolve: (id) => `/studios/${id}` },
+  { kind: "tag", topLevel: true, browsePath: "/tags", resolve: (id) => `/tags/${id}` },
+  { kind: "collection", topLevel: true, browsePath: "/collections", resolve: (id) => `/collections/${id}` },
 ];
 
 const ruleMap = new Map(ROUTE_RULES.map((r) => [r.kind, r]));

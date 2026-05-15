@@ -61,7 +61,7 @@
         const seasonPos = pos?.items.find((p) => p.code === "season");
         return seasonPos && Number(seasonPos.value) === seasonNumber;
       })
-      .map((video) => entityCardToThumbnailCard(video, `/v2/videos/${video.id}`));
+      .map((video) => entityCardToThumbnailCard(video, `/videos/${video.id}`));
   });
 
   onMount(() => {
@@ -134,7 +134,7 @@
 </svelte:head>
 
 <div class="season-page">
-  <a href={`/v2/series/${seriesId}`} class="back-link">
+  <a href={`/series/${seriesId}`} class="back-link">
     <ArrowLeft class="h-4 w-4" />
     {parentSeries?.title ?? "Series"}
   </a>

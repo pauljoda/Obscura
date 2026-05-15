@@ -53,19 +53,19 @@
     if (!series) return [];
     return series.children
       .filter((child) => child.kind === "video-season")
-      .map((child) => entityCardToThumbnailCard(child, `/v2/series/${series!.id}/seasons/${child.id}`));
+      .map((child) => entityCardToThumbnailCard(child, `/series/${series!.id}/seasons/${child.id}`));
   });
 
   const childSeriesCards = $derived.by((): EntityThumbnailCard[] => {
     if (!series) return [];
     return series.children
       .filter((child) => child.kind === "video-series")
-      .map((child) => entityCardToThumbnailCard(child, `/v2/series/${child.id}`));
+      .map((child) => entityCardToThumbnailCard(child, `/series/${child.id}`));
   });
 
   const videoCards = $derived.by((): EntityThumbnailCard[] => {
     if (!series) return [];
-    return series.videos.map((video) => entityCardToThumbnailCard(video, `/v2/videos/${video.id}`));
+    return series.videos.map((video) => entityCardToThumbnailCard(video, `/videos/${video.id}`));
   });
 
   const hasSeasons = $derived(seasonCards.length > 0);
@@ -135,7 +135,7 @@
 </svelte:head>
 
 <div class="series-page">
-  <a href="/v2/series" class="back-link">
+  <a href="/series" class="back-link">
     <ArrowLeft class="h-4 w-4" />
     Series
   </a>

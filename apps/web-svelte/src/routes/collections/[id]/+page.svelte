@@ -1,412 +1,190 @@
 <script lang="ts">
-  import { goto, invalidate } from "$app/navigation";
+  import { onMount } from "svelte";
   import { page } from "$app/state";
+  import { ArrowLeft, Layers } from "@lucide/svelte";
   import {
-    CheckSquare,
-    BookOpen,
-    Edit,
-    FolderOpen,
-    Grid3X3,
-    Hand,
-    Images,
-    Image as ImageIcon,
-    List,
-    Loader2,
-    Music,
-    Play,
-    RefreshCw,
-    Shuffle,
-    Trash2,
-    X,
-    Zap,
-    Film,
-  } from "@lucide/svelte";
-  import { Badge, Button } from "@obscura/ui-svelte";
-  import type {
-    CollectionEntityType,
-    CollectionItemDto,
-    CollectionMode,
-  } from "@obscura/contracts";
-  import { deleteCollection, fetchCollectionItems, refreshCollection, removeCollectionItems } from "$lib/v1/api/media-v1";
-  import { toApiUrl } from "$lib/v1/api/core-v1";
-  import CollectionItemCard from "$lib/components/collections/CollectionItemCard.svelte";
-  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
-  import { usePlaylist } from "$lib/stores/playlist.svelte";
+    fetchV2Collection,
+    updateV2EntityRating,
+    updateV2EntityFlags,
+    type V2CollectionDetail,
+  } from "$lib/api/v2";
+  import {
+    getCapability,
+    withFlagCapability,
+    withRatingCapability,
+  } from "$lib/api/capabilities";
+  import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
+  import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
+  import { resolveEntityHref } from "$lib/entities/entity-routes";
+  import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
+  import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
+  import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
 
-  type ViewMode = "mixed" | "by-type";
+  type LoadState = "loading" | "ready" | "error";
 
-  let { data } = $props();
-  const playlist = usePlaylist();
-  const c = $derived(data.collection);
-  const initialItems = $derived(data.items as CollectionItemDto[]);
-  let items = $derived(initialItems);
-  let viewMode = $state<ViewMode>("mixed");
-  let selectMode = $state(false);
-  let selectedItemIds = $state<string[]>([]);
-  let refreshing = $state(false);
-  let deleting = $state(false);
-  let removing = $state(false);
+  let loadState: LoadState = $state("loading");
+  let collection = $state<V2CollectionDetail | null>(null);
+  let errorMessage: string | null = $state(null);
+  let ratingBusy = $state(false);
 
-  const typeOrder: CollectionEntityType[] = ["video", "gallery", "book", "image", "audio-track"];
-  const modeIcons: Record<CollectionMode, typeof Hand> = {
-    manual: Hand,
-    dynamic: Zap,
-    hybrid: Shuffle,
-  };
-  const modeLabels: Record<CollectionMode, string> = {
-    manual: "Manual",
-    dynamic: "Dynamic",
-    hybrid: "Hybrid",
-  };
-  const typeLabels: Record<CollectionEntityType, string> = {
-    video: "Videos",
-    gallery: "Galleries",
-    book: "Books",
-    image: "Images",
-    "audio-track": "Audio",
-  };
-  const typeIcons: Record<CollectionEntityType, typeof Film> = {
-    video: Film,
-    gallery: Images,
-    book: BookOpen,
-    image: ImageIcon,
-    "audio-track": Music,
-  };
-
-  const ModeIcon = $derived(modeIcons[c.mode as CollectionMode]);
-  const coverUrl = $derived(toApiUrl(c.coverImagePath, c.updatedAt));
-  const hasManualItems = $derived(items.some((item) => item.source === "manual"));
-  const selectedCount = $derived(selectedItemIds.length);
-  const currentPath = $derived(page.url.pathname);
-  const itemsByType = $derived.by(() => {
-    const grouped: Record<CollectionEntityType, CollectionItemDto[]> = {
-      video: [],
-      gallery: [],
-      book: [],
-      image: [],
-      "audio-track": [],
-    };
-    for (const item of items) grouped[item.entityType].push(item);
-    return grouped;
+  const card = $derived.by((): EntityDetailCardFull | null => {
+    if (!collection) return null;
+    return entityCardToDetailCard(collection);
   });
 
-  function slideshowDuration() {
-    return c.slideshowAutoAdvance ? c.slideshowDurationSeconds : 0;
-  }
+  const itemCards = $derived.by((): EntityThumbnailCard[] => {
+    if (!collection) return [];
+    return collection.items.map((item) =>
+      entityCardToThumbnailCard(item, resolveEntityHref(item.kind, item.id)),
+    );
+  });
 
-  function startPlayback(shuffle = false) {
-    if (items.length === 0) return;
-    playlist.startPlaylist(items, c.name, 0, {
-      shuffle,
-      slideshowDurationSeconds: slideshowDuration(),
-    });
-  }
+  onMount(() => {
+    void loadCollection();
+  });
 
-  async function refreshDynamicRules() {
-    if (refreshing) return;
-    refreshing = true;
+  async function loadCollection() {
+    loadState = "loading";
+    errorMessage = null;
     try {
-      await refreshCollection(c.id);
-      await invalidate(`collections:${c.id}`);
-      const fresh = await fetchCollectionItems(c.id, { limit: 200 });
-      items = fresh.items;
-      selectedItemIds = selectedItemIds.filter((id) => fresh.items.some((item) => item.id === id));
-    } finally {
-      refreshing = false;
-    }
-  }
-
-  async function deleteThisCollection() {
-    if (deleting) return;
-    if (!confirm("Delete this collection? This cannot be undone.")) return;
-    deleting = true;
-    try {
-      await deleteCollection(c.id);
-      await invalidate("collections");
-      await goto("/collections");
-    } finally {
-      deleting = false;
-    }
-  }
-
-  function toggleSelection(itemId: string) {
-    if (selectedItemIds.includes(itemId)) {
-      selectedItemIds = selectedItemIds.filter((id) => id !== itemId);
-      return;
-    }
-    selectedItemIds = [...selectedItemIds, itemId];
-  }
-
-  async function removeSelectedItems() {
-    if (selectedItemIds.length === 0 || removing) return;
-    const ids = selectedItemIds;
-    const previous = items;
-    removing = true;
-    items = items.filter((item) => !ids.includes(item.id));
-    selectedItemIds = [];
-    selectMode = false;
-    try {
-      await removeCollectionItems(c.id, { itemIds: ids });
-      await invalidate(`collections:${c.id}`);
-      await invalidate("collections");
+      collection = await fetchV2Collection(page.params.id ?? "");
+      loadState = "ready";
     } catch (err) {
-      items = previous;
-      throw err;
-    } finally {
-      removing = false;
+      errorMessage = err instanceof Error ? err.message : String(err);
+      loadState = "error";
     }
   }
 
-  function exitSelectMode() {
-    selectMode = false;
-    selectedItemIds = [];
+  async function handleRatingChange(value: number | null) {
+    if (!collection || ratingBusy) return;
+    const previous = collection;
+    ratingBusy = true;
+    collection = { ...collection, capabilities: withRatingCapability(collection.capabilities, value) };
+    try {
+      await updateV2EntityRating(collection.id, value);
+    } catch {
+      collection = previous;
+    } finally {
+      ratingBusy = false;
+    }
+  }
+
+  async function handleFavoriteToggle() {
+    if (!collection) return;
+    const previous = collection;
+    const flagsCap = getCapability(collection.capabilities, "flags");
+    const next = !(flagsCap?.isFavorite ?? false);
+    collection = { ...collection, capabilities: withFlagCapability(collection.capabilities, "isFavorite", next) };
+    try {
+      await updateV2EntityFlags(collection.id, { isFavorite: next });
+    } catch {
+      collection = previous;
+    }
+  }
+
+  async function handleOrganizedToggle() {
+    if (!collection) return;
+    const previous = collection;
+    const flagsCap = getCapability(collection.capabilities, "flags");
+    const next = !(flagsCap?.isOrganized ?? false);
+    collection = { ...collection, capabilities: withFlagCapability(collection.capabilities, "isOrganized", next) };
+    try {
+      await updateV2EntityFlags(collection.id, { isOrganized: next });
+    } catch {
+      collection = previous;
+    }
   }
 </script>
 
 <svelte:head>
-  <title>{c.name} — Obscura</title>
+  <title>{collection?.title ?? "Collection"} · Obscura</title>
 </svelte:head>
 
-<div class="space-y-5">
-  <section class="relative isolate overflow-hidden border border-border-subtle">
-    <div class="pointer-events-none absolute inset-0 -z-10">
-      {#if coverUrl}
-        <img
-          src={coverUrl}
-          alt=""
-          aria-hidden="true"
-          decoding="async"
-          class="h-full w-full scale-110 object-cover opacity-40 blur-3xl"
+<div class="detail-page">
+  <a href="/collections" class="back-link">
+    <ArrowLeft class="h-4 w-4" />
+    Collections
+  </a>
+
+  {#if loadState === "loading"}
+    <div class="loading-shell" aria-busy="true"></div>
+  {:else if loadState === "error"}
+    <div class="error-notice">
+      <p>{errorMessage ?? "Failed to load collection."}</p>
+      <button type="button" onclick={() => void loadCollection()}>Retry</button>
+    </div>
+  {:else if card && collection}
+    <EntityDetail
+      {card}
+      onRatingChange={handleRatingChange}
+      onFavoriteToggle={handleFavoriteToggle}
+      onOrganizedToggle={handleOrganizedToggle}
+      {ratingBusy}
+      posterSize="large"
+    >
+      {#snippet heroMeta()}
+        {#if collection?.mode}
+          <span class="meta-item">{collection.mode}</span>
+        {/if}
+        {#if itemCards.length > 0}
+          {#if collection?.mode}<span class="meta-sep"></span>{/if}
+          <span class="meta-item">{itemCards.length} {itemCards.length === 1 ? "item" : "items"}</span>
+        {/if}
+      {/snippet}
+
+      {#snippet heroBadges()}
+        {#if collection?.mode}
+          <span class="type-badge">{collection.mode}</span>
+        {/if}
+      {/snippet}
+    </EntityDetail>
+
+    {#if itemCards.length > 0}
+      <section class="content-section">
+        <h2 class="content-heading">
+          <Layers class="h-4 w-4" />
+          Items
+          <span class="content-count">{itemCards.length}</span>
+        </h2>
+        <EntityGrid
+          cards={itemCards}
+          prefsKey={`collection-${collection?.id}-items`}
+          selectable={false}
+          emptyTitle="Empty collection"
+          emptyMessage="This collection has no items."
         />
-      {:else}
-        <div class="h-full w-full bg-gradient-to-br from-accent-950/70 via-surface-1 to-surface-bg"></div>
-      {/if}
-      <div class="absolute inset-0 bg-gradient-to-b from-black/35 via-black/65 to-[var(--color-surface-bg)]"></div>
-    </div>
-
-    <div class="flex flex-col gap-5 p-5 sm:flex-row sm:items-end sm:gap-7 sm:p-7">
-      <div class="relative w-full max-w-52 flex-shrink-0 border border-border-default shadow-[0_20px_60px_rgba(0,0,0,0.55)] sm:w-48 md:w-56">
-        <EntityThumbnail kind="collection" collection={c} size="hero" loading="eager" />
+      </section>
+    {:else}
+      <div class="empty-children">
+        <p>This collection is empty.</p>
       </div>
-
-      <div class="min-w-0 flex-1 space-y-4">
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0 flex-1 space-y-2">
-            <div class="flex items-center gap-2 text-kicker">
-              <FolderOpen class="h-3 w-3" />
-              Collection
-              <span class="ml-1"><Badge>{modeLabels[c.mode as CollectionMode]}</Badge></span>
-            </div>
-            <h1 class="font-heading text-3xl font-semibold leading-tight text-text-primary drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)] sm:text-4xl md:text-5xl">
-              {c.name}
-            </h1>
-          </div>
-
-          <div class="flex flex-shrink-0 items-center gap-1">
-            {#if c.mode !== "manual"}
-              <button
-                type="button"
-                class="inline-flex h-9 w-9 items-center justify-center border border-border-subtle bg-surface-2/70 text-text-muted backdrop-blur-sm transition-colors hover:border-border-accent hover:text-text-primary disabled:opacity-50"
-                aria-label="Refresh dynamic rules"
-                title="Refresh dynamic rules"
-                disabled={refreshing}
-                onclick={refreshDynamicRules}
-              >
-                <RefreshCw class={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-              </button>
-            {/if}
-            <a
-              href={`/collections/${c.id}/edit`}
-              class="inline-flex h-9 w-9 items-center justify-center border border-border-subtle bg-surface-2/70 text-text-muted backdrop-blur-sm transition-colors hover:border-border-accent hover:text-text-primary"
-              aria-label="Edit collection"
-              title="Edit collection"
-            >
-              <Edit class="h-4 w-4" />
-            </a>
-            <button
-              type="button"
-              class="inline-flex h-9 w-9 items-center justify-center border border-border-subtle bg-surface-2/70 text-text-muted backdrop-blur-sm transition-colors hover:border-error/40 hover:text-error-text disabled:opacity-50"
-              aria-label="Delete collection"
-              title="Delete collection"
-              disabled={deleting}
-              onclick={deleteThisCollection}
-            >
-              {#if deleting}
-                <Loader2 class="h-4 w-4 animate-spin" />
-              {:else}
-                <Trash2 class="h-4 w-4" />
-              {/if}
-            </button>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.78rem] text-text-secondary">
-          <span class="inline-flex items-center gap-1 font-medium text-text-primary">
-            <ModeIcon class="h-3 w-3" />
-            {items.length} item{items.length === 1 ? "" : "s"}
-          </span>
-          {#if c.lastRefreshedAt}
-            <span class="text-text-disabled">•</span>
-            <span class="text-text-muted">
-              Refreshed {new Date(c.lastRefreshedAt).toLocaleDateString()}
-            </span>
-          {/if}
-          {#if c.slideshowAutoAdvance}
-            <span class="text-text-disabled">•</span>
-            <Badge>auto-advance {c.slideshowDurationSeconds}s</Badge>
-          {/if}
-        </div>
-
-        {#if c.description}
-          <p class="max-w-2xl whitespace-pre-wrap text-[0.82rem] leading-relaxed text-text-secondary">
-            {c.description}
-          </p>
-        {/if}
-
-        <div class="flex flex-wrap items-center gap-2 pt-1">
-          <Button size="sm" disabled={items.length === 0} onclick={() => startPlayback(false)}>
-            <Play class="h-3.5 w-3.5" />
-            Play All
-          </Button>
-          <Button size="sm" variant="secondary" disabled={items.length === 0} onclick={() => startPlayback(true)}>
-            <Shuffle class="h-3.5 w-3.5" />
-            Shuffle All
-          </Button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  {#if Object.values(c.typeCounts).some((n) => n > 0)}
-    <div class="flex flex-wrap gap-4">
-      {#each typeOrder as type (type)}
-        {@const count = c.typeCounts[type] ?? 0}
-        {#if count > 0}
-          {@const Icon = typeIcons[type]}
-          <span class="inline-flex items-center gap-1.5 text-[0.75rem] text-text-secondary">
-            <Icon class="h-3.5 w-3.5 text-text-muted" />
-            {count} {typeLabels[type]}
-          </span>
-        {/if}
-      {/each}
-    </div>
-  {/if}
-
-  <div class="flex items-center gap-1 border-b border-border-subtle pb-2">
-    <button
-      type="button"
-      onclick={() => (viewMode = "mixed")}
-      class={`px-3 py-1.5 text-[0.78rem] font-medium transition-colors ${
-        viewMode === "mixed"
-          ? "border-b-2 border-accent-brass text-text-accent shadow-[0_8px_20px_rgba(196,154,90,0.12)]"
-          : "text-text-muted hover:text-text-secondary"
-      }`}
-      aria-pressed={viewMode === "mixed"}
-    >
-      <Grid3X3 class="mr-1 inline h-3.5 w-3.5" />
-      Mixed
-    </button>
-    <button
-      type="button"
-      onclick={() => (viewMode = "by-type")}
-      class={`px-3 py-1.5 text-[0.78rem] font-medium transition-colors ${
-        viewMode === "by-type"
-          ? "border-b-2 border-accent-brass text-text-accent shadow-[0_8px_20px_rgba(196,154,90,0.12)]"
-          : "text-text-muted hover:text-text-secondary"
-      }`}
-      aria-pressed={viewMode === "by-type"}
-    >
-      <List class="mr-1 inline h-3.5 w-3.5" />
-      By Type
-    </button>
-
-    <div class="flex-1"></div>
-
-    {#if hasManualItems && !selectMode}
-      <button
-        type="button"
-        onclick={() => (selectMode = true)}
-        class="px-2 py-1 text-[0.72rem] text-text-muted transition-colors hover:text-text-secondary"
-      >
-        <CheckSquare class="mr-1 inline h-3.5 w-3.5" />
-        Select
-      </button>
     {/if}
-  </div>
-
-  {#if selectMode}
-    <div class="flex items-center justify-between border border-border-subtle bg-surface-2 px-3 py-2">
-      <div class="flex items-center gap-3">
-        <span class="text-[0.75rem] text-text-secondary">{selectedCount} selected</span>
-        {#if selectedCount > 0}
-          <Button variant="danger" size="sm" disabled={removing} onclick={removeSelectedItems}>
-            {#if removing}
-              <Loader2 class="h-3.5 w-3.5 animate-spin" />
-            {:else}
-              <Trash2 class="h-3.5 w-3.5" />
-            {/if}
-            Remove from Collection
-          </Button>
-        {/if}
-      </div>
-      <button
-        type="button"
-        onclick={exitSelectMode}
-        class="p-1 text-text-muted transition-colors hover:text-text-secondary"
-        aria-label="Exit selection mode"
-      >
-        <X class="h-4 w-4" />
-      </button>
-    </div>
-  {/if}
-
-  {#if items.length === 0}
-    <div class="surface-well flex flex-col items-center justify-center py-16 text-center">
-      <FolderOpen class="mb-3 h-10 w-10 text-text-disabled" />
-      <p class="text-sm text-text-muted">
-        {c.mode === "manual"
-          ? "This collection is empty. Add items from video, gallery, image, or audio pages."
-          : "No items match the current rules. Try refreshing the dynamic rules."}
-      </p>
-    </div>
-  {:else if viewMode === "mixed"}
-    <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {#each items as item (item.id)}
-        <CollectionItemCard
-          {item}
-          selectable={selectMode}
-          selected={selectedItemIds.includes(item.id)}
-          onSelect={toggleSelection}
-          from={currentPath}
-        />
-      {/each}
-    </div>
-  {:else}
-    <div class="space-y-6">
-      {#each typeOrder as type (type)}
-        {@const typeItems = itemsByType[type]}
-        {#if typeItems.length > 0}
-          {@const Icon = typeIcons[type]}
-          <section>
-            <h2 class="mb-3 flex items-center gap-2 text-sm font-heading font-medium text-text-secondary">
-              <Icon class="h-4 w-4 text-text-muted" />
-              {typeLabels[type]}
-              <span class="font-mono text-[0.7rem] text-text-disabled">{typeItems.length}</span>
-            </h2>
-            <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {#each typeItems as item (item.id)}
-                <CollectionItemCard
-                  {item}
-                  selectable={selectMode}
-                  selected={selectedItemIds.includes(item.id)}
-                  onSelect={toggleSelection}
-                  from={currentPath}
-                />
-              {/each}
-            </div>
-          </section>
-        {/if}
-      {/each}
-    </div>
   {/if}
 </div>
+
+<style>
+  .detail-page { display: grid; gap: 1.25rem; padding: clamp(1rem, 3vw, 2rem); max-width: 72rem; margin: 0 auto; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--color-text-muted, #8a93a6); font-size: 0.78rem; text-decoration: none; font-family: var(--font-mono, "JetBrains Mono", monospace); text-transform: uppercase; letter-spacing: 0.04em; transition: color 0.15s; }
+  .back-link:hover { color: var(--color-text-primary, #f2eed8); }
+  .loading-shell { min-height: 28rem; border: 1px solid var(--color-border, #1c2235); background: var(--color-surface-2, #101420); animation: pulse 1.2s ease-in-out infinite; }
+  .error-notice { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid color-mix(in srgb, #ef4444 50%, var(--color-border, #1c2235)); background: var(--color-surface-2, #101420); color: var(--color-text-muted, #8a93a6); font-size: 0.85rem; }
+  .error-notice button { border: 1px solid var(--color-border, #1c2235); background: var(--color-surface-3, #151a28); color: var(--color-text-muted, #8a93a6); padding: 0.4rem 0.8rem; font-size: 0.78rem; cursor: pointer; }
+
+  :global(.meta-item) { white-space: nowrap; font-size: 0.82rem; }
+  :global(.meta-sep) { display: inline-block; width: 3px; height: 3px; margin: 0 0.5rem; background: var(--color-text-muted, #8a93a6); opacity: 0.5; }
+
+  .type-badge {
+    display: inline-flex; align-items: center; padding: 0.15rem 0.5rem;
+    font-family: var(--font-mono, "JetBrains Mono", monospace); font-size: 0.68rem; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--color-text-accent, #c49a5a); border: 1px solid rgba(196, 154, 90, 0.35); background: rgba(196, 154, 90, 0.08);
+  }
+
+  .content-section { display: grid; gap: 0.75rem; }
+  .content-heading { display: flex; align-items: center; gap: 0.5rem; margin: 0; font-family: var(--font-heading, Geist, sans-serif); font-size: 1.1rem; font-weight: 600; color: var(--color-text-primary, #f2eed8); }
+  .content-count { font-family: var(--font-mono, "JetBrains Mono", monospace); font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted, #8a93a6); padding: 0.1rem 0.4rem; border: 1px solid var(--color-border, #1c2235); background: var(--color-surface-3, #151a28); }
+
+  .empty-children { padding: 2rem; border: 1px solid var(--color-border-subtle, #1c2235); background: var(--color-surface-1, #0c0f15); color: var(--color-text-muted, #8a93a6); text-align: center; font-size: 0.85rem; }
+
+  @keyframes pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.85; } }
+</style>

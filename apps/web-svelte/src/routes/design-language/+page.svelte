@@ -89,8 +89,8 @@
         <code class="text-mono text-text-accent">@obscura/ui-svelte</code>, rendered for
         visual verification inside the live Svelte runtime.
       </p>
-      <a href="/dev/v2-migration" class="inline-flex items-center gap-1 text-mono-sm text-text-muted hover:text-text-accent transition-colors">
-        ← Back to Dev Tools
+      <a href="/" class="inline-flex items-center gap-1 text-mono-sm text-text-muted hover:text-text-accent transition-colors">
+        ← Back to Dashboard
       </a>
     </header>
 

@@ -1,380 +1,320 @@
 <script lang="ts">
-  import { invalidate, invalidateAll } from "$app/navigation";
   import { onMount } from "svelte";
-  import { Images, LayoutGrid, LayoutList, Pencil, Rows3 } from "@lucide/svelte";
-  import { Badge, dur } from "@obscura/ui-svelte";
-  import { deleteImage, updateGallery } from "$lib/v1/api/media-v1";
-  import type { ImageListItemDto } from "@obscura/contracts";
-  import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
-  import ImageLightbox from "$lib/components/ImageLightbox.svelte";
-  import GalleryEdit from "$lib/components/GalleryEdit.svelte";
-  import ChildGalleryGrid from "$lib/components/galleries/ChildGalleryGrid.svelte";
-  import EntityThumbnail from "$lib/v1/components/thumbnails/EntityThumbnailV1.svelte";
-  import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
-  import ImportButton from "$lib/components/ImportButton.svelte";
-  import InlineRating from "$lib/components/InlineRating.svelte";
-  import MediaSurface from "$lib/v1/media-surface/MediaSurfaceV1.svelte";
-  import { imagesSurfaceConfig } from "$lib/v1/media-surface/configs/images-v1";
-  import UploadDropZone from "$lib/components/UploadDropZone.svelte";
-  import { createServerPrefs } from "$lib/server-prefs.svelte";
+  import { page } from "$app/state";
+  import { ArrowLeft, Users, Layers } from "@lucide/svelte";
   import {
-    detectUiPrefsFormFactor,
-    formFactorUiPrefKey,
-  } from "$lib/prefs/form-factor-prefs";
-  import { useAppChrome, type AppBreadcrumb } from "$lib/stores/app-chrome.svelte";
+    fetchV2Gallery,
+    updateV2EntityRating,
+    updateV2EntityFlags,
+    type V2GalleryDetail,
+  } from "$lib/api/v2";
+  import {
+    getCapability,
+    withFlagCapability,
+    withRatingCapability,
+  } from "$lib/api/capabilities";
+  import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
+  import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
+  import { resolveEntityHref } from "$lib/entities/entity-routes";
+  import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
+  import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
+  import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
 
-  type ChildGalleryViewPrefs = { cols: number };
-  const childGalleryPrefsDefault: ChildGalleryViewPrefs = { cols: 3 };
+  type LoadState = "loading" | "ready" | "error";
 
-  function validateChildGalleryPrefs(raw: unknown): ChildGalleryViewPrefs | null {
-    if (!raw || typeof raw !== "object") return null;
-    const cols = (raw as { cols?: unknown }).cols;
-    if (typeof cols !== "number" || !Number.isFinite(cols)) return null;
-    return { cols: Math.min(8, Math.max(2, Math.round(cols))) };
-  }
+  let loadState: LoadState = $state("loading");
+  let gallery = $state<V2GalleryDetail | null>(null);
+  let errorMessage: string | null = $state(null);
+  let ratingBusy = $state(false);
 
-  let { data } = $props();
-  const appChrome = useAppChrome();
-  const childGalleryFormFactor = detectUiPrefsFormFactor();
-  let overrideRating = $state<number | null | undefined>(undefined);
-  const g = $derived(
-    overrideRating === undefined
-      ? data.gallery
-      : { ...data.gallery, rating: overrideRating },
-  );
+  const card = $derived.by((): EntityDetailCardFull | null => {
+    if (!gallery) return null;
+    return entityCardToDetailCard(gallery);
+  });
 
-  async function handleRatingSave(next: number | null) {
-    const previous = data.gallery.rating ?? null;
-    overrideRating = next;
-    try {
-      await updateGallery(data.gallery.id, { rating: next });
-    } catch {
-      overrideRating = previous;
-      throw new Error("Failed to update rating");
-    }
-  }
+  const studio = $derived.by(() => {
+    if (!gallery) return null;
+    const cap = getCapability(gallery.capabilities, "studio");
+    return cap?.value ?? null;
+  });
 
-  let images = $state.raw<ImageListItemDto[]>([]);
-  let imageTotal = $state(0);
-  let syncedGalleryId = $state<string | null>(null);
+  const credits = $derived.by(() => {
+    if (!gallery) return [];
+    const cap = getCapability(gallery.capabilities, "credits");
+    return cap?.people ?? [];
+  });
 
-  let lightboxOpen = $state(false);
-  let lightboxIndex = $state(0);
-  let lightboxSourceId = $state<string | null>(null);
-  let editing = $state(false);
-  let deleteDialogOpen = $state(false);
-  let pendingDelete = $state<ImageListItemDto[]>([]);
-  let bulkBusy = $state(false);
-  // svelte-ignore state_referenced_locally
-  const childGalleryPrefs = createServerPrefs<ChildGalleryViewPrefs>(
-    formFactorUiPrefKey("galleries:interiorView", childGalleryFormFactor),
-    childGalleryPrefsDefault,
-    data.viewPrefsByFormFactor?.[childGalleryFormFactor],
-    validateChildGalleryPrefs,
-  );
-  const childGalleryCols = $derived(childGalleryPrefs.current.cols);
+  const dates = $derived.by(() => {
+    if (!gallery) return [];
+    const cap = getCapability(gallery.capabilities, "dates");
+    return cap?.items ?? [];
+  });
+
+  const childCards = $derived.by((): EntityThumbnailCard[] => {
+    if (!gallery) return [];
+    return gallery.children.map((child) => {
+      const href = child.kind === "gallery"
+        ? resolveEntityHref("gallery", child.id)
+        : resolveEntityHref(child.kind, child.id);
+      return entityCardToThumbnailCard(child, href);
+    });
+  });
+
+  const imageChildren = $derived(childCards.filter((c) => c.entity.kind === "image"));
+  const galleryChildren = $derived(childCards.filter((c) => c.entity.kind === "gallery"));
 
   onMount(() => {
-    void childGalleryPrefs.load();
+    void loadGallery();
   });
 
-  function openAt(i: number) {
-    openLightboxAt(i);
-  }
-
-  function openLightboxAt(i: number) {
-    lightboxIndex = i;
-    lightboxSourceId = images[i]?.id ?? null;
-    lightboxOpen = true;
-  }
-
-  function openImage(item: ImageListItemDto) {
-    const existingIndex = images.findIndex((image) => image.id === item.id);
-    if (existingIndex < 0) {
-      images = [...images, item];
-      lightboxIndex = images.length - 1;
-    } else {
-      lightboxIndex = existingIndex;
-    }
-    lightboxSourceId = item.id;
-    lightboxOpen = true;
-  }
-
-  function closeLightbox() {
-    lightboxOpen = false;
-    window.setTimeout(() => {
-      if (!lightboxOpen) lightboxSourceId = null;
-    }, dur.moderate + 40);
-  }
-
-  function patchImageRating(imageId: string, rating: number | null) {
-    images = images.map((image) =>
-      image.id === imageId ? { ...image, rating } : image,
-    );
-  }
-
-  async function refreshGallery() {
-    await invalidate(`galleries:${data.gallery.id}`);
-    editing = false;
-  }
-
-  async function confirmDelete(deleteFromDisk: boolean) {
-    if (bulkBusy) return;
-    bulkBusy = true;
+  async function loadGallery() {
+    loadState = "loading";
+    errorMessage = null;
     try {
-      await Promise.all(pendingDelete.map((i) => deleteImage(i.id, deleteFromDisk)));
-      deleteDialogOpen = false;
-      pendingDelete = [];
-      await invalidateAll();
-    } finally {
-      bulkBusy = false;
+      gallery = await fetchV2Gallery(page.params.id ?? "");
+      loadState = "ready";
+    } catch (err) {
+      errorMessage = err instanceof Error ? err.message : String(err);
+      loadState = "error";
     }
   }
 
-  const visibleChildGalleries = $derived(g.children ?? []);
-  const galleryImageSurface = $derived(
-    imagesSurfaceConfig({
-      initial: { items: data.gallery.images, total: data.gallery.imageTotal },
-      pageSize: data.pageSize,
-      page: 1,
-      nsfwMode: data.nsfwMode,
-      galleryId: g.id,
-      surfaceId: `gallery:${g.id}:images`,
-      defaultViewMode: "masonry",
-      defaultSortBy: "recent",
-      defaultSortDir: "desc",
-      layoutByViewMode: { masonry: "masonry", grid: "grid", list: "list" },
-      viewModes: [
-        { mode: "masonry", icon: Rows3, label: "Masonry view" },
-        { mode: "grid", icon: LayoutGrid, label: "Grid view" },
-        { mode: "list", icon: LayoutList, label: "List view" },
-      ],
-      onMutated: () => invalidateAll(),
-      onConfirmDelete: (selected) => {
-        pendingDelete = selected;
-        deleteDialogOpen = true;
-      },
-      onItemActivate: (item) => openImage(item),
-      onItemsChange: (items) => {
-        images = items;
-      },
-      decorateItem: (image) =>
-        image.id === lightboxSourceId && lightboxOpen
-          ? { ...image, __lightboxSource: true }
-          : image,
-    }),
-  );
-
-  $effect(() => {
-    if (syncedGalleryId !== data.gallery.id) {
-      images = data.gallery.images;
-      imageTotal = data.gallery.imageTotal;
-      syncedGalleryId = data.gallery.id;
+  async function handleRatingChange(value: number | null) {
+    if (!gallery || ratingBusy) return;
+    const previous = gallery;
+    ratingBusy = true;
+    gallery = { ...gallery, capabilities: withRatingCapability(gallery.capabilities, value) };
+    try {
+      await updateV2EntityRating(gallery.id, value);
+    } catch {
+      gallery = previous;
+    } finally {
+      ratingBusy = false;
     }
-  });
+  }
 
-  $effect(() => {
-    const crumbs: AppBreadcrumb[] = [{ label: "Galleries", href: "/galleries" }];
-    if (g.parentId) {
-      crumbs.push({ label: "Parent", href: `/galleries/${g.parentId}` });
+  async function handleFavoriteToggle() {
+    if (!gallery) return;
+    const previous = gallery;
+    const flagsCap = getCapability(gallery.capabilities, "flags");
+    const next = !(flagsCap?.isFavorite ?? false);
+    gallery = { ...gallery, capabilities: withFlagCapability(gallery.capabilities, "isFavorite", next) };
+    try {
+      await updateV2EntityFlags(gallery.id, { isFavorite: next });
+    } catch {
+      gallery = previous;
     }
-    crumbs.push({ label: g.title });
-    return appChrome.setBreadcrumbs(crumbs);
-  });
+  }
+
+  async function handleOrganizedToggle() {
+    if (!gallery) return;
+    const previous = gallery;
+    const flagsCap = getCapability(gallery.capabilities, "flags");
+    const next = !(flagsCap?.isOrganized ?? false);
+    gallery = { ...gallery, capabilities: withFlagCapability(gallery.capabilities, "isOrganized", next) };
+    try {
+      await updateV2EntityFlags(gallery.id, { isOrganized: next });
+    } catch {
+      gallery = previous;
+    }
+  }
 </script>
 
 <svelte:head>
-  <title>Obscura</title>
+  <title>{gallery?.title ?? "Gallery"} · Obscura</title>
 </svelte:head>
 
-<UploadDropZone target={{ kind: "image", galleryId: g.id }} enabled={Boolean(g.folderPath)}>
-<div class="space-y-4">
-  <div class="flex items-start justify-between gap-4 flex-wrap">
-    <div class="space-y-1.5">
-      <h1 class="flex items-center gap-2.5 text-text-primary">
-        <Images class="h-5 w-5 text-text-accent" />
-        {g.title}
-      </h1>
-      <div class="flex flex-wrap items-center gap-2 text-[0.78rem] text-text-muted">
-        <span>{g.imageCount} image{g.imageCount === 1 ? "" : "s"}</span>
-        {#if g.studio}
-          <a
-            href={`/studios/${encodeURIComponent(g.studio.name)}`}
-            class="text-text-accent hover:text-text-accent-bright transition-colors"
-          >
-            · {g.studio.name}
-          </a>
-        {/if}
-        {#if g.date}<span>· {g.date}</span>{/if}
-        {#if g.isNsfw}
-          <Badge variant="warning">
-            {#snippet children()}NSFW{/snippet}
-          </Badge>
-        {/if}
-      </div>
-      <InlineRating
-        value={g.rating}
-        onSave={handleRatingSave}
-        ariaLabelPrefix="Rate gallery with"
-      />
-      {#if g.details}
-        <p class="mt-2 text-[0.82rem] text-text-secondary leading-relaxed whitespace-pre-wrap max-w-2xl">
-          {g.details}
-        </p>
-      {/if}
-    </div>
-    <div class="flex items-center gap-2">
-      {#if !editing}
-        <button
-          type="button"
-          onclick={() => (editing = true)}
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] border border-border-default hover:border-border-accent hover:text-text-accent transition-colors"
-        >
-          <Pencil class="h-3.5 w-3.5" />
-          Edit
-        </button>
-      {/if}
-    </div>
-  </div>
+<div class="detail-page">
+  <a href="/galleries" class="back-link">
+    <ArrowLeft class="h-4 w-4" />
+    Galleries
+  </a>
 
-  {#if editing}
-    <GalleryEdit
-      gallery={data.gallery}
-      onSaved={() => void refreshGallery()}
-      onCancel={() => (editing = false)}
-    />
+  {#if loadState === "loading"}
+    <div class="loading-shell" aria-busy="true"></div>
+  {:else if loadState === "error"}
+    <div class="error-notice">
+      <p>{errorMessage ?? "Failed to load gallery."}</p>
+      <button type="button" onclick={() => void loadGallery()}>Retry</button>
+    </div>
+  {:else if card && gallery}
+    <EntityDetail
+      {card}
+      onRatingChange={handleRatingChange}
+      onFavoriteToggle={handleFavoriteToggle}
+      onOrganizedToggle={handleOrganizedToggle}
+      {ratingBusy}
+      posterSize="large"
+    >
+      {#snippet heroMeta()}
+        {#if studio}
+          <a href={resolveEntityHref("studio", studio.id)} class="meta-item is-studio">{studio.title}</a>
+        {/if}
+        {#if gallery?.galleryType}
+          {#if studio}<span class="meta-sep"></span>{/if}
+          <span class="meta-item">{gallery.galleryType}</span>
+        {/if}
+        {#each dates as date, i (date.code)}
+          <span class="meta-sep"></span>
+          <span class="meta-item">{date.value}</span>
+        {/each}
+        {#if childCards.length > 0}
+          <span class="meta-sep"></span>
+          <span class="meta-item">{childCards.length} {childCards.length === 1 ? "item" : "items"}</span>
+        {/if}
+      {/snippet}
+
+      {#snippet heroBadges()}
+        {#if gallery?.galleryType}
+          <span class="type-badge">{gallery.galleryType}</span>
+        {/if}
+      {/snippet}
+
+      {#snippet afterBody()}
+        {#if credits.length > 0}
+          <div class="credits-section">
+            <h2 class="section-label">
+              <Users class="h-4 w-4" />
+              Cast
+            </h2>
+            <div class="credits-grid">
+              {#each credits as person (person.id)}
+                <a href={resolveEntityHref("person", person.id)} class="credit-chip">
+                  {person.title}
+                </a>
+              {/each}
+            </div>
+          </div>
+        {/if}
+      {/snippet}
+    </EntityDetail>
+
+    {#if galleryChildren.length > 0}
+      <section class="content-section">
+        <h2 class="content-heading">
+          <Layers class="h-4 w-4" />
+          Sub-Galleries
+          <span class="content-count">{galleryChildren.length}</span>
+        </h2>
+        <EntityGrid
+          cards={galleryChildren}
+          prefsKey={`gallery-${gallery?.id}-children`}
+          selectable={false}
+          emptyTitle="No sub-galleries"
+          emptyMessage="This gallery has no sub-galleries."
+        />
+      </section>
+    {/if}
+
+    {#if imageChildren.length > 0}
+      <section class="content-section">
+        <h2 class="content-heading">
+          Images
+          <span class="content-count">{imageChildren.length}</span>
+        </h2>
+        <EntityGrid
+          cards={imageChildren}
+          prefsKey={`gallery-${gallery?.id}-images`}
+          selectable={false}
+          emptyTitle="No images"
+          emptyMessage="This gallery has no images."
+        />
+      </section>
+    {/if}
+
+    {#if childCards.length === 0}
+      <div class="empty-children">
+        <p>No images or sub-galleries in this gallery yet.</p>
+      </div>
+    {/if}
   {/if}
-
-  <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
-    <div class="space-y-6 min-w-0 order-2 lg:order-1">
-      {#if visibleChildGalleries.length > 0}
-        <HierarchySection title="Sub-galleries">
-          {#snippet children()}
-            <ChildGalleryGrid
-              galleries={visibleChildGalleries}
-              cols={childGalleryCols}
-              onColsChange={(cols) => childGalleryPrefs.update({ cols })}
-            />
-          {/snippet}
-        </HierarchySection>
-      {/if}
-
-      {#if imageTotal > 0}
-        <HierarchySection title={visibleChildGalleries.length > 0 ? "Images" : ""}>
-          {#snippet action()}
-            {#if g.folderPath}
-              <ImportButton target={{ kind: "image", galleryId: g.id }} onUploaded={refreshGallery} />
-            {/if}
-          {/snippet}
-          {#snippet children()}
-            <MediaSurface
-              config={galleryImageSurface}
-              initialPrefsByFormFactor={data.surfacePrefs}
-              legacyPrefsKey={`gallery:${g.id}:imageFilterPresets`}
-            />
-          {/snippet}
-        </HierarchySection>
-      {:else if visibleChildGalleries.length === 0}
-        <div class="surface-well flex flex-col items-center justify-center py-16 text-center">
-          <Images class="h-8 w-8 text-text-disabled mb-2" />
-          <p class="text-text-muted text-sm">This gallery is empty</p>
-        </div>
-      {/if}
-    </div>
-
-    <!-- Metadata sidebar -->
-    <aside class="space-y-4 order-1 lg:order-2 lg:sticky lg:top-5 lg:self-start">
-      <div class="surface-well p-4 space-y-4">
-        {#if g.performers && g.performers.length > 0}
-          <div class="space-y-2">
-            <h2 class="text-kicker">Performers</h2>
-            <div class="flex flex-wrap gap-1.5">
-              {#each g.performers as p (p.id)}
-                <a
-                  href={`/performers/${p.id}`}
-                  class="inline-flex items-center gap-1.5 tag-chip tag-chip-default hover:tag-chip-accent transition-colors cursor-pointer"
-                >
-                  <EntityThumbnail
-                    kind="performer"
-                    performer={p}
-                    compact
-                    showChips={false}
-                    class="h-4 w-3 flex-shrink-0"
-                  />
-                  {p.name}
-                </a>
-              {/each}
-            </div>
-          </div>
-        {/if}
-
-        {#if g.tags && g.tags.length > 0}
-          <div class="space-y-2">
-            <h2 class="text-kicker">Tags</h2>
-            <div class="flex flex-wrap gap-1.5">
-              {#each g.tags as t (t.id)}
-                <a
-                  href={`/tags/${encodeURIComponent(t.name)}`}
-                  class="tag-chip tag-chip-default hover:tag-chip-accent transition-colors cursor-pointer"
-                >
-                  {t.name}
-                </a>
-              {/each}
-            </div>
-          </div>
-        {/if}
-
-        <div class="space-y-2">
-          <h2 class="text-kicker">Info</h2>
-          <dl class="text-[0.78rem] space-y-1">
-            <div class="flex justify-between gap-2">
-              <dt class="text-text-muted">Type</dt>
-              <dd class="text-text-primary">{g.galleryType}</dd>
-            </div>
-            <div class="flex justify-between gap-2">
-              <dt class="text-text-muted">Images</dt>
-              <dd class="text-text-primary">{g.imageCount}</dd>
-            </div>
-            {#if g.photographer}
-              <div class="flex justify-between gap-2">
-                <dt class="text-text-muted">Photographer</dt>
-                <dd class="text-text-primary truncate">{g.photographer}</dd>
-              </div>
-            {/if}
-            {#if g.folderPath}
-              <div class="flex justify-between gap-2">
-                <dt class="text-text-muted">Path</dt>
-                <dd class="text-text-primary truncate font-mono text-[0.7rem]" title={g.folderPath}>
-                  {g.folderPath.split("/").slice(-2).join("/")}
-                </dd>
-              </div>
-            {/if}
-          </dl>
-        </div>
-      </div>
-    </aside>
-  </div>
 </div>
-</UploadDropZone>
 
-<ConfirmDeleteDialog
-  open={deleteDialogOpen}
-  entityType="image"
-  count={pendingDelete.length}
-  loading={bulkBusy}
-  allowDeleteFromDisk
-  onClose={() => (deleteDialogOpen = false)}
-  onDeleteFromLibrary={() => void confirmDelete(false)}
-  onDeleteFromDisk={() => void confirmDelete(true)}
-/>
+<style>
+  .detail-page {
+    display: grid;
+    gap: 1.25rem;
+    padding: clamp(1rem, 3vw, 2rem);
+    max-width: 72rem;
+    margin: 0 auto;
+  }
 
-{#if lightboxOpen}
-  <ImageLightbox
-    {images}
-    initialIndex={lightboxIndex}
-    sharedKey={lightboxSourceId ?? undefined}
-    onClose={closeLightbox}
-    onIndexChange={(index) => (lightboxIndex = index)}
-    onRatingChange={patchImageRating}
-  />
-{/if}
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--color-text-muted, #8a93a6);
+    font-size: 0.78rem;
+    text-decoration: none;
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    transition: color 0.15s;
+  }
+
+  .back-link:hover {
+    color: var(--color-text-primary, #f2eed8);
+  }
+
+  .loading-shell {
+    min-height: 28rem;
+    border: 1px solid var(--color-border, #1c2235);
+    background: var(--color-surface-2, #101420);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+
+  .error-notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid color-mix(in srgb, #ef4444 50%, var(--color-border, #1c2235));
+    background: var(--color-surface-2, #101420);
+    color: var(--color-text-muted, #8a93a6);
+    font-size: 0.85rem;
+  }
+
+  .error-notice button {
+    border: 1px solid var(--color-border, #1c2235);
+    background: var(--color-surface-3, #151a28);
+    color: var(--color-text-muted, #8a93a6);
+    padding: 0.4rem 0.8rem;
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+
+  :global(.meta-item) { white-space: nowrap; font-size: 0.82rem; }
+  :global(.meta-item.is-studio) { color: var(--color-text-accent, #c49a5a); text-decoration: none; transition: opacity 0.15s; }
+  :global(.meta-item.is-studio:hover) { opacity: 0.8; }
+  :global(.meta-sep) { display: inline-block; width: 3px; height: 3px; margin: 0 0.5rem; background: var(--color-text-muted, #8a93a6); opacity: 0.5; }
+
+  .type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.5rem;
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-accent, #c49a5a);
+    border: 1px solid rgba(196, 154, 90, 0.35);
+    background: rgba(196, 154, 90, 0.08);
+  }
+
+  .credits-section { padding: 1rem 1.5rem; border-top: 1px solid var(--color-border, #1c2235); }
+  .section-label { display: flex; align-items: center; gap: 0.45rem; margin: 0 0 0.75rem; font-family: var(--font-mono, "JetBrains Mono", monospace); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-muted, #8a93a6); }
+  .credits-grid { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .credit-chip { padding: 0.22rem 0.55rem; font-size: 0.75rem; color: var(--color-text-secondary, #c4c9d4); border: 1px solid var(--color-border, #1c2235); background: var(--color-surface-3, #151a28); text-decoration: none; transition: border-color 0.15s, color 0.15s; }
+  .credit-chip:hover { color: var(--color-text-accent, #c49a5a); border-color: rgba(196, 154, 90, 0.35); }
+
+  .content-section { display: grid; gap: 0.75rem; }
+  .content-heading { display: flex; align-items: center; gap: 0.5rem; margin: 0; font-family: var(--font-heading, Geist, sans-serif); font-size: 1.1rem; font-weight: 600; color: var(--color-text-primary, #f2eed8); }
+  .content-count { font-family: var(--font-mono, "JetBrains Mono", monospace); font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted, #8a93a6); padding: 0.1rem 0.4rem; border: 1px solid var(--color-border, #1c2235); background: var(--color-surface-3, #151a28); }
+
+  .empty-children { padding: 2rem; border: 1px solid var(--color-border-subtle, #1c2235); background: var(--color-surface-1, #0c0f15); color: var(--color-text-muted, #8a93a6); text-align: center; font-size: 0.85rem; }
+
+  @media (min-width: 640px) { .credits-section { padding: 1rem 2rem; } }
+  @keyframes pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.85; } }
+</style>
