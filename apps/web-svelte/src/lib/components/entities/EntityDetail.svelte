@@ -512,8 +512,8 @@
     position: relative;
     z-index: 2;
     line-height: 0;
-    mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 95%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 95%, transparent 100%);
   }
 
   .hero-banner img {
@@ -528,7 +528,7 @@
 
   .hero-lower {
     position: relative;
-    margin-top: -10%;
+    margin-top: -5%;
     overflow: hidden;
   }
 
@@ -538,8 +538,8 @@
     inset: 0;
     z-index: 0;
     overflow: hidden;
-    mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 70%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 70%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%);
   }
 
   .hero-reflection img {
