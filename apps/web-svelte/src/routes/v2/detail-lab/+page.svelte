@@ -2,7 +2,7 @@
   import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
   import type { EntityDetailPosterSize } from "$lib/components/entities/EntityDetail.svelte";
   import { baseDetailCard, detailLabRows } from "$lib/entities/detail-lab-data";
-  import type { EntityDetailCard } from "$lib/entities/entity-detail";
+  import type { EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { presentSections } from "$lib/entities/entity-detail";
 
   type LabTab = "base" | "examples";
@@ -28,7 +28,7 @@
     "files",
   ];
 
-  const baseCard = $derived.by((): EntityDetailCard => {
+  const baseCard = $derived.by((): EntityDetailCardFull => {
     const card = { ...baseDetailCard };
 
     if (heroSource === "poster-blur") card.hero = null;

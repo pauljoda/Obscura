@@ -136,7 +136,7 @@ export interface EntityDetailClassification {
   system: string | null;
 }
 
-/** Complete view model for one entity detail surface. */
+/** Universal view model consumed by the shared EntityDetail component. */
 export interface EntityDetailCard {
   entity: EntityDetailEntity;
   kindLabel: string;
@@ -146,13 +146,18 @@ export interface EntityDetailCard {
   rating: EntityDetailRating | null;
   flags: EntityDetailFlag[];
   tags: string[];
+  links: EntityDetailLink[];
+  files: EntityDetailFile[];
+  presentCapabilities: EntityCapabilityKind[];
+}
+
+/** Extended view model with kind-specific fields for entity detail pages. */
+export interface EntityDetailCardFull extends EntityDetailCard {
   studio: EntityDetailCredit | null;
   credits: EntityDetailCredit[];
   stats: EntityDetailStat[];
   dates: EntityDetailDate[];
   technical: EntityDetailTechnicalRow[];
-  links: EntityDetailLink[];
-  files: EntityDetailFile[];
   fingerprints: EntityFingerprint[];
   markers: EntityDetailMarker[];
   subtitles: EntityDetailSubtitle[];
@@ -161,7 +166,6 @@ export interface EntityDetailCard {
   classification: EntityDetailClassification | null;
   sources: EntitySource[];
   counters: EntityDetailStat[];
-  presentCapabilities: EntityCapabilityKind[];
 }
 
 function numberValue(value: number | string | null | undefined): number | null {
@@ -346,7 +350,7 @@ function resolvePositions(capabilities: EntityCapability[]): EntityDetailPositio
  * Reads only shared capabilities so every entity kind can flow through
  * one detail component — the same philosophy as entityCardToThumbnailCard.
  */
-export function entityCardToDetailCard(entity: EntityCard): EntityDetailCard {
+export function entityCardToDetailCard(entity: EntityCard): EntityDetailCardFull {
   const capabilities = entity.capabilities;
   const presentCapabilities = [
     ...new Set(capabilities.map((c) => c.kind)),
@@ -426,25 +430,26 @@ export function hasPoster(card: EntityDetailCard): boolean {
 }
 
 /** Returns all capability section names that have renderable content. */
-export function presentSections(card: EntityDetailCard): string[] {
+export function presentSections(card: EntityDetailCard | EntityDetailCardFull): string[] {
   const sections: string[] = [];
   if (card.description) sections.push("description");
   if (card.rating) sections.push("rating");
   if (card.flags.length > 0) sections.push("flags");
   if (card.tags.length > 0) sections.push("tags");
-  if (card.studio) sections.push("studio");
-  if (card.credits.length > 0) sections.push("credits");
-  if (card.stats.length > 0 || card.counters.length > 0) sections.push("stats");
-  if (card.dates.length > 0) sections.push("dates");
-  if (card.technical.length > 0) sections.push("technical");
   if (card.links.length > 0) sections.push("links");
   if (card.files.length > 0) sections.push("files");
-  if (card.fingerprints.length > 0) sections.push("fingerprints");
-  if (card.markers.length > 0) sections.push("markers");
-  if (card.subtitles.length > 0) sections.push("subtitles");
-  if (card.progress) sections.push("progress");
-  if (card.positions.length > 0) sections.push("positions");
-  if (card.classification) sections.push("classification");
-  if (card.sources.length > 0) sections.push("sources");
+  const full = card as EntityDetailCardFull;
+  if (full.studio) sections.push("studio");
+  if (full.credits?.length > 0) sections.push("credits");
+  if ((full.stats?.length ?? 0) > 0 || (full.counters?.length ?? 0) > 0) sections.push("stats");
+  if (full.dates?.length > 0) sections.push("dates");
+  if (full.technical?.length > 0) sections.push("technical");
+  if (full.fingerprints?.length > 0) sections.push("fingerprints");
+  if (full.markers?.length > 0) sections.push("markers");
+  if (full.subtitles?.length > 0) sections.push("subtitles");
+  if (full.progress) sections.push("progress");
+  if (full.positions?.length > 0) sections.push("positions");
+  if (full.classification) sections.push("classification");
+  if (full.sources?.length > 0) sections.push("sources");
   return sections;
 }

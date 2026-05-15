@@ -1,35 +1,17 @@
 <script lang="ts">
   import { marked } from "marked";
+  import type { Snippet } from "svelte";
   import {
     Star,
     Heart,
     ShieldAlert,
     CheckCircle,
     ExternalLink,
-    Clock,
-    Hash,
-    User,
-    Building2,
-    Tag,
-    Calendar,
     FileText,
-    Fingerprint,
-    Bookmark,
-    Captions,
-    BarChart3,
-    MapPin,
     Link,
-    Database,
-    Layers,
   } from "@lucide/svelte";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
-  import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
-  import type {
-    EntityDetailCard,
-    EntityDetailCredit,
-    EntityDetailRating,
-  } from "$lib/entities/entity-detail";
-  import { hasHero, hasPoster, presentSections } from "$lib/entities/entity-detail";
+  import type { EntityDetailCard } from "$lib/entities/entity-detail";
+  import { hasHero, hasPoster } from "$lib/entities/entity-detail";
   import { placeholderGradient } from "$lib/entities/entity-thumbnail";
 
   export type EntityDetailPosterSize = "none" | "small" | "medium" | "large";
@@ -40,6 +22,16 @@
     posterSize?: EntityDetailPosterSize;
     ratingBusy?: boolean;
     showHero?: boolean;
+    /** Inline metadata rendered below the title (e.g. studio link · date · count). */
+    heroMeta?: Snippet;
+    /** Badge row rendered below the rating stars (e.g. Season 1, Episode 2). */
+    heroBadges?: Snippet;
+    /** Extra badges appended to the flags row (e.g. classification). */
+    extraFlags?: Snippet;
+    /** Content rendered between the detail body and the metadata sections (e.g. studio, credits). */
+    afterBody?: Snippet;
+    /** Extra metadata sections appended inside the lower metadata area. */
+    extraSections?: Snippet;
   }
 
   let {
@@ -48,6 +40,11 @@
     posterSize = "medium",
     ratingBusy = false,
     showHero = true,
+    heroMeta,
+    heroBadges,
+    extraFlags,
+    afterBody,
+    extraSections,
   }: Props = $props();
 
   type HeroMode = "image" | "poster-blur" | "gradient";
@@ -61,32 +58,12 @@
 
   const posterVisible = $derived(posterSize !== "none" && hasPoster(card));
 
-  const sections = $derived(presentSections(card));
-
   const renderedDescription = $derived.by(() => {
     if (!card.description) return null;
     const renderer = new marked.Renderer();
     renderer.link = ({ href, text }) =>
       `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
     return marked.parse(card.description, { renderer, async: false, gfm: true, breaks: true }) as string;
-  });
-
-  function creditToThumbnailCard(credit: EntityDetailCredit): EntityThumbnailCard {
-    return {
-      entity: { id: credit.id, kind: credit.kind, title: credit.title, capabilities: [] },
-      aspectRatio: credit.kind === "studio" ? "square" : "portrait",
-      cover: credit.thumbnail ? { src: credit.thumbnail, alt: credit.title } : null,
-      hover: { kind: "none" },
-    };
-  }
-
-  const metaItems = $derived.by(() => {
-    const items: string[] = [];
-    if (card.studio) items.push(card.studio.title);
-    if (card.dates.length > 0) items.push(card.dates[0].value);
-    const firstStat = card.stats[0] ?? card.counters[0];
-    if (firstStat) items.push(`${firstStat.value} ${firstStat.label.toLowerCase()}`);
-    return items;
   });
 
   function handleRatingClick(value: number) {
@@ -112,12 +89,9 @@
           <span class="kind-badge">{card.kindLabel}</span>
           <h1>{card.entity.title}</h1>
 
-          {#if metaItems.length > 0}
+          {#if heroMeta}
             <div class="meta-row">
-              {#each metaItems as item, i (i)}
-                {#if i > 0}<span class="meta-sep"></span>{/if}
-                <span class="meta-item" class:is-studio={i === 0 && card.studio != null}>{item}</span>
-              {/each}
+              {@render heroMeta()}
             </div>
           {/if}
 
@@ -139,11 +113,9 @@
             </div>
           {/if}
 
-          {#if card.positions.length > 0}
+          {#if heroBadges}
             <div class="position-badges">
-              {#each card.positions as pos (pos.code)}
-                <span class="position-badge">{pos.label}</span>
-              {/each}
+              {@render heroBadges()}
             </div>
           {/if}
         </div>
@@ -194,11 +166,8 @@
           </span>
         {/each}
 
-        {#if card.classification}
-          <span class="flag-badge classification">
-            <Layers class="h-3.5 w-3.5" />
-            {card.classification.value}
-          </span>
+        {#if extraFlags}
+          {@render extraFlags()}
         {/if}
       </div>
     {/if}
@@ -221,166 +190,19 @@
     {/if}
   </div>
 
-  <!-- Studio -->
-  {#if card.studio}
-    <section class="studio-section">
-      <h2 class="credits-heading">Studio</h2>
-      <div class="studio-row">
-        <div class="studio-card">
-          <EntityThumbnail card={creditToThumbnailCard(card.studio)} />
-        </div>
-      </div>
-    </section>
+  <!-- Kind-specific content between body and metadata (studio, credits, etc.) -->
+  {#if afterBody}
+    {@render afterBody()}
   {/if}
 
-  <!-- Credits (horizontal scroll of EntityThumbnails) -->
-  {#if card.credits.length > 0}
-    <section class="credits-section">
-      <h2 class="credits-heading">Cast & Crew</h2>
-      <div class="credits-scroll">
-        {#each card.credits as credit (credit.id)}
-          <div class="credit-card">
-            <EntityThumbnail card={creditToThumbnailCard(credit)} />
-          </div>
-        {/each}
-      </div>
-    </section>
-  {/if}
-
-  <!-- Lower sections: collapsible metadata -->
-  {#if sections.includes("stats") || sections.includes("progress") || sections.includes("dates") || sections.includes("technical") || sections.includes("markers") || sections.includes("subtitles") || sections.includes("links") || sections.includes("files") || sections.includes("fingerprints") || sections.includes("sources")}
+  <!-- Lower metadata sections -->
+  {#if card.links.length > 0 || card.files.length > 0 || extraSections}
     <div class="metadata-sections">
-      <!-- Stats + Counters -->
-      {#if card.stats.length > 0 || card.counters.length > 0}
-        <section class="detail-section">
-          <h2 class="section-label">
-            <BarChart3 class="h-4 w-4" />
-            Stats
-          </h2>
-          <div class="stat-grid">
-            {#each card.stats as stat (stat.code)}
-              <div class="stat-item">
-                <span class="stat-value">{stat.value}</span>
-                <span class="stat-label">{stat.label}</span>
-              </div>
-            {/each}
-            {#each card.counters as counter (counter.code)}
-              <div class="stat-item">
-                <span class="stat-value">{counter.value}</span>
-                <span class="stat-label">{counter.label}</span>
-              </div>
-            {/each}
-          </div>
-        </section>
+      {#if extraSections}
+        {@render extraSections()}
       {/if}
 
-      <!-- Progress -->
-      {#if card.progress}
-        <section class="detail-section">
-          <h2 class="section-label">
-            <BarChart3 class="h-4 w-4" />
-            Progress
-          </h2>
-          <div class="progress-block">
-            <div class="progress-bar">
-              <div class="progress-fill" style:width={`${card.progress.percent}%`}></div>
-            </div>
-            <div class="progress-meta">
-              <span>{card.progress.index} / {card.progress.total} {card.progress.unit}</span>
-              <span>{card.progress.percent}%</span>
-            </div>
-            {#if card.progress.mode}
-              <span class="progress-mode">{card.progress.mode}</span>
-            {/if}
-            {#if card.progress.completed}
-              <span class="progress-completed">
-                <CheckCircle class="h-3.5 w-3.5" />
-                Completed
-              </span>
-            {/if}
-          </div>
-        </section>
-      {/if}
-
-      <!-- Dates -->
-      {#if card.dates.length > 0}
-        <section class="detail-section">
-          <h2 class="section-label">
-            <Calendar class="h-4 w-4" />
-            Dates
-          </h2>
-          <div class="kv-list">
-            {#each card.dates as date (date.code)}
-              <div class="kv-row">
-                <span class="kv-key">{date.label}</span>
-                <span class="kv-value">{date.value}</span>
-              </div>
-            {/each}
-          </div>
-        </section>
-      {/if}
-
-      <!-- Technical -->
-      {#if card.technical.length > 0}
-        <section class="detail-section">
-          <h2 class="section-label">
-            <Hash class="h-4 w-4" />
-            Technical
-          </h2>
-          <div class="kv-list">
-            {#each card.technical as row (row.label)}
-              <div class="kv-row">
-                <span class="kv-key">{row.label}</span>
-                <span class="kv-value mono">{row.value}</span>
-              </div>
-            {/each}
-          </div>
-        </section>
-      {/if}
-
-      <!-- Markers -->
-      {#if card.markers.length > 0}
-        <section class="detail-section">
-          <h2 class="section-label">
-            <Bookmark class="h-4 w-4" />
-            Markers
-          </h2>
-          <div class="marker-list">
-            {#each card.markers as marker (marker.id)}
-              <div class="marker-row">
-                <span class="marker-time mono">{marker.timestamp}</span>
-                <span class="marker-title">{marker.title}</span>
-              </div>
-            {/each}
-          </div>
-        </section>
-      {/if}
-
-      <!-- Subtitles -->
-      {#if card.subtitles.length > 0}
-        <section class="detail-section">
-          <h2 class="section-label">
-            <Captions class="h-4 w-4" />
-            Subtitles
-          </h2>
-          <div class="subtitle-list">
-            {#each card.subtitles as sub (sub.id)}
-              <div class="subtitle-row">
-                <span class="subtitle-lang">{sub.language}</span>
-                {#if sub.label}
-                  <span class="subtitle-label">{sub.label}</span>
-                {/if}
-                <span class="subtitle-meta mono">{sub.format} · {sub.source}</span>
-                {#if sub.isDefault}
-                  <span class="subtitle-default">default</span>
-                {/if}
-              </div>
-            {/each}
-          </div>
-        </section>
-      {/if}
-
-      <!-- Links -->
+      <!-- Links (universal) -->
       {#if card.links.length > 0}
         <section class="detail-section">
           <h2 class="section-label">
@@ -396,11 +218,7 @@
                 </a>
               {:else}
                 <span class="link-item no-url">
-                  {#if link.provider}
-                    <Database class="h-3.5 w-3.5" />
-                  {:else}
-                    <Link class="h-3.5 w-3.5" />
-                  {/if}
+                  <Link class="h-3.5 w-3.5" />
                   {link.label}
                 </span>
               {/if}
@@ -409,7 +227,7 @@
         </section>
       {/if}
 
-      <!-- Files -->
+      <!-- Files (universal) -->
       {#if card.files.length > 0}
         <section class="detail-section">
           <h2 class="section-label">
@@ -424,42 +242,6 @@
                 {#if file.mimeType}
                   <span class="file-mime mono">{file.mimeType}</span>
                 {/if}
-              </div>
-            {/each}
-          </div>
-        </section>
-      {/if}
-
-      <!-- Fingerprints -->
-      {#if card.fingerprints.length > 0}
-        <section class="detail-section">
-          <h2 class="section-label">
-            <Fingerprint class="h-4 w-4" />
-            Fingerprints
-          </h2>
-          <div class="kv-list">
-            {#each card.fingerprints as fp (fp.algorithm)}
-              <div class="kv-row">
-                <span class="kv-key">{fp.algorithm}</span>
-                <span class="kv-value mono">{fp.value}</span>
-              </div>
-            {/each}
-          </div>
-        </section>
-      {/if}
-
-      <!-- Sources -->
-      {#if card.sources.length > 0}
-        <section class="detail-section">
-          <h2 class="section-label">
-            <Database class="h-4 w-4" />
-            Sources
-          </h2>
-          <div class="kv-list">
-            {#each card.sources as src (src.code)}
-              <div class="kv-row">
-                <span class="kv-key">{src.code}</span>
-                <span class="kv-value mono">{src.value}</span>
               </div>
             {/each}
           </div>
@@ -736,16 +518,6 @@
     flex-wrap: wrap;
   }
 
-  .position-badge {
-    padding: 0.1rem 0.4rem;
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.68rem;
-    color: var(--detail-text-muted);
-    border: 1px solid var(--detail-border);
-    background: var(--detail-glass);
-    backdrop-filter: blur(var(--detail-glass-blur));
-  }
-
   /* ── Detail Body ────────────────────────────────────────── */
 
   .detail-body {
@@ -797,10 +569,6 @@
     color: #80b898;
     border-color: rgba(78, 138, 98, 0.4);
     box-shadow: 0 0 10px rgba(78, 138, 98, 0.15);
-  }
-
-  .flag-badge.classification {
-    text-transform: capitalize;
   }
 
   /* ── Description (markdown) ─────────────────────────────── */
@@ -935,63 +703,6 @@
     border-color: var(--detail-accent-muted);
   }
 
-  /* ── Studio row ─────────────────────────────────────────── */
-
-  .studio-section {
-    padding: 0 1.5rem 1rem;
-  }
-
-  .studio-row {
-    display: flex;
-  }
-
-  .studio-card {
-    width: 7rem;
-  }
-
-  /* ── Credits (horizontal scroll) ───────────────────────── */
-
-  .credits-section {
-    padding: 0 1.5rem 1.5rem;
-  }
-
-  .credits-heading {
-    margin: 0 0 0.6rem;
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--detail-accent);
-  }
-
-  .credits-scroll {
-    display: flex;
-    gap: 0.5rem;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding-bottom: 0.5rem;
-    scrollbar-width: thin;
-    scrollbar-color: var(--detail-border) transparent;
-  }
-
-  .credits-scroll::-webkit-scrollbar {
-    height: 4px;
-  }
-
-  .credits-scroll::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .credits-scroll::-webkit-scrollbar-thumb {
-    background: var(--detail-border);
-  }
-
-  .credit-card {
-    flex-shrink: 0;
-    width: 6rem;
-  }
-
   /* ── Metadata sections ──────────────────────────────────── */
 
   .metadata-sections {
@@ -1020,195 +731,6 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--detail-text-muted);
-  }
-
-  /* ── Stat Grid ──────────────────────────────────────────── */
-
-  .stat-grid {
-    display: grid;
-    gap: 0.5rem;
-    grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
-  }
-
-  .stat-item {
-    display: grid;
-    gap: 0.15rem;
-    padding: 0.6rem 0.75rem;
-    border: 1px solid var(--detail-border);
-    background: var(--detail-surface-raised);
-  }
-
-  .stat-value {
-    font-family: var(--font-heading, Geist, sans-serif);
-    font-size: 1.4rem;
-    font-weight: 700;
-    line-height: 1;
-    color: var(--detail-text);
-  }
-
-  .stat-label {
-    font-size: 0.68rem;
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--detail-text-muted);
-  }
-
-  /* ── Progress ───────────────────────────────────────────── */
-
-  .progress-block {
-    display: grid;
-    gap: 0.45rem;
-  }
-
-  .progress-bar {
-    height: 6px;
-    background: var(--detail-surface-raised);
-    border: 1px solid var(--detail-border);
-    overflow: hidden;
-  }
-
-  .progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--detail-accent), #e0c48e);
-    box-shadow: 0 0 12px var(--detail-accent-glow);
-    transition: width 0.3s ease;
-  }
-
-  .progress-meta {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.78rem;
-    color: var(--detail-text-secondary);
-  }
-
-  .progress-mode {
-    font-size: 0.68rem;
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--detail-text-muted);
-  }
-
-  .progress-completed {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    width: fit-content;
-    font-size: 0.72rem;
-    color: #80b898;
-  }
-
-  /* ── Key-Value List ─────────────────────────────────────── */
-
-  .kv-list {
-    display: grid;
-    gap: 0;
-  }
-
-  .kv-row {
-    display: flex;
-    align-items: baseline;
-    gap: 1rem;
-    padding: 0.4rem 0;
-    border-bottom: 1px solid color-mix(in srgb, var(--detail-border) 50%, transparent);
-    font-size: 0.82rem;
-  }
-
-  .kv-row:last-child {
-    border-bottom: none;
-  }
-
-  .kv-key {
-    flex-shrink: 0;
-    min-width: 6rem;
-    color: var(--detail-text-muted);
-  }
-
-  .kv-value {
-    color: var(--detail-text);
-    word-break: break-all;
-  }
-
-  /* ── Markers ────────────────────────────────────────────── */
-
-  .marker-list {
-    display: grid;
-    gap: 0;
-  }
-
-  .marker-row {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.45rem 0;
-    border-bottom: 1px solid color-mix(in srgb, var(--detail-border) 50%, transparent);
-    font-size: 0.82rem;
-    cursor: default;
-    transition: background 0.12s;
-  }
-
-  .marker-row:last-child {
-    border-bottom: none;
-  }
-
-  .marker-row:hover {
-    background: var(--detail-surface-raised);
-  }
-
-  .marker-time {
-    flex-shrink: 0;
-    min-width: 4rem;
-    color: var(--detail-accent);
-    font-weight: 500;
-  }
-
-  .marker-title {
-    color: var(--detail-text);
-  }
-
-  /* ── Subtitles ──────────────────────────────────────────── */
-
-  .subtitle-list {
-    display: grid;
-    gap: 0;
-  }
-
-  .subtitle-row {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.45rem 0;
-    border-bottom: 1px solid color-mix(in srgb, var(--detail-border) 50%, transparent);
-    font-size: 0.82rem;
-  }
-
-  .subtitle-row:last-child {
-    border-bottom: none;
-  }
-
-  .subtitle-lang {
-    min-width: 5rem;
-    color: var(--detail-text);
-  }
-
-  .subtitle-label {
-    color: var(--detail-text-secondary);
-  }
-
-  .subtitle-meta {
-    color: var(--detail-text-muted);
-    font-size: 0.72rem;
-  }
-
-  .subtitle-default {
-    padding: 0.08rem 0.35rem;
-    font-size: 0.62rem;
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--detail-accent);
-    border: 1px solid var(--detail-accent-muted);
   }
 
   /* ── Links ──────────────────────────────────────────────── */
@@ -1306,14 +828,6 @@
 
     .detail-body {
       padding: 1.25rem 2rem 2rem;
-    }
-
-    .studio-section {
-      padding: 0 2rem 1rem;
-    }
-
-    .credits-section {
-      padding: 0 2rem 2rem;
     }
 
     .metadata-sections {

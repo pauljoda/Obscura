@@ -1,11 +1,11 @@
 import type { EntityCapability } from "$lib/api/generated/model";
-import type { EntityDetailCard } from "./entity-detail";
+import type { EntityDetailCardFull } from "./entity-detail";
 import { entityCardToDetailCard } from "./entity-detail";
 
 export interface EntityDetailLabRow {
   kind: string;
   label: string;
-  cards: EntityDetailCard[];
+  cards: EntityDetailCardFull[];
 }
 
 type ArtShape = "wide" | "video" | "square" | "portrait" | "poster";
@@ -214,7 +214,7 @@ function detailCard(options: {
   kind: string;
   title: string;
   capabilities: EntityCapability[];
-}): EntityDetailCard {
+}): EntityDetailCardFull {
   return entityCardToDetailCard({
     id: options.id,
     kind: options.kind,
@@ -229,7 +229,7 @@ function detailCard(options: {
  * shared foundation that EntityDetail must handle before any kind-specific
  * customization is layered on.
  */
-export const baseDetailCard: EntityDetailCard = detailCard({
+export const baseDetailCard: EntityDetailCardFull = detailCard({
   id: "base-universal",
   kind: "video",
   title: "Big Buck Bunny",
