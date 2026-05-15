@@ -8,6 +8,19 @@ import {
   getSettings,
   getSeries,
   getVideo,
+  getImage,
+  getGallerie,
+  getBook,
+  getAudioLibrarie,
+  getAudioTrack,
+  getPeople,
+  getStudio,
+  getTag,
+  getCollection,
+  listPeople,
+  listStudios,
+  listTags,
+  listCollections,
   importLegacyMedia,
   importLegacyVideos,
   listAudioLibraries,
@@ -17,17 +30,28 @@ import {
   listImages,
 } from "./generated/obscura-v2";
 import type {
+  AudioLibraryDetail,
+  AudioTrackDetail,
+  BookDetail,
+  CollectionDetail,
+  CollectionListResponse,
   EntityCapability,
   EntityCard,
   EntityListResponse,
   EntityReference,
+  GalleryDetail,
+  ImageDetail,
   JobListResponse,
   JobRun,
   LegacyMediaImportResponse,
   LegacyVideoImportResponse,
   MediaListResponse,
+  PersonDetail,
   Rating,
   SettingsResponse,
+  StudioDetail,
+  TagDetail,
+  TaxonomyListResponse,
   VideoDetail,
   VideoListResponse,
   VideoSeriesDetail,
@@ -68,6 +92,17 @@ export interface V2BulkJobResponse {
   enqueued: number;
   skipped: number;
 }
+export type V2ImageDetail = ImageDetail;
+export type V2GalleryDetail = GalleryDetail;
+export type V2BookDetail = BookDetail;
+export type V2AudioLibraryDetail = AudioLibraryDetail;
+export type V2AudioTrackDetail = AudioTrackDetail;
+export type V2PersonDetail = PersonDetail;
+export type V2StudioDetail = StudioDetail;
+export type V2TagDetail = TagDetail;
+export type V2CollectionDetail = CollectionDetail;
+export type V2CollectionListResponse = CollectionListResponse;
+export type V2TaxonomyListResponse = TaxonomyListResponse;
 export type V2SettingsResponse = SettingsResponse;
 export type V2LegacyVideoImportResponse = LegacyVideoImportResponse;
 export type V2LegacyMediaImportResponse = LegacyMediaImportResponse;
@@ -154,6 +189,85 @@ export function fetchV2AudioLibraries(options?: V2RequestOptions): Promise<V2Med
 
 export function fetchV2AudioTracks(options?: V2RequestOptions): Promise<V2MediaListResponse> {
   return listAudioTracks(undefined, { signal: options?.signal }).then((response) => response.data);
+}
+
+export function fetchV2Image(id: string, options?: V2RequestOptions): Promise<V2ImageDetail> {
+  return getImage(id, { signal: options?.signal }).then((response) => {
+    if (response.status !== 200) throw new Error(response.data.message);
+    return response.data;
+  });
+}
+
+export function fetchV2Gallery(id: string, options?: V2RequestOptions): Promise<V2GalleryDetail> {
+  return getGallerie(id, { signal: options?.signal }).then((response) => {
+    if (response.status !== 200) throw new Error(response.data.message);
+    return response.data;
+  });
+}
+
+export function fetchV2Book(id: string, options?: V2RequestOptions): Promise<V2BookDetail> {
+  return getBook(id, { signal: options?.signal }).then((response) => {
+    if (response.status !== 200) throw new Error(response.data.message);
+    return response.data;
+  });
+}
+
+export function fetchV2AudioLibrary(id: string, options?: V2RequestOptions): Promise<V2AudioLibraryDetail> {
+  return getAudioLibrarie(id, { signal: options?.signal }).then((response) => {
+    if (response.status !== 200) throw new Error(response.data.message);
+    return response.data;
+  });
+}
+
+export function fetchV2AudioTrack(id: string, options?: V2RequestOptions): Promise<V2AudioTrackDetail> {
+  return getAudioTrack(id, { signal: options?.signal }).then((response) => {
+    if (response.status !== 200) throw new Error(response.data.message);
+    return response.data;
+  });
+}
+
+export function fetchV2Person(id: string, options?: V2RequestOptions): Promise<V2PersonDetail> {
+  return getPeople(id, { signal: options?.signal }).then((response) => {
+    if (response.status !== 200) throw new Error(response.data.message);
+    return response.data;
+  });
+}
+
+export function fetchV2Studio(id: string, options?: V2RequestOptions): Promise<V2StudioDetail> {
+  return getStudio(id, { signal: options?.signal }).then((response) => {
+    if (response.status !== 200) throw new Error(response.data.message);
+    return response.data;
+  });
+}
+
+export function fetchV2Tag(id: string, options?: V2RequestOptions): Promise<V2TagDetail> {
+  return getTag(id, { signal: options?.signal }).then((response) => {
+    if (response.status !== 200) throw new Error(response.data.message);
+    return response.data;
+  });
+}
+
+export function fetchV2People(options?: V2RequestOptions): Promise<V2TaxonomyListResponse> {
+  return listPeople(undefined, { signal: options?.signal }).then((response) => response.data);
+}
+
+export function fetchV2Studios(options?: V2RequestOptions): Promise<V2TaxonomyListResponse> {
+  return listStudios(undefined, { signal: options?.signal }).then((response) => response.data);
+}
+
+export function fetchV2Tags(options?: V2RequestOptions): Promise<V2TaxonomyListResponse> {
+  return listTags(undefined, { signal: options?.signal }).then((response) => response.data);
+}
+
+export function fetchV2Collection(id: string, options?: V2RequestOptions): Promise<V2CollectionDetail> {
+  return getCollection(id, { signal: options?.signal }).then((response) => {
+    if (response.status !== 200) throw new Error(response.data.message);
+    return response.data;
+  });
+}
+
+export function fetchV2Collections(options?: V2RequestOptions): Promise<V2CollectionListResponse> {
+  return listCollections(undefined, { signal: options?.signal }).then((response) => response.data);
 }
 
 export function updateV2EntityRating(

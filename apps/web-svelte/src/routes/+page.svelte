@@ -14,6 +14,7 @@
   } from "@lucide/svelte";
   import { fetchV2Entities, type V2EntityCard } from "$lib/api/v2";
   import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
+  import { resolveEntityHref } from "$lib/entities/entity-routes";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
@@ -24,21 +25,20 @@
     label: string;
     icon: typeof Film;
     href: string;
-    entityHref: (id: string) => string;
     items: V2EntityCard[];
     cards: EntityThumbnailCard[];
   }
 
   const SECTION_DEFS: Omit<DashboardSection, "items" | "cards">[] = [
-    { kind: "video", label: "Videos", icon: Film, href: "/videos", entityHref: (id) => `/videos/${id}` },
-    { kind: "video-series", label: "Series", icon: FolderOpen, href: "/series", entityHref: (id) => `/v2/series/${id}` },
-    { kind: "gallery", label: "Galleries", icon: Layers, href: "/galleries", entityHref: (id) => `/galleries/${id}` },
-    { kind: "book", label: "Books", icon: BookOpen, href: "/books", entityHref: (id) => `/books/${id}` },
-    { kind: "image", label: "Images", icon: ImageIcon, href: "/images", entityHref: (id) => `/images/${id}` },
-    { kind: "audio-library", label: "Audio", icon: Music, href: "/audio", entityHref: (id) => `/audio/${id}` },
-    { kind: "person", label: "Actors", icon: Users, href: "/performers", entityHref: (id) => `/performers/${id}` },
-    { kind: "studio", label: "Studios", icon: Building2, href: "/studios", entityHref: (id) => `/studios/${id}` },
-    { kind: "tag", label: "Tags", icon: Tag, href: "/tags", entityHref: (id) => `/tags/${id}` },
+    { kind: "video", label: "Videos", icon: Film, href: "/videos" },
+    { kind: "video-series", label: "Series", icon: FolderOpen, href: "/series" },
+    { kind: "gallery", label: "Galleries", icon: Layers, href: "/galleries" },
+    { kind: "book", label: "Books", icon: BookOpen, href: "/books" },
+    { kind: "image", label: "Images", icon: ImageIcon, href: "/images" },
+    { kind: "audio-library", label: "Audio", icon: Music, href: "/audio" },
+    { kind: "person", label: "Actors", icon: Users, href: "/performers" },
+    { kind: "studio", label: "Studios", icon: Building2, href: "/studios" },
+    { kind: "tag", label: "Tags", icon: Tag, href: "/tags" },
   ];
 
   const nsfw = useNsfw();
@@ -80,7 +80,7 @@
         return {
           ...def,
           items,
-          cards: items.map((item) => entityCardToThumbnailCard(item, def.entityHref(item.id))),
+          cards: items.map((item) => entityCardToThumbnailCard(item, resolveEntityHref(item.kind, item.id))),
         };
       }
       return { ...def, items: [], cards: [] };

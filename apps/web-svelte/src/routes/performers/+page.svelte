@@ -3,6 +3,7 @@
   import { Users } from "@lucide/svelte";
   import { fetchV2Entities, type V2EntityCard } from "$lib/api/v2";
   import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
+  import { resolveEntityHref } from "$lib/entities/entity-routes";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
@@ -20,7 +21,7 @@
   let loadMoreError: string | null = $state(null);
 
   const cards: EntityThumbnailCard[] = $derived(
-    items.map((item) => entityCardToThumbnailCard(item, `/performers/${item.id}`)),
+    items.map((item) => entityCardToThumbnailCard(item, resolveEntityHref(item.kind, item.id))),
   );
 
   let lastNsfwMode = $state(nsfw.mode);
