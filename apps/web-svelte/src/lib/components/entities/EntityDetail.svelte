@@ -60,15 +60,17 @@
   const isNsfw = $derived(card.flags.find((f) => f.code === "nsfw")?.active ?? false);
   const isOrganized = $derived(card.flags.find((f) => f.code === "organized")?.active ?? false);
 
-  function handleFavoriteClick() {
+  function handleFavoriteClick(e: MouseEvent) {
     if (!onFavoriteToggle) return;
+    (e.currentTarget as HTMLElement).blur();
     favoriteAnimating = true;
     onFavoriteToggle();
     setTimeout(() => (favoriteAnimating = false), 400);
   }
 
-  function handleOrganizedClick() {
+  function handleOrganizedClick(e: MouseEvent) {
     if (!onOrganizedToggle) return;
+    (e.currentTarget as HTMLElement).blur();
     organizedAnimating = true;
     onOrganizedToggle();
     setTimeout(() => (organizedAnimating = false), 400);
@@ -93,8 +95,9 @@
     return marked.parse(card.description, { renderer, async: false, gfm: true, breaks: true }) as string;
   });
 
-  function handleRatingClick(value: number) {
+  function handleRatingClick(e: MouseEvent, value: number) {
     if (!onRatingChange || ratingBusy || !card.rating) return;
+    (e.currentTarget as HTMLElement).blur();
     const clearing = card.rating.value === value;
     const nextValue = clearing ? null : value;
 
@@ -128,7 +131,7 @@
               class:animating={favoriteAnimating}
               disabled={!onFavoriteToggle}
               aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-              onclick={handleFavoriteClick}
+              onclick={(e: MouseEvent) => handleFavoriteClick(e)}
             >
               <Heart class="h-4 w-4" />
             </button>
@@ -146,7 +149,7 @@
               class:animating={organizedAnimating}
               disabled={!onOrganizedToggle}
               aria-label={isOrganized ? "Mark as unorganized" : "Mark as organized"}
-              onclick={handleOrganizedClick}
+              onclick={(e: MouseEvent) => handleOrganizedClick(e)}
             >
               <CheckCircle class="h-4 w-4" />
             </button>
@@ -178,7 +181,7 @@
                   style:animation-delay={filling ? `${(value - 1) * 70}ms` : "0ms"}
                   disabled={ratingBusy || !onRatingChange}
                   aria-label={`Rate ${value}`}
-                  onclick={() => handleRatingClick(value)}
+                  onclick={(e: MouseEvent) => handleRatingClick(e, value)}
                 >
                   <Star class="h-5 w-5" />
                 </button>
