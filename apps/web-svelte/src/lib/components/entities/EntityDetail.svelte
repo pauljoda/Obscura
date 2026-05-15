@@ -488,6 +488,12 @@
 
     display: grid;
     gap: 0;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .entity-detail > * {
+    min-width: 0;
   }
 
   /* ── Hero ────────────────────────────────────────────────── */
