@@ -348,8 +348,9 @@ The single image bundles:
 
 | Component | Role |
 |-----------|------|
-| **SvelteKit** | Web frontend and same-origin HTTP API ingress |
-| **pg-boss** | Background job queue (Postgres-backed, no Redis) |
+| **.NET API** | HTTP API ingress, static frontend host, streaming, and persistence |
+| **Svelte** | Static web frontend |
+| **.NET Worker** | Background media jobs |
 | **PostgreSQL 16** | Database |
 | **ffmpeg** | Video and audio transcoding |
 
@@ -376,9 +377,6 @@ pnpm install
 # Start PostgreSQL (pg-boss manages the queue inside the DB)
 docker compose -f infra/docker/docker-compose.yml up postgres -d
 
-# Apply migrations
-pnpm --filter @obscura/db db:migrate
-
 # Start all services in dev mode
 pnpm dev
 ```
@@ -393,9 +391,6 @@ The app and API both run at `http://localhost:8008`, with JSON served under `/ap
 | `pnpm build` | Build all apps and packages |
 | `pnpm check` | Lint and typecheck across the monorepo |
 | `pnpm release:check` | Validate version and changelog alignment |
-| `pnpm --filter @obscura/db db:generate` | Generate a new SQL migration from schema changes |
-| `pnpm --filter @obscura/db db:migrate` | Apply versioned migrations to PostgreSQL |
-| `pnpm --filter @obscura/db db:studio` | Open Drizzle Studio |
 
 ### Building the Docker Image Locally
 

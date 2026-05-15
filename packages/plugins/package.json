@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@obscura/contracts": "workspace:*",
-    "@obscura/db": "workspace:*",
     "@obscura/stash-import": "workspace:*",
     "@obscura/media-core": "workspace:*",
     "js-yaml": "^4.1.1"

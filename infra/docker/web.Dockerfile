@@ -7,11 +7,8 @@ WORKDIR /app
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
 COPY apps/web-svelte/package.json apps/web-svelte/package.json
-COPY apps/worker/package.json apps/worker/package.json
 COPY packages/ui-svelte/package.json packages/ui-svelte/package.json
-COPY packages/app-core/package.json packages/app-core/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
-COPY packages/db/package.json packages/db/package.json
 COPY packages/media-core/package.json packages/media-core/package.json
 COPY packages/plugins/package.json packages/plugins/package.json
 COPY packages/stash-import/package.json packages/stash-import/package.json

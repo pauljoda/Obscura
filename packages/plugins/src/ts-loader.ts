@@ -16,11 +16,10 @@ import { PluginExecutionError } from "./executor";
 /**
  * Plugins ship compiled JS. Most today are bundled as CommonJS (the
  * entry file contains `exports.default = {...}`). Node resolves the
- * module format by walking up for the nearest `package.json`, which
- * for plugins installed under `apps/worker/.obscura-cache/plugins/*`
- * lands on `apps/worker/package.json` — and that file declares
- * `"type": "module"`, so the loader tries to parse CJS code as ESM
- * and fails with "exports is not defined in ES module scope".
+ * module format by walking up for the nearest `package.json`. In dev and
+ * production plugin cache directories, that nearest package can be ESM, so
+ * Node tries to parse CJS code as ESM and fails with
+ * "exports is not defined in ES module scope".
  *
  * Detect CJS entries before loading them. Node can load these directly
  * through `require`, which avoids dev-server ESM transforms that ignore

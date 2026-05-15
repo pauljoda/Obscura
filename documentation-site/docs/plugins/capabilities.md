@@ -354,7 +354,7 @@ The `*Candidates` arrays let the user pick the poster/backdrop they want from mu
 
 ## Nested entity creation
 
-When the user accepts a result, the engine in `packages/app-core/src/plugin-execution.ts` walks the tree and creates missing entities by name:
+When the user accepts a result, the .NET backend walks the tree and creates missing entities by name:
 
 1. **Performers** — created by name; **not** deduplicated against existing.
 2. **Tags** — created by name; **deduplicated case-insensitively**.

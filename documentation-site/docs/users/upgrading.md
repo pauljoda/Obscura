@@ -72,7 +72,7 @@ After the gate accepts:
 The gate is the only "are you sure" step. If you click through and decide later you wanted the old state, the only way back is restoring `/data` from a snapshot taken before the upgrade. Take the snapshot first.
 :::
 
-The full policy lives in `CLAUDE.md` under "Breaking-change policy" and the implementation is at `packages/db/src/breaking-gate.ts`.
+The full policy lives in `CLAUDE.md` under "Breaking-change policy"; any future break gate should live in the .NET backend and be surfaced by the Svelte UI.
 
 ## Rolling back
 

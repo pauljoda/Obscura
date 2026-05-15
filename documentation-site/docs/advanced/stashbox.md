@@ -107,6 +107,5 @@ Toggle **Enabled** off on an endpoint to remove it from the provider picker with
 ## Reading the source
 
 - `packages/stash-import/src/stashbox/client.ts` — GraphQL client.
-- `packages/db/src/schema.ts` — `stashbox_endpoints`, `stash_ids`, `fingerprint_submissions`.
-- `apps/web-svelte/src/routes/api/stashbox-endpoints/` — HTTP routes for identify, lookup, submit.
-- `packages/app-core/src/plugin-execution.ts` — how StashBox results land in the same `scrape_results` flow as plugin results.
+- `apps/backend` — endpoint config, persistence, identify, lookup, submit, and result-accept flows.
+- `packages/plugins` and `packages/stash-import` — plugin and StashBox protocol helpers.

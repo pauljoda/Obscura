@@ -98,6 +98,6 @@ If you're going deeper:
 
 - `infra/phash/main.go` — the helper.
 - `packages/media-core/src/index.ts` — `computeFingerprint('video-phash', filePath)` glue.
-- `apps/worker/src/processors/processFingerprint.ts` — when phash is computed during a scan.
+- `apps/backend` — when pHash is computed during a scan.
 - `packages/stash-import/src/stashbox/client.ts` — submission GraphQL.
-- `packages/db/src/schema.ts` — `fingerprint_submissions` and `stash_ids` tables.
+- `apps/backend/src/Obscura.Infrastructure/Persistence` — fingerprint submission and Stash ID persistence.

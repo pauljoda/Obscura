@@ -1,7 +1,10 @@
 # @obscura/contracts
 
-This TypeScript package is a legacy migration bridge for the v2 .NET backend work.
+This TypeScript package is a frontend compatibility package for constants and
+helpers that have not yet moved to generated .NET OpenAPI types.
 
-It still owns queue identifiers, media helpers, plugin normalizer shapes, and DTOs used by the current SvelteKit/API/worker path. Do not delete DTO groups from this package until the matching route or UI surface has moved to the .NET OpenAPI contract and the Orval-generated client under `apps/web-svelte/src/lib/api/generated`.
+It may still own frontend-only constants, media helpers, plugin normalizer
+shapes, and compatibility DTOs used by migrated Svelte surfaces. It must not
+own server contracts, database schema, queues, or worker behavior.
 
 New .NET API request and response shapes should be added to `apps/backend/src/Obscura.Contracts` so OpenAPI and Orval remain the public contract source for migrated v2 surfaces.

@@ -17,16 +17,12 @@
     "test:unit": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
-    "@obscura/app-core": "workspace:*",
     "@obscura/contracts": "workspace:*",
-    "@obscura/db": "workspace:*",
     "@obscura/media-core": "workspace:*",
     "@obscura/ui-svelte": "workspace:*",
-    "drizzle-orm": "^0.45.2",
     "hls.js": "^1.6.15",
     "jassub": "2.4.2",
     "marked": "^18.0.3",
-    "postgres": "^3.4.8",
     "vidstack": "^1.12.13"
   },
   "devDependencies": {

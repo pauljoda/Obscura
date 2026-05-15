@@ -60,12 +60,10 @@ Obscura is a private self-hosted media browser. It is video-first, but supports 
 ## Project Structure
 
 ```
-apps/web-svelte/   — SvelteKit full-stack app and HTTP ingress (port 8008)
-apps/worker/       — pg-boss background worker
+apps/web-svelte/   — Svelte frontend only. Built as static assets and served by the .NET API.
+apps/backend/      — .NET API, application/domain/infrastructure layers, EF Core persistence, and .NET worker.
 
-packages/app-core/ — Shared reads, writes, orchestration, and system runtime
-packages/contracts/ — Typed DTOs, route constants, job identifiers
-packages/db/       — Shared Drizzle schema and database utilities
+packages/contracts/ — Frontend TypeScript constants and compatibility DTOs while surfaces migrate to generated .NET OpenAPI types
 packages/media-core/ — File discovery, fingerprint, scan primitives
 packages/plugins/  — Plugin runtime helpers and contracts
 packages/stash-import/ — Stash migration adapter
@@ -79,40 +77,40 @@ docs/              — Architecture and design language docs
 ## Architecture
 
 - Monorepo with `pnpm` workspaces and `turbo`.
-- Runtime processes: SvelteKit web app/HTTP ingress and the pg-boss worker.
-- PostgreSQL 16 is the sole stateful dependency — used for both application data and the job queue.
-- All services share typed contracts via `@obscura/contracts`.
+- Runtime processes: .NET API/HTTP ingress, static Svelte frontend assets, and the .NET worker.
+- PostgreSQL 16 is the sole stateful dependency — used for application data and queue/job state.
+- Public HTTP contracts live in the .NET backend and are consumed by the generated Svelte client under `apps/web-svelte/src/lib/api/generated`.
 
 ## Key Architectural Decisions
 
-1. **Full-stack SvelteKit + worker** — SvelteKit owns the UI, same-origin `/api` endpoints, and lightweight server orchestration. The worker handles restart-safe background jobs.
-2. **PostgreSQL + Drizzle ORM** — Typed schema with versioned SQL migrations managed from `packages/db`.
-3. **pg-boss job queue** — Postgres-backed job queues for scan, probe, thumbnail, sprite, HLS, and import jobs. Job state is mirrored into the `job_runs` table, which is the single source of truth for the Operations dashboard. No Redis.
-4. **HLS streaming** — Videos are transcoded to HLS on demand via ffmpeg. Cached renditions are served by the SvelteKit app.
+1. **.NET API + static Svelte UI** — The .NET API owns all HTTP endpoints, persistence, and server orchestration. Svelte is a frontend client only.
+2. **PostgreSQL + EF Core** — Typed schema and versioned migrations are managed from `apps/backend/src/Obscura.Infrastructure/Persistence`.
+3. **.NET background worker** — Long-running scan, probe, thumbnail, sprite, HLS, and import work runs in `apps/backend/src/Obscura.Worker`. Job state is mirrored into the `job_runs` table, which is the single source of truth for the Operations dashboard. No Redis and no TypeScript worker.
+4. **HLS streaming** — Videos are transcoded to HLS on demand via ffmpeg. Cached renditions are served by the .NET API.
 5. **Stash as import source** — Stash is a migration/import source, not the application schema. Imported data is normalized into Obscura-owned tables.
-6. **Typed contracts** — All DTOs, route paths, and job identifiers live in `@obscura/contracts` and are shared across all apps.
+6. **Typed contracts** — .NET contracts are the server source of truth. The frontend should prefer generated OpenAPI types; `@obscura/contracts` is frontend compatibility only.
 
 ## Database
 
-- PostgreSQL 16 via `postgres` driver and `drizzle-orm`.
-- Schema defined in `packages/db/src/schema.ts` and consumed via `@obscura/db`.
+- PostgreSQL 16 via EF Core/Npgsql in the .NET backend.
+- Schema is defined by EF Core entity mappings in `apps/backend/src/Obscura.Infrastructure/Persistence`.
 - Core entities: videos (series/seasons/episodes/movies), performers, studios, tags, fingerprints, library_roots, settings.
-- **Versioned migrations, not `push`, ship in releases.** Migration SQL files live under `packages/db/drizzle/` and are applied by `packages/db/src/migrate.ts`, which runs automatically from the shared runtime used by SvelteKit and the worker. Each file records a row in `drizzle.__drizzle_migrations` so migrations apply exactly once per database.
+- **Versioned EF Core migrations ship in releases.** Migration files live under `apps/backend/src/Obscura.Infrastructure/Persistence/Migrations` and are applied by the .NET runtime on startup.
 - **Adding a schema change:**
-  1. Edit `packages/db/src/schema.ts`.
-  2. Run `pnpm --filter @obscura/db db:generate` to produce a new `drizzle/NNNN_<name>.sql` file.
-  3. **Open the file and read it.** drizzle-kit is conservative but will emit destructive SQL (drops, column renames seen as drop+add) when it can't tell your intent — fix it by hand before committing. Use `DROP TABLE IF EXISTS` when the drop needs to be safe on installs that may already lack the table.
-  4. Commit the `.sql` file, the new `drizzle/meta/NNNN_snapshot.json`, and the updated `drizzle/meta/_journal.json` alongside the schema edit.
-  5. Apply locally by restarting the web app or worker (or running `pnpm --filter @obscura/db db:migrate`) and verify.
-- **Never run `db:push` against a deployment you care about.** It bypasses the migration ledger and can apply destructive drops silently.
+  1. Edit the EF Core entity/model mapping.
+  2. Generate an EF migration from `apps/backend`.
+  3. **Open the migration and read it.** Fix destructive or accidental operations before committing.
+  4. Commit the migration, model snapshot, entity/mapping changes, tests, and changelog entry together.
+  5. Apply locally by restarting the .NET API or worker and verify.
+- **Never reintroduce Drizzle, SvelteKit `/api` routes, or a TypeScript worker.**
 
 ### Breaking-change policy
 
 Obscura is pre-1.0. We do not maintain a staging/finalize data-migration framework or a push-era legacy-install bridge. When a schema change would destroy user data (e.g. dropping a populated table), do this instead:
 
-1. Ship the change as a normal drizzle migration with `DROP TABLE IF EXISTS` / idempotent SQL.
+1. Ship the change as a normal EF Core migration with explicit, reviewed SQL when needed.
 2. Call out the break in `CHANGELOG.md` under `### What's New` — describe what breaks, what the user should do (usually "rescan your library roots"), and why.
-3. If the data loss is severe enough that we want explicit consent before it happens, add a single-purpose one-time break-gate next to the migration. See `packages/db/src/breaking-gate.ts` for the pattern: marker file on disk, gate check runs before the migrator, and the consent UI lives in `apps/web-svelte/src/lib/components/BreakingUpgradeGate.svelte`. Don't abstract this into a framework — copy the pattern if a future break needs it, or delete the old gate when it's no longer relevant.
+3. If the data loss is severe enough that we want explicit consent before it happens, add a single-purpose one-time break-gate in the .NET backend and surface consent through the Svelte UI. Don't abstract this into a framework — copy the existing pattern if a future break needs it, or delete the old gate when it's no longer relevant.
 
 No bridges, no staging tables, no legacy-schema snapshots. Early users expect breakage; make it loud and move on.
 
@@ -138,18 +136,18 @@ No bridges, no staging tables, no legacy-schema snapshots. Early users expect br
 
 ## Quality Bar
 
-- TypeScript is required across apps and packages.
+- TypeScript is required in the Svelte frontend and TypeScript packages; C# is required for all server, persistence, and worker logic.
 - Prefer typed contracts over ad hoc object shapes.
 - Public classes, records, interfaces, and non-trivial public methods should have rich documentation comments that explain the domain meaning, parameters, return values, and important behavior. Prefer C# XML documentation comments for .NET code so IDEs surface the intent while editing.
 - Add tests with new logic when behavior can regress.
-- Keep app boundaries explicit: UI and HTTP ingress in `apps/web-svelte`, heavy work in `apps/worker`, shared logic in `packages/*`.
+- Keep app boundaries explicit: UI in `apps/web-svelte`, HTTP/persistence/worker logic in `apps/backend`, and frontend-only shared utilities in `packages/*`.
 
 ## Docker
 
-- Development: `docker compose -f infra/docker/docker-compose.yml up` runs SvelteKit, worker, and PostgreSQL with hot reload.
-- Production: single unified image (`ghcr.io/pauljoda/obscura`) bundles PostgreSQL, ffmpeg, SvelteKit, and the worker.
+- Development: `docker compose -f infra/docker/docker-compose.yml up` runs Vite, the .NET API, the .NET worker, and PostgreSQL with hot reload.
+- Production: single unified image (`ghcr.io/pauljoda/obscura`) bundles PostgreSQL, ffmpeg, the built Svelte frontend, the .NET API, and the .NET worker.
 - Per-service Dockerfiles remain in `infra/docker/` for development; the unified build uses `infra/docker/unified.Dockerfile`.
-- SvelteKit listens directly on port 8008 and serves same-origin `/api/*` routes alongside the UI.
+- The .NET API listens on port 8008, serves same-origin `/api/*` routes, and serves the built Svelte assets.
 - Volumes: `/data` (database, cache, thumbnails) and `/media` (user media library).
 
 ## CI/CD

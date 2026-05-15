@@ -188,6 +188,5 @@ Plugins are software. Users will fork them, file issues, and depend on them. Tre
 If you want the canonical answer to anything in this section, the registry-side code lives in:
 
 - [`obscura-community-plugins/`](https://github.com/pauljoda/obscura-community-plugins) — the registry itself.
-- `packages/app-core/src/plugin-registry.ts` — Obscura-side discovery and install.
-- `packages/app-core/src/plugin-execution.ts` — runtime dispatch and auth resolution.
+- `apps/backend` — Obscura-side discovery, install, runtime dispatch, and auth resolution.
 - `packages/plugins/src/manifest-parser.ts` — manifest parsing and validation.

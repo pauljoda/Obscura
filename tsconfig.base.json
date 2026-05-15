@@ -12,11 +12,7 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@obscura/app-core": ["packages/app-core/src/index.ts"],
-      "@obscura/app-core/*": ["packages/app-core/src/*"],
       "@obscura/contracts": ["packages/contracts/src/index.ts"],
-      "@obscura/db": ["packages/db/src/index.ts"],
-      "@obscura/db/*": ["packages/db/*"],
       "@obscura/media-core": ["packages/media-core/src/index.ts"],
       "@obscura/plugins": ["packages/plugins/src/index.ts"],
       "@obscura/stash-import": ["packages/stash-import/src/index.ts"],

@@ -39,9 +39,8 @@ host    all   all   127.0.0.1/32  trust
 host    all   all   ::1/128       trust
 CONF
 
-  # Tune for embedded single-user usage. max_connections bumped to 40 so
-  # pg-boss (job queue), drizzle (schema push), API, and worker can all hold
-  # pool connections without exhausting slots.
+  # Tune for embedded single-user usage. max_connections leaves enough room
+  # for the .NET API, worker, and EF migration/runtime pools.
   cat >> "$PGDATA/postgresql.conf" <<CONF
 listen_addresses = '127.0.0.1'
 unix_socket_directories = '/run/postgresql'

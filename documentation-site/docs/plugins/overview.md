@@ -104,9 +104,7 @@ You install them from **Plugins → Obscura Index** in the web app. One click do
 | `packages/plugins/src/executor.ts` | Python subprocess executor. |
 | `packages/plugins/src/normalizer.ts` | Output normalizers. |
 | `packages/stash-import/src/stash-adapter.ts` | Stash-compat YAML adapter. |
-| `packages/app-core/src/plugin-execution.ts` | Web-side glue: resolve manifest, decrypt auth, dispatch into the runtime, normalize result. |
-| `packages/app-core/src/plugin-registry.ts` | Discover installed plugins from the `plugin_packages` table. |
-| `packages/app-core/src/plugin-proposed-result.ts` | Convert a plugin output into a `scrape_results` row. |
+| `apps/backend` | Obscura-side glue: resolve manifests, credentials, execution, persistence, and accepted results. |
 
 If you're going to read source, start with `packages/plugins/src/types.ts`. Everything else makes sense once you know the wire format.
 

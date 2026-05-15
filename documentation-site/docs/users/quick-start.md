@@ -113,8 +113,8 @@ The `dev` tag is rebuilt on every push to `main`; `latest` only moves when a rel
 | Process | Role |
 | --- | --- |
 | **PostgreSQL 16** | Application data and the pg-boss job queue. Data lives at `/data/postgres`. |
-| **SvelteKit server** | Web UI plus same-origin `/api/*`. Port `8008`. |
-| **Worker** | Background scan, probe, fingerprint, preview, HLS, and import jobs. |
+| **.NET API** | Same-origin `/api/*`, streaming, persistence, and built web UI. Port `8008`. |
+| **.NET Worker** | Background scan, probe, fingerprint, preview, HLS, and import jobs. |
 | **ffmpeg / ffprobe** | Media probing, HLS transcoding, sprite generation. |
 | **audiowaveform** | Audio waveform peak files. |
 | **obscura-phash** | Stash-compatible video perceptual hashes (Go binary). |

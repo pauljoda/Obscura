@@ -25,9 +25,9 @@ This page covers what to know before opening a PR: how to run things locally, wh
 docker compose -f infra/docker/docker-compose.yml up
 ```
 
-This brings up Postgres, the SvelteKit web app, and the worker with hot reload. Web is at http://localhost:8008.
+This brings up Postgres, Vite, the .NET API, and the .NET worker with hot reload. Web is at http://localhost:8008.
 
-**The local way** (when you're iterating fast on the SvelteKit app):
+**The local way** (when you're iterating fast on the Svelte app):
 
 ```bash
 # 1. Start Postgres (or any Postgres you control)
@@ -38,22 +38,16 @@ docker run --rm -d --name obscura-pg \
 # 2. Set the env
 export DATABASE_URL=postgres://obscura:obscura@localhost:5432/obscura
 
-# 3. Migrate
-pnpm --filter @obscura/db db:migrate
-
-# 4. Run web + worker in parallel
+# 3. Run the full dev stack from VS Code or the root scripts
 pnpm dev
 ```
 
-Web is at http://localhost:8008; the worker logs to the same terminal via turbo's interleaved output.
+Web is at http://localhost:8008. The .NET API and worker own migrations and server work.
 
 ### Useful filters
 
 ```bash
 pnpm --filter @obscura/web-svelte dev    # web only
-pnpm --filter @obscura/worker dev        # worker only
-pnpm --filter @obscura/db db:generate    # diff schema → new SQL migration
-pnpm --filter @obscura/db db:migrate     # apply pending migrations
 pnpm docs:dev                            # this site
 ```
 
@@ -138,10 +132,10 @@ Two automation surfaces, both in `.github/workflows/`:
 
 ## Style and quality
 
-- **TypeScript across apps and packages.** No JS in new code.
-- **Prefer typed contracts** in `@obscura/contracts` over ad-hoc object shapes.
-- **Add tests with new logic** when behavior can regress. Unit tests for pure functions, integration tests for DB-dependent paths.
-- **Keep app boundaries explicit:** UI + HTTP in `apps/web-svelte`, heavy work in `apps/worker`, shared logic in `packages/*`.
+- **TypeScript in the frontend/packages and C# in the server.** No JS in new code.
+- **Prefer generated .NET OpenAPI contracts** over ad-hoc frontend object shapes.
+- **Add tests with new logic** when behavior can regress.
+- **Keep app boundaries explicit:** UI in `apps/web-svelte`, server/persistence/worker work in `apps/backend`.
 - **Don't introduce abstractions beyond what the task requires.** A bug fix doesn't need surrounding cleanup. Three similar lines is better than a premature abstraction.
 - **Don't add error handling for scenarios that can't happen.** Trust internal code; only validate at system boundaries.
 
@@ -158,6 +152,6 @@ If you're new and want to make a small change, this order tends to work:
 
 1. Run it locally with Docker compose. Click around. Open dev tools.
 2. Read [Architecture](./architecture.md) and [Monorepo Layout](./monorepo.md).
-3. Find a `+server.ts` or processor that does something close to your task.
-4. Trace the call chain: handler → app-core → db.
+3. Find a .NET endpoint/service or Svelte page that does something close to your task.
+4. Trace the call chain: endpoint → application/infrastructure service → EF Core model.
 5. Make the change. Add a test. Update CHANGELOG. Commit.

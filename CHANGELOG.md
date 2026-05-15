@@ -35,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Virtual adaptive HLS now generates each rendition as one continuous ffmpeg HLS stream, preventing periodic audio crackles from independently encoded AAC segments.
 - Adaptive HLS playback now honors the source file's default audio track and exposes alternate audio tracks in the player menu, preventing multi-language videos from starting on the wrong language.
 - Playback settings now include preferred audio languages, so multi-audio videos can start in the user's chosen language when a matching stream is available.
+- Legacy v1 server code has been removed: Obscura now treats the .NET API, EF Core persistence, and .NET worker as the only server/runtime path. Any remaining frontend imports of v1 helpers now surface as build failures so they can be migrated deliberately.
 - Virtual HLS now publishes generated segments atomically and refreshes older segment caches, preventing content-length crashes when users scrub past buffered playback.
 - Scrubbing beyond the current buffer now starts virtual HLS generation at the requested segment and continues forward, restoring responsive long-distance seeks without waiting for earlier segments.
 - Subtitle style controls now use consistent sharp menu rows and squared sliders in both the player and Settings page, with compact language-code text that no longer overpowers subtitle settings.
@@ -73,6 +74,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- The workspace now depends on the .NET backend for server, database, and worker behavior; Svelte is a frontend-only app served by the .NET host.
 - `EntityDetail` hero actions now render below the title, metadata, and rating controls, keeping the title stack visually grounded on detail pages.
 - Production Docker startup now serves the built Svelte app through the .NET API host and starts `Obscura.Worker.dll` for background jobs.
 - The video detail page now opens root-level Jellyfin-compatible `/Videos` and `/Sessions` routes for playback instead of the old Obscura-specific `/api/videos/{id}/hls/master.m3u8` and `PATCH /api/entities/{id}/playback` flow.
@@ -189,6 +191,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scan now propagates the NSFW flag from the library root to all child entities — images, audio libraries, audio tracks, book chapters, and book pages were previously missing the flag even when their parent library root was marked NSFW.
 
 ### Removed
+- Removed the legacy SvelteKit `/api` route tree, `$lib/v1` server/client helpers, TypeScript worker app, Drizzle database package, and shared `@obscura/app-core` server package.
 - Removed the obsolete `/api/videos/{id}/stream`, `/api/videos/{id}/hls/master.m3u8`, and `/api/videos/{id}/hls/{asset}` playback routes; Jellyfin-compatible `/Videos/...` routes now own playback.
 - Removed the legacy Node worker service from the development Docker Compose stack.
 - `/v2/` route tree — all 15 temporary staging pages (detail-lab, thumbnail-lab, entity detail pages, series browse) deleted after consolidation into canonical routes.

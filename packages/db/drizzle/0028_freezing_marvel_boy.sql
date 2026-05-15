@@ -1,1 +1,0 @@
-ALTER TABLE "library_settings" ADD COLUMN "show_cast_controls" boolean DEFAULT true NOT NULL;

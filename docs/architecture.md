@@ -2,14 +2,14 @@
 
 ## Runtime Topology
 
-Obscura is organized as a Docker-first monorepo with three primary services:
+Obscura is organized as a Docker-first monorepo with two primary runtime services:
 
-- `web-svelte` - SvelteKit full-stack frontend and HTTP ingress
-- `worker` - background process for scan, fingerprint, preview, and import jobs
+- `backend` - .NET API, HTTP ingress, EF Core persistence, static frontend host
+- `backend-worker` - .NET background process for scan, fingerprint, preview, and import jobs
 
 Supporting services:
 
-- `postgres` - application database **and** the job queue backend (via pg-boss). No separate queue service is required.
+- `postgres` - application database and durable job state. No separate queue service is required.
 
 ## Responsibility Boundaries
 
@@ -18,12 +18,14 @@ Supporting services:
 - user interface
 - responsive layout and navigation
 - asset browsing, metadata workflows, settings surfaces
+- static frontend build consumed by the .NET API host
+
+### apps/backend
+
 - same-origin `/api` transport layer
 - request validation and route composition
-- orchestration of reads, writes, and local streaming endpoints
-
-### apps/worker
-
+- EF Core persistence and migrations
+- local streaming endpoints
 - heavy media work
 - long-running or restart-safe tasks
 - queue execution, retries, and progress reporting
@@ -32,7 +34,7 @@ Supporting services:
 
 - media discovery primitives
 - file fingerprint taxonomy
-- future scan and normalization logic shared by SvelteKit and worker
+- frontend/shared media helpers that are not server-owned
 
 ### packages/stash-import
 
@@ -41,9 +43,8 @@ Supporting services:
 
 ### packages/contracts
 
-- route constants
-- DTOs and transport contracts
-- shared job and queue identifiers
+- frontend compatibility constants and helper types
+- server contracts live in `apps/backend/src/Obscura.Contracts`
 
 ### packages/ui-svelte
 

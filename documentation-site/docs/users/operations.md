@@ -6,7 +6,7 @@ description: The Job Control dashboard — what's running, what's queued, what f
 
 # Operations & Jobs
 
-Almost everything in Obscura is asynchronous. Scans, probes, fingerprints, previews, HLS transcodes, identify runs, image thumbnails, audio waveforms — they're all jobs handled by a background worker (`apps/worker`) backed by [pg-boss](https://github.com/timgit/pg-boss). The **Operations** page (sidebar → **Jobs**) is your window into that work.
+Almost everything in Obscura is asynchronous. Scans, probes, fingerprints, previews, HLS transcodes, identify runs, image thumbnails, audio waveforms — they're all jobs handled by the .NET background worker. The **Operations** page (sidebar → **Jobs**) is your window into that work.
 
 ![Operations dashboard](/img/screenshots/jobs.png)
 
@@ -119,7 +119,7 @@ When NSFW mode is **Off**, jobs targeting NSFW entities are hidden from every li
 If you want to read job state outside the UI:
 
 - `job_runs` table — the source of truth for the dashboard. One row per job execution (id, queueName, bullmqJobId, status, targetType, targetId, targetLabel, progress, attempts, payload, error, startedAt, finishedAt).
-- `pgboss.*` schema — pg-boss's internal state. You generally shouldn't poke this directly; the wrapper in `packages/app-core/src/queue-writes.ts` is the supported API.
+- job internals — don't edit queue/job tables directly; use the Operations page or .NET API.
 
 ```sql
 -- Recent failures across all queues

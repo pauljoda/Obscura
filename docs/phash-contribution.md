@@ -63,7 +63,7 @@ the binary keep running.
 
 ### Worker integration
 
-The fingerprint job (`apps/worker/src/processors/fingerprint.ts`) reads the
+The .NET fingerprint job reads the
 `library_settings.generate_phash` flag. When enabled and the scene has a known
 duration, it runs `computePhash(filePath, duration)` after md5/oshash and
 writes the result to `scenes.phash`.
@@ -131,10 +131,10 @@ per minute (Stash's default). Previously, each API route handler `new`-ed a
 fresh client per request, so the bucket was effectively reset on every call
 and bulk operations could blow right through the limit.
 
-The fix lives in `packages/app-core/src/stashbox-runtime.ts`: a process-wide
+The fix lives in the .NET StashBox runtime: a process-wide
 Map keyed by endpoint UUID that hands out a cached client via
 `getStashBoxClient(ep)`. Rate limiting now holds across concurrent requests
-and across the lifetime of the SvelteKit server process. PATCH/DELETE handlers
+and across the lifetime of the .NET API process. PATCH/DELETE handlers
 call `invalidateStashBoxClient(id)` so credential changes take effect
 immediately.
 
