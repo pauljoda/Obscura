@@ -14,7 +14,8 @@
   let ratingBusy = $state(false);
 
   // ── Base tab controls ──────────────────────────────────
-  let showHero = $state(true);
+  type HeroSource = "banner" | "poster-blur" | "gradient";
+  let heroSource = $state<HeroSource>("banner");
   let posterSize = $state<EntityDetailPosterSize>("medium");
   let hiddenSections = $state<Set<string>>(new Set());
 
@@ -42,6 +43,9 @@
 
   const baseCard = $derived.by((): EntityDetailCard => {
     const card = { ...baseDetailCard };
+
+    if (heroSource === "poster-blur") card.hero = null;
+    if (heroSource === "gradient") { card.hero = null; card.poster = null; }
 
     if (hiddenSections.has("description")) card.description = null;
     if (hiddenSections.has("rating")) card.rating = null;
@@ -122,18 +126,15 @@
   {#if activeTab === "base"}
     <div class="controls-panel">
       <div class="control-group">
-        <span class="control-label">Hero Image</span>
+        <span class="control-label">Hero Source</span>
         <div class="toggle-row">
-          <button
-            type="button"
-            class:is-active={showHero}
-            onclick={() => (showHero = true)}
-          >On</button>
-          <button
-            type="button"
-            class:is-active={!showHero}
-            onclick={() => (showHero = false)}
-          >Off</button>
+          {#each ["banner", "poster-blur", "gradient"] as src (src)}
+            <button
+              type="button"
+              class:is-active={heroSource === src}
+              onclick={() => (heroSource = src as HeroSource)}
+            >{src}</button>
+          {/each}
         </div>
       </div>
 
@@ -202,7 +203,7 @@
       onRatingChange={handleRatingChange}
       {ratingBusy}
       {posterSize}
-      showHero={activeTab === "base" ? showHero : true}
+      showHero={true}
     />
   {/if}
 </main>

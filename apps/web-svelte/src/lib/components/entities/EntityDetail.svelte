@@ -50,7 +50,15 @@
     showHero = true,
   }: Props = $props();
 
-  const heroVisible = $derived(showHero && hasHero(card));
+  type HeroMode = "image" | "poster-blur" | "gradient";
+
+  const heroMode = $derived.by((): HeroMode => {
+    if (!showHero) return "gradient";
+    if (hasHero(card)) return "image";
+    if (hasPoster(card)) return "poster-blur";
+    return "gradient";
+  });
+
   const posterVisible = $derived(posterSize !== "none" && hasPoster(card));
 
   const sections = $derived(presentSections(card));
@@ -92,11 +100,19 @@
   <!-- Hero / Banner -->
   <div
     class="hero"
-    class:has-image={heroVisible}
-    style:background-image={heroVisible
+    data-hero-mode={heroMode}
+    style:background-image={heroMode === "image"
       ? `url(${card.hero!.src})`
-      : placeholderGradient(card.entity.title)}
+      : heroMode === "gradient"
+        ? placeholderGradient(card.entity.title)
+        : "none"}
   >
+    {#if heroMode === "poster-blur"}
+      <div class="hero-poster-bg">
+        <img src={card.poster!.src} alt="" aria-hidden="true" />
+      </div>
+      <div class="hero-poster-blur-overlay"></div>
+    {/if}
     <div class="hero-scrim"></div>
 
     <div class="hero-content">
@@ -474,13 +490,43 @@
     border: 1px solid var(--detail-border);
   }
 
-  .hero.has-image {
+  .hero[data-hero-mode="image"] {
     min-height: 18rem;
+  }
+
+  .hero[data-hero-mode="poster-blur"] {
+    min-height: 18rem;
+  }
+
+  /* Poster used as blurred background when no hero banner exists */
+  .hero-poster-bg {
+    position: absolute;
+    inset: -20px;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .hero-poster-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 25%;
+    transform: scale(1.15);
+  }
+
+  .hero-poster-blur-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    backdrop-filter: blur(40px) saturate(1.4);
+    -webkit-backdrop-filter: blur(40px) saturate(1.4);
+    background: rgba(7, 8, 11, 0.45);
   }
 
   .hero-scrim {
     position: absolute;
     inset: 0;
+    z-index: 2;
     background: linear-gradient(
       to top,
       rgba(7, 8, 11, 0.95) 0%,
@@ -495,7 +541,7 @@
     align-items: end;
     gap: 1.25rem;
     padding: 1.5rem;
-    z-index: 1;
+    z-index: 3;
     align-self: end;
   }
 
@@ -1173,7 +1219,8 @@
   /* ── Responsive ─────────────────────────────────────────── */
 
   @media (min-width: 640px) {
-    .hero.has-image {
+    .hero[data-hero-mode="image"],
+    .hero[data-hero-mode="poster-blur"] {
       min-height: 22rem;
     }
 
@@ -1203,7 +1250,8 @@
   }
 
   @media (min-width: 1024px) {
-    .hero.has-image {
+    .hero[data-hero-mode="image"],
+    .hero[data-hero-mode="poster-blur"] {
       min-height: 26rem;
     }
 
