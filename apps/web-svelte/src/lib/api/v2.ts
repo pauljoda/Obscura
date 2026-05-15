@@ -57,7 +57,7 @@ import type {
   VideoSeriesDetail,
   VideoSeriesListResponse,
 } from "./generated/model";
-import { v2ApiPath } from "./orval-fetch";
+import { jellyfinApiPath, v2ApiPath } from "./orval-fetch";
 import type {
   LibraryBrowseDto,
   LibraryRootDto,
@@ -115,6 +115,67 @@ export interface V2LibraryConfigResponse {
   roots: V2LibraryRoot[];
 }
 
+export interface JellyfinPlaybackInfoRequest {
+  UserId?: string | null;
+  StartTimeTicks?: number | null;
+  AudioStreamIndex?: number | null;
+  SubtitleStreamIndex?: number | null;
+  MaxStreamingBitrate?: number | null;
+  EnableDirectPlay?: boolean | null;
+  EnableDirectStream?: boolean | null;
+  EnableTranscoding?: boolean | null;
+  MediaSourceId?: string | null;
+  PlaySessionId?: string | null;
+}
+
+export interface JellyfinMediaStreamInfo {
+  Index: number;
+  Type: string;
+  Codec?: string | null;
+  Language?: string | null;
+  DisplayTitle?: string | null;
+  Width?: number | null;
+  Height?: number | null;
+  AverageFrameRate?: number | null;
+  BitRate?: number | null;
+  SampleRate?: number | null;
+  Channels?: number | null;
+  IsDefault?: boolean | null;
+  IsForced?: boolean | null;
+}
+
+export interface JellyfinMediaSourceInfo {
+  Id: string;
+  Path: string;
+  Protocol: string;
+  Container?: string | null;
+  Size?: number | null;
+  Name?: string | null;
+  RunTimeTicks?: number | null;
+  SupportsDirectPlay: boolean;
+  SupportsDirectStream: boolean;
+  SupportsTranscoding: boolean;
+  TranscodingUrl?: string | null;
+  TranscodingSubProtocol?: string | null;
+  TranscodingContainer?: string | null;
+  MediaStreams: JellyfinMediaStreamInfo[];
+}
+
+export interface JellyfinPlaybackInfoResponse {
+  PlaySessionId: string;
+  MediaSources: JellyfinMediaSourceInfo[];
+  ErrorCode?: string | null;
+}
+
+export interface JellyfinPlaybackSessionRequest {
+  ItemId: string;
+  MediaSourceId?: string | null;
+  PlaySessionId?: string | null;
+  PositionTicks?: number | null;
+  IsPaused?: boolean | null;
+  IsMuted?: boolean | null;
+}
+
 export interface V2RequestOptions {
   signal?: AbortSignal;
 }
@@ -150,6 +211,53 @@ export function fetchV2Video(
 
     return response.data;
   });
+}
+
+export async function fetchJellyfinPlaybackInfo(
+  itemId: string,
+  request: JellyfinPlaybackInfoRequest = {},
+  options?: V2RequestOptions,
+): Promise<JellyfinPlaybackInfoResponse> {
+  const response = await fetch(jellyfinApiPath(`/Items/${itemId}/PlaybackInfo`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+    signal: options?.signal,
+  });
+  if (!response.ok) {
+    throw new Error(await response.text() || `PlaybackInfo ${response.status}`);
+  }
+  return await response.json() as JellyfinPlaybackInfoResponse;
+}
+
+export async function postJellyfinSessionProgress(
+  path: "Playing" | "Playing/Progress" | "Playing/Ping" | "Playing/Stopped",
+  request: JellyfinPlaybackSessionRequest,
+  options?: V2RequestOptions,
+): Promise<void> {
+  const response = await fetch(jellyfinApiPath(`/Sessions/${path}`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+    signal: options?.signal,
+  });
+  if (!response.ok) {
+    throw new Error(await response.text() || `Session ${response.status}`);
+  }
+}
+
+export async function markJellyfinUserPlayedItem(
+  itemId: string,
+  played: boolean,
+  options?: V2RequestOptions,
+): Promise<void> {
+  const response = await fetch(jellyfinApiPath(`/UserPlayedItems/${itemId}`), {
+    method: played ? "POST" : "DELETE",
+    signal: options?.signal,
+  });
+  if (!response.ok) {
+    throw new Error(await response.text() || `UserPlayedItems ${response.status}`);
+  }
 }
 
 export function fetchV2SeriesList(

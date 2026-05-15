@@ -7,6 +7,16 @@ export function v2ApiPath(path: string): string {
   return `${API_BASE}${normalizedPath.startsWith("/api/") ? normalizedPath.slice(4) : normalizedPath}`;
 }
 
+export function jellyfinApiPath(path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const rootBase = API_BASE.endsWith("/api")
+    ? API_BASE.slice(0, -4)
+    : API_BASE === "/api"
+      ? ""
+      : API_BASE;
+  return `${rootBase}${normalizedPath}`;
+}
+
 export function v2AssetUrl(assetPath: string | null | undefined): string {
   if (!assetPath) return "";
   const normalized = assetPath.startsWith("/") ? assetPath : `/${assetPath}`;

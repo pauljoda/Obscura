@@ -1,7 +1,8 @@
 import type { EntityCapability } from "$lib/api/generated/model";
+import type { JellyfinPlaybackInfoResponse } from "$lib/api/v2";
 import type { VideoPlayerMarker } from "$lib/components/VideoPlayer.svelte";
 import { getCapability } from "$lib/api/capabilities";
-import { v2ApiPath, v2AssetUrl } from "$lib/api/orval-fetch";
+import { jellyfinApiPath, v2ApiPath, v2AssetUrl } from "$lib/api/orval-fetch";
 import type {
   SubtitleSource,
   SubtitleSourceFormat,
@@ -16,14 +17,16 @@ export interface VideoPlayerProps {
   poster: string;
   markers: VideoPlayerMarker[];
   duration: number;
-  trickplaySprite: string;
-  trickplayVtt: string;
+  trickplayPlaylist: string;
+  playSessionId: string | null;
+  mediaSourceId: string | null;
   subtitleTracks: VideoSubtitleTrack[];
 }
 
 export function extractVideoPlayerProps(
   videoId: string,
   capabilities: EntityCapability[],
+  playbackInfo: JellyfinPlaybackInfoResponse | null = null,
 ): VideoPlayerProps {
   const technical = getCapability(capabilities, CAPABILITY_KIND.technical);
   const images = getCapability(capabilities, CAPABILITY_KIND.images);
@@ -32,30 +35,44 @@ export function extractVideoPlayerProps(
   const subtitles = getCapability(capabilities, CAPABILITY_KIND.subtitles);
 
   const sourceFile = files?.items.find((f) => f.role === ENTITY_FILE_ROLE.source);
+  const mediaSource = playbackInfo?.MediaSources?.[0] ?? null;
+  const videoStream = mediaSource?.MediaStreams?.find((stream) => stream.Type === "Video");
   const trickplayFile = files?.items.find((f) => f.role === ENTITY_FILE_ROLE.trickplay);
-  const trickplayVttUrl = trickplayFile ? v2AssetUrl(trickplayFile.path) : "";
-  const spriteUrl = trickplayVttUrl
-    ? v2AssetUrl(`/assets/videos/${videoId}/sprite.jpg`)
-    : "";
+  const trickplayPlaylist = trickplayFile?.path
+    ? jellyfinApiPath(trickplayFile.path)
+    : jellyfinApiPath(`/Videos/${videoId}/Trickplay/320/tiles.m3u8`);
   const directPlayable = isBrowserNativeVideoSource(sourceFile?.path, technical?.container);
+  const directSrc = (mediaSource?.SupportsDirectPlay ?? directPlayable)
+    ? jellyfinApiPath(`/Videos/${videoId}/stream${mediaSource?.Id ? `?MediaSourceId=${mediaSource.Id}` : ""}`)
+    : "";
+  const hlsSrc = mediaSource?.TranscodingUrl
+    ? jellyfinApiPath(mediaSource.TranscodingUrl)
+    : jellyfinApiPath(`/Videos/${videoId}/live.m3u8`);
 
   return {
-    src: v2ApiPath(`/videos/${videoId}/hls/master.m3u8`),
-    directSrc: directPlayable ? v2ApiPath(`/videos/${videoId}/stream`) : "",
-    codec: technical?.codec ?? null,
+    src: hlsSrc,
+    directSrc,
+    codec: videoStream?.Codec ?? technical?.codec ?? null,
     poster: v2AssetUrl(images?.thumbnailUrl) || "",
     markers: (markers?.items ?? []).map((m) => ({
       id: m.id,
       time: Number(m.seconds),
       title: m.title,
     })),
-    duration: parseDotnetTimeSpan(technical?.duration),
-    trickplaySprite: spriteUrl,
-    trickplayVtt: trickplayVttUrl,
+    duration: ticksToSeconds(mediaSource?.RunTimeTicks) || parseDotnetTimeSpan(technical?.duration),
+    trickplayPlaylist,
+    playSessionId: playbackInfo?.PlaySessionId ?? null,
+    mediaSourceId: mediaSource?.Id ?? null,
     subtitleTracks: (subtitles?.items ?? []).map((s) =>
       mapEntitySubtitle(videoId, s),
     ),
   };
+}
+
+function ticksToSeconds(value: number | null | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value / 10_000_000
+    : 0;
 }
 
 function mapEntitySubtitle(

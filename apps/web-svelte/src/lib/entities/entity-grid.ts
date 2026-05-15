@@ -174,7 +174,7 @@ function previewAssets(entity: EntityCard, roles: string[]): EntityThumbnailAsse
   const results: EntityThumbnailAsset[] = [];
   for (const item of images.items) {
     if (!roles.includes(item.kind)) continue;
-    if (item.kind === ENTITY_FILE_ROLE.trickplay && item.path.endsWith(".vtt")) continue;
+    if (item.kind === ENTITY_FILE_ROLE.trickplay) continue;
     results.push(assetFromPath(item.path, entity.title, item.kind));
   }
   return results;

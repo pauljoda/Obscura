@@ -9,8 +9,8 @@ vi.mock("@lucide/svelte", () => ({
 
 vi.mock("@obscura/ui-svelte", () => ({
   loadTrickplayFrames: vi.fn().mockResolvedValue([
-    { start: 0, end: 50, x: 0, y: 0, width: 160, height: 90 },
-    { start: 50, end: 100, x: 160, y: 0, width: 160, height: 90 },
+    { start: 0, end: 50, x: 0, y: 0, width: 160, height: 90, url: "/0.jpg" },
+    { start: 50, end: 100, x: 160, y: 0, width: 160, height: 90, url: "/0.jpg" },
   ]),
   findFrameAtTime: vi.fn(() => 0),
   timeToTrackPosition: vi.fn((_frames, time, frameWidth) => (time / 50) * frameWidth),
@@ -50,8 +50,7 @@ describe("FilmStrip", () => {
 
     const { container } = render(FilmStrip, {
       props: {
-        spriteUrl: "/sprite.jpg",
-        vttUrl: "/trickplay.vtt",
+        playlistUrl: "/trickplay.m3u8",
         videoEl: null,
         currentTime: 10,
         duration: 100,
@@ -81,8 +80,7 @@ describe("FilmStrip", () => {
 
     const { container } = render(FilmStrip, {
       props: {
-        spriteUrl: "/sprite.jpg",
-        vttUrl: "/trickplay.vtt",
+        playlistUrl: "/trickplay.m3u8",
         videoEl: null,
         currentTime: 10,
         duration: 100,

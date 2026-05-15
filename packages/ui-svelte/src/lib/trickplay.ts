@@ -60,22 +60,84 @@ export function parseTrickplayVtt(raw: string): TrickplayFrame[] {
   return frames;
 }
 
-export async function loadTrickplayFrames(vttUrl: string): Promise<TrickplayFrame[]> {
-  const cached = trickplayCache.get(vttUrl);
+export function parseTrickplayImagePlaylist(raw: string, playlistUrl: string): TrickplayFrame[] {
+  const lines = raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const tileLine = lines.find((line) => line.startsWith("#EXT-X-TILES:"));
+  if (!tileLine) return [];
+
+  const resolution = tileLine.match(/RESOLUTION=(\d+)x(\d+)/);
+  const layout = tileLine.match(/LAYOUT=(\d+)x(\d+)/);
+  const duration = tileLine.match(/DURATION=([0-9.]+)/);
+  if (!resolution || !layout || !duration) return [];
+
+  const width = Number(resolution[1]);
+  const height = Number(resolution[2]);
+  const columns = Number(layout[1]);
+  const rows = Number(layout[2]);
+  const interval = Number(duration[1]);
+  if ([width, height, columns, rows, interval].some((value) => !Number.isFinite(value) || value <= 0)) {
+    return [];
+  }
+
+  const frames: TrickplayFrame[] = [];
+  let pendingDuration = columns * rows * interval;
+  for (const line of lines) {
+    if (line.startsWith("#EXTINF:")) {
+      const parsed = Number(line.slice("#EXTINF:".length).replace(",", ""));
+      pendingDuration = Number.isFinite(parsed) && parsed > 0 ? parsed : pendingDuration;
+      continue;
+    }
+    if (line.startsWith("#")) continue;
+
+    const baseUrl = typeof globalThis.location === "object"
+      ? new URL(playlistUrl, globalThis.location.href).toString()
+      : playlistUrl;
+    const tileUrl = new URL(line, baseUrl).toString();
+    const cells = columns * rows;
+    const cellDuration = pendingDuration / cells;
+    const baseStart = frames.length * cellDuration;
+    for (let index = 0; index < cells; index += 1) {
+      const x = (index % columns) * width;
+      const y = Math.floor(index / columns) * height;
+      const start = baseStart + index * cellDuration;
+      frames.push({
+        start,
+        end: start + cellDuration,
+        x,
+        y,
+        width,
+        height,
+        url: tileUrl,
+      });
+    }
+  }
+
+  return frames;
+}
+
+export async function loadTrickplayFrames(mapUrl: string): Promise<TrickplayFrame[]> {
+  const cached = trickplayCache.get(mapUrl);
   if (cached) {
     return cached;
   }
 
-  const pending = fetch(vttUrl)
+  const pending = fetch(mapUrl)
     .then((response) => {
       if (!response.ok) {
         throw new Error(`Failed to load trickplay map (${response.status})`);
       }
       return response.text();
     })
-    .then(parseTrickplayVtt);
+    .then((text) => (
+      text.includes("#EXT-X-IMAGES-ONLY")
+        ? parseTrickplayImagePlaylist(text, mapUrl)
+        : parseTrickplayVtt(text)
+    ));
 
-  trickplayCache.set(vttUrl, pending);
+  trickplayCache.set(mapUrl, pending);
   return pending;
 }
 

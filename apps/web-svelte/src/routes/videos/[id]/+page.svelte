@@ -10,9 +10,12 @@
   import {
     fetchV2Video,
     fetchV2LibraryConfig,
+    fetchJellyfinPlaybackInfo,
+    markJellyfinUserPlayedItem,
+    postJellyfinSessionProgress,
     updateV2EntityRating,
     updateV2EntityFlags,
-    updateV2EntityPlayback,
+    type JellyfinPlaybackInfoResponse,
     type V2VideoDetail,
     type V2LibrarySettings,
   } from "$lib/api/v2";
@@ -40,6 +43,7 @@
 
   let loadState: LoadState = $state("loading");
   let video = $state<V2VideoDetail | null>(null);
+  let playbackInfo = $state<JellyfinPlaybackInfoResponse | null>(null);
   let errorMessage: string | null = $state(null);
   let ratingBusy = $state(false);
   let librarySettings = $state<V2LibrarySettings | null>(null);
@@ -70,7 +74,7 @@
 
   const playerProps = $derived.by(() => {
     if (!video) return null;
-    return extractVideoPlayerProps(video.id, video.capabilities);
+    return extractVideoPlayerProps(video.id, video.capabilities, playbackInfo);
   });
 
   const studio = $derived.by(() => {
@@ -227,6 +231,7 @@
     errorMessage = null;
     try {
       video = await fetchV2Video(page.params.id ?? "");
+      playbackInfo = await loadPlaybackInfo(video.id);
       loadState = "ready";
     } catch (err) {
       errorMessage = err instanceof Error ? err.message : String(err);
@@ -237,8 +242,22 @@
   async function refreshVideo() {
     try {
       video = await fetchV2Video(video?.id ?? page.params.id ?? "");
+      playbackInfo = video ? await loadPlaybackInfo(video.id, playbackInfo?.PlaySessionId) : null;
     } catch {
       // best-effort
+    }
+  }
+
+  async function loadPlaybackInfo(videoId: string, playSessionId?: string | null) {
+    try {
+      return await fetchJellyfinPlaybackInfo(videoId, {
+        EnableDirectPlay: true,
+        EnableDirectStream: true,
+        EnableTranscoding: true,
+        PlaySessionId: playSessionId ?? undefined,
+      });
+    } catch {
+      return null;
     }
   }
 
@@ -255,11 +274,16 @@
   }
 
   async function handlePlayStarted() {
-    if (playTracked || !video) return;
+    if (playTracked || !video || !playerProps) return;
     playTracked = true;
 
     try {
-      await updateV2EntityPlayback(video.id, {});
+      await postJellyfinSessionProgress("Playing", {
+        ItemId: video.id,
+        MediaSourceId: playerProps.mediaSourceId,
+        PlaySessionId: playerProps.playSessionId,
+        PositionTicks: Math.round(currentTime * 10_000_000),
+      });
     } catch {
       // best-effort
     }
@@ -269,9 +293,11 @@
       playbackUpdateTimer = setInterval(() => {
         if (currentTime > 0 && Math.abs(currentTime - lastReportedTime) > 3) {
           lastReportedTime = currentTime;
-          void updateV2EntityPlayback(videoId, {
-            resumeSeconds: currentTime,
-            durationSeconds: 10,
+          void postJellyfinSessionProgress("Playing/Progress", {
+            ItemId: videoId,
+            MediaSourceId: playerProps.mediaSourceId,
+            PlaySessionId: playerProps.playSessionId,
+            PositionTicks: Math.round(currentTime * 10_000_000),
           }).catch(() => {});
         }
       }, 10_000);
@@ -279,16 +305,19 @@
   }
 
   async function handleVideoEnded() {
-    if (!video) return;
+    if (!video || !playerProps) return;
     if (playbackUpdateTimer) {
       clearInterval(playbackUpdateTimer);
       playbackUpdateTimer = null;
     }
     try {
-      await updateV2EntityPlayback(video.id, {
-        resumeSeconds: 0,
-        completed: true,
+      await postJellyfinSessionProgress("Playing/Stopped", {
+        ItemId: video.id,
+        MediaSourceId: playerProps.mediaSourceId,
+        PlaySessionId: playerProps.playSessionId,
+        PositionTicks: 0,
       });
+      await markJellyfinUserPlayedItem(video.id, true);
     } catch {
       // best-effort
     }
@@ -429,8 +458,7 @@
             duration={playerProps.duration || undefined}
             onPlayStarted={handlePlayStarted}
             onTimeUpdate={handleTimeUpdate}
-            trickplaySprite={playerProps.trickplaySprite}
-            trickplayVtt={playerProps.trickplayVtt}
+            trickplayPlaylist={playerProps.trickplayPlaylist}
             subtitleTracks={playerProps.subtitleTracks}
             activeSubtitleTrackId={activeSubtitleId}
             onActiveSubtitleTrackIdChange={handleActiveSubtitleChange}

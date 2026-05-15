@@ -16,8 +16,7 @@
   }
 
   interface Props {
-    spriteUrl: string;
-    vttUrl: string;
+    playlistUrl: string;
     videoEl: HTMLVideoElement | null | undefined;
     currentTime?: number;
     duration: number;
@@ -27,8 +26,7 @@
   }
 
   let {
-    spriteUrl,
-    vttUrl,
+    playlistUrl,
     videoEl,
     currentTime,
     duration,
@@ -99,7 +97,7 @@
   }
 
   $effect(() => {
-    loadTrickplayFrames(vttUrl)
+    loadTrickplayFrames(playlistUrl)
       .then((f) => (frames = f))
       .catch(() => (error = true));
   });
@@ -241,7 +239,7 @@
           <div class="flex-shrink-0" style:width="{frameWidth}px" style:height="{STRIP_HEIGHT}px">
             <div
               class="h-full w-full"
-              style:background-image="url({spriteUrl})"
+              style:background-image="url({frame.url})"
               style:background-size="{(spriteWidth / frame.width) * frameWidth}px {(spriteHeight / frame.height) * STRIP_HEIGHT}px"
               style:background-position="-{(frame.x / frame.width) * frameWidth}px -{(frame.y / frame.height) * STRIP_HEIGHT}px"
               style:background-repeat="no-repeat"

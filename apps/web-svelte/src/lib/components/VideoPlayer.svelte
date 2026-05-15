@@ -86,8 +86,7 @@
     onMarkerClick?: (marker: VideoPlayerMarker) => void;
     onPlayStarted?: () => void;
     onTimeUpdate?: (time: number) => void;
-    trickplaySprite?: string;
-    trickplayVtt?: string;
+    trickplayPlaylist?: string;
     subtitleTracks?: VideoSubtitleTrack[];
     activeSubtitleTrackId?: string | null;
     onActiveSubtitleTrackIdChange?: (id: string | null) => void;
@@ -135,8 +134,7 @@
     onMarkerClick,
     onPlayStarted,
     onTimeUpdate,
-    trickplaySprite,
-    trickplayVtt,
+    trickplayPlaylist,
     subtitleTracks = [],
     activeSubtitleTrackId: controlledSubtitleId,
     onActiveSubtitleTrackIdChange,
@@ -217,7 +215,7 @@
   const requestedPlayerSrc = $derived(effectiveMode === "direct" ? directSrc : src);
   const playerSrc = $derived(requestedPlayerSrc === hlsReadySrc ? requestedPlayerSrc : undefined);
   const progress = $derived(duration > 0 ? (currentTime / duration) * 100 : 0);
-  const hasFilmStrip = $derived(Boolean(trickplaySprite && trickplayVtt && duration > 0));
+  const hasFilmStrip = $derived(Boolean(trickplayPlaylist && duration > 0));
   const activeSubtitleId = $derived(
     controlledSubtitleId !== undefined ? controlledSubtitleId : internalSubtitleId,
   );
@@ -1562,8 +1560,7 @@
   {#if hasFilmStrip}
     <div class="border border-border-subtle bg-black overflow-hidden">
       <FilmStrip
-        spriteUrl={trickplaySprite!}
-        vttUrl={trickplayVtt!}
+        playlistUrl={trickplayPlaylist!}
         videoEl={videoEl ?? null}
         currentTime={currentTime}
         {duration}
