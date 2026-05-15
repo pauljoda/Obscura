@@ -512,8 +512,8 @@
     position: relative;
     z-index: 2;
     line-height: 0;
-    mask-image: linear-gradient(to bottom, black 92%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, black 92%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
   }
 
   .hero-banner img {
