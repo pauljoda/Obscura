@@ -109,6 +109,22 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task HlsVariantEndpointPassesAudioStreamSelection()
+    {
+        var path = Path.Combine(_tempDir, "index.m3u8");
+        await File.WriteAllTextAsync(path, "#EXTM3U\n");
+        var hls = new RecordingHlsAssetService(new HlsAsset(path, "application/vnd.apple.mpegurl", "public, max-age=60"));
+        using var factory = CreateFactory(hls: hls);
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync($"/Videos/{VideoId}/hls/720p/index.m3u8?AudioStreamIndex=2");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("v/720p/index.m3u8", hls.LastAssetPath);
+        Assert.Equal(2, hls.LastAudioStreamIndex);
+    }
+
+    [Fact]
     public async Task HlsVariantEndpointAcceptsMasterPlaylistRelativeUrls()
     {
         var path = Path.Combine(_tempDir, "index.m3u8");
@@ -216,10 +232,16 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
         }
 
         public string? LastAssetPath { get; private set; }
+        public int? LastAudioStreamIndex { get; private set; }
 
-        public Task<HlsAsset?> GetAssetAsync(Guid id, string assetPath, CancellationToken cancellationToken)
+        public Task<HlsAsset?> GetAssetAsync(
+            Guid id,
+            string assetPath,
+            int? audioStreamIndex,
+            CancellationToken cancellationToken)
         {
             LastAssetPath = assetPath;
+            LastAudioStreamIndex = audioStreamIndex;
             return Task.FromResult(id == VideoId ? _asset : null);
         }
     }

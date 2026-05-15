@@ -126,4 +126,60 @@ describe("extractVideoPlayerProps", () => {
   it("does not request trickplay until the backend advertises an asset", () => {
     expect(extractVideoPlayerProps("video-1", []).trickplayPlaylist).toBe("");
   });
+
+  it("maps Jellyfin audio streams into player audio options", () => {
+    const props = extractVideoPlayerProps("video-1", [], {
+      PlaySessionId: "session-1",
+      ErrorCode: null,
+      MediaSources: [
+        {
+          Id: "source-1",
+          Path: "/media/movie.mkv",
+          Protocol: "File",
+          Container: "mkv",
+          Size: null,
+          Name: "movie.mkv",
+          RunTimeTicks: 600_000_000,
+          SupportsDirectPlay: false,
+          SupportsDirectStream: false,
+          SupportsTranscoding: true,
+          TranscodingUrl: "/Videos/video-1/live.m3u8?AudioStreamIndex=2",
+          TranscodingSubProtocol: "hls",
+          TranscodingContainer: "ts",
+          MediaStreams: [
+            {
+              Index: 0,
+              Type: "Video",
+              Codec: "h264",
+              DisplayTitle: "Video",
+              IsDefault: true,
+            },
+            {
+              Index: 1,
+              Type: "Audio",
+              Codec: "aac",
+              Language: "spa",
+              DisplayTitle: "Spanish",
+              Channels: 2,
+              IsDefault: false,
+            },
+            {
+              Index: 2,
+              Type: "Audio",
+              Codec: "aac",
+              Language: "eng",
+              DisplayTitle: "English",
+              Channels: 2,
+              IsDefault: true,
+            },
+          ],
+        },
+      ],
+    }, 2);
+
+    expect(props.audioTracks).toEqual([
+      expect.objectContaining({ streamIndex: 1, label: "Spanish · AAC · 2ch", selected: false }),
+      expect.objectContaining({ streamIndex: 2, label: "English · AAC · 2ch · Default", selected: true }),
+    ]);
+  });
 });

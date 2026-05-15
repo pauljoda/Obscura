@@ -124,6 +124,7 @@ public sealed class VideoHlsEndpointTests : IDisposable
         public Task<HlsAsset?> GetAssetAsync(
             Guid id,
             string assetPath,
+            int? audioStreamIndex,
             CancellationToken cancellationToken)
         {
             return Task.FromResult(id == VideoId ? _asset : null);

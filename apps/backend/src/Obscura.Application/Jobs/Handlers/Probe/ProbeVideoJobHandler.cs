@@ -68,6 +68,11 @@ public sealed class ProbeVideoJobHandler(
 
     private static IReadOnlyList<MediaStreamProbeData> BuildStreams(VideoProbeData probe)
     {
+        if (probe.Streams is { Count: > 0 })
+        {
+            return probe.Streams;
+        }
+
         var streams = new List<MediaStreamProbeData>();
         if (probe.Codec is not null || probe.Width is not null || probe.Height is not null)
         {

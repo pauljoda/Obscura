@@ -39,10 +39,11 @@ public static class JellyfinPlaybackEndpoints
 
         routes.MapMethods("/Videos/{itemId:guid}/live.m3u8", [HttpMethods.Get, HttpMethods.Head], (
             Guid itemId,
+            int? audioStreamIndex,
             IHlsAssetService hlsAssets,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
-            StreamHlsAssetAsync(itemId, "master.m3u8", hlsAssets, httpContext, cancellationToken))
+            StreamHlsAssetAsync(itemId, "master.m3u8", audioStreamIndex, hlsAssets, httpContext, cancellationToken))
             .WithName("GetJellyfinVideoLivePlaylist")
             .WithTags("Jellyfin Videos");
 
@@ -51,10 +52,11 @@ public static class JellyfinPlaybackEndpoints
             string playlistId,
             string segmentId,
             string container,
+            int? audioStreamIndex,
             IHlsAssetService hlsAssets,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
-            StreamHlsAssetAsync(itemId, $"v/{playlistId}/{segmentId}.{container}", hlsAssets, httpContext, cancellationToken))
+            StreamHlsAssetAsync(itemId, $"v/{playlistId}/{segmentId}.{container}", audioStreamIndex, hlsAssets, httpContext, cancellationToken))
             .WithName("GetJellyfinVideoHlsSegment")
             .WithTags("Jellyfin Videos");
 
@@ -63,10 +65,11 @@ public static class JellyfinPlaybackEndpoints
             string playlistId,
             string segmentId,
             string container,
+            int? audioStreamIndex,
             IHlsAssetService hlsAssets,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
-            StreamHlsAssetAsync(itemId, $"v/{playlistId}/{segmentId}.{container}", hlsAssets, httpContext, cancellationToken))
+            StreamHlsAssetAsync(itemId, $"v/{playlistId}/{segmentId}.{container}", audioStreamIndex, hlsAssets, httpContext, cancellationToken))
             .WithName("GetJellyfinVideoHlsRelativeAsset")
             .WithTags("Jellyfin Videos");
 
@@ -187,11 +190,12 @@ public static class JellyfinPlaybackEndpoints
     private static async Task<IResult> StreamHlsAssetAsync(
         Guid itemId,
         string asset,
+        int? audioStreamIndex,
         IHlsAssetService hlsAssets,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var hlsAsset = await hlsAssets.GetAssetAsync(itemId, asset, cancellationToken);
+        var hlsAsset = await hlsAssets.GetAssetAsync(itemId, asset, audioStreamIndex, cancellationToken);
         if (hlsAsset is null)
         {
             return Results.NotFound(new ApiProblem("video_hls_not_found", $"Video HLS asset '{asset}' for '{itemId}' was not found."));

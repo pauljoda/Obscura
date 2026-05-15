@@ -22,7 +22,7 @@ public sealed class MediaProbeService
     {
         var result = await RunFfprobeAsync(
             ["-v", "error",
-             "-show_entries", "format=duration,size,bit_rate,format_name:stream=index,codec_type,codec_name,width,height,avg_frame_rate,sample_rate,channels",
+             "-show_entries", "format=duration,size,bit_rate,format_name:stream=index,codec_type,codec_name,width,height,avg_frame_rate,bit_rate,sample_rate,channels:stream_tags=language,title:stream_disposition=default,forced",
              "-of", "json",
              filePath],
             cancellationToken);
@@ -35,6 +35,7 @@ public sealed class MediaProbeService
 
         JsonElement? videoStream = null;
         JsonElement? audioStream = null;
+        var streamResults = new List<MediaStreamProbeResult>();
 
         if (streams.ValueKind == JsonValueKind.Array)
         {
@@ -45,6 +46,26 @@ public sealed class MediaProbeService
                     videoStream = stream;
                 else if (codecType == "audio" && audioStream is null)
                     audioStream = stream;
+
+                if (codecType is not ("video" or "audio"))
+                    continue;
+
+                var tags = stream.GetPropertyOrDefault("tags");
+                var disposition = stream.GetPropertyOrDefault("disposition");
+                streamResults.Add(new MediaStreamProbeResult(
+                    stream.GetIntOrDefault("index") ?? 0,
+                    codecType == "video" ? "Video" : "Audio",
+                    stream.GetStringOrDefault("codec_name"),
+                    tags.GetStringOrDefault("language"),
+                    tags.GetStringOrDefault("title"),
+                    stream.GetIntOrDefault("width"),
+                    stream.GetIntOrDefault("height"),
+                    ParseFrameRate(stream.GetStringOrDefault("avg_frame_rate")),
+                    stream.GetIntOrDefault("bit_rate"),
+                    stream.GetIntOrDefault("sample_rate"),
+                    stream.GetIntOrDefault("channels"),
+                    disposition.GetIntOrDefault("default") == 1,
+                    disposition.GetIntOrDefault("forced") == 1));
             }
         }
 
@@ -78,7 +99,7 @@ public sealed class MediaProbeService
 
         return new VideoProbeResult(
             duration, fileSize, width, height, frameRate, bitRate, codec, container,
-            sampleRate, channels, audioCodec);
+            sampleRate, channels, audioCodec, streamResults);
     }
 
     /// <summary>
@@ -257,7 +278,23 @@ public sealed record VideoProbeResult(
     string? Container,
     int? SampleRate,
     int? Channels,
-    string? AudioCodec);
+    string? AudioCodec,
+    IReadOnlyList<MediaStreamProbeResult>? Streams = null);
+
+public sealed record MediaStreamProbeResult(
+    int StreamIndex,
+    string Type,
+    string? Codec,
+    string? Language,
+    string? Title,
+    int? Width,
+    int? Height,
+    double? FrameRate,
+    int? BitRate,
+    int? SampleRate,
+    int? Channels,
+    bool IsDefault,
+    bool IsForced);
 
 public sealed record AudioProbeResult(
     double? DurationSeconds,

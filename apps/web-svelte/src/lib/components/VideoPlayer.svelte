@@ -14,6 +14,13 @@
     time: number;
     title: string;
   }
+
+  export interface VideoPlayerAudioTrack {
+    id: string;
+    streamIndex: number;
+    label: string;
+    selected: boolean;
+  }
 </script>
 
 <script lang="ts">
@@ -94,6 +101,8 @@
     onTimeUpdate?: (time: number) => void;
     trickplayPlaylist?: string;
     subtitleTracks?: VideoSubtitleTrack[];
+    audioTrackOptions?: VideoPlayerAudioTrack[];
+    onAudioTrackChange?: (streamIndex: number) => void | Promise<void>;
     activeSubtitleTrackId?: string | null;
     onActiveSubtitleTrackIdChange?: (id: string | null) => void;
     onActiveCueChange?: (cue: ActiveCue | null) => void;
@@ -132,8 +141,10 @@
   interface AudioTrackOption {
     id: string;
     index: number;
+    streamIndex: number | null;
     label: string;
     selected: boolean;
+    source: "native" | "external";
   }
 
   let {
@@ -148,6 +159,8 @@
     onTimeUpdate,
     trickplayPlaylist,
     subtitleTracks = [],
+    audioTrackOptions = [],
+    onAudioTrackChange,
     activeSubtitleTrackId: controlledSubtitleId,
     onActiveSubtitleTrackIdChange,
     onActiveCueChange,
@@ -271,9 +284,27 @@
     effectiveMode === "direct" ? "Direct Playback" : "Adaptive HLS",
   );
   const displayedAudioTracks = $derived<AudioTrackOption[]>(
-    audioTracks.length > 0
-      ? audioTracks
-      : [{ id: "default-audio", index: -1, label: "Default audio", selected: true }],
+    audioTrackOptions.length > 1
+      ? audioTrackOptions.map((track) => ({
+          id: track.id,
+          index: -1,
+          streamIndex: track.streamIndex,
+          label: track.label,
+          selected: track.selected,
+          source: "external" as const,
+        }))
+      : audioTracks.length > 0
+        ? audioTracks
+        : [
+            {
+              id: "default-audio",
+              index: -1,
+              streamIndex: null,
+              label: "Default audio",
+              selected: true,
+              source: "external",
+            },
+          ],
   );
   const displayedAudioTrackLabel = $derived(
     selectedAudioTrackLabel ?? displayedAudioTracks.find((track) => track.selected)?.label ?? "Audio",
@@ -439,23 +470,35 @@
     audioTracks = tracks.map((track, index) => ({
       id: track.id,
       index,
+      streamIndex: null,
       label: audioTrackLabel(track, index),
       selected: track.selected,
+      source: "native",
     }));
     selectedAudioTrackLabel =
       audioTracks.find((track) => track.selected)?.label ?? audioTracks[0]?.label ?? null;
   }
 
-  function selectAudioTrack(index: number) {
-    if (index < 0) {
+  function selectAudioTrack(trackOption: AudioTrackOption) {
+    if (trackOption.source === "external") {
+      if (trackOption.streamIndex !== null) {
+        pendingSeekTime = currentTime > 0.25 ? currentTime : null;
+        pendingAutoPlay = playing;
+        selectedAudioTrackLabel = trackOption.label;
+        void onAudioTrackChange?.(trackOption.streamIndex);
+      }
+      closeMenus();
+      return;
+    }
+    if (trackOption.index < 0) {
       selectedAudioTrackLabel = displayedAudioTrackLabel;
       closeMenus();
       return;
     }
-    const track = player?.audioTracks?.toArray?.()[index];
+    const track = player?.audioTracks?.toArray?.()[trackOption.index];
     if (!track) return;
     track.selected = true;
-    selectedAudioTrackLabel = audioTrackLabel(track, index);
+    selectedAudioTrackLabel = audioTrackLabel(track, trackOption.index);
     refreshAudioTracks();
     closeMenus();
   }
@@ -1673,7 +1716,7 @@
           {#each displayedAudioTracks as track (track.id)}
             <button
               type="button"
-              onclick={() => selectAudioTrack(track.index)}
+              onclick={() => selectAudioTrack(track)}
               class={cn("player-settings-option", track.selected && "is-active")}
             >
               <span class="min-w-0 truncate">{track.label}</span>

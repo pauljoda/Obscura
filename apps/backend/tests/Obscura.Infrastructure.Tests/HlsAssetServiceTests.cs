@@ -31,8 +31,8 @@ public sealed class HlsAssetServiceTests : IDisposable
         await File.WriteAllTextAsync(segmentPath, "segment");
 
         var service = new HlsAssetService(new HlsAssetServiceOptions(_cacheRoot));
-        var manifest = await service.GetAssetAsync(videoId, "master.m3u8", CancellationToken.None);
-        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00000.ts", CancellationToken.None);
+        var manifest = await service.GetAssetAsync(videoId, "master.m3u8", null, CancellationToken.None);
+        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00000.ts", null, CancellationToken.None);
 
         Assert.NotNull(manifest);
         Assert.Equal("application/vnd.apple.mpegurl", manifest.ContentType);
@@ -48,7 +48,7 @@ public sealed class HlsAssetServiceTests : IDisposable
         var videoId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         var service = new HlsAssetService(new HlsAssetServiceOptions(_cacheRoot));
 
-        var asset = await service.GetAssetAsync(videoId, "../secret.ts", CancellationToken.None);
+        var asset = await service.GetAssetAsync(videoId, "../secret.ts", null, CancellationToken.None);
 
         Assert.Null(asset);
     }
@@ -73,8 +73,8 @@ public sealed class HlsAssetServiceTests : IDisposable
             process,
             NullLogger<HlsAssetService>.Instance);
 
-        var master = await service.GetAssetAsync(videoId, "master.m3u8", CancellationToken.None);
-        var variant = await service.GetAssetAsync(videoId, "v/720p/index.m3u8", CancellationToken.None);
+        var master = await service.GetAssetAsync(videoId, "master.m3u8", null, CancellationToken.None);
+        var variant = await service.GetAssetAsync(videoId, "v/720p/index.m3u8", null, CancellationToken.None);
 
         Assert.NotNull(master);
         Assert.Contains("hls/720p/index.m3u8", await File.ReadAllTextAsync(master.Path));
@@ -130,7 +130,7 @@ public sealed class HlsAssetServiceTests : IDisposable
             NullLogger<HlsAssetService>.Instance,
             db);
 
-        var master = await service.GetAssetAsync(videoId, "master.m3u8", CancellationToken.None);
+        var master = await service.GetAssetAsync(videoId, "master.m3u8", null, CancellationToken.None);
 
         Assert.NotNull(master);
         var content = await File.ReadAllTextAsync(master.Path);
@@ -175,6 +175,7 @@ public sealed class HlsAssetServiceTests : IDisposable
             .Select(index => service.GetAssetAsync(
                 videoId,
                 index % 2 == 0 ? "master.m3u8" : "v/720p/index.m3u8",
+                null,
                 CancellationToken.None))
             .ToArray();
         var assets = await Task.WhenAll(requests);
@@ -217,11 +218,11 @@ public sealed class HlsAssetServiceTests : IDisposable
             new ManifestWritingProcessExecutor(),
             NullLogger<HlsAssetService>.Instance);
 
-        var asset = await service.GetAssetAsync(videoId, "master.m3u8", CancellationToken.None);
+        var asset = await service.GetAssetAsync(videoId, "master.m3u8", null, CancellationToken.None);
 
         Assert.NotNull(asset);
         var metadata = await File.ReadAllTextAsync(Path.Combine(virtualRoot, "metadata.json"));
-        Assert.Contains("\"FormatVersion\": 2", metadata);
+        Assert.Contains("\"FormatVersion\": 3", metadata);
         Assert.False(File.Exists(Path.Combine(virtualRoot, "v", "720p", "seg_00000.ts")));
     }
 
@@ -245,7 +246,7 @@ public sealed class HlsAssetServiceTests : IDisposable
             process,
             NullLogger<HlsAssetService>.Instance);
 
-        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00000.ts", CancellationToken.None);
+        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00000.ts", null, CancellationToken.None);
 
         Assert.NotNull(segment);
         Assert.Equal("video/mp2t", segment.ContentType);
@@ -274,7 +275,7 @@ public sealed class HlsAssetServiceTests : IDisposable
             process,
             NullLogger<HlsAssetService>.Instance);
 
-        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00001.ts", CancellationToken.None);
+        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00001.ts", null, CancellationToken.None);
 
         Assert.NotNull(segment);
         var arguments = Assert.Single(process.ArgumentHistory);
@@ -313,7 +314,7 @@ public sealed class HlsAssetServiceTests : IDisposable
             process,
             NullLogger<HlsAssetService>.Instance);
 
-        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00020.ts", CancellationToken.None);
+        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00020.ts", null, CancellationToken.None);
 
         Assert.NotNull(segment);
         var arguments = Assert.Single(process.ArgumentHistory);
@@ -322,6 +323,40 @@ public sealed class HlsAssetServiceTests : IDisposable
         Assert.Contains("-start_number", arguments);
         Assert.Contains("20", arguments);
         Assert.DoesNotContain("-t", arguments);
+    }
+
+    [Fact]
+    public async Task VirtualSegmentsUseDefaultSourceAudioStream()
+    {
+        var videoId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var process = new ManifestWritingProcessExecutor();
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 180,
+                Width: 1920,
+                Height: 960,
+                Streams:
+                [
+                    new(0, "Video", "h264", null, "Video", 1920, 960, 24, null, null, null, true, false),
+                    new(1, "Audio", "aac", "spa", "Spanish", null, null, null, null, 48000, 2, false, false),
+                    new(2, "Audio", "aac", "eng", "English", null, null, null, null, 48000, 2, true, false)
+                ])),
+            process,
+            NullLogger<HlsAssetService>.Instance);
+
+        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00000.ts", null, CancellationToken.None);
+
+        Assert.NotNull(segment);
+        var arguments = Assert.Single(process.ArgumentHistory);
+        Assert.Contains("-map", arguments);
+        Assert.Contains("0:2?", arguments);
     }
 
     [Fact]
@@ -343,7 +378,7 @@ public sealed class HlsAssetServiceTests : IDisposable
             new MissingSegmentProcessExecutor(),
             NullLogger<HlsAssetService>.Instance);
 
-        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00020.ts", CancellationToken.None);
+        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00020.ts", null, CancellationToken.None);
 
         Assert.Null(segment);
     }
@@ -352,7 +387,23 @@ public sealed class HlsAssetServiceTests : IDisposable
     {
         if (Directory.Exists(_cacheRoot))
         {
-            Directory.Delete(_cacheRoot, recursive: true);
+            DeleteDirectoryWithRetry(_cacheRoot);
+        }
+    }
+
+    private static void DeleteDirectoryWithRetry(string path)
+    {
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            try
+            {
+                Directory.Delete(path, recursive: true);
+                return;
+            }
+            catch (IOException) when (attempt < 4)
+            {
+                Thread.Sleep(50);
+            }
         }
     }
 

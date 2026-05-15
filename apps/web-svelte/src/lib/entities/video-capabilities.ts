@@ -1,6 +1,9 @@
 import type { EntityCapability } from "$lib/api/generated/model";
 import type { JellyfinPlaybackInfoResponse } from "$lib/api/v2";
-import type { VideoPlayerMarker } from "$lib/components/VideoPlayer.svelte";
+import type {
+  VideoPlayerAudioTrack,
+  VideoPlayerMarker,
+} from "$lib/components/VideoPlayer.svelte";
 import { getCapability } from "$lib/api/capabilities";
 import { jellyfinApiPath, v2ApiPath, v2AssetUrl } from "$lib/api/orval-fetch";
 import type {
@@ -21,12 +24,14 @@ export interface VideoPlayerProps {
   playSessionId: string | null;
   mediaSourceId: string | null;
   subtitleTracks: VideoSubtitleTrack[];
+  audioTracks: VideoPlayerAudioTrack[];
 }
 
 export function extractVideoPlayerProps(
   videoId: string,
   capabilities: EntityCapability[],
   playbackInfo: JellyfinPlaybackInfoResponse | null = null,
+  selectedAudioStreamIndex: number | null = null,
 ): VideoPlayerProps {
   const technical = getCapability(capabilities, CAPABILITY_KIND.technical);
   const images = getCapability(capabilities, CAPABILITY_KIND.images);
@@ -37,6 +42,12 @@ export function extractVideoPlayerProps(
   const sourceFile = files?.items.find((f) => f.role === ENTITY_FILE_ROLE.source);
   const mediaSource = playbackInfo?.MediaSources?.[0] ?? null;
   const videoStream = mediaSource?.MediaStreams?.find((stream) => stream.Type === "Video");
+  const audioStreams = (mediaSource?.MediaStreams ?? []).filter((stream) => stream.Type === "Audio");
+  const defaultAudioStreamIndex =
+    selectedAudioStreamIndex ??
+    audioStreams.find((stream) => stream.IsDefault)?.Index ??
+    audioStreams[0]?.Index ??
+    null;
   const trickplayFile = files?.items.find((f) => f.role === ENTITY_FILE_ROLE.trickplay);
   const trickplayImage = images?.items.find((asset) =>
     asset.kind === ENTITY_FILE_ROLE.trickplay &&
@@ -66,10 +77,42 @@ export function extractVideoPlayerProps(
     trickplayPlaylist,
     playSessionId: playbackInfo?.PlaySessionId ?? null,
     mediaSourceId: mediaSource?.Id ?? null,
+    audioTracks: audioStreams.map((stream) => ({
+      id: `audio-${stream.Index}`,
+      streamIndex: stream.Index,
+      label: audioStreamLabel(stream),
+      selected: defaultAudioStreamIndex === stream.Index,
+    })),
     subtitleTracks: (subtitles?.items ?? []).map((s) =>
       mapEntitySubtitle(videoId, s),
     ),
   };
+}
+
+function audioStreamLabel(stream: {
+  Index: number;
+  Language?: string | null;
+  DisplayTitle?: string | null;
+  Channels?: number | null;
+  Codec?: string | null;
+  IsDefault?: boolean | null;
+}): string {
+  const title = stream.DisplayTitle?.trim();
+  const language = languageLabel(stream.Language);
+  const codec = stream.Codec ? stream.Codec.toUpperCase() : null;
+  const channels = stream.Channels ? `${stream.Channels}ch` : null;
+  const parts = [title || language || `Track ${stream.Index}`, codec, channels]
+    .filter(Boolean);
+  return `${parts.join(" · ")}${stream.IsDefault ? " · Default" : ""}`;
+}
+
+function languageLabel(language: string | null | undefined): string | null {
+  if (!language || language === "und") return null;
+  try {
+    return new Intl.DisplayNames(undefined, { type: "language" }).of(language) ?? language.toUpperCase();
+  } catch {
+    return language.toUpperCase();
+  }
 }
 
 function ticksToSeconds(value: number | null | undefined): number {

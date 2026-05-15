@@ -22,7 +22,8 @@ public sealed record VideoProbeData(
     string? Container,
     int? SampleRate,
     int? Channels,
-    string? AudioCodec);
+    string? AudioCodec,
+    IReadOnlyList<MediaStreamProbeData>? Streams = null);
 
 public sealed record AudioProbeData(
     double? DurationSeconds,

@@ -14,7 +14,21 @@ public sealed class MediaProbeAdapter(MediaProbeService inner) : IMediaProbe
         if (result is null) return null;
         return new VideoProbeData(result.DurationSeconds, result.FileSize, result.Width, result.Height,
             result.FrameRate, result.BitRate, result.Codec, result.Container,
-            result.SampleRate, result.Channels, result.AudioCodec);
+            result.SampleRate, result.Channels, result.AudioCodec,
+            result.Streams?.Select(stream => new MediaStreamProbeData(
+                stream.StreamIndex,
+                stream.Type,
+                stream.Codec,
+                stream.Language,
+                stream.Title,
+                stream.Width,
+                stream.Height,
+                stream.FrameRate,
+                stream.BitRate,
+                stream.SampleRate,
+                stream.Channels,
+                stream.IsDefault,
+                stream.IsForced)).ToList());
     }
 
     public async Task<AudioProbeData?> ProbeAudioAsync(string filePath, CancellationToken cancellationToken)

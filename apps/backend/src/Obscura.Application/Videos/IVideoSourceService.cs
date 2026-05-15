@@ -32,6 +32,7 @@ public interface IVideoSourceService
 /// <param name="FrameRate">Optional probed primary video frame rate.</param>
 /// <param name="SampleRate">Optional probed primary audio sample rate.</param>
 /// <param name="Channels">Optional probed primary audio channel count.</param>
+/// <param name="Streams">Optional probed source streams available for playback selection.</param>
 public sealed record VideoSourceFile(
     Guid EntityId,
     string Path,
@@ -47,4 +48,36 @@ public sealed record VideoSourceFile(
     string? AudioCodec = null,
     double? FrameRate = null,
     int? SampleRate = null,
-    int? Channels = null);
+    int? Channels = null,
+    IReadOnlyList<VideoSourceStream>? Streams = null);
+
+/// <summary>
+/// Source stream metadata needed for HLS audio selection and Jellyfin-style playback info.
+/// </summary>
+/// <param name="StreamIndex">Absolute ffmpeg stream index within the source container.</param>
+/// <param name="Type">Stream type, such as Video or Audio.</param>
+/// <param name="Codec">Optional stream codec name.</param>
+/// <param name="Language">Optional ISO language code.</param>
+/// <param name="Title">Optional embedded stream title.</param>
+/// <param name="Width">Optional video width.</param>
+/// <param name="Height">Optional video height.</param>
+/// <param name="FrameRate">Optional video frame rate.</param>
+/// <param name="BitRate">Optional stream bitrate.</param>
+/// <param name="SampleRate">Optional audio sample rate.</param>
+/// <param name="Channels">Optional audio channel count.</param>
+/// <param name="IsDefault">Whether the container marks this stream as default.</param>
+/// <param name="IsForced">Whether the container marks this stream as forced.</param>
+public sealed record VideoSourceStream(
+    int StreamIndex,
+    string Type,
+    string? Codec,
+    string? Language,
+    string? Title,
+    int? Width,
+    int? Height,
+    double? FrameRate,
+    int? BitRate,
+    int? SampleRate,
+    int? Channels,
+    bool IsDefault,
+    bool IsForced);

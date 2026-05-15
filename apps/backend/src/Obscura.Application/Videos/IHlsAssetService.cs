@@ -10,11 +10,13 @@ public interface IHlsAssetService
     /// </summary>
     /// <param name="id">Video entity identifier.</param>
     /// <param name="assetPath">Package-relative HLS asset path.</param>
+    /// <param name="audioStreamIndex">Optional source audio stream index to use for virtual HLS.</param>
     /// <param name="cancellationToken">Token used to cancel the lookup.</param>
     /// <returns>HLS asset metadata, or null when the requested asset is missing or invalid.</returns>
     Task<HlsAsset?> GetAssetAsync(
         Guid id,
         string assetPath,
+        int? audioStreamIndex,
         CancellationToken cancellationToken);
 }
 

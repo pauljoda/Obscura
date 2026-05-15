@@ -52,6 +52,7 @@
   let currentTime = $state(0);
   let displayTime = $state(0);
   let activeSubtitleId = $state<string | null>(null);
+  let selectedAudioStreamIndex = $state<number | null>(null);
   let subtitleChoiceLocked = $state(false);
   let playTracked = false;
   let resumeApplied = false;
@@ -74,7 +75,7 @@
 
   const playerProps = $derived.by(() => {
     if (!video) return null;
-    return extractVideoPlayerProps(video.id, video.capabilities, playbackInfo);
+    return extractVideoPlayerProps(video.id, video.capabilities, playbackInfo, selectedAudioStreamIndex);
   });
 
   const studio = $derived.by(() => {
@@ -173,6 +174,7 @@
   $effect(() => {
     playTracked = false;
     resumeApplied = false;
+    selectedAudioStreamIndex = null;
     lastReportedTime = 0;
     hydratedSubtitlePrefsKey = "";
     if (playbackUpdateTimer) {
@@ -242,19 +244,26 @@
   async function refreshVideo() {
     try {
       video = await fetchV2Video(video?.id ?? page.params.id ?? "");
-      playbackInfo = video ? await loadPlaybackInfo(video.id, playbackInfo?.PlaySessionId) : null;
+      playbackInfo = video
+        ? await loadPlaybackInfo(video.id, playbackInfo?.PlaySessionId, selectedAudioStreamIndex)
+        : null;
     } catch {
       // best-effort
     }
   }
 
-  async function loadPlaybackInfo(videoId: string, playSessionId?: string | null) {
+  async function loadPlaybackInfo(
+    videoId: string,
+    playSessionId?: string | null,
+    audioStreamIndex?: number | null,
+  ) {
     try {
       return await fetchJellyfinPlaybackInfo(videoId, {
         EnableDirectPlay: true,
         EnableDirectStream: true,
         EnableTranscoding: true,
         PlaySessionId: playSessionId ?? undefined,
+        AudioStreamIndex: audioStreamIndex ?? undefined,
       });
     } catch {
       return null;
@@ -332,6 +341,12 @@
       window.localStorage.setItem(`obscura:subtitle-lang:${video.id}`, id ?? "__off__");
       if (id) window.localStorage.setItem("obscura:transcript-docked", "1");
     }
+  }
+
+  async function handleAudioTrackChange(streamIndex: number) {
+    if (!video) return;
+    selectedAudioStreamIndex = streamIndex;
+    playbackInfo = await loadPlaybackInfo(video.id, playbackInfo?.PlaySessionId, streamIndex);
   }
 
   function handleSeek(time: number) {
@@ -462,6 +477,8 @@
             onTimeUpdate={handleTimeUpdate}
             trickplayPlaylist={playerProps.trickplayPlaylist}
             subtitleTracks={playerProps.subtitleTracks}
+            audioTrackOptions={playerProps.audioTracks}
+            onAudioTrackChange={handleAudioTrackChange}
             activeSubtitleTrackId={activeSubtitleId}
             onActiveSubtitleTrackIdChange={handleActiveSubtitleChange}
             {subtitleChoiceLocked}

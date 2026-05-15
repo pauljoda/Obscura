@@ -167,6 +167,31 @@ describe("VideoPlayer", () => {
     });
   });
 
+  it("shows server-provided audio tracks when the HLS provider exposes only one muxed track", async () => {
+    const onAudioTrackChange = vi.fn();
+
+    render(VideoPlayer, {
+      props: {
+        src: "/api/videos/video-1/hls/master.m3u8",
+        defaultPlaybackMode: "hls",
+        audioTrackOptions: [
+          { id: "audio-1", streamIndex: 1, label: "Spanish", selected: false },
+          { id: "audio-2", streamIndex: 2, label: "English · Default", selected: true },
+        ],
+        onAudioTrackChange,
+      },
+    });
+
+    const settingsButton = screen.getByRole("button", { name: "Player settings" });
+    await fireEvent.click(settingsButton);
+    await fireEvent.click(screen.getByRole("button", { name: /Audio/ }));
+
+    expect(screen.getByRole("button", { name: /English · Default/ })).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole("button", { name: /Spanish/ }));
+
+    expect(onAudioTrackChange).toHaveBeenCalledWith(1);
+  });
+
   it("hides cast controls when the library setting disables them", () => {
     render(VideoPlayer, {
       props: {

@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Obscura.Domain.Entities;
+using Obscura.Infrastructure.Media.Processing;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
+using Obscura.Infrastructure.Processes;
 using Obscura.Infrastructure.Videos;
 
 namespace Obscura.Infrastructure.Tests;
@@ -104,6 +106,60 @@ public sealed class VideoSourceServiceTests : IDisposable
         Assert.Equal(23.976, source.FrameRate);
     }
 
+    [Fact]
+    public async Task ProbesStreamsWhenPersistedSourceOnlyHasOneSyntheticAudioTrack()
+    {
+        await using var db = CreateContext();
+        var videoId = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        var sourceId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+        var filePath = Path.Combine(_tempDir, "video.mkv");
+        await File.WriteAllTextAsync(filePath, "video-bytes");
+        SeedVideoSource(db, videoId, filePath, null);
+        db.MediaSources.Add(new MediaSourceRow
+        {
+            Id = sourceId,
+            EntityId = videoId,
+            Path = filePath,
+            Protocol = "File",
+            Container = "matroska",
+            DurationSeconds = 42,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        db.MediaStreams.Add(new MediaStreamRow
+        {
+            Id = Guid.NewGuid(),
+            MediaSourceId = sourceId,
+            EntityId = videoId,
+            StreamIndex = 1,
+            Type = "Audio",
+            Codec = "aac",
+            Title = "Audio",
+            IsDefault = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+        var probe = new MediaProbeService(new JsonProcessExecutor("""
+            {
+              "format": { "duration": "42", "format_name": "matroska" },
+              "streams": [
+                { "index": 0, "codec_type": "video", "codec_name": "h264", "width": 1920, "height": 1080, "avg_frame_rate": "24/1", "disposition": { "default": 1, "forced": 0 } },
+                { "index": 1, "codec_type": "audio", "codec_name": "aac", "sample_rate": "48000", "channels": 2, "tags": { "language": "spa", "title": "Spanish" }, "disposition": { "default": 0, "forced": 0 } },
+                { "index": 2, "codec_type": "audio", "codec_name": "aac", "sample_rate": "48000", "channels": 2, "tags": { "language": "eng", "title": "English" }, "disposition": { "default": 1, "forced": 0 } }
+              ]
+            }
+            """));
+
+        var service = new VideoSourceService(db, probe);
+        var source = await service.GetSourceAsync(videoId, CancellationToken.None);
+
+        Assert.NotNull(source);
+        var audioStreams = source.Streams!.Where(stream => stream.Type == "Audio").ToList();
+        Assert.Equal(2, audioStreams.Count);
+        Assert.Equal(2, audioStreams.Single(stream => stream.IsDefault).StreamIndex);
+        Assert.Equal("eng", audioStreams.Single(stream => stream.StreamIndex == 2).Language);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
@@ -145,5 +201,24 @@ public sealed class VideoSourceServiceTests : IDisposable
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         });
+    }
+
+    private sealed class JsonProcessExecutor : ProcessExecutor
+    {
+        private readonly string _json;
+
+        public JsonProcessExecutor(string json)
+        {
+            _json = json;
+        }
+
+        public override Task<ProcessExecutionResult> RunAsync(
+            string fileName,
+            IReadOnlyList<string> arguments,
+            IReadOnlyDictionary<string, string>? environment,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new ProcessExecutionResult(0, _json, string.Empty));
+        }
     }
 }

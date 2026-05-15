@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Obscura.Application.Videos;
 using Obscura.Domain.Entities;
+using Obscura.Infrastructure.Media.Processing;
 using Obscura.Infrastructure.Persistence;
 
 namespace Obscura.Infrastructure.Videos;
@@ -33,14 +34,16 @@ public sealed class VideoSourceService : IVideoSourceService
         };
 
     private readonly ObscuraDbContext _db;
+    private readonly MediaProbeService? _mediaProbe;
 
     /// <summary>
     /// Creates a video source resolver over the v2 database context.
     /// </summary>
     /// <param name="db">Database context used to find video source file rows.</param>
-    public VideoSourceService(ObscuraDbContext db)
+    public VideoSourceService(ObscuraDbContext db, MediaProbeService? mediaProbe = null)
     {
         _db = db;
+        _mediaProbe = mediaProbe;
     }
 
     /// <inheritdoc />
@@ -71,6 +74,51 @@ public sealed class VideoSourceService : IVideoSourceService
             .Where(row => row.EntityId == id && row.Path == source.File.Path)
             .OrderByDescending(row => row.UpdatedAt)
             .FirstOrDefaultAsync(cancellationToken);
+        List<VideoSourceStream> streams = mediaSource is null
+            ? []
+            : await _db.MediaStreams.AsNoTracking()
+                .Where(row => row.MediaSourceId == mediaSource.Id)
+                .OrderBy(row => row.StreamIndex)
+                .Select(row => new VideoSourceStream(
+                    row.StreamIndex,
+                    row.Type,
+                    row.Codec,
+                    row.Language,
+                    row.Title,
+                    row.Width,
+                    row.Height,
+                    row.FrameRate,
+                    row.BitRate,
+                    row.SampleRate,
+                    row.Channels,
+                    row.IsDefault,
+                    row.IsForced))
+                .ToListAsync(cancellationToken);
+        if (_mediaProbe is not null && streams.Count(stream =>
+                stream.Type.Equals("Audio", StringComparison.OrdinalIgnoreCase)) <= 1)
+        {
+            var probed = await _mediaProbe.ProbeVideoAsync(source.File.Path, cancellationToken);
+            if (probed?.Streams is { Count: > 0 })
+            {
+                streams = probed.Streams
+                    .Select(stream => new VideoSourceStream(
+                        stream.StreamIndex,
+                        stream.Type,
+                        stream.Codec,
+                        stream.Language,
+                        stream.Title,
+                        stream.Width,
+                        stream.Height,
+                        stream.FrameRate,
+                        stream.BitRate,
+                        stream.SampleRate,
+                        stream.Channels,
+                        stream.IsDefault,
+                        stream.IsForced))
+                    .OrderBy(stream => stream.StreamIndex)
+                    .ToList();
+            }
+        }
         var extension = Path.GetExtension(source.File.Path);
         var directPlayable =
             BrowserNativeExtensions.Contains(extension) ||
@@ -91,7 +139,8 @@ public sealed class VideoSourceService : IVideoSourceService
             mediaSource?.AudioCodec,
             mediaSource?.FrameRate ?? source.Technical?.FrameRate,
             source.Technical?.SampleRate,
-            source.Technical?.Channels);
+            source.Technical?.Channels,
+            streams);
     }
 
     private static string MimeForExtension(string extension)

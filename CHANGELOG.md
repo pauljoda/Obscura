@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video seekbar hover previews now show the matching trickplay thumbnail frame, so scrubbing from the main controls is easier without opening the full filmstrip.
 - Concurrent video playback requests no longer crash the backend when they refresh the same virtual HLS cache at the same time.
 - Virtual adaptive HLS now generates each rendition as one continuous ffmpeg HLS stream, preventing periodic audio crackles from independently encoded AAC segments.
+- Adaptive HLS playback now honors the source file's default audio track and exposes alternate audio tracks in the player menu, preventing multi-language videos from starting on the wrong language.
 - Virtual HLS now publishes generated segments atomically and refreshes older segment caches, preventing content-length crashes when users scrub past buffered playback.
 - Scrubbing beyond the current buffer now starts virtual HLS generation at the requested segment and continues forward, restoring responsive long-distance seeks without waiting for earlier segments.
 - Subtitle style controls now use consistent sharp menu rows and squared sliders in both the player and Settings page, with compact language-code text that no longer overpowers subtitle settings.
@@ -118,6 +119,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Virtual HLS segment playlists now use exact target durations and six-decimal `EXTINF` values, and generated segments come from a single continuous HLS muxer instead of per-segment AAC encodes.
 - Virtual HLS segments are no longer served while ffmpeg is still writing them, avoiding `Content-Length` mismatch crashes during aggressive scrubbing.
 - Virtual HLS far-ahead segment requests now generate from the requested segment and return a clean miss instead of crashing if ffmpeg completes without the requested segment.
+- Adaptive HLS audio selection now maps ffmpeg by the source stream index and keeps separate virtual caches per selected audio track, so alternate-language tracks can be selected without leaking the wrong audio into another session.
 - Direct playback no longer stalls the player when Vidstack/browser probes fail before `can-play`. The Jellyfin-compatible stream route now supports `HEAD`, and the player switches to adaptive HLS instead of leaving playback paused.
 - HLS playback no longer spams repeated Vidstack errors after startup. The player keeps extended forward buffering, HLS asset routes now answer media `HEAD` probes, and hls.js can reduce its buffer target when the browser hits its media quota.
 - The playlist session compatibility endpoint now returns JSON `null` when no session is stored, preventing the Svelte shell from logging an empty-response parse error.
