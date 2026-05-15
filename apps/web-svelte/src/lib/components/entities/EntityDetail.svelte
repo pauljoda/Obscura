@@ -40,6 +40,7 @@
     posterSize?: EntityDetailPosterSize;
     ratingBusy?: boolean;
     showHero?: boolean;
+    debugNoBlur?: boolean;
   }
 
   let {
@@ -48,6 +49,7 @@
     posterSize = "medium",
     ratingBusy = false,
     showHero = true,
+    debugNoBlur = false,
   }: Props = $props();
 
   type HeroMode = "image" | "poster-blur" | "gradient";
@@ -98,7 +100,7 @@
 
 <article class="entity-detail" data-poster-size={posterSize} data-hero-mode={heroMode}>
   <!-- Hero -->
-  <div class="hero" data-hero-mode={heroMode}>
+  <div class="hero" data-hero-mode={heroMode} data-no-blur={debugNoBlur || undefined}>
 
     {#if heroMode === "image"}
       <!-- Sharp banner — visible ~80%, bottom 20% fades via mask -->
@@ -556,6 +558,12 @@
     backdrop-filter: blur(28px) saturate(1.4) brightness(0.6);
     -webkit-backdrop-filter: blur(28px) saturate(1.4) brightness(0.6);
     background: rgba(7, 8, 11, 0.15);
+  }
+
+  .hero[data-no-blur] .hero-backdrop-blur {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: none;
   }
 
   /* Poster-blur: slightly heavier blur since the poster has sharp edges */

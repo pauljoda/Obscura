@@ -17,6 +17,7 @@
   type HeroSource = "banner" | "poster-blur" | "gradient";
   let heroSource = $state<HeroSource>("banner");
   let posterSize = $state<EntityDetailPosterSize>("medium");
+  let debugNoBlur = $state(false);
   let hiddenSections = $state<Set<string>>(new Set());
 
   const allSectionNames = [
@@ -151,6 +152,17 @@
         </div>
       </div>
 
+      <div class="control-group">
+        <span class="control-label">Debug</span>
+        <div class="toggle-row">
+          <button
+            type="button"
+            class:is-active={debugNoBlur}
+            onclick={() => (debugNoBlur = !debugNoBlur)}
+          >no blur</button>
+        </div>
+      </div>
+
       <div class="control-group sections-control">
         <div class="control-label-row">
           <span class="control-label">Sections</span>
@@ -204,6 +216,7 @@
       {ratingBusy}
       {posterSize}
       showHero={true}
+      {debugNoBlur}
     />
   {/if}
 </main>
