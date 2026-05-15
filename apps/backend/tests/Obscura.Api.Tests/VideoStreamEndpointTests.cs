@@ -52,6 +52,20 @@ public sealed class VideoStreamEndpointTests : IDisposable
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
     }
 
+    [Fact]
+    public async Task HeadEndpointDoesNotPropagateCanceledProbeLookups()
+    {
+        using var factory = CreateFactory(new CancelingVideoSourceService());
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(
+            HttpMethod.Head,
+            $"/api/videos/{FakeVideoSourceService.VideoId}/stream");
+
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(499, (int)response.StatusCode);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
@@ -85,6 +99,14 @@ public sealed class VideoStreamEndpointTests : IDisposable
         public Task<VideoSourceFile?> GetSourceAsync(Guid id, CancellationToken cancellationToken)
         {
             return Task.FromResult(id == VideoId ? _source : null);
+        }
+    }
+
+    private sealed class CancelingVideoSourceService : IVideoSourceService
+    {
+        public Task<VideoSourceFile?> GetSourceAsync(Guid id, CancellationToken cancellationToken)
+        {
+            throw new OperationCanceledException();
         }
     }
 }

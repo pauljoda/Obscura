@@ -107,7 +107,19 @@ public static class VideoEndpoints
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var source = await sourceFiles.GetSourceAsync(id, cancellationToken);
+        VideoSourceFile? source;
+        try
+        {
+            // Media elements aggressively cancel duplicate HEAD probes while
+            // choosing a provider. Do not let request-abort cancellation bubble
+            // out of the source lookup and trip the debugger during normal
+            // playback startup.
+            source = await sourceFiles.GetSourceAsync(id, CancellationToken.None);
+        }
+        catch (OperationCanceledException)
+        {
+            return Results.StatusCode(499);
+        }
 
         if (source is null)
         {
