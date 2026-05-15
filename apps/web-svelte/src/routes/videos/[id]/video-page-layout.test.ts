@@ -12,11 +12,12 @@ function readDetailPageCssRule(source: string) {
 }
 
 describe("/videos/[id] detail layout", () => {
-  it("opts the video detail route out of shell padding", () => {
+  it("keeps outer padding owned by the shared layout", () => {
     const layoutSource = readLocalSource("../../+layout.svelte");
 
-    expect(layoutSource).toContain("isVideoDetailPage");
-    expect(layoutSource).toMatch(/isVideoDetailPage\s*\?\s*"p-0"\s*:\s*"p-5"/);
+    expect(layoutSource).toContain('<div class="flex-1 p-5">');
+    expect(layoutSource).not.toContain("isVideoDetailPage");
+    expect(layoutSource).not.toContain("p-0");
   });
 
   it("does not add component padding or width constraints around the player", () => {

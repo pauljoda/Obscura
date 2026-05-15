@@ -30,7 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Local trickplay generation now writes real Jellyfin tile sheets in the shared dev cache, so rescans can advertise thumbnail hover previews instead of leaving empty `Trickplay/320` folders behind.
 - Library scans now enqueue trickplay generation whenever trickplay is enabled, even if thumbnail preview generation is disabled.
 - Local dev navigation now ignores browser-aborted backend requests, preventing canceled list loads during refresh/navigation from breaking the .NET debug session.
-- Video detail pages now remove the extra content padding around the player, giving playback more room in the main view.
+- Video detail pages now use the shared page padding without adding a second inset around the player, giving playback more room while matching browse-page spacing.
 - Scheduled v2 library scans now target the intended watched folder instead of falling back to all eligible roots, and configured static web builds are served directly even in development/test hosts.
 - Entity detail descriptions now render markdown through a sanitized v2 helper, preserving formatting while stripping unsafe HTML and script URLs.
 - Videos now track playback state on the v2 backend — play count, accumulated watch time, and resume position are persisted per entity. Navigating back to a video resumes from where you left off, and the position is updated every 10 seconds during playback.
@@ -119,7 +119,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Local .NET development no longer serves the stale `apps/web-svelte/build` bundle by default; page requests proxy to the running Vite dev server unless a static web root is explicitly configured.
 - V2 subtitle display and transcript panels now read cue text from the normalized `/assets/...` WebVTT files exposed by the v2 subtitle capability, including ASS/SSA tracks that only have a generated VTT fallback.
 - V2 data now persists across backend container/app restarts in dev Docker. The upgrade gate no longer depends only on `/data/upgrade-markers`, which was not mounted by the dev compose backend and could disappear while Postgres data remained.
-- Video detail pages no longer add shell padding and an extra centered width cap around the player surface.
+- Video detail pages no longer add their own outer padding or centered width cap around the player surface.
 - Re-running the v2 fresh-start prepare endpoint no longer backs up, truncates, and re-imports v2 data after a successful migration. The dev gate re-arm now only clears the consent/prepared markers; the destructive reset happens only when the migration prepare step is accepted.
 - Refreshing `/videos` in local dev no longer returns the .NET JSON 404 caused by case-insensitive Jellyfin route matching.
 - Trickplay hover previews now read `#EXT-X-IMAGES-ONLY` playlists from the v2 trickplay asset instead of only looking for legacy sprite VTT files.

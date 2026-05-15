@@ -5,7 +5,6 @@
   import { tick } from "svelte";
   import type { Snapshot } from "@sveltejs/kit";
   import { cn } from "@obscura/ui-svelte";
-  import { page } from "$app/state";
   import Sidebar from "$lib/components/Sidebar.svelte";
   import CanvasHeader from "$lib/components/CanvasHeader.svelte";
   import MobileNav from "$lib/components/MobileNav.svelte";
@@ -95,7 +94,6 @@
     chrome.bottomDockInsetPx > 0 ? `${chrome.bottomDockInsetPx + 16}px` : "0px",
   );
   const playlistOffset = $derived(playlist.isActive ? "3.5rem" : "0px");
-  const isVideoDetailPage = $derived(/^\/videos\/[^/]+$/.test(page.url.pathname));
 </script>
 
 <BreakingUpgradeGate awaitingConsent={layoutData.awaitingBreakingConsent}>
@@ -122,7 +120,7 @@
         style:transition-timing-function="var(--ease-mechanical)"
       >
         <CanvasHeader />
-        <div class={cn("flex-1", isVideoDetailPage ? "p-0" : "p-5")}>
+        <div class="flex-1 p-5">
           {@render pageContent()}
         </div>
       </main>
