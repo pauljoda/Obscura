@@ -1,5 +1,5 @@
 import type { Handle } from "@sveltejs/kit";
-import { PAGE_CACHE_CONTROL } from "$lib/v1/server/cache-policy-v1";
+import { PAGE_CACHE_CONTROL } from "$lib/server/cache-policy";
 
 function requestMethodCanUseBrowserCache(method: string) {
   return method === "GET" || method === "HEAD";
@@ -47,4 +47,3 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   return response;
 };
-

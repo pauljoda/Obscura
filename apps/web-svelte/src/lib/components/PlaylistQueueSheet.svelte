@@ -1,7 +1,7 @@
 <script lang="ts">
   import { X, BookOpen, Film, Images, Layers, Music, ListMusic } from "@lucide/svelte";
   import type { CollectionEntityType } from "@obscura/contracts";
-  import { toApiUrl } from "$lib/v1/api/core-v1";
+  import { v2AssetUrl } from "$lib/api/orval-fetch";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
   import {
     getEntityMeta,
@@ -78,7 +78,7 @@
         {@const Icon = typeIcons[item.entityType]}
         {@const title = getEntityTitle(item)}
         {@const meta = getEntityMeta(item)}
-        {@const thumbnailUrl = toApiUrl(getEntityThumbnail(item))}
+        {@const thumbnailUrl = v2AssetUrl(getEntityThumbnail(item))}
         {@const isCurrent = position === playlist.orderPosition}
         {@const isPlayed = position < playlist.orderPosition}
         <button

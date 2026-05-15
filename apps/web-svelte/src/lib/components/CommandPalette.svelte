@@ -5,14 +5,17 @@
   import { Search, X, Clock, ArrowRight, Trash2 } from "@lucide/svelte";
   import { cn, dur, ease, flyDown } from "@obscura/ui-svelte";
   import { fade } from "svelte/transition";
-  import type { SearchResponseDto } from "@obscura/contracts";
+  import type { EntityKind, SearchResponseDto, SearchResultItem } from "@obscura/contracts";
+  import { getRatingValue, getThumbnailUrl } from "$lib/api/capabilities";
+  import { fetchV2Entities, type V2EntityCard } from "$lib/api/v2";
   import SearchResultCard from "$lib/components/SearchResultCard.svelte";
   import { useSearch } from "$lib/stores/search.svelte";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { entityTerms } from "$lib/terminology";
-  import { fetchSearch } from "$lib/v1/api/media-v1";
   import { recentSearches } from "$lib/stores/recent-searches.svelte";
   import { buildHrefWithFrom } from "$lib/back-navigation";
+  import { resolveEntityHref } from "$lib/entities/entity-routes";
+  import { labelForEntityKind } from "$lib/entities/v2-codes";
 
   const search = useSearch();
   const nsfw = useNsfw();
@@ -30,6 +33,63 @@
   const hasResults = $derived(
     results != null && results.groups.some((group) => group.items.length > 0),
   );
+
+  function toSearchKind(kind: string): EntityKind | null {
+    if (kind === "person") return "performer";
+    if (
+      kind === "video" ||
+      kind === "video-series" ||
+      kind === "studio" ||
+      kind === "tag" ||
+      kind === "gallery" ||
+      kind === "image" ||
+      kind === "book" ||
+      kind === "audio-library" ||
+      kind === "audio-track"
+    ) {
+      return kind;
+    }
+    return null;
+  }
+
+  function entityToSearchItem(entity: V2EntityCard): SearchResultItem | null {
+    const kind = toSearchKind(entity.kind);
+    const href = resolveEntityHref(entity.kind, entity.id);
+    if (!kind || !href) return null;
+
+    return {
+      href,
+      id: entity.id,
+      imagePath: getThumbnailUrl(entity.capabilities) ?? null,
+      kind,
+      meta: {},
+      rating: getRatingValue(entity.capabilities) || null,
+      score: 1,
+      subtitle: labelForEntityKind(entity.kind),
+      title: entity.title,
+    };
+  }
+
+  function toSearchResponse(term: string, startedAt: number, items: V2EntityCard[]): SearchResponseDto {
+    const groups = new Map<EntityKind, SearchResultItem[]>();
+    for (const entity of items) {
+      const item = entityToSearchItem(entity);
+      if (!item) continue;
+      groups.set(item.kind, [...(groups.get(item.kind) ?? []), item]);
+    }
+
+    return {
+      durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+      groups: [...groups.entries()].map(([kind, groupItems]) => ({
+        hasMore: false,
+        items: groupItems,
+        kind,
+        label: labelForEntityKind(kind === "performer" ? "person" : kind),
+        total: groupItems.length,
+      })),
+      query: term,
+    };
+  }
 
   function closePalette() {
     search.closePalette();
@@ -53,13 +113,13 @@
 
     loading = true;
     try {
-      const data = await fetchSearch({
-        q: trimmed,
-        limit: 6,
-        nsfw: nsfw.mode,
+      const startedAt = performance.now();
+      const data = await fetchV2Entities({
+        query: trimmed,
+        hideNsfw: nsfw.mode === "off",
       });
       if (requestId === activeRequest) {
-        results = data;
+        results = toSearchResponse(trimmed, startedAt, data.items);
       }
     } catch {
       if (requestId === activeRequest) {

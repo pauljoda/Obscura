@@ -7,7 +7,7 @@ import type {
   PlaylistSessionDto,
   PlaylistSessionWriteDto,
 } from "@obscura/contracts";
-import { fetchApi } from "$lib/v1/api/core-v1";
+import { v2ApiPath } from "$lib/api/orval-fetch";
 
 const KEY = Symbol("playlist");
 
@@ -41,6 +41,27 @@ function getEntityHref(item: CollectionItemDto): string {
 function buildHrefWithFrom(href: string, from: string): string {
   const sep = href.includes("?") ? "&" : "?";
   return `${href}${sep}from=${encodeURIComponent(from)}`;
+}
+
+async function playlistApi<T>(init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  if (init?.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  const response = await fetch(v2ApiPath("/playlist-session"), {
+    ...init,
+    headers,
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Playlist session ${response.status}`);
+  }
+
+  if (response.status === 204) return undefined as T;
+  const text = await response.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 export interface PlaylistStartOptions {
@@ -105,7 +126,7 @@ export class PlaylistStore {
     this.hydrated = true;
     const hydrateVersion = this.mutationVersion;
     try {
-      const session = await fetchApi<PlaylistSessionDto | null>("/playlist-session");
+      const session = await playlistApi<PlaylistSessionDto | null>();
       if (session && this.mutationVersion === hydrateVersion) {
         this.applySession(session);
       }
@@ -117,7 +138,7 @@ export class PlaylistStore {
   private persistSession() {
     if (!this.hydrated) return;
     const payload = this.toSessionPayload();
-    void fetchApi<PlaylistSessionDto | null>("/playlist-session", {
+    void playlistApi<PlaylistSessionDto | null>({
       method: "PUT",
       body: JSON.stringify(payload),
     }).catch((err) => {
@@ -127,7 +148,7 @@ export class PlaylistStore {
 
   private deleteSession() {
     if (!this.hydrated) return;
-    void fetchApi<{ ok: true }>("/playlist-session", { method: "DELETE" }).catch(
+    void playlistApi<{ ok: true }>({ method: "DELETE" }).catch(
       (err) => {
         console.warn("Unable to clear playlist session", err);
       },
