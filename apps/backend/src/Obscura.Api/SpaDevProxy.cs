@@ -75,8 +75,13 @@ public static class SpaDevProxy
 
                 await response.Content.CopyToAsync(context.Response.Body, context.RequestAborted);
             }
-            catch (HttpRequestException)
+            catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
             {
+                // Browser disconnected — nothing to write.
+            }
+            catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
+            {
+                if (context.Response.HasStarted) return;
                 context.Response.StatusCode = 503;
                 context.Response.ContentType = "text/html; charset=utf-8";
                 await context.Response.WriteAsync(
@@ -88,8 +93,7 @@ public static class SpaDevProxy
                     <h1>Waiting for Vite dev server…</h1>
                     <p>The Svelte dev server is still starting. This page will auto-refresh.</p>
                     </div><script>setTimeout(()=>location.reload(),2000)</script></body></html>
-                    """,
-                    context.RequestAborted);
+                    """);
             }
         });
     }
