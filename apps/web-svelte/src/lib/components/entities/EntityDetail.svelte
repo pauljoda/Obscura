@@ -536,8 +536,9 @@
     position: absolute;
     inset: 0;
     z-index: 0;
-    line-height: 0;
     overflow: hidden;
+    mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
   }
 
   .hero-reflection img {
@@ -545,27 +546,47 @@
     top: 0;
     left: 0;
     width: 100%;
-    height: auto;
-    display: block;
-    max-height: 22rem;
+    height: 100%;
     object-fit: cover;
+    transform: scaleY(-1) scale(1.2);
+    filter: blur(48px) saturate(1.3) brightness(0.5);
+  }
+
+  .hero[data-no-blur] .hero-reflection {
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  .hero[data-no-blur] .hero-reflection img {
+    filter: none;
     transform: scaleY(-1);
   }
 
-  /* Blur overlay: covers the reflection */
+  /* Scrim + noise grain to break color banding */
   .hero-blur-overlay {
     position: absolute;
     inset: 0;
     z-index: 1;
-    backdrop-filter: blur(28px) saturate(1.4) brightness(0.6);
-    -webkit-backdrop-filter: blur(28px) saturate(1.4) brightness(0.6);
-    background: rgba(7, 8, 11, 0.15);
+    background: rgba(7, 8, 11, 0.3);
+  }
+
+  .hero-blur-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.035;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+    pointer-events: none;
   }
 
   .hero[data-no-blur] .hero-blur-overlay {
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
     background: none;
+  }
+
+  .hero[data-no-blur] .hero-blur-overlay::after {
+    display: none;
   }
 
   /* Bottom fade to page bg */
@@ -1325,10 +1346,6 @@
       max-height: 28rem;
     }
 
-    .hero-reflection img {
-      max-height: 28rem;
-    }
-
     .hero-content {
       padding: 2rem;
       padding-top: 3rem;
@@ -1357,10 +1374,6 @@
 
   @media (min-width: 1024px) {
     .hero-banner img {
-      max-height: 34rem;
-    }
-
-    .hero-reflection img {
       max-height: 34rem;
     }
 
