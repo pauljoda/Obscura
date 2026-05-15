@@ -510,8 +510,8 @@
     position: relative;
     z-index: 2;
     line-height: 0;
-    mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
   }
 
   .hero-banner img {
@@ -536,8 +536,8 @@
     inset: 0;
     z-index: 0;
     overflow: hidden;
-    mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 100%);
   }
 
   .hero-reflection img {
