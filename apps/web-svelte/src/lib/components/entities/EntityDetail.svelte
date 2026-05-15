@@ -511,20 +511,12 @@
     opacity: 0.5;
   }
 
-  .action-badge:not(:disabled):not(.active):hover {
-    opacity: 0.8;
-  }
 
   /* Favorite — red when active */
   .action-badge.favorite.active {
     color: #e06070;
     border-color: rgba(224, 96, 112, 0.5);
     box-shadow: 0 0 10px rgba(224, 96, 112, 0.2);
-  }
-
-  .action-badge.favorite.active:not(:disabled):hover {
-    color: #e06070;
-    border-color: rgba(224, 96, 112, 0.7);
   }
 
   .action-badge.favorite.animating {
@@ -547,11 +539,6 @@
     color: #80b898;
     border-color: rgba(78, 138, 98, 0.5);
     box-shadow: 0 0 10px rgba(78, 138, 98, 0.2);
-  }
-
-  .action-badge.organized.active:not(:disabled):hover {
-    color: #80b898;
-    border-color: rgba(78, 138, 98, 0.7);
   }
 
   .action-badge.organized.animating {
@@ -619,10 +606,6 @@
     color: var(--detail-text-disabled);
     cursor: pointer;
     transition: color 0.15s, filter 0.15s;
-  }
-
-  .rating-star:hover:not(:disabled):not(.active) {
-    color: var(--detail-text-muted);
   }
 
   .rating-star.active {
