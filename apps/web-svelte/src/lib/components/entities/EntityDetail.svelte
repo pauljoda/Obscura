@@ -102,21 +102,71 @@
   <!-- Hero -->
   <div class="hero" data-hero-mode={heroMode} data-no-blur={debugNoBlur || undefined}>
 
+    {#snippet heroContent()}
+      <div class="hero-content">
+        {#if posterVisible}
+          <div class="poster-frame">
+            <img src={card.poster!.src} alt={card.poster!.alt} />
+          </div>
+        {/if}
+
+        <div class="hero-text">
+          <span class="kind-badge">{card.kindLabel}</span>
+          <h1>{card.entity.title}</h1>
+
+          {#if metaItems.length > 0}
+            <div class="meta-row">
+              {#each metaItems as item, i (i)}
+                {#if i > 0}<span class="meta-sep"></span>{/if}
+                <span class="meta-item" class:is-studio={i === 0 && card.studio != null}>{item}</span>
+              {/each}
+            </div>
+          {/if}
+
+          {#if card.rating}
+            <div class="rating-row" role="group" aria-label="Rating">
+              {#each { length: card.rating.max } as _, i (i)}
+                {@const value = i + 1}
+                <button
+                  type="button"
+                  class="rating-star"
+                  class:active={card.rating!.value >= value}
+                  disabled={ratingBusy || !onRatingChange}
+                  aria-label={`Rate ${value}`}
+                  onclick={() => handleRatingClick(value)}
+                >
+                  <Star class="h-5 w-5" />
+                </button>
+              {/each}
+            </div>
+          {/if}
+
+          {#if card.positions.length > 0}
+            <div class="position-badges">
+              {#each card.positions as pos (pos.code)}
+                <span class="position-badge">{pos.label}</span>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      </div>
+    {/snippet}
+
     {#if heroMode === "image"}
-      <!-- Sharp banner -->
+      <!-- Sharp banner, mask fades bottom 10% -->
       <div class="hero-banner">
         <img src={card.hero!.src} alt="Banner" />
       </div>
-      <!-- Reflected copy flipped along the bottom edge, overlaps 10% into banner -->
-      <div class="hero-reflection">
-        <img src={card.hero!.src} alt="" aria-hidden="true" />
+      <!-- Lower zone: reflection bg + content on top -->
+      <div class="hero-lower">
+        <div class="hero-reflection">
+          <img src={card.hero!.src} alt="" aria-hidden="true" />
+        </div>
+        <div class="hero-blur-overlay"></div>
+        <div class="hero-bottom-fade"></div>
+        {@render heroContent()}
       </div>
-      <!-- Blur overlay: covers reflection zone + bleeds into banner -->
-      <div class="hero-blur-overlay"></div>
-      <!-- Fade to page background at the bottom -->
-      <div class="hero-bottom-fade"></div>
     {:else if heroMode === "poster-blur"}
-      <!-- Poster blurred as backdrop when no header exists -->
       <div class="hero-backdrop poster-mode">
         <div class="hero-backdrop-img">
           <img src={card.poster!.src} alt="" aria-hidden="true" />
@@ -124,58 +174,11 @@
         <div class="hero-backdrop-blur"></div>
         <div class="hero-backdrop-fade"></div>
       </div>
+      {@render heroContent()}
     {:else}
       <div class="hero-gradient-bg" style:background-image={placeholderGradient(card.entity.title)}></div>
+      {@render heroContent()}
     {/if}
-
-    <!-- Poster + title overlay -->
-    <div class="hero-content">
-      {#if posterVisible}
-        <div class="poster-frame">
-          <img src={card.poster!.src} alt={card.poster!.alt} />
-        </div>
-      {/if}
-
-      <div class="hero-text">
-        <span class="kind-badge">{card.kindLabel}</span>
-        <h1>{card.entity.title}</h1>
-
-        {#if metaItems.length > 0}
-          <div class="meta-row">
-            {#each metaItems as item, i (i)}
-              {#if i > 0}<span class="meta-sep"></span>{/if}
-              <span class="meta-item" class:is-studio={i === 0 && card.studio != null}>{item}</span>
-            {/each}
-          </div>
-        {/if}
-
-        {#if card.rating}
-          <div class="rating-row" role="group" aria-label="Rating">
-            {#each { length: card.rating.max } as _, i (i)}
-              {@const value = i + 1}
-              <button
-                type="button"
-                class="rating-star"
-                class:active={card.rating!.value >= value}
-                disabled={ratingBusy || !onRatingChange}
-                aria-label={`Rate ${value}`}
-                onclick={() => handleRatingClick(value)}
-              >
-                <Star class="h-5 w-5" />
-              </button>
-            {/each}
-          </div>
-        {/if}
-
-        {#if card.positions.length > 0}
-          <div class="position-badges">
-            {#each card.positions as pos (pos.code)}
-              <span class="position-badge">{pos.label}</span>
-            {/each}
-          </div>
-        {/if}
-      </div>
-    </div>
   </div>
 
   <div class="detail-body">
@@ -502,12 +505,14 @@
     /* No reserved space — fits to content */
   }
 
-  /* ── Sharp banner ────────────────────────────────────────── */
+  /* ── Sharp banner (mask fades bottom 10% into reflection) ── */
 
   .hero-banner {
     position: relative;
-    z-index: 3;
+    z-index: 2;
     line-height: 0;
+    mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
   }
 
   .hero-banner img {
@@ -518,15 +523,21 @@
     object-fit: cover;
   }
 
-  /* ── Reflection: flipped along bottom edge ─────────────── */
+  /* ── Lower zone: reflection bg + content ──────────────── */
 
-  .hero-reflection {
+  .hero-lower {
     position: relative;
+    margin-top: -10%;
+    overflow: hidden;
+  }
+
+  /* Reflection: absolute, fills the lower zone as its background */
+  .hero-reflection {
+    position: absolute;
+    inset: 0;
     z-index: 0;
     line-height: 0;
-    margin-top: -10%;
-    mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 100%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 100%);
+    overflow: hidden;
   }
 
   .hero-reflection img {
@@ -536,22 +547,17 @@
     max-height: 22rem;
     object-fit: cover;
     transform: scaleY(-1);
+    transform-origin: top center;
   }
 
-  /* ── Blur overlay: covers reflection + bleeds into banner ─ */
-
+  /* Blur overlay: covers the reflection */
   .hero-blur-overlay {
     position: absolute;
-    top: 40%;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 2;
+    inset: 0;
+    z-index: 1;
     backdrop-filter: blur(28px) saturate(1.4) brightness(0.6);
     -webkit-backdrop-filter: blur(28px) saturate(1.4) brightness(0.6);
     background: rgba(7, 8, 11, 0.15);
-    mask-image: linear-gradient(to bottom, transparent 0%, black 25%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%);
   }
 
   .hero[data-no-blur] .hero-blur-overlay {
@@ -560,14 +566,13 @@
     background: none;
   }
 
-  /* ── Bottom fade to page bg ────────────────────────────── */
-
+  /* Bottom fade to page bg */
   .hero-bottom-fade {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
-    height: 25%;
+    height: 40%;
     z-index: 2;
     background: linear-gradient(to top, var(--color-bg, #07080b) 0%, transparent 100%);
     pointer-events: none;
@@ -635,14 +640,8 @@
     align-items: end;
     gap: 1.25rem;
     padding: 1.5rem;
-    padding-top: 2rem;
-    z-index: 4;
-    margin-top: -8rem;
-  }
-
-  .hero[data-hero-mode="poster-blur"] .hero-content,
-  .hero[data-hero-mode="gradient"] .hero-content {
-    margin-top: 0;
+    padding-top: 3rem;
+    z-index: 3;
   }
 
   /* ── Poster / cover ────────────────────────────────────── */
@@ -1330,13 +1329,7 @@
 
     .hero-content {
       padding: 2rem;
-      padding-top: 2.5rem;
-      margin-top: -10rem;
-    }
-
-    .hero[data-hero-mode="poster-blur"] .hero-content,
-    .hero[data-hero-mode="gradient"] .hero-content {
-      margin-top: 0;
+      padding-top: 3rem;
     }
 
     [data-poster-size="small"] .poster-frame { --poster-width: 6rem; }
@@ -1367,15 +1360,6 @@
 
     .hero-reflection img {
       max-height: 34rem;
-    }
-
-    .hero-content {
-      margin-top: -12rem;
-    }
-
-    .hero[data-hero-mode="poster-blur"] .hero-content,
-    .hero[data-hero-mode="gradient"] .hero-content {
-      margin-top: 0;
     }
 
     [data-poster-size="small"] .poster-frame { --poster-width: 7rem; }
