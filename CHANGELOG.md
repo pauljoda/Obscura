@@ -38,6 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Added
+- VS Code Run and Debug now includes `Obscura: Kill Orphans`, a launch entry that runs `pnpm dev:kill` from the workspace.
 - `media_sources`, `media_streams`, and `trickplay_infos` v2 tables for Jellyfin-style media source negotiation, stream metadata, and image-playlist trickplay persistence.
 - Jellyfin-shaped playback contracts and .NET service seams for media sources, media streams, playback sessions, active transcode cancellation, and HLS image-playlist trickplay.
 - Public Jellyfin-compatible routes: `GET/POST /Items/{itemId}/PlaybackInfo`, `GET /Videos/{itemId}/stream`, `GET /Videos/{itemId}/live.m3u8`, `GET /Videos/{itemId}/hls/{playlistId}/{segmentId}.{container}`, `DELETE /Videos/ActiveEncodings`, `GET /Videos/{itemId}/Trickplay/{width}/tiles.m3u8`, `GET /Videos/{itemId}/Trickplay/{width}/{index}.jpg`, `POST /Sessions/Playing`, `POST /Sessions/Playing/Progress`, `POST /Sessions/Playing/Ping`, `POST /Sessions/Playing/Stopped`, and `POST/DELETE /UserPlayedItems/{itemId}`.

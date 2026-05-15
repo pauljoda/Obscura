@@ -24,6 +24,16 @@
       "sourceMaps": true
     },
     {
+      "name": "Obscura: Kill Orphans",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev:kill"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
       "name": "Obscura Docs: Dev Site",
       "type": "node",
       "request": "launch",
