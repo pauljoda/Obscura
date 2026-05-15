@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "predev": "node scripts/copy-jassub-assets.mjs",
-    "dev": "vite dev --port 8008 --host",
+    "dev": "vite dev --port 5173 --host",
     "prebuild": "node scripts/copy-jassub-assets.mjs",
     "build": "vite build",
-    "preview": "vite preview --port 8008",
+    "preview": "vite preview --port 5173",
     "start": "node build/index.js",
     "lint": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",

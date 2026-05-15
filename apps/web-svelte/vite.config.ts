@@ -5,21 +5,10 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
   server: {
-    port: 8008,
+    port: 5173,
     strictPort: false,
-    proxy: {
-      "/api": {
-        target: "http://localhost:8010",
-        changeOrigin: true,
-      },
-      "/assets": {
-        target: "http://localhost:8010",
-        changeOrigin: true,
-      },
-      "/openapi": {
-        target: "http://localhost:8010",
-        changeOrigin: true,
-      },
+    hmr: {
+      clientPort: 5173,
     },
   },
   optimizeDeps: {

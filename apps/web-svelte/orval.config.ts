@@ -1,7 +1,7 @@
 import { defineConfig } from "orval";
 
 const openApiUrl =
-  process.env.OBSCURA_OPENAPI_URL ?? "http://127.0.0.1:8010/openapi/v1.json";
+  process.env.OBSCURA_OPENAPI_URL ?? "http://127.0.0.1:8008/openapi/v1.json";
 
 export default defineConfig({
   obscuraV2: {

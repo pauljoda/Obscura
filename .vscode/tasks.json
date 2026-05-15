@@ -34,7 +34,7 @@
         "panel": "dedicated",
         "group": "obscura-dev"
       },
-      "detail": "Starts the Vite dev server with HMR on port 8008. Proxies /api and /assets to the .NET backend on 8010."
+      "detail": "Starts the Vite dev server with HMR on port 5173. The .NET API on 8008 proxies page requests here."
     },
     {
       "label": "Obscura: Web Build",
