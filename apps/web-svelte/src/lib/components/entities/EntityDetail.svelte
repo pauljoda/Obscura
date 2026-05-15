@@ -103,18 +103,18 @@
   <div class="hero" data-hero-mode={heroMode} data-no-blur={debugNoBlur || undefined}>
 
     {#if heroMode === "image"}
-      <!-- Sharp banner — visible ~80%, bottom 20% fades via mask -->
+      <!-- Sharp banner -->
       <div class="hero-banner">
         <img src={card.hero!.src} alt="Banner" />
       </div>
-      <!-- Blurred reflection zone behind poster+title -->
-      <div class="hero-backdrop">
-        <div class="hero-backdrop-img">
-          <img src={card.hero!.src} alt="" aria-hidden="true" />
-        </div>
-        <div class="hero-backdrop-blur"></div>
-        <div class="hero-backdrop-fade"></div>
+      <!-- Reflected copy flipped along the bottom edge, overlaps 10% into banner -->
+      <div class="hero-reflection">
+        <img src={card.hero!.src} alt="" aria-hidden="true" />
       </div>
+      <!-- Blur overlay: covers reflection zone + bleeds into banner -->
+      <div class="hero-blur-overlay"></div>
+      <!-- Fade to page background at the bottom -->
+      <div class="hero-bottom-fade"></div>
     {:else if heroMode === "poster-blur"}
       <!-- Poster blurred as backdrop when no header exists -->
       <div class="hero-backdrop poster-mode">
@@ -502,14 +502,12 @@
     /* No reserved space — fits to content */
   }
 
-  /* ── Sharp banner (80% visible, bottom 20% fades) ─────── */
+  /* ── Sharp banner ────────────────────────────────────────── */
 
   .hero-banner {
     position: relative;
-    z-index: 2;
+    z-index: 3;
     line-height: 0;
-    mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
   }
 
   .hero-banner img {
@@ -520,7 +518,62 @@
     object-fit: cover;
   }
 
-  /* ── Blurred backdrop (fills entire hero behind banner) ── */
+  /* ── Reflection: flipped along bottom edge ─────────────── */
+
+  .hero-reflection {
+    position: relative;
+    z-index: 0;
+    line-height: 0;
+    margin-top: -10%;
+    mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 100%);
+  }
+
+  .hero-reflection img {
+    width: 100%;
+    height: auto;
+    display: block;
+    max-height: 22rem;
+    object-fit: cover;
+    transform: scaleY(-1);
+  }
+
+  /* ── Blur overlay: covers reflection + bleeds into banner ─ */
+
+  .hero-blur-overlay {
+    position: absolute;
+    top: 40%;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    backdrop-filter: blur(28px) saturate(1.4) brightness(0.6);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4) brightness(0.6);
+    background: rgba(7, 8, 11, 0.15);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 25%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%);
+  }
+
+  .hero[data-no-blur] .hero-blur-overlay {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: none;
+  }
+
+  /* ── Bottom fade to page bg ────────────────────────────── */
+
+  .hero-bottom-fade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 25%;
+    z-index: 2;
+    background: linear-gradient(to top, var(--color-bg, #07080b) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  /* ── Poster-blur backdrop (no banner) ──────────────────── */
 
   .hero-backdrop {
     position: absolute;
@@ -538,16 +591,6 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-  }
-
-  /* Banner mode: same orientation as banner, aligned so colors match at the seam */
-  .hero[data-hero-mode="image"] .hero-backdrop-img img {
-    object-position: center center;
-    transform: scale(1.2);
-  }
-
-  /* Poster-blur mode: scale to fill, center on poster content */
-  .hero[data-hero-mode="poster-blur"] .hero-backdrop-img img {
     object-position: center center;
     transform: scale(1.3);
   }
@@ -555,22 +598,15 @@
   .hero-backdrop-blur {
     position: absolute;
     inset: 0;
-    backdrop-filter: blur(28px) saturate(1.4) brightness(0.6);
-    -webkit-backdrop-filter: blur(28px) saturate(1.4) brightness(0.6);
-    background: rgba(7, 8, 11, 0.15);
+    backdrop-filter: blur(48px) saturate(1.5) brightness(0.55);
+    -webkit-backdrop-filter: blur(48px) saturate(1.5) brightness(0.55);
+    background: rgba(7, 8, 11, 0.2);
   }
 
   .hero[data-no-blur] .hero-backdrop-blur {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     background: none;
-  }
-
-  /* Poster-blur: slightly heavier blur since the poster has sharp edges */
-  .hero[data-hero-mode="poster-blur"] .hero-backdrop-blur {
-    backdrop-filter: blur(48px) saturate(1.5) brightness(0.55);
-    -webkit-backdrop-filter: blur(48px) saturate(1.5) brightness(0.55);
-    background: rgba(7, 8, 11, 0.2);
   }
 
   .hero-backdrop-fade {
@@ -582,8 +618,6 @@
     background: linear-gradient(to top, var(--color-bg, #07080b) 0%, transparent 100%);
     pointer-events: none;
   }
-
-  /* poster-blur mode: absolute behind content, no reserved space */
 
   /* Gradient background when no images exist */
   .hero-gradient-bg {
@@ -602,8 +636,8 @@
     gap: 1.25rem;
     padding: 1.5rem;
     padding-top: 2rem;
-    z-index: 3;
-    margin-top: -4rem;
+    z-index: 4;
+    margin-top: -8rem;
   }
 
   .hero[data-hero-mode="poster-blur"] .hero-content,
@@ -1290,10 +1324,14 @@
       max-height: 28rem;
     }
 
+    .hero-reflection img {
+      max-height: 28rem;
+    }
+
     .hero-content {
       padding: 2rem;
       padding-top: 2.5rem;
-      margin-top: -5rem;
+      margin-top: -10rem;
     }
 
     .hero[data-hero-mode="poster-blur"] .hero-content,
@@ -1327,8 +1365,12 @@
       max-height: 34rem;
     }
 
+    .hero-reflection img {
+      max-height: 34rem;
+    }
+
     .hero-content {
-      margin-top: -6rem;
+      margin-top: -12rem;
     }
 
     .hero[data-hero-mode="poster-blur"] .hero-content,
