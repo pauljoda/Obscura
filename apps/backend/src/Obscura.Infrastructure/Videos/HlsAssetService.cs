@@ -14,6 +14,7 @@ namespace Obscura.Infrastructure.Videos;
 public sealed class HlsAssetService : IHlsAssetService
 {
     private const int SegmentDurationSeconds = 6;
+    private const int VirtualCacheFormatVersion = 2;
     private static readonly TimeSpan SegmentPollInterval = TimeSpan.FromMilliseconds(100);
     private static readonly ConcurrentDictionary<string, Task> ActiveRenditions = new();
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> VirtualCacheRefreshLocks = new();
@@ -217,7 +218,8 @@ public sealed class HlsAssetService : IHlsAssetService
             sourceInfo.Length,
             sourceInfo.LastWriteTimeUtc,
             source.DurationSeconds!.Value,
-            renditions.Select(rendition => rendition.Name).ToArray());
+            renditions.Select(rendition => rendition.Name).ToArray(),
+            VirtualCacheFormatVersion);
 
         if (File.Exists(metaPath))
         {
@@ -562,6 +564,8 @@ public sealed class HlsAssetService : IHlsAssetService
             "vod",
             "-hls_list_size",
             "0",
+            "-hls_flags",
+            "temp_file",
             "-hls_segment_filename",
             segmentPattern,
             playlistPath
@@ -622,7 +626,8 @@ public sealed class HlsAssetService : IHlsAssetService
         left.SourceSize == right.SourceSize &&
         left.SourceModifiedUtc == right.SourceModifiedUtc &&
         Math.Abs(left.DurationSeconds - right.DurationSeconds) < 0.001 &&
-        left.Renditions.SequenceEqual(right.Renditions);
+        left.Renditions.SequenceEqual(right.Renditions) &&
+        left.FormatVersion == right.FormatVersion;
 
     private static string MimeForExtension(string extension)
     {
@@ -657,7 +662,8 @@ public sealed class HlsAssetService : IHlsAssetService
         long SourceSize,
         DateTime SourceModifiedUtc,
         double DurationSeconds,
-        IReadOnlyList<string> Renditions);
+        IReadOnlyList<string> Renditions,
+        int FormatVersion = 0);
 
     private sealed record VirtualTrickplayStream(int Width, int Height, int Bandwidth);
 }

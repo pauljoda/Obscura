@@ -184,6 +184,48 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task VirtualCacheWithoutFormatVersionIsRefreshed()
+    {
+        var videoId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var sourceInfo = new FileInfo(sourcePath);
+        var virtualRoot = Path.Combine(_cacheRoot, "hlsv", videoId.ToString());
+        Directory.CreateDirectory(Path.Combine(virtualRoot, "v", "720p"));
+        await File.WriteAllTextAsync(
+            Path.Combine(virtualRoot, "metadata.json"),
+            $$"""
+            {
+              "SourcePath": "{{sourcePath.Replace("\\", "\\\\")}}",
+              "SourceSize": {{sourceInfo.Length}},
+              "SourceModifiedUtc": "{{sourceInfo.LastWriteTimeUtc:O}}",
+              "DurationSeconds": 13,
+              "Renditions": ["720p"]
+            }
+            """);
+        await File.WriteAllTextAsync(Path.Combine(virtualRoot, "v", "720p", "seg_00000.ts"), "old");
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 13,
+                Width: 1920,
+                Height: 960)),
+            new ManifestWritingProcessExecutor(),
+            NullLogger<HlsAssetService>.Instance);
+
+        var asset = await service.GetAssetAsync(videoId, "master.m3u8", CancellationToken.None);
+
+        Assert.NotNull(asset);
+        var metadata = await File.ReadAllTextAsync(Path.Combine(virtualRoot, "metadata.json"));
+        Assert.Contains("\"FormatVersion\": 2", metadata);
+        Assert.False(File.Exists(Path.Combine(virtualRoot, "v", "720p", "seg_00000.ts")));
+    }
+
+    [Fact]
     public async Task VirtualSegmentStartsContinuousRenditionGeneration()
     {
         var videoId = Guid.Parse("44444444-4444-4444-4444-444444444444");
@@ -241,6 +283,8 @@ public sealed class HlsAssetServiceTests : IDisposable
         Assert.Contains("-hls_time", arguments);
         Assert.Contains(SegmentLengthText, arguments);
         Assert.Contains("-hls_segment_filename", arguments);
+        Assert.Contains("-hls_flags", arguments);
+        Assert.Contains("temp_file", arguments);
         Assert.Contains("-copyts", arguments);
         Assert.Contains("-avoid_negative_ts", arguments);
         Assert.Contains("disabled", arguments);
