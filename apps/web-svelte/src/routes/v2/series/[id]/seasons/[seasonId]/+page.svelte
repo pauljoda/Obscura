@@ -1,0 +1,327 @@
+<script lang="ts">
+  import { onMount } from "svelte";
+  import { page } from "$app/state";
+  import { ArrowLeft, Film } from "@lucide/svelte";
+  import {
+    fetchV2Series,
+    updateV2EntityRating,
+    updateV2EntityFlags,
+    type V2VideoSeriesDetail,
+  } from "$lib/api/v2";
+  import {
+    getCapability,
+    withFlagCapability,
+    withRatingCapability,
+  } from "$lib/api/capabilities";
+  import type { EntityCard } from "$lib/api/generated/model";
+  import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
+  import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
+  import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
+  import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
+  import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
+
+  type LoadState = "loading" | "ready" | "error";
+
+  let loadState: LoadState = $state("loading");
+  let parentSeries = $state<V2VideoSeriesDetail | null>(null);
+  let season = $state<EntityCard | null>(null);
+  let errorMessage: string | null = $state(null);
+  let ratingBusy = $state(false);
+
+  const seriesId = $derived(page.params.id ?? "");
+  const seasonId = $derived(page.params.seasonId ?? "");
+
+  const card = $derived.by((): EntityDetailCardFull | null => {
+    if (!season) return null;
+    return entityCardToDetailCard(season);
+  });
+
+  const seasonNumber = $derived.by(() => {
+    if (!season) return null;
+    const pos = getCapability(season.capabilities, "position");
+    const item = pos?.items.find((p) => p.code === "season");
+    return item ? Number(item.value) : null;
+  });
+
+  const dates = $derived.by(() => {
+    if (!season) return [];
+    const cap = getCapability(season.capabilities, "dates");
+    return cap?.items ?? [];
+  });
+
+  const episodeCards = $derived.by((): EntityThumbnailCard[] => {
+    if (!parentSeries || !season) return [];
+    // The V2 series detail `videos` contains loose episodes (specials).
+    // Episodes within a season are not yet exposed by the V2 API.
+    // When a season detail endpoint is added, this will be populated.
+    // For now, filter the series' videos that have a matching season position.
+    return parentSeries.videos
+      .filter((video) => {
+        const pos = getCapability(video.capabilities, "position");
+        const seasonPos = pos?.items.find((p) => p.code === "season");
+        return seasonPos && Number(seasonPos.value) === seasonNumber;
+      })
+      .map((video) => entityCardToThumbnailCard(video, `/v2/videos/${video.id}`));
+  });
+
+  onMount(() => {
+    void loadSeason();
+  });
+
+  async function loadSeason() {
+    loadState = "loading";
+    errorMessage = null;
+    try {
+      const seriesDetail = await fetchV2Series(seriesId);
+      parentSeries = seriesDetail;
+      const found = seriesDetail.children.find((child) => child.id === seasonId);
+      if (!found) {
+        errorMessage = "Season not found in this series.";
+        loadState = "error";
+        return;
+      }
+      season = found;
+      loadState = "ready";
+    } catch (err) {
+      errorMessage = err instanceof Error ? err.message : String(err);
+      loadState = "error";
+    }
+  }
+
+  async function handleRatingChange(value: number | null) {
+    if (!season || ratingBusy) return;
+    const previous = season;
+    ratingBusy = true;
+    season = { ...season, capabilities: withRatingCapability(season.capabilities, value) };
+    try {
+      await updateV2EntityRating(season.id, value);
+    } catch {
+      season = previous;
+    } finally {
+      ratingBusy = false;
+    }
+  }
+
+  async function handleFavoriteToggle() {
+    if (!season) return;
+    const previous = season;
+    const flagsCap = getCapability(season.capabilities, "flags");
+    const next = !(flagsCap?.isFavorite ?? false);
+    season = { ...season, capabilities: withFlagCapability(season.capabilities, "isFavorite", next) };
+    try {
+      await updateV2EntityFlags(season.id, { isFavorite: next });
+    } catch {
+      season = previous;
+    }
+  }
+
+  async function handleOrganizedToggle() {
+    if (!season) return;
+    const previous = season;
+    const flagsCap = getCapability(season.capabilities, "flags");
+    const next = !(flagsCap?.isOrganized ?? false);
+    season = { ...season, capabilities: withFlagCapability(season.capabilities, "isOrganized", next) };
+    try {
+      await updateV2EntityFlags(season.id, { isOrganized: next });
+    } catch {
+      season = previous;
+    }
+  }
+</script>
+
+<svelte:head>
+  <title>{season?.title ?? "Season"} · Obscura</title>
+</svelte:head>
+
+<div class="season-page">
+  <a href={`/v2/series/${seriesId}`} class="back-link">
+    <ArrowLeft class="h-4 w-4" />
+    {parentSeries?.title ?? "Series"}
+  </a>
+
+  {#if loadState === "loading"}
+    <div class="loading-shell" aria-busy="true"></div>
+  {:else if loadState === "error"}
+    <div class="error-notice">
+      <p>{errorMessage ?? "Failed to load season."}</p>
+      <button type="button" onclick={() => void loadSeason()}>Retry</button>
+    </div>
+  {:else if card && season}
+    <EntityDetail
+      {card}
+      onRatingChange={handleRatingChange}
+      onFavoriteToggle={handleFavoriteToggle}
+      onOrganizedToggle={handleOrganizedToggle}
+      {ratingBusy}
+      posterSize="large"
+    >
+      {#snippet heroMeta()}
+        {#if parentSeries}
+          <span class="meta-item is-studio">{parentSeries.title}</span>
+        {/if}
+        {#if seasonNumber != null}
+          <span class="meta-sep"></span>
+          <span class="meta-item">Season {seasonNumber}</span>
+        {/if}
+        {#each dates as date, i (date.code)}
+          <span class="meta-sep"></span>
+          <span class="meta-item">{date.value}</span>
+        {/each}
+      {/snippet}
+
+      {#snippet heroBadges()}
+        {#if seasonNumber != null}
+          <span class="position-badge">S{String(seasonNumber).padStart(2, "0")}</span>
+        {/if}
+      {/snippet}
+    </EntityDetail>
+
+    {#if episodeCards.length > 0}
+      <section class="content-section">
+        <h2 class="content-heading">
+          <Film class="h-4 w-4" />
+          Episodes
+          <span class="content-count">{episodeCards.length}</span>
+        </h2>
+        <EntityGrid
+          cards={episodeCards}
+          prefsKey={`season-${seasonId}-episodes`}
+          selectable={false}
+          emptyTitle="No episodes"
+          emptyMessage="No episodes found in this season."
+        />
+      </section>
+    {:else}
+      <div class="empty-children">
+        <p>Episodes for this season will appear here once the season detail endpoint is available.</p>
+      </div>
+    {/if}
+  {/if}
+</div>
+
+<style>
+  .season-page {
+    display: grid;
+    gap: 1.25rem;
+    padding: clamp(1rem, 3vw, 2rem);
+    max-width: 72rem;
+    margin: 0 auto;
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--color-text-muted, #8a93a6);
+    font-size: 0.78rem;
+    text-decoration: none;
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    transition: color 0.15s;
+  }
+
+  .back-link:hover {
+    color: var(--color-text-primary, #f2eed8);
+  }
+
+  .loading-shell {
+    min-height: 28rem;
+    border: 1px solid var(--color-border, #1c2235);
+    background: var(--color-surface-2, #101420);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+
+  .error-notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid color-mix(in srgb, #ef4444 50%, var(--color-border, #1c2235));
+    background: var(--color-surface-2, #101420);
+    color: var(--color-text-muted, #8a93a6);
+    font-size: 0.85rem;
+  }
+
+  .error-notice button {
+    border: 1px solid var(--color-border, #1c2235);
+    background: var(--color-surface-3, #151a28);
+    color: var(--color-text-muted, #8a93a6);
+    padding: 0.4rem 0.8rem;
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+
+  :global(.meta-item) {
+    white-space: nowrap;
+    font-size: 0.82rem;
+  }
+
+  :global(.meta-item.is-studio) {
+    color: var(--color-text-accent, #c49a5a);
+  }
+
+  :global(.meta-sep) {
+    display: inline-block;
+    width: 3px;
+    height: 3px;
+    margin: 0 0.5rem;
+    background: var(--color-text-muted, #8a93a6);
+    opacity: 0.5;
+  }
+
+  .position-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.5rem;
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-accent, #c49a5a);
+    border: 1px solid rgba(196, 154, 90, 0.35);
+    background: rgba(196, 154, 90, 0.08);
+  }
+
+  .content-section {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .content-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-family: var(--font-heading, Geist, sans-serif);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-text-primary, #f2eed8);
+  }
+
+  .content-count {
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--color-text-muted, #8a93a6);
+    padding: 0.1rem 0.4rem;
+    border: 1px solid var(--color-border, #1c2235);
+    background: var(--color-surface-3, #151a28);
+  }
+
+  .empty-children {
+    padding: 2rem;
+    border: 1px solid var(--color-border-subtle, #1c2235);
+    background: var(--color-surface-1, #0c0f15);
+    color: var(--color-text-muted, #8a93a6);
+    text-align: center;
+    font-size: 0.85rem;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.45; }
+    50% { opacity: 0.85; }
+  }
+</style>

@@ -12,6 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Added
+- Series detail page (`/v2/series/[id]`) now uses the shared `EntityDetail` component with hero imagery, rating, flags, description, tags, cast credits, and external links, plus `EntityGrid` sections for seasons, sub-series, and loose episodes — replacing the minimal v2 prototype.
+- Season detail page (`/v2/series/[id]/seasons/[seasonId]`) — new route that shows season metadata via `EntityDetail` with parent series breadcrumb, season number badge, and date information. Episode grid is wired but pending a dedicated backend endpoint.
+- `withFlagCapability` helper in `capabilities.ts` for optimistic flag toggle updates (favorite, organized, NSFW) on entity detail pages.
 - `EntityDetail` component — capability-driven detail view that renders hero/poster images, markdown descriptions, interactive star rating, flag badges, tags, links, and files as universal sections shared by every entity kind. Kind-specific content (studio, credits, stats, technical, markers, etc.) is injected via Svelte 5 snippet slots, letting each entity page customize the detail surface without modifying the base component.
 - Entity Detail Lab now renders the `EntityDetail` component with rich fixture data across 8 entity kinds (video, series, gallery, person, book, audio, studio, collection), each exercising different capability combinations.
 - `marked` library for rendering markdown in entity descriptions — plain text passes through unchanged, but descriptions can now include bold, italic, lists, blockquotes, links, and code formatting.

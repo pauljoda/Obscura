@@ -94,3 +94,15 @@ export function withRatingCapability(
       : capability,
   );
 }
+
+export function withFlagCapability(
+  capabilities: EntityCapability[],
+  flag: "isFavorite" | "isNsfw" | "isOrganized",
+  value: boolean,
+): EntityCapability[] {
+  return capabilities.map((capability) =>
+    capability.kind === "flags"
+      ? { ...capability, [flag]: value }
+      : capability,
+  );
+}
