@@ -100,4 +100,30 @@ describe("extractVideoPlayerProps", () => {
       sourceUrl: null,
     });
   });
+
+  it("uses the advertised trickplay image playlist instead of guessing a fixed width", () => {
+    const capabilities: EntityCapability[] = [
+      {
+        kind: "images",
+        supportedKinds: ["thumbnail", "trickplay"],
+        thumbnailUrl: null,
+        coverUrl: null,
+        items: [
+          {
+            kind: "trickplay",
+            path: "/Videos/video-1/Trickplay/280/tiles.m3u8",
+            mimeType: "application/vnd.apple.mpegurl",
+          },
+        ],
+      },
+    ];
+
+    expect(extractVideoPlayerProps("video-1", capabilities).trickplayPlaylist).toBe(
+      "/Videos/video-1/Trickplay/280/tiles.m3u8",
+    );
+  });
+
+  it("does not request trickplay until the backend advertises an asset", () => {
+    expect(extractVideoPlayerProps("video-1", []).trickplayPlaylist).toBe("");
+  });
 });

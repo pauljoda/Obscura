@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Obscura.Application.Videos;
+using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Processes;
 
 namespace Obscura.Infrastructure.Videos;
@@ -18,6 +20,7 @@ public sealed class HlsAssetService : IHlsAssetService
     private readonly IVideoSourceService? _sources;
     private readonly ProcessExecutor? _processes;
     private readonly ILogger<HlsAssetService>? _logger;
+    private readonly ObscuraDbContext? _db;
 
     /// <summary>
     /// Creates an HLS asset resolver rooted at the configured cache directory.
@@ -40,11 +43,31 @@ public sealed class HlsAssetService : IHlsAssetService
         IVideoSourceService sources,
         ProcessExecutor processes,
         ILogger<HlsAssetService> logger)
+        : this(options, sources, processes, logger, null)
+    {
+    }
+
+    /// <summary>
+    /// Creates an HLS asset resolver that can advertise generated trickplay
+    /// playlists alongside adaptive video renditions.
+    /// </summary>
+    /// <param name="options">Cache-root options for generated HLS packages.</param>
+    /// <param name="sources">Source video resolver used to locate the original media file.</param>
+    /// <param name="processes">Process runner used to invoke ffmpeg.</param>
+    /// <param name="logger">Logger for generation diagnostics.</param>
+    /// <param name="db">Database used to discover generated trickplay resolutions.</param>
+    public HlsAssetService(
+        HlsAssetServiceOptions options,
+        IVideoSourceService sources,
+        ProcessExecutor processes,
+        ILogger<HlsAssetService> logger,
+        ObscuraDbContext? db)
     {
         _options = options;
         _sources = sources;
         _processes = processes;
         _logger = logger;
+        _db = db;
     }
 
     /// <inheritdoc />
@@ -113,9 +136,10 @@ public sealed class HlsAssetService : IHlsAssetService
 
         if (normalizedAssetPath.Equals("master.m3u8", StringComparison.OrdinalIgnoreCase))
         {
+            var trickplayStreams = await GetTrickplayStreamsAsync(id, cancellationToken);
             return await WriteTextAssetAsync(
                 VirtualPath(id, "master.m3u8"),
-                BuildVirtualMasterPlaylist(source, renditions),
+                BuildVirtualMasterPlaylist(source, renditions, trickplayStreams),
                 ".m3u8",
                 cancellationToken);
         }
@@ -375,7 +399,8 @@ public sealed class HlsAssetService : IHlsAssetService
 
     private static string BuildVirtualMasterPlaylist(
         VideoSourceFile source,
-        IReadOnlyList<VirtualHlsRendition> renditions)
+        IReadOnlyList<VirtualHlsRendition> renditions,
+        IReadOnlyList<VirtualTrickplayStream> trickplayStreams)
     {
         var lines = new List<string> { "#EXTM3U", "#EXT-X-VERSION:6" };
         foreach (var rendition in renditions)
@@ -387,8 +412,30 @@ public sealed class HlsAssetService : IHlsAssetService
             lines.Add($"hls/{rendition.Name}/index.m3u8");
         }
 
+        foreach (var stream in trickplayStreams)
+        {
+            lines.Add(
+                $"#EXT-X-IMAGE-STREAM-INF:BANDWIDTH={Math.Max(0, stream.Bandwidth)},RESOLUTION={stream.Width}x{stream.Height},CODECS=\"jpeg\",URI=\"Trickplay/{stream.Width}/tiles.m3u8\"");
+        }
+
         lines.Add(string.Empty);
         return string.Join('\n', lines);
+    }
+
+    private async Task<IReadOnlyList<VirtualTrickplayStream>> GetTrickplayStreamsAsync(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        if (_db is null)
+        {
+            return [];
+        }
+
+        return await _db.TrickplayInfos.AsNoTracking()
+            .Where(row => row.EntityId == id)
+            .OrderBy(row => row.Width)
+            .Select(row => new VirtualTrickplayStream(row.Width, row.Height, row.Bandwidth))
+            .ToListAsync(cancellationToken);
     }
 
     private static string BuildVirtualVariantPlaylist(double durationSeconds)
@@ -569,4 +616,6 @@ public sealed class HlsAssetService : IHlsAssetService
         DateTime SourceModifiedUtc,
         double DurationSeconds,
         IReadOnlyList<string> Renditions);
+
+    private sealed record VirtualTrickplayStream(int Width, int Height, int Bandwidth);
 }

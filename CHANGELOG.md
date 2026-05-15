@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video thumbnails now use Jellyfin image-playlist trickplay maps for hover previews after scans generate tiled JPEG sheets.
 - V2 rescans now repair missing Jellyfin media-source and trickplay records, so migrated videos can populate playback metadata and hover previews after the media-pipeline replacement.
 - V2 adaptive HLS playlists now point at the public Jellyfin-compatible `/Videos/{id}/hls/...` route, fixing variant playlist 404s during playback.
+- V2 adaptive playback now advertises generated Jellyfin trickplay image playlists from the HLS master manifest and stops guessing a fixed trickplay width in the player, preventing scrubber 404s when generated assets use a different size.
 - Library scans now enqueue trickplay generation whenever trickplay is enabled, even if thumbnail preview generation is disabled.
 - Local dev navigation now ignores browser-aborted backend requests, preventing canceled list loads during refresh/navigation from breaking the .NET debug session.
 - Scheduled v2 library scans now target the intended watched folder instead of falling back to all eligible roots, and configured static web builds are served directly even in development/test hosts.
@@ -60,6 +61,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Production Docker startup now serves the built Svelte app through the .NET API host and starts `Obscura.Worker.dll` for background jobs.
 - The video detail page now opens root-level Jellyfin-compatible `/Videos` and `/Sessions` routes for playback instead of the old Obscura-specific `/api/videos/{id}/hls/master.m3u8` and `PATCH /api/entities/{id}/playback` flow.
 - The .NET preview worker now stores trickplay assets under the Jellyfin-style tile directory and records `trickplay_infos` metadata for image-only HLS playlists.
+- Adaptive HLS master manifests now include Jellyfin-style `#EXT-X-IMAGE-STREAM-INF` entries for generated trickplay resolutions.
 - The development SPA proxy now treats Jellyfin-compatible root routes as backend API traffic, so `/Items`, `/Videos`, `/Sessions`, and `/UserPlayedItems` are not forwarded to Vite.
 - Shared v2 entity UI now centralizes entity kind, capability, file-role, label, and route codes in typed frontend registries instead of spreading raw string checks through `EntityThumbnail`, `EntityGrid`, and `EntityDetail`.
 - All entity detail pages consolidated from temporary `/v2/` staging routes to canonical paths (`/videos/[id]`, `/series/[id]`, `/galleries/[id]`, etc.) — the entity route registry now resolves directly to standard routes, fixing back-navigation that previously landed on the old v2 test page.
@@ -95,6 +97,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- The V2 player now uses advertised trickplay asset paths and leaves the filmstrip disabled until trickplay exists, avoiding hardcoded `/Trickplay/320` requests.
+- Jellyfin-compatible trickplay playlist and tile routes now fall back to the nearest generated width when a client asks for a width that was not produced by the current quality setting.
 - V2 video pages no longer block forever on a missing HLS status route. The player now only uses the legacy readiness probe for legacy `hls2` URLs, attaches v2 manifests directly, and falls back to direct streaming when adaptive playback fails.
 - V2 video stream probes now tolerate browser-canceled HEAD requests, avoiding debugger-breaking cancellation exceptions during player initialization.
 - V2 video pages no longer try direct playback for Matroska sources, preventing the player from choosing a stream the backend correctly rejects with 415.

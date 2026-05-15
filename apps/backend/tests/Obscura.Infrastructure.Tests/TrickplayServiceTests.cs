@@ -53,6 +53,60 @@ public sealed class TrickplayServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task PlaylistFallsBackToAvailableGeneratedWidth()
+    {
+        await using var db = CreateContext();
+        var itemId = Guid.Parse("44444444-4444-4444-4444-444444444444");
+        db.Entities.Add(new EntityRow
+        {
+            Id = itemId,
+            KindCode = EntityKindRegistry.Video.Code,
+            Title = "Video",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        db.TrickplayInfos.Add(new TrickplayInfoRow
+        {
+            EntityId = itemId,
+            Width = 280,
+            Height = 158,
+            TileWidth = 4,
+            TileHeight = 4,
+            ThumbnailCount = 16,
+            IntervalSeconds = 7,
+            Bandwidth = 1234,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+        var tileRoot = Path.Combine(_cacheRoot, "trickplay", itemId.ToString(), "280");
+        Directory.CreateDirectory(tileRoot);
+        await File.WriteAllTextAsync(Path.Combine(tileRoot, "0.jpg"), "tile0");
+        var service = new TrickplayService(new HlsAssetServiceOptions(_cacheRoot), db);
+
+        var playlist = await service.GetPlaylistAsync(itemId, 320, CancellationToken.None);
+
+        Assert.NotNull(playlist);
+        Assert.Contains("#EXT-X-TILES:RESOLUTION=280x158,LAYOUT=4x4,DURATION=7", playlist.Content);
+    }
+
+    [Fact]
+    public async Task TileFallsBackToAvailableGeneratedWidth()
+    {
+        var itemId = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        var tileRoot = Path.Combine(_cacheRoot, "trickplay", itemId.ToString(), "280");
+        Directory.CreateDirectory(tileRoot);
+        var tilePath = Path.Combine(tileRoot, "0.jpg");
+        await File.WriteAllTextAsync(tilePath, "tile0");
+        var service = new TrickplayService(new HlsAssetServiceOptions(_cacheRoot));
+
+        var tile = await service.GetTileAsync(itemId, 320, 0, CancellationToken.None);
+
+        Assert.NotNull(tile);
+        Assert.Equal(tilePath, tile.Path);
+    }
+
+    [Fact]
     public async Task PlaylistUsesPersistedTrickplayInfoWhenAvailable()
     {
         await using var db = CreateContext();

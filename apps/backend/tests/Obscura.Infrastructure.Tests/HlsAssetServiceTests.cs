@@ -1,5 +1,9 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.EntityFrameworkCore;
 using Obscura.Application.Videos;
+using Obscura.Domain.Entities;
+using Obscura.Infrastructure.Persistence;
+using Obscura.Infrastructure.Persistence.Entities;
 using Obscura.Infrastructure.Processes;
 using Obscura.Infrastructure.Videos;
 
@@ -82,6 +86,56 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task VirtualManifestAdvertisesGeneratedTrickplayPlaylist()
+    {
+        await using var db = CreateContext();
+        var videoId = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        db.Entities.Add(new EntityRow
+        {
+            Id = videoId,
+            KindCode = EntityKindRegistry.Video.Code,
+            Title = "Video",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        db.TrickplayInfos.Add(new TrickplayInfoRow
+        {
+            EntityId = videoId,
+            Width = 280,
+            Height = 158,
+            TileWidth = 4,
+            TileHeight = 4,
+            ThumbnailCount = 16,
+            IntervalSeconds = 7,
+            Bandwidth = 1234,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 13,
+                Width: 1920,
+                Height: 960)),
+            new ManifestWritingProcessExecutor(),
+            NullLogger<HlsAssetService>.Instance,
+            db);
+
+        var master = await service.GetAssetAsync(videoId, "master.m3u8", CancellationToken.None);
+
+        Assert.NotNull(master);
+        var content = await File.ReadAllTextAsync(master.Path);
+        Assert.Contains("#EXT-X-IMAGE-STREAM-INF:BANDWIDTH=1234,RESOLUTION=280x158,CODECS=\"jpeg\",URI=\"Trickplay/280/tiles.m3u8\"", content);
+    }
+
+    [Fact]
     public async Task VirtualSegmentIsEncodedOnDemand()
     {
         var videoId = Guid.Parse("44444444-4444-4444-4444-444444444444");
@@ -116,6 +170,15 @@ public sealed class HlsAssetServiceTests : IDisposable
         {
             Directory.Delete(_cacheRoot, recursive: true);
         }
+    }
+
+    private static ObscuraDbContext CreateContext()
+    {
+        var options = new DbContextOptionsBuilder<ObscuraDbContext>()
+            .UseInMemoryDatabase($"hls-assets-{Guid.NewGuid():N}")
+            .Options;
+
+        return new ObscuraDbContext(options);
     }
 
     private sealed class FakeVideoSourceService : IVideoSourceService

@@ -38,9 +38,12 @@ export function extractVideoPlayerProps(
   const mediaSource = playbackInfo?.MediaSources?.[0] ?? null;
   const videoStream = mediaSource?.MediaStreams?.find((stream) => stream.Type === "Video");
   const trickplayFile = files?.items.find((f) => f.role === ENTITY_FILE_ROLE.trickplay);
-  const trickplayPlaylist = trickplayFile?.path
-    ? jellyfinApiPath(trickplayFile.path)
-    : jellyfinApiPath(`/Videos/${videoId}/Trickplay/320/tiles.m3u8`);
+  const trickplayImage = images?.items.find((asset) =>
+    asset.kind === ENTITY_FILE_ROLE.trickplay &&
+    asset.path.toLowerCase().endsWith(".m3u8")
+  );
+  const trickplayPath = trickplayFile?.path ?? trickplayImage?.path ?? "";
+  const trickplayPlaylist = trickplayPath ? jellyfinApiPath(trickplayPath) : "";
   const directPlayable = isBrowserNativeVideoSource(sourceFile?.path, technical?.container);
   const directSrc = (mediaSource?.SupportsDirectPlay ?? directPlayable)
     ? jellyfinApiPath(`/Videos/${videoId}/stream${mediaSource?.Id ? `?MediaSourceId=${mediaSource.Id}` : ""}`)
