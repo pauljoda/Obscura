@@ -536,8 +536,18 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center 30%;
-    transform: scale(1.15);
+  }
+
+  /* Banner mode: flip vertically so the bottom of the banner reflects downward */
+  .hero[data-hero-mode="image"] .hero-backdrop-img img {
+    object-position: center bottom;
+    transform: scale(1.15) scaleY(-1);
+  }
+
+  /* Poster-blur mode: scale to fill, center on poster content */
+  .hero[data-hero-mode="poster-blur"] .hero-backdrop-img img {
+    object-position: center center;
+    transform: scale(1.3);
   }
 
   .hero-backdrop-blur {
@@ -546,6 +556,13 @@
     backdrop-filter: blur(44px) saturate(1.5) brightness(0.55);
     -webkit-backdrop-filter: blur(44px) saturate(1.5) brightness(0.55);
     background: rgba(7, 8, 11, 0.25);
+  }
+
+  /* Poster-blur: softer, smoother blur */
+  .hero[data-hero-mode="poster-blur"] .hero-backdrop-blur {
+    backdrop-filter: blur(64px) saturate(1.6) brightness(0.5);
+    -webkit-backdrop-filter: blur(64px) saturate(1.6) brightness(0.5);
+    background: rgba(7, 8, 11, 0.35);
   }
 
   .hero-backdrop-fade {
@@ -558,11 +575,7 @@
     pointer-events: none;
   }
 
-  /* poster-blur mode: relative so it takes space in flow */
-  .hero-backdrop.poster-mode {
-    position: relative;
-    height: 10rem;
-  }
+  /* poster-blur mode: absolute behind content, no reserved space */
 
   /* Gradient background when no images exist */
   .hero-gradient-bg {
@@ -585,6 +598,7 @@
     margin-top: -4rem;
   }
 
+  .hero[data-hero-mode="poster-blur"] .hero-content,
   .hero[data-hero-mode="gradient"] .hero-content {
     margin-top: 0;
   }
@@ -1274,6 +1288,7 @@
       margin-top: -5rem;
     }
 
+    .hero[data-hero-mode="poster-blur"] .hero-content,
     .hero[data-hero-mode="gradient"] .hero-content {
       margin-top: 0;
     }
@@ -1308,6 +1323,7 @@
       margin-top: -6rem;
     }
 
+    .hero[data-hero-mode="poster-blur"] .hero-content,
     .hero[data-hero-mode="gradient"] .hero-content {
       margin-top: 0;
     }
