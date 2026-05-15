@@ -541,13 +541,15 @@
   }
 
   .hero-reflection img {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: auto;
     display: block;
     max-height: 22rem;
     object-fit: cover;
     transform: scaleY(-1);
-    transform-origin: top center;
   }
 
   /* Blur overlay: covers the reflection */
