@@ -26,4 +26,5 @@ namespace Obscura.Contracts.Entities;
 [JsonDerivedType(typeof(ProgressCapability), "progress")]
 [JsonDerivedType(typeof(PositionCapability), "position")]
 [JsonDerivedType(typeof(ClassificationCapability), "classification")]
+[JsonDerivedType(typeof(PlaybackCapability), "playback")]
 public abstract record EntityCapability;

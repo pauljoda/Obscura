@@ -191,6 +191,12 @@ public static partial class ContractMapper
             CapabilityClassification classification => new ClassificationCapability(
                 classification.Value,
                 classification.System),
+            CapabilityPlayback playback => new PlaybackCapability(
+                playback.Value.PlayCount,
+                playback.Value.PlayDuration.TotalSeconds,
+                playback.Value.ResumeTime.TotalSeconds,
+                playback.Value.LastPlayedAt,
+                playback.Value.CompletedAt),
             _ => null
         };
 

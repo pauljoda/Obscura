@@ -44,6 +44,14 @@ public static class VideoEndpoints
             .Produces<ApiProblem>(StatusCodes.Status404NotFound)
             .Produces<ApiProblem>(StatusCodes.Status415UnsupportedMediaType);
 
+        group.MapMethods("/{id:guid}/stream", ["HEAD"], HeadVideoStreamAsync)
+            .WithName("HeadVideoStream")
+            .WithSummary("Returns headers for the original video source without opening a file stream.")
+            .Produces(StatusCodes.Status200OK)
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound)
+            .Produces<ApiProblem>(StatusCodes.Status415UnsupportedMediaType)
+            .ExcludeFromDescription();
+
         group.MapGet("/{id:guid}/hls/master.m3u8", (
             Guid id,
             IHlsAssetService hlsAssets,
@@ -91,6 +99,37 @@ public static class VideoEndpoints
             File.OpenRead(source.Path),
             source.ContentType,
             enableRangeProcessing: true);
+    }
+
+    private static async Task<IResult> HeadVideoStreamAsync(
+        Guid id,
+        IVideoSourceService sourceFiles,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var source = await sourceFiles.GetSourceAsync(id, cancellationToken);
+
+        if (source is null)
+        {
+            return Results.NotFound(new ApiProblem(
+                "video_stream_not_found",
+                $"Video stream '{id}' was not found."));
+        }
+
+        if (!source.DirectPlayable)
+        {
+            return Results.Json(
+                new ApiProblem(
+                    "video_stream_not_direct_playable",
+                    "Direct playback is not available for this container."),
+                statusCode: StatusCodes.Status415UnsupportedMediaType);
+        }
+
+        var fileInfo = new FileInfo(source.Path);
+        httpContext.Response.ContentType = source.ContentType;
+        httpContext.Response.ContentLength = fileInfo.Length;
+        httpContext.Response.Headers.AcceptRanges = "bytes";
+        return Results.Ok();
     }
 
     private static async Task<IResult> StreamHlsAssetAsync(

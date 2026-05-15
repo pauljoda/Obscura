@@ -11,6 +11,13 @@ export function v2ApiPath(path: string): string {
   return `${V2_API_BASE}${normalizedPath.startsWith("/api/") ? normalizedPath.slice(4) : normalizedPath}`;
 }
 
+export function v2AssetUrl(assetPath: string | null | undefined): string {
+  if (!assetPath) return "";
+  const origin = V2_API_BASE.replace(/\/api\/?$/, "");
+  const normalized = assetPath.startsWith("/") ? assetPath : `/${assetPath}`;
+  return `${origin}${normalized}`;
+}
+
 export async function orvalFetch<TData>(
   url: string,
   init?: RequestInit,

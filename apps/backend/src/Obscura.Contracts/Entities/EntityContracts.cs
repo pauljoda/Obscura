@@ -67,3 +67,15 @@ public sealed record EntityFlagsUpdateRequest(
     bool? IsFavorite,
     bool? IsNsfw,
     bool? IsOrganized);
+
+/// <summary>
+/// Request body for recording or updating playback state.
+/// All fields are optional — omitted fields leave the existing value unchanged.
+/// </summary>
+/// <param name="ResumeSeconds">Position in seconds where playback should resume next time.</param>
+/// <param name="DurationSeconds">Seconds of playback to add to the total accumulated duration.</param>
+/// <param name="Completed">When true, marks the entity as completed; when false, clears completion.</param>
+public sealed record PlaybackUpdateRequest(
+    double? ResumeSeconds,
+    double? DurationSeconds,
+    bool? Completed);

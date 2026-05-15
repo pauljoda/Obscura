@@ -19,3 +19,18 @@ public sealed record UpdateEntityFlagsCommand(
     bool? IsFavorite,
     bool? IsNsfw,
     bool? IsOrganized);
+
+/// <summary>
+/// Use-case command for recording a playback state change on a media entity.
+/// Increments play count on the first call, updates resume position,
+/// accumulates duration, and optionally marks completion.
+/// </summary>
+/// <param name="EntityId">Entity whose playback state should change.</param>
+/// <param name="ResumeSeconds">Resume position in seconds, or null to leave unchanged.</param>
+/// <param name="DurationSeconds">Seconds of playback to accumulate, or null to skip.</param>
+/// <param name="Completed">When true marks completion; when false clears it; null leaves unchanged.</param>
+public sealed record UpdatePlaybackCommand(
+    Guid EntityId,
+    double? ResumeSeconds,
+    double? DurationSeconds,
+    bool? Completed);

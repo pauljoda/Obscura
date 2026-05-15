@@ -209,6 +209,68 @@ public sealed partial class EntityProjectionService : IEntityCatalog, IEntityDet
     }
 
     /// <inheritdoc />
+    public async Task<Entity?> UpdatePlaybackAsync(
+        Guid id,
+        double? resumeSeconds,
+        double? durationSeconds,
+        bool? completed,
+        CancellationToken cancellationToken)
+    {
+        var entity = await _db.Entities
+            .FirstOrDefaultAsync(row => row.Id == id && row.DeletedAt == null, cancellationToken);
+
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var playback = await _db.EntityPlayback.FindAsync([id], cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+
+        if (playback is null)
+        {
+            playback = new EntityPlaybackRow
+            {
+                EntityId = id,
+                PlayCount = 1,
+                LastPlayedAt = now,
+                UpdatedAt = now
+            };
+            _db.EntityPlayback.Add(playback);
+        }
+        else
+        {
+            playback.LastPlayedAt = now;
+        }
+
+        if (resumeSeconds.HasValue)
+        {
+            playback.ResumeSeconds = Math.Max(0, resumeSeconds.Value);
+        }
+
+        if (durationSeconds.HasValue && durationSeconds.Value > 0)
+        {
+            playback.PlayDurationSeconds += durationSeconds.Value;
+        }
+
+        if (completed == true)
+        {
+            playback.CompletedAt = now;
+            playback.ResumeSeconds = 0;
+        }
+        else if (completed == false)
+        {
+            playback.CompletedAt = null;
+        }
+
+        playback.UpdatedAt = now;
+        entity.UpdatedAt = now;
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public Task<EntityPage> ListVideosAsync(bool hideNsfw, CancellationToken cancellationToken) =>
         ListAsync(EntityKindRegistry.Video, null, null, hideNsfw, cancellationToken);
 

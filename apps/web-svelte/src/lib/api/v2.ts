@@ -288,6 +288,26 @@ export function updateV2EntityFlags(
   });
 }
 
+export async function updateV2EntityPlayback(
+  id: string,
+  payload: { resumeSeconds?: number | null; durationSeconds?: number | null; completed?: boolean | null },
+  options?: V2RequestOptions,
+): Promise<V2EntityCard> {
+  const response = await fetch(v2ApiPath(`/entities/${id}/playback`), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    signal: options?.signal,
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Failed to update playback for ${id}`);
+  }
+
+  return (await response.json()) as V2EntityCard;
+}
+
 export function fetchV2Jobs(options?: V2RequestOptions): Promise<V2JobListResponse> {
   return listJobs({ signal: options?.signal }).then((response) => response.data);
 }

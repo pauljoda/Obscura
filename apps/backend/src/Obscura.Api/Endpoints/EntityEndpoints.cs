@@ -91,6 +91,31 @@ public static class EntityEndpoints
             .Produces<EntityCard>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
+        group.MapPatch("/{id:guid}/playback", async (
+            Guid id,
+            PlaybackUpdateRequest request,
+            EntityService entities,
+            CancellationToken cancellationToken) =>
+            {
+                var entity = await entities.UpdatePlaybackAsync(
+                    new UpdatePlaybackCommand(
+                        id,
+                        request.ResumeSeconds,
+                        request.DurationSeconds,
+                        request.Completed),
+                    cancellationToken);
+
+                return entity is null
+                    ? Results.NotFound(new ApiProblem(
+                        "entity_not_found",
+                        $"Entity '{id}' was not found."))
+                    : Results.Ok(entity);
+            })
+            .WithName("UpdateEntityPlayback")
+            .WithSummary("Updates playback state (resume position, duration, completion) for one entity.")
+            .Produces<EntityCard>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
+
         return group;
     }
 }

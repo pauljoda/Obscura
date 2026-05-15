@@ -191,6 +191,16 @@ public sealed class EntityVideoEndpointServiceTests
             return Task.FromResult<DomainEntity?>(id == VideoId ? Card(null) : null);
         }
 
+        public Task<DomainEntity?> UpdatePlaybackAsync(
+            Guid id,
+            double? resumeSeconds,
+            double? durationSeconds,
+            bool? completed,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<DomainEntity?>(id == VideoId ? Card(null) : null);
+        }
+
         public Task<DomainEntityPage> ListVideosAsync(bool hideNsfw, CancellationToken cancellationToken)
         {
             return Task.FromResult(new DomainEntityPage(hideNsfw ? [] : [Card(null)], null));

@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Videos now track playback state on the v2 backend — play count, accumulated watch time, and resume position are persisted per entity. Navigating back to a video resumes from where you left off, and the position is updated every 10 seconds during playback.
 - Every entity type now has a dedicated v2 detail page — videos, series, galleries, images, books, audio libraries, performers, studios, tags, and collections all render through the shared `EntityDetail` component with kind-specific sections (credits, reading progress, track lists, bio details) composed via snippet slots.
 - All browse pages and the dashboard now link directly to v2 detail pages via a centralized entity route registry that mirrors the backend hierarchy definitions.
 - All browse pages (Images, Galleries, Books, Audio, Series, Actors, Studios, Tags, Collections) now use the shared `EntityGrid` component backed by the v2 .NET entity API, replacing the legacy `MediaSurface` v1 pattern with consistent search, sort, filter, and grid/list controls across every media type.
@@ -14,6 +15,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Added
+- `PATCH /api/entities/{id}/playback` endpoint — updates resume position, accumulated play duration, and completion state for any media entity. Follows the same pattern as rating and flags mutations.
+- `PlaybackCapability` contract and JSON discriminator (`"playback"`) — the playback capability is now serialized to API responses so clients can read resume position, play count, and completion status from the entity card.
+- `HEAD /api/videos/{id}/stream` — returns Content-Type, Content-Length, and Accept-Ranges headers without opening a file stream, fixing the 500 error that occurred when players probed the stream endpoint.
+- `v2AssetUrl` helper in `orval-fetch.ts` for resolving `/assets/...` paths served by the .NET backend.
+- `video-capabilities.ts` — maps v2 entity capabilities to flat VideoPlayer props (HLS, direct stream, trickplay, subtitles, markers, duration) and extracts playback state for resume-from-position.
+- V2 video detail page now uses the full production VideoPlayer with subtitles, trickplay, transcript dock, library settings, and playback tracking — replacing the v1 `recordVideoPlay` call with native v2 playback state.
 - Entity route registry (`entity-routes.ts`) — centralized mapping from entity kind + ID to URL path, mirroring the backend hierarchy. `resolveEntityHref()` replaces hardcoded route strings across all browse pages, the dashboard, and detail pages.
 - V2 detail pages for all remaining entity types: gallery (`/v2/galleries/[id]`), image (`/v2/images/[id]`), book (`/v2/books/[id]`), audio library (`/v2/audio/[id]`), performer (`/v2/performers/[id]`), studio (`/v2/studios/[id]`), tag (`/v2/tags/[id]`), and collection (`/v2/collections/[id]`). Each uses the shared `EntityDetail` component with kind-specific snippets for credits, reading progress, track grids, bio details, and related content.
 - API fetch wrappers for all entity detail types (`fetchV2Image`, `fetchV2Gallery`, `fetchV2Book`, `fetchV2AudioLibrary`, `fetchV2AudioTrack`, `fetchV2Person`, `fetchV2Studio`, `fetchV2Tag`, `fetchV2Collection`) and taxonomy list endpoints (`fetchV2People`, `fetchV2Studios`, `fetchV2Tags`, `fetchV2Collections`).
@@ -56,6 +63,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- Video stream HEAD requests no longer return 500. The .NET backend now has an explicit HEAD handler that returns Content-Type, Content-Length, and Accept-Ranges headers without opening a file stream — fixing direct playback probe failures.
 - Entity thumbnails in browse grids now navigate to detail pages when clicked. Previously, `selectable` mode caused cards to render as non-clickable `<article>` elements instead of `<a>` links — clicking did nothing. Cards now always render as links when an href is set; the selection checkbox remains independent via event propagation isolation.
 - `EntityDetail` no longer causes horizontal page scroll on mobile — grid children now constrain their width to the viewport instead of blowing out the layout.
 

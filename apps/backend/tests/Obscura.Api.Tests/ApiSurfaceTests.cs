@@ -267,6 +267,16 @@ public sealed class ApiSurfaceTests
             return Task.FromResult<DomainEntity?>(null);
         }
 
+        public Task<DomainEntity?> UpdatePlaybackAsync(
+            Guid id,
+            double? resumeSeconds,
+            double? durationSeconds,
+            bool? completed,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<DomainEntity?>(null);
+        }
+
         public Task<DomainEntityPage> ListVideosAsync(bool hideNsfw, CancellationToken cancellationToken)
         {
             return Task.FromResult(new DomainEntityPage([], null));

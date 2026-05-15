@@ -104,4 +104,21 @@ public sealed class EntityService
             cancellationToken);
         return entity is null ? null : ContractMapper.ToEntityCard(entity);
     }
+
+    /// <summary>
+    /// Applies a playback state change and returns the updated entity projection.
+    /// </summary>
+    /// <param name="command">Playback update command from the application boundary.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>API-ready updated entity card, or null when the entity is missing.</returns>
+    public async Task<EntityCard?> UpdatePlaybackAsync(UpdatePlaybackCommand command, CancellationToken cancellationToken)
+    {
+        var entity = await _ratings.UpdatePlaybackAsync(
+            command.EntityId,
+            command.ResumeSeconds,
+            command.DurationSeconds,
+            command.Completed,
+            cancellationToken);
+        return entity is null ? null : ContractMapper.ToEntityCard(entity);
+    }
 }

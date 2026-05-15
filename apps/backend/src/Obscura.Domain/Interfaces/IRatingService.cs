@@ -34,4 +34,22 @@ public interface IRatingService
         bool? isNsfw,
         bool? isOrganized,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Updates playback state for a media entity.
+    /// Increments play count on the first call for an entity that has no existing playback row,
+    /// updates resume position and accumulated duration, and optionally records completion.
+    /// </summary>
+    /// <param name="id">Entity whose playback state should be updated.</param>
+    /// <param name="resumeSeconds">Resume position in seconds, or null to leave unchanged.</param>
+    /// <param name="durationSeconds">Seconds of playback to add to the accumulated total, or null to skip.</param>
+    /// <param name="completed">When true marks the entity as completed now; when false clears completion; null leaves unchanged.</param>
+    /// <param name="cancellationToken">Token used to cancel the write.</param>
+    /// <returns>The updated entity projection, or null when the entity does not exist.</returns>
+    Task<Entity?> UpdatePlaybackAsync(
+        Guid id,
+        double? resumeSeconds,
+        double? durationSeconds,
+        bool? completed,
+        CancellationToken cancellationToken);
 }
