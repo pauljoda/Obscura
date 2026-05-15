@@ -21,8 +21,14 @@ public interface IVideoSourceService
 /// <param name="Path">Absolute path to the source file on disk.</param>
 /// <param name="ContentType">HTTP content type for the source file.</param>
 /// <param name="DirectPlayable">Whether the browser can play the source container directly.</param>
+/// <param name="DurationSeconds">Optional probed duration used to build virtual HLS playlists.</param>
+/// <param name="Width">Optional probed source width.</param>
+/// <param name="Height">Optional probed source height.</param>
 public sealed record VideoSourceFile(
     Guid EntityId,
     string Path,
     string ContentType,
-    bool DirectPlayable);
+    bool DirectPlayable,
+    double? DurationSeconds = null,
+    int? Width = null,
+    int? Height = null);

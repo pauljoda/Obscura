@@ -49,7 +49,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task StartsGenerationWhenMasterManifestIsMissing()
+    public async Task VirtualManifestIsVodAndCoversFullDuration()
     {
         var videoId = Guid.Parse("33333333-3333-3333-3333-333333333333");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
@@ -57,15 +57,57 @@ public sealed class HlsAssetServiceTests : IDisposable
         var process = new ManifestWritingProcessExecutor();
         var service = new HlsAssetService(
             new HlsAssetServiceOptions(_cacheRoot),
-            new FakeVideoSourceService(new VideoSourceFile(videoId, sourcePath, "video/x-matroska", false)),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 13,
+                Width: 1920,
+                Height: 960)),
             process,
             NullLogger<HlsAssetService>.Instance);
 
-        var asset = await service.GetAssetAsync(videoId, "master.m3u8", CancellationToken.None);
+        var master = await service.GetAssetAsync(videoId, "master.m3u8", CancellationToken.None);
+        var variant = await service.GetAssetAsync(videoId, "v/720p/index.m3u8", CancellationToken.None);
 
-        Assert.NotNull(asset);
-        Assert.Equal("application/vnd.apple.mpegurl", asset.ContentType);
+        Assert.NotNull(master);
+        Assert.Contains("v/720p/index.m3u8", await File.ReadAllTextAsync(master.Path));
+        Assert.NotNull(variant);
+        var playlist = await File.ReadAllTextAsync(variant.Path);
+        Assert.Contains("#EXT-X-PLAYLIST-TYPE:VOD", playlist);
+        Assert.Contains("#EXTINF:1.000,", playlist);
+        Assert.Contains("#EXT-X-ENDLIST", playlist);
+        Assert.False(process.WasCalled);
+    }
+
+    [Fact]
+    public async Task VirtualSegmentIsEncodedOnDemand()
+    {
+        var videoId = Guid.Parse("44444444-4444-4444-4444-444444444444");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var process = new ManifestWritingProcessExecutor();
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 13,
+                Width: 1920,
+                Height: 960)),
+            process,
+            NullLogger<HlsAssetService>.Instance);
+
+        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00000.ts", CancellationToken.None);
+
+        Assert.NotNull(segment);
+        Assert.Equal("video/mp2t", segment.ContentType);
         Assert.True(process.WasCalled);
+        Assert.Contains(process.ArgumentHistory, arguments =>
+            arguments.Contains("-ss") && arguments.Contains("0.000"));
     }
 
     public void Dispose()
@@ -94,6 +136,8 @@ public sealed class HlsAssetServiceTests : IDisposable
     private sealed class ManifestWritingProcessExecutor : ProcessExecutor
     {
         public bool WasCalled { get; private set; }
+        public IReadOnlyList<string> LastArguments { get; private set; } = [];
+        public List<IReadOnlyList<string>> ArgumentHistory { get; } = [];
 
         public override async Task<ProcessExecutionResult> RunAsync(
             string fileName,
@@ -102,9 +146,11 @@ public sealed class HlsAssetServiceTests : IDisposable
             CancellationToken cancellationToken)
         {
             WasCalled = true;
-            var manifestPath = arguments[^1];
-            Directory.CreateDirectory(Path.GetDirectoryName(manifestPath)!);
-            await File.WriteAllTextAsync(manifestPath, "#EXTM3U", cancellationToken);
+            LastArguments = arguments;
+            ArgumentHistory.Add(arguments);
+            var outputPath = arguments[^1];
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+            await File.WriteAllTextAsync(outputPath, "segment", cancellationToken);
             return new ProcessExecutionResult(0, string.Empty, string.Empty);
         }
     }

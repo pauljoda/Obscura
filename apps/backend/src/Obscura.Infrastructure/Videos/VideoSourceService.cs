@@ -49,28 +49,37 @@ public sealed class VideoSourceService : IVideoSourceService
         var source = await (
             from entity in _db.Entities.AsNoTracking()
             join file in _db.EntityFiles.AsNoTracking() on entity.Id equals file.EntityId
+            join technical in _db.EntityTechnical.AsNoTracking() on entity.Id equals technical.EntityId into technicalRows
+            from technical in technicalRows.DefaultIfEmpty()
             where entity.Id == id &&
                 entity.KindCode == EntityKindRegistry.Video.Code &&
                 entity.DeletedAt == null &&
                 file.Role == EntityFileRole.Source
-            select file)
+            select new
+            {
+                File = file,
+                Technical = technical
+            })
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (source is null || !File.Exists(source.Path))
+        if (source is null || !File.Exists(source.File.Path))
         {
             return null;
         }
 
-        var extension = Path.GetExtension(source.Path);
+        var extension = Path.GetExtension(source.File.Path);
         var directPlayable =
             BrowserNativeExtensions.Contains(extension) ||
             !RequiresTranscodeExtensions.Contains(extension);
 
         return new VideoSourceFile(
             id,
-            source.Path,
-            source.MimeType ?? MimeForExtension(extension),
-            directPlayable);
+            source.File.Path,
+            source.File.MimeType ?? MimeForExtension(extension),
+            directPlayable,
+            source.Technical?.DurationSeconds,
+            source.Technical?.Width,
+            source.Technical?.Height);
     }
 
     private static string MimeForExtension(string extension)
