@@ -105,7 +105,7 @@ public sealed class JobScheduler(
 
         var request = new EnqueueJobRequest(
             Type: type,
-            PayloadJson: $$"""{"libraryRootId":"{{rootId}}"}""",
+            PayloadJson: new ScanRootPayload(Guid.Parse(rootId)).ToJson(),
             TargetEntityKind: "library-root",
             TargetEntityId: rootId,
             TargetLabel: label);

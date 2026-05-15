@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Obscura.Application.Jobs.Ports;
 using Obscura.Domain.Entities;
@@ -19,8 +18,7 @@ public abstract class ScanJobHandler(
 
     public async Task HandleAsync(JobContext context, CancellationToken cancellationToken)
     {
-        var rootId = ParseRootId(context.Job.PayloadJson);
-        if (rootId is null)
+        if (!ScanRootPayload.TryParse(context.Job.PayloadJson, out var payload))
         {
             var roots = await persistence.GetEnabledRootsAsync(cancellationToken);
             var eligible = roots.Where(IsEligibleRoot).ToList();
@@ -35,10 +33,10 @@ public abstract class ScanJobHandler(
         }
         else
         {
-            var root = await persistence.GetLibraryRootAsync(rootId.Value, cancellationToken);
+            var root = await persistence.GetLibraryRootAsync(payload.RootId, cancellationToken);
             if (root is null)
             {
-                logger.LogWarning("{JobType}: root {RootId} not found", Type.ToCode(), rootId);
+                logger.LogWarning("{JobType}: root {RootId} not found", Type.ToCode(), payload.RootId);
                 return;
             }
 
@@ -58,20 +56,4 @@ public abstract class ScanJobHandler(
 
     /// <summary>Scan persistence port for subclass use.</summary>
     protected ILibraryScanPersistence Persistence => persistence;
-
-    private static Guid? ParseRootId(string? payloadJson)
-    {
-        if (string.IsNullOrWhiteSpace(payloadJson) || payloadJson == "{}")
-            return null;
-
-        try
-        {
-            using var doc = JsonDocument.Parse(payloadJson);
-            if (doc.RootElement.TryGetProperty("rootId", out var prop) && prop.TryGetGuid(out var id))
-                return id;
-        }
-        catch (JsonException) { }
-
-        return null;
-    }
 }

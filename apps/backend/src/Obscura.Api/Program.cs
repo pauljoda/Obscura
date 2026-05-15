@@ -52,7 +52,10 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.UseCors("ObscuraDevCors");
-    app.UseSpaDevServer("http://localhost:5173");
+    if (staticFileProvider is null)
+    {
+        app.UseSpaDevServer("http://localhost:5173");
+    }
 }
 
 if (staticFileProvider is not null)

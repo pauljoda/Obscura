@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Scheduled v2 library scans now target the intended watched folder instead of falling back to all eligible roots, and configured static web builds are served directly even in development/test hosts.
 - Videos now track playback state on the v2 backend — play count, accumulated watch time, and resume position are persisted per entity. Navigating back to a video resumes from where you left off, and the position is updated every 10 seconds during playback.
 - Every entity type now has a dedicated detail page using the v2 entity API — videos, series, galleries, images, books, audio libraries, performers, studios, tags, and collections all render through the shared `EntityDetail` component with kind-specific sections (credits, reading progress, track lists, bio details) composed via snippet slots. The temporary `/v2/` route prefix has been removed; all detail pages now live at their canonical paths (e.g. `/videos/{id}`, `/performers/{id}`).
 - All browse pages and the dashboard link directly to detail pages via a centralized entity route registry that mirrors the backend hierarchy definitions.
@@ -66,6 +67,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- Scheduled v2 scan jobs now share a typed scan-root payload with scan handlers, including compatibility for already queued `libraryRootId` payloads, so per-root auto scans no longer expand into all-root scans.
+- Static SPA fallback now serves a configured web root without the development Vite proxy intercepting static assets or client-side routes.
 - Video stream HEAD requests no longer return 500. The .NET backend now has an explicit HEAD handler that returns Content-Type, Content-Length, and Accept-Ranges headers without opening a file stream — fixing direct playback probe failures.
 - Entity thumbnails in browse grids now navigate to detail pages when clicked. Previously, `selectable` mode caused cards to render as non-clickable `<article>` elements instead of `<a>` links — clicking did nothing. Cards now always render as links when an href is set; the selection checkbox remains independent via event propagation isolation.
 - `EntityDetail` no longer causes horizontal page scroll on mobile — grid children now constrain their width to the viewport instead of blowing out the layout.
