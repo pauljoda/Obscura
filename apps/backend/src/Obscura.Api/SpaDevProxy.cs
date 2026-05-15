@@ -8,7 +8,16 @@ namespace Obscura.Api;
 /// </summary>
 public static class SpaDevProxy
 {
-    private static readonly string[] ApiPrefixes = ["/api", "/assets", "/openapi"];
+    private static readonly string[] ApiPrefixes =
+    [
+        "/api",
+        "/assets",
+        "/openapi",
+        "/Items",
+        "/Videos",
+        "/Sessions",
+        "/UserPlayedItems"
+    ];
 
     public static void UseSpaDevServer(this WebApplication app, string viteUrl)
     {

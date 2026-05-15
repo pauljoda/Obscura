@@ -97,7 +97,11 @@ public static class DependencyInjection
         services.AddScoped<IVideoLibrary>(provider => provider.GetRequiredService<EntityProjectionService>());
         services.AddScoped<IVideoSourceService, VideoSourceService>();
         services.AddSingleton(new HlsAssetServiceOptions(cacheDir));
+        services.AddSingleton<ITranscodeSessionService, TranscodeSessionService>();
         services.AddScoped<IHlsAssetService, HlsAssetService>();
+        services.AddScoped<IPlaybackInfoService, PlaybackInfoService>();
+        services.AddScoped<IPlaybackSessionService, PlaybackSessionService>();
+        services.AddScoped<ITrickplayService, TrickplayService>();
         services.AddScoped<IVideoSubtitleAssetService, VideoSubtitleAssetService>();
         services.AddScoped<IJobQueueService, JobQueueService>();
         services.AddScoped<ISettingsService, SettingsService>();

@@ -1,0 +1,265 @@
+using System.Net;
+using System.Net.Http.Json;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Obscura.Application.Videos;
+using Obscura.Contracts.Playback;
+
+namespace Obscura.Api.Tests;
+
+public sealed class JellyfinPlaybackEndpointTests : IDisposable
+{
+    private static readonly Guid VideoId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private readonly string _tempDir = Path.Combine(Path.GetTempPath(), $"obscura-jellyfin-api-{Guid.NewGuid():N}");
+
+    public JellyfinPlaybackEndpointTests()
+    {
+        Directory.CreateDirectory(_tempDir);
+    }
+
+    [Fact]
+    public async Task PlaybackInfoEndpointReturnsJellyfinStyleMediaSource()
+    {
+        using var factory = CreateFactory(playback: new FakePlaybackInfoService(new PlaybackInfoResponse(
+            "play-session",
+            [
+                new MediaSourceInfo(
+                    VideoId.ToString("N"),
+                    "/media/movie.mkv",
+                    "File",
+                    "mkv",
+                    1234,
+                    "movie.mkv",
+                    TimeSpan.FromMinutes(5).Ticks,
+                    SupportsDirectPlay: false,
+                    SupportsDirectStream: false,
+                    SupportsTranscoding: true,
+                    TranscodingUrl: $"/Videos/{VideoId}/live.m3u8?PlaySessionId=play-session",
+                    TranscodingSubProtocol: "hls",
+                    TranscodingContainer: "ts",
+                    MediaStreams:
+                    [
+                        new MediaStreamInfo(0, "Video", "hevc", null, "Video", 1920, 1080, 23.976, null, null, null, IsDefault: true)
+                    ],
+                    TranscodingInfo: new TranscodingInfo("ts", "h264", "aac", "hls", IsVideoDirect: false, IsAudioDirect: false))
+            ])));
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync($"/Items/{VideoId}/PlaybackInfo", new PlaybackInfoRequest
+        {
+            EnableDirectPlay = true,
+            EnableTranscoding = true
+        });
+        var body = await response.Content.ReadFromJsonAsync<PlaybackInfoResponse>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(body);
+        Assert.Equal("play-session", body.PlaySessionId);
+        Assert.False(body.MediaSources.Single().SupportsDirectPlay);
+        Assert.Equal("hls", body.MediaSources.Single().TranscodingSubProtocol);
+        Assert.StartsWith($"/Videos/{VideoId}/live.m3u8", body.MediaSources.Single().TranscodingUrl);
+    }
+
+    [Fact]
+    public async Task LivePlaylistEndpointMapsToMasterHlsAsset()
+    {
+        var path = Path.Combine(_tempDir, "master.m3u8");
+        await File.WriteAllTextAsync(path, "#EXTM3U\n");
+        var hls = new RecordingHlsAssetService(new HlsAsset(path, "application/vnd.apple.mpegurl", "public, max-age=60"));
+        using var factory = CreateFactory(hls: hls);
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync($"/Videos/{VideoId}/live.m3u8");
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("master.m3u8", hls.LastAssetPath);
+        Assert.Equal("#EXTM3U\n", body);
+    }
+
+    [Fact]
+    public async Task HlsSegmentEndpointMapsJellyfinRouteToVariantAsset()
+    {
+        var path = Path.Combine(_tempDir, "seg_00000.ts");
+        await File.WriteAllTextAsync(path, "segment");
+        var hls = new RecordingHlsAssetService(new HlsAsset(path, "video/mp2t", "public, max-age=31536000, immutable"));
+        using var factory = CreateFactory(hls: hls);
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync($"/Videos/{VideoId}/hls/720p/seg_00000.ts");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("v/720p/seg_00000.ts", hls.LastAssetPath);
+    }
+
+    [Fact]
+    public async Task TrickplayPlaylistEndpointServesImagesOnlyPlaylist()
+    {
+        using var factory = CreateFactory(trickplay: new FakeTrickplayService(
+            new TrickplayPlaylist("#EXTM3U\n#EXT-X-IMAGES-ONLY\n", "public, max-age=60"),
+            null));
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync($"/Videos/{VideoId}/Trickplay/320/tiles.m3u8");
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/vnd.apple.mpegurl", response.Content.Headers.ContentType?.MediaType);
+        Assert.Contains("#EXT-X-IMAGES-ONLY", body);
+    }
+
+    [Fact]
+    public async Task SessionProgressEndpointRecordsJellyfinProgressPayload()
+    {
+        var sessions = new RecordingPlaybackSessionService();
+        using var factory = CreateFactory(sessions: sessions);
+        using var client = factory.CreateClient();
+
+        using var response = await client.PostAsJsonAsync("/Sessions/Playing/Progress", new PlaybackSessionRequest
+        {
+            ItemId = VideoId,
+            PlaySessionId = "play-session",
+            PositionTicks = TimeSpan.FromSeconds(42).Ticks
+        });
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.NotNull(sessions.LastProgress);
+        Assert.Equal(VideoId, sessions.LastProgress.ItemId);
+        Assert.Equal(TimeSpan.FromSeconds(42).Ticks, sessions.LastProgress.PositionTicks);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_tempDir))
+        {
+            Directory.Delete(_tempDir, recursive: true);
+        }
+    }
+
+    private static WebApplicationFactory<Program> CreateFactory(
+        IPlaybackInfoService? playback = null,
+        IHlsAssetService? hls = null,
+        ITrickplayService? trickplay = null,
+        IPlaybackSessionService? sessions = null,
+        IVideoSourceService? sources = null,
+        ITranscodeSessionService? transcodes = null)
+    {
+        return new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    services.AddSingleton(playback ?? new FakePlaybackInfoService(null));
+                    services.AddSingleton(hls ?? new RecordingHlsAssetService(null));
+                    services.AddSingleton(trickplay ?? new FakeTrickplayService(null, null));
+                    services.AddSingleton(sessions ?? new RecordingPlaybackSessionService());
+                    services.AddSingleton(sources ?? new FakeVideoSourceService(null));
+                    services.AddSingleton(transcodes ?? new RecordingTranscodeSessionService());
+                });
+            });
+    }
+
+    private sealed class FakePlaybackInfoService : IPlaybackInfoService
+    {
+        private readonly PlaybackInfoResponse? _response;
+
+        public FakePlaybackInfoService(PlaybackInfoResponse? response)
+        {
+            _response = response;
+        }
+
+        public Task<PlaybackInfoResponse?> GetPlaybackInfoAsync(
+            Guid itemId,
+            PlaybackInfoRequest? request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(itemId == VideoId ? _response : null);
+    }
+
+    private sealed class RecordingHlsAssetService : IHlsAssetService
+    {
+        private readonly HlsAsset? _asset;
+
+        public RecordingHlsAssetService(HlsAsset? asset)
+        {
+            _asset = asset;
+        }
+
+        public string? LastAssetPath { get; private set; }
+
+        public Task<HlsAsset?> GetAssetAsync(Guid id, string assetPath, CancellationToken cancellationToken)
+        {
+            LastAssetPath = assetPath;
+            return Task.FromResult(id == VideoId ? _asset : null);
+        }
+    }
+
+    private sealed class FakeTrickplayService : ITrickplayService
+    {
+        private readonly TrickplayPlaylist? _playlist;
+        private readonly TrickplayTile? _tile;
+
+        public FakeTrickplayService(TrickplayPlaylist? playlist, TrickplayTile? tile)
+        {
+            _playlist = playlist;
+            _tile = tile;
+        }
+
+        public Task<TrickplayPlaylist?> GetPlaylistAsync(Guid itemId, int width, CancellationToken cancellationToken) =>
+            Task.FromResult(itemId == VideoId ? _playlist : null);
+
+        public Task<TrickplayTile?> GetTileAsync(Guid itemId, int width, int index, CancellationToken cancellationToken) =>
+            Task.FromResult(itemId == VideoId ? _tile : null);
+    }
+
+    private sealed class RecordingPlaybackSessionService : IPlaybackSessionService
+    {
+        public PlaybackSessionRequest? LastProgress { get; private set; }
+
+        public Task StartAsync(PlaybackSessionRequest request, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task ProgressAsync(PlaybackSessionRequest request, CancellationToken cancellationToken)
+        {
+            LastProgress = request;
+            return Task.CompletedTask;
+        }
+
+        public Task PingAsync(PlaybackSessionRequest request, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task StopAsync(PlaybackSessionRequest request, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task<UserItemData?> MarkPlayedAsync(Guid itemId, CancellationToken cancellationToken) =>
+            Task.FromResult<UserItemData?>(new UserItemData(true));
+
+        public Task<UserItemData?> MarkUnplayedAsync(Guid itemId, CancellationToken cancellationToken) =>
+            Task.FromResult<UserItemData?>(new UserItemData(false));
+    }
+
+    private sealed class FakeVideoSourceService : IVideoSourceService
+    {
+        private readonly VideoSourceFile? _source;
+
+        public FakeVideoSourceService(VideoSourceFile? source)
+        {
+            _source = source;
+        }
+
+        public Task<VideoSourceFile?> GetSourceAsync(Guid id, CancellationToken cancellationToken) =>
+            Task.FromResult(id == VideoId ? _source : null);
+    }
+
+    private sealed class RecordingTranscodeSessionService : ITranscodeSessionService
+    {
+        public void Register(string playSessionId, Guid itemId)
+        {
+        }
+
+        public void Ping(string playSessionId)
+        {
+        }
+
+        public Task CancelAsync(string playSessionId, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task<int> CancelAllAsync(CancellationToken cancellationToken) => Task.FromResult(0);
+    }
+}

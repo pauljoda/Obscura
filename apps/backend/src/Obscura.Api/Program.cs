@@ -89,6 +89,7 @@ app.MapCollectionEndpoints();
 app.MapMediaEndpoints();
 app.MapSeriesEndpoints();
 app.MapVideoEndpoints();
+app.MapJellyfinPlaybackEndpoints();
 app.MapJobEndpoints();
 app.MapSettingsEndpoints();
 app.MapSystemEndpoints();

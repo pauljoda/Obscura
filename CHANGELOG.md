@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Video playback now exposes the first Jellyfin-compatible endpoints for PlaybackInfo negotiation, root-level video streaming, live HLS playlists, HLS segments, session progress, played-state updates, and image-playlist trickplay. This is the first breaking-media-pipeline slice and prepares clients to move away from Obscura-specific playback routes.
 - V2 video playback now falls back to direct streaming when adaptive HLS is not ready, and subtitle transcripts load from v2 subtitle assets instead of the removed v1 API routes.
 - V2 video pages no longer break the .NET debug session when the browser cancels duplicate stream probes during playback startup.
 - V2 video playback now starts an adaptive HLS package when a non-browser-native source, such as MKV, has no cached manifest yet.
@@ -24,6 +25,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Added
+- Jellyfin-shaped playback contracts and .NET service seams for media sources, media streams, playback sessions, active transcode cancellation, and HLS image-playlist trickplay.
+- Public Jellyfin-compatible routes: `GET/POST /Items/{itemId}/PlaybackInfo`, `GET /Videos/{itemId}/stream`, `GET /Videos/{itemId}/live.m3u8`, `GET /Videos/{itemId}/hls/{playlistId}/{segmentId}.{container}`, `DELETE /Videos/ActiveEncodings`, `GET /Videos/{itemId}/Trickplay/{width}/tiles.m3u8`, `GET /Videos/{itemId}/Trickplay/{width}/{index}.jpg`, `POST /Sessions/Playing`, `POST /Sessions/Playing/Progress`, `POST /Sessions/Playing/Ping`, `POST /Sessions/Playing/Stopped`, and `POST/DELETE /UserPlayedItems/{itemId}`.
 - `PATCH /api/entities/{id}/playback` endpoint — updates resume position, accumulated play duration, and completion state for any media entity. Follows the same pattern as rating and flags mutations.
 - `PlaybackCapability` contract and JSON discriminator (`"playback"`) — the playback capability is now serialized to API responses so clients can read resume position, play count, and completion status from the entity card.
 - `HEAD /api/videos/{id}/stream` — returns Content-Type, Content-Length, and Accept-Ranges headers without opening a file stream, fixing the 500 error that occurred when players probed the stream endpoint.
@@ -42,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- The development SPA proxy now treats Jellyfin-compatible root routes as backend API traffic, so `/Items`, `/Videos`, `/Sessions`, and `/UserPlayedItems` are not forwarded to Vite.
 - Shared v2 entity UI now centralizes entity kind, capability, file-role, label, and route codes in typed frontend registries instead of spreading raw string checks through `EntityThumbnail`, `EntityGrid`, and `EntityDetail`.
 - All entity detail pages consolidated from temporary `/v2/` staging routes to canonical paths (`/videos/[id]`, `/series/[id]`, `/galleries/[id]`, etc.) — the entity route registry now resolves directly to standard routes, fixing back-navigation that previously landed on the old v2 test page.
 - Sidebar footer link now points to the dev tools hub (`/dev/v2-migration`) with migration controls, gate management, and quick links to design system, settings, and operations.
