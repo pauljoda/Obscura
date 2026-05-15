@@ -1,3 +1,4 @@
+using Obscura.Api;
 using Obscura.Api.Endpoints;
 using Obscura.Application;
 using Obscura.Contracts.System;
