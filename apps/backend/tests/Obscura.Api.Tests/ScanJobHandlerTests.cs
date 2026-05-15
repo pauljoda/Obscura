@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Obscura.Application.Jobs;
 using Obscura.Application.Jobs.Handlers;
+using Obscura.Application.Jobs.Handlers.Scan;
 using Obscura.Application.Jobs.Ports;
 using Obscura.Domain.Entities;
 
@@ -8,6 +9,71 @@ namespace Obscura.Api.Tests;
 
 public sealed class ScanJobHandlerTests
 {
+    [Fact]
+    public async Task VideoScanEnqueuesPreviewJobWhenOnlyTrickplayNeedsGeneration()
+    {
+        var root = new LibraryRootData(
+            Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            "/media/videos",
+            "Videos",
+            Enabled: true,
+            Recursive: true,
+            ScanVideos: true,
+            ScanImages: false,
+            ScanAudio: false,
+            ScanBooks: false,
+            IsNsfw: false);
+        var videoId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        var persistence = new FakeScanPersistence([root])
+        {
+            Settings = new LibrarySettingsData(
+                AutoGenerateMetadata: false,
+                AutoGenerateFingerprints: false,
+                GeneratePhash: false,
+                AutoGeneratePreview: false,
+                GenerateTrickplay: true,
+                TrickplayIntervalSeconds: 10,
+                PreviewClipDurationSeconds: 8,
+                ThumbnailQuality: 2,
+                TrickplayQuality: 2),
+            UpsertedVideoIds = [videoId],
+            DownstreamNeedsById = new Dictionary<Guid, DownstreamNeeds>
+            {
+                [videoId] = new(
+                    NeedsProbe: false,
+                    NeedsFingerprint: false,
+                    NeedsPreview: false,
+                    NeedsTrickplay: true,
+                    NeedsSubtitleExtraction: false)
+            }
+        };
+        var discovery = new RecordingFileDiscovery(["/media/videos/movie.mkv"]);
+        var queue = new RecordingJobQueue();
+        var handler = new ScanLibraryJobHandler(
+            NullLogger<ScanLibraryJobHandler>.Instance,
+            discovery,
+            persistence);
+        var job = new JobRunSnapshot(
+            Guid.NewGuid(),
+            JobType.ScanLibrary,
+            JobRunStatus.Running,
+            Progress: 0,
+            Message: null,
+            PayloadJson: $$"""{"libraryRootId":"{{root.Id}}"}""",
+            TargetEntityKind: "library-root",
+            TargetEntityId: root.Id.ToString(),
+            TargetLabel: root.Label,
+            CreatedAt: DateTimeOffset.UtcNow,
+            StartedAt: DateTimeOffset.UtcNow,
+            FinishedAt: null);
+
+        await handler.HandleAsync(new JobContext(job, queue), CancellationToken.None);
+
+        var request = Assert.Single(queue.Enqueued);
+        Assert.Equal(JobType.GeneratePreview, request.Type);
+        Assert.Equal(videoId.ToString(), request.TargetEntityId);
+    }
+
     [Fact]
     public async Task HandlesScheduledLibraryRootPayloadAsSingleRootScan()
     {
@@ -74,6 +140,19 @@ public sealed class ScanJobHandlerTests
     {
         public List<Guid> LoadedRootIds { get; } = [];
         public bool LoadedEnabledRoots { get; private set; }
+        public LibrarySettingsData Settings { get; init; } = new(
+            AutoGenerateMetadata: true,
+            AutoGenerateFingerprints: true,
+            GeneratePhash: false,
+            AutoGeneratePreview: true,
+            GenerateTrickplay: true,
+            TrickplayIntervalSeconds: 10,
+            PreviewClipDurationSeconds: 8,
+            ThumbnailQuality: 2,
+            TrickplayQuality: 2);
+        public IReadOnlyList<Guid> UpsertedVideoIds { get; init; } = [];
+        public IReadOnlyDictionary<Guid, DownstreamNeeds> DownstreamNeedsById { get; init; } =
+            new Dictionary<Guid, DownstreamNeeds>();
 
         public Task<LibraryRootData?> GetLibraryRootAsync(Guid rootId, CancellationToken cancellationToken)
         {
@@ -88,10 +167,10 @@ public sealed class ScanJobHandlerTests
         }
 
         public Task<LibrarySettingsData> GetSettingsAsync(CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
+            Task.FromResult(Settings);
 
         public Task UpdateRootLastScannedAsync(Guid rootId, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
+            Task.CompletedTask;
 
         public Task<Guid> UpsertVideoAsync(string filePath, string title, Guid libraryRootId, bool isNsfw, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
@@ -118,7 +197,7 @@ public sealed class ScanJobHandlerTests
             throw new NotSupportedException();
 
         public Task<int> RemoveStaleVideosByRootAsync(Guid rootId, IReadOnlySet<string> validPaths, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
+            Task.FromResult(0);
 
         public Task<int> RemoveStaleImagesInGalleryAsync(Guid galleryEntityId, IReadOnlySet<string> validPaths, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
@@ -139,10 +218,10 @@ public sealed class ScanJobHandlerTests
             throw new NotSupportedException();
 
         public Task<IReadOnlyList<Guid>> UpsertVideosBatchAsync(IReadOnlyList<VideoUpsertItem> items, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
+            Task.FromResult(UpsertedVideoIds);
 
         public Task<IReadOnlyDictionary<Guid, DownstreamNeeds>> CheckDownstreamNeedsBatchAsync(IReadOnlyList<Guid> entityIds, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
+            Task.FromResult(DownstreamNeedsById);
 
         public Task<bool> HasEntityTechnicalAsync(Guid entityId, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
@@ -199,6 +278,17 @@ public sealed class ScanJobHandlerTests
             throw new NotSupportedException();
     }
 
+    private sealed class RecordingFileDiscovery(IReadOnlyList<string> files) : IFileDiscovery
+    {
+        public Task<IReadOnlyList<string>> DiscoverFilesAsync(
+            string rootPath, MediaCategory category, bool recursive, CancellationToken cancellationToken) =>
+            Task.FromResult(files);
+
+        public Task<IReadOnlyDictionary<string, IReadOnlyList<string>>> DiscoverFilesByDirectoryAsync(
+            string rootPath, MediaCategory category, bool recursive, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+    }
+
     private sealed class NoopJobQueue : IJobQueueService
     {
         public Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<JobRunSnapshot>>([]);
@@ -206,6 +296,30 @@ public sealed class ScanJobHandlerTests
         public Task<JobRunSnapshot> EnqueueAsync(EnqueueJobRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<bool> HasPendingAsync(JobType type, string? targetEntityId, CancellationToken cancellationToken) => Task.FromResult(false);
         public Task<int> EnqueueBatchAsync(IReadOnlyList<EnqueueJobRequest> requests, CancellationToken cancellationToken) => Task.FromResult(0);
+        public Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken) => Task.FromResult(0);
+        public Task<bool> CancelRunAsync(Guid id, CancellationToken cancellationToken) => Task.FromResult(false);
+        public Task<int> ClearFailuresAsync(JobType? type, CancellationToken cancellationToken) => Task.FromResult(0);
+        public Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken) => Task.FromResult<JobRunSnapshot?>(null);
+        public Task UpdateProgressAsync(Guid id, int progress, string? message, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task CompleteAsync(Guid id, string? message, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task FailAsync(Guid id, string message, TimeSpan retryDelay, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task<IReadOnlyList<JobQueueCount>> GetQueueCountsAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<JobQueueCount>>([]);
+        public Task<int> PruneHistoryAsync(TimeSpan retention, CancellationToken cancellationToken) => Task.FromResult(0);
+    }
+
+    private sealed class RecordingJobQueue : IJobQueueService
+    {
+        public List<EnqueueJobRequest> Enqueued { get; } = [];
+
+        public Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<JobRunSnapshot>>([]);
+        public Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<JobRunSnapshot> EnqueueAsync(EnqueueJobRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<bool> HasPendingAsync(JobType type, string? targetEntityId, CancellationToken cancellationToken) => Task.FromResult(false);
+        public Task<int> EnqueueBatchAsync(IReadOnlyList<EnqueueJobRequest> requests, CancellationToken cancellationToken)
+        {
+            Enqueued.AddRange(requests);
+            return Task.FromResult(requests.Count);
+        }
         public Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken) => Task.FromResult(0);
         public Task<bool> CancelRunAsync(Guid id, CancellationToken cancellationToken) => Task.FromResult(false);
         public Task<int> ClearFailuresAsync(JobType? type, CancellationToken cancellationToken) => Task.FromResult(0);

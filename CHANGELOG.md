@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video thumbnails now use Jellyfin image-playlist trickplay maps for hover previews after scans generate tiled JPEG sheets.
 - V2 rescans now repair missing Jellyfin media-source and trickplay records, so migrated videos can populate playback metadata and hover previews after the media-pipeline replacement.
 - V2 adaptive HLS playlists now point at the public Jellyfin-compatible `/Videos/{id}/hls/...` route, fixing variant playlist 404s during playback.
+- Library scans now enqueue trickplay generation whenever trickplay is enabled, even if thumbnail preview generation is disabled.
 - Local dev navigation now ignores browser-aborted backend requests, preventing canceled list loads during refresh/navigation from breaking the .NET debug session.
 - Scheduled v2 library scans now target the intended watched folder instead of falling back to all eligible roots, and configured static web builds are served directly even in development/test hosts.
 - Entity detail descriptions now render markdown through a sanitized v2 helper, preserving formatting while stripping unsafe HTML and script URLs.
@@ -108,6 +109,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Browser-canceled v2 entity list requests no longer surface as unhandled `OperationCanceledException` failures while using the dev proxy.
 - V2 scans now re-run probes when a legacy technical row exists without a Jellyfin media source, and re-run preview generation when thumbnails exist without trickplay tile metadata.
 - V2 HLS master playlists now advertise `/hls/{playlistId}/index.m3u8` variant URLs instead of private cache-relative paths that had no public route.
+- V2 video playback no longer 404s when HLS clients resolve master-playlist variant URLs as `/Videos/{id}/v/{quality}/index.m3u8`, and trickplay-only scans now build tiled preview playlists without forcing thumbnail preview generation.
 - The .NET API now handles the Svelte shell's playlist-session and update-check calls, removing 404 noise from video pages after the API host migration.
 - Scheduled v2 scan jobs now share a typed scan-root payload with scan handlers, including compatibility for already queued `libraryRootId` payloads, so per-root auto scans no longer expand into all-root scans.
 - Static SPA fallback now serves a configured web root without the development Vite proxy intercepting static assets or client-side routes.

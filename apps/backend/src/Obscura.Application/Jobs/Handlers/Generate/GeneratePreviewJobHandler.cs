@@ -25,10 +25,13 @@ public sealed class GeneratePreviewJobHandler(
 
         var (duration, width, height) = await GetDimensionsAsync(entityId, cancellationToken);
 
-        using (timer.Phase("thumbnail+preview"))
+        if (settings.AutoGeneratePreview)
         {
-            await context.ReportProgressAsync(10, "Generating thumbnail and preview", cancellationToken);
-            await GenerateThumbnailAndPreviewAsync(entityId, filePath, settings, duration, width, height, cancellationToken);
+            using (timer.Phase("thumbnail+preview"))
+            {
+                await context.ReportProgressAsync(10, "Generating thumbnail and preview", cancellationToken);
+                await GenerateThumbnailAndPreviewAsync(entityId, filePath, settings, duration, width, height, cancellationToken);
+            }
         }
 
         if (settings.GenerateTrickplay)

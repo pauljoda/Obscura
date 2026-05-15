@@ -58,6 +58,18 @@ public static class JellyfinPlaybackEndpoints
             .WithName("GetJellyfinVideoHlsSegment")
             .WithTags("Jellyfin Videos");
 
+        routes.MapGet("/Videos/{itemId:guid}/v/{playlistId}/{segmentId}.{container}", (
+            Guid itemId,
+            string playlistId,
+            string segmentId,
+            string container,
+            IHlsAssetService hlsAssets,
+            HttpContext httpContext,
+            CancellationToken cancellationToken) =>
+            StreamHlsAssetAsync(itemId, $"v/{playlistId}/{segmentId}.{container}", hlsAssets, httpContext, cancellationToken))
+            .WithName("GetJellyfinVideoHlsRelativeAsset")
+            .WithTags("Jellyfin Videos");
+
         routes.MapDelete("/Videos/ActiveEncodings", async (
             ITranscodeSessionService transcodes,
             CancellationToken cancellationToken) =>
