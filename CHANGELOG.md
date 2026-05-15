@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### What's New
 - V2 video playback now falls back to direct streaming when adaptive HLS is not ready, and subtitle transcripts load from v2 subtitle assets instead of the removed v1 API routes.
 - V2 video pages no longer break the .NET debug session when the browser cancels duplicate stream probes during playback startup.
+- V2 video playback now starts an adaptive HLS package when a non-browser-native source, such as MKV, has no cached manifest yet.
+- V2 subtitle playback now reads tracks through video subtitle API routes, so migrated subtitle files with absolute cache paths can still render in the player and transcript.
 - Local v2 development now serves the live Svelte app through Vite again, so player fixes and route changes appear immediately instead of using a stale production build.
 - V2 upgrade consent now persists in the database, so restarting the dev backend no longer re-opens the upgrade prompt or re-runs the destructive fresh-start reset.
 - Scheduled v2 library scans now target the intended watched folder instead of falling back to all eligible roots, and configured static web builds are served directly even in development/test hosts.
@@ -75,6 +77,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 - V2 video pages no longer block forever on a missing HLS status route. The player now only uses the legacy readiness probe for legacy `hls2` URLs, attaches v2 manifests directly, and falls back to direct streaming when adaptive playback fails.
 - V2 video stream probes now tolerate browser-canceled HEAD requests, avoiding debugger-breaking cancellation exceptions during player initialization.
+- V2 video pages no longer try direct playback for Matroska sources, preventing the player from choosing a stream the backend correctly rejects with 415.
+- V2 subtitle tracks no longer expose raw filesystem paths to the browser; the player now requests normalized WebVTT and preserved ASS/SSA sources through the .NET video API.
 - Local .NET development no longer serves the stale `apps/web-svelte/build` bundle by default; page requests proxy to the running Vite dev server unless a static web root is explicitly configured.
 - V2 subtitle display and transcript panels now read cue text from the normalized `/assets/...` WebVTT files exposed by the v2 subtitle capability, including ASS/SSA tracks that only have a generated VTT fallback.
 - V2 data now persists across backend container/app restarts in dev Docker. The upgrade gate no longer depends only on `/data/upgrade-markers`, which was not mounted by the dev compose backend and could disappear while Postgres data remained.

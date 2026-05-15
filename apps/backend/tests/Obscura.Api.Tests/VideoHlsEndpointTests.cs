@@ -45,6 +45,25 @@ public sealed class VideoHlsEndpointTests : IDisposable
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
     }
 
+    [Fact]
+    public async Task SubtitleEndpointServesStoredSubtitleAsset()
+    {
+        var trackId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        var filePath = Path.Combine(_tempDir, "track.vtt");
+        await File.WriteAllTextAsync(filePath, "WEBVTT");
+        using var factory = CreateFactory(
+            new FakeHlsAssetService(null),
+            new FakeVideoSubtitleAssetService(new VideoSubtitleAsset(filePath, "text/vtt; charset=utf-8")));
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync($"/api/videos/{FakeHlsAssetService.VideoId}/subtitles/{trackId}");
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/vtt", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("WEBVTT", body);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
@@ -55,12 +74,20 @@ public sealed class VideoHlsEndpointTests : IDisposable
 
     private static WebApplicationFactory<Program> CreateFactory(IHlsAssetService hlsAssets)
     {
+        return CreateFactory(hlsAssets, new FakeVideoSubtitleAssetService(null));
+    }
+
+    private static WebApplicationFactory<Program> CreateFactory(
+        IHlsAssetService hlsAssets,
+        IVideoSubtitleAssetService subtitleAssets)
+    {
         return new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>
                 {
                     services.AddSingleton(hlsAssets);
+                    services.AddSingleton(subtitleAssets);
                 });
             });
     }
@@ -81,6 +108,32 @@ public sealed class VideoHlsEndpointTests : IDisposable
             CancellationToken cancellationToken)
         {
             return Task.FromResult(id == VideoId ? _asset : null);
+        }
+    }
+
+    private sealed class FakeVideoSubtitleAssetService : IVideoSubtitleAssetService
+    {
+        private readonly VideoSubtitleAsset? _asset;
+
+        public FakeVideoSubtitleAssetService(VideoSubtitleAsset? asset)
+        {
+            _asset = asset;
+        }
+
+        public Task<VideoSubtitleAsset?> GetSubtitleAsync(
+            Guid videoId,
+            Guid trackId,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(videoId == FakeHlsAssetService.VideoId ? _asset : null);
+        }
+
+        public Task<VideoSubtitleAsset?> GetSubtitleSourceAsync(
+            Guid videoId,
+            Guid trackId,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(videoId == FakeHlsAssetService.VideoId ? _asset : null);
         }
     }
 }

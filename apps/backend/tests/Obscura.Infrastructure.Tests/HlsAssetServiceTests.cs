@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Obscura.Application.Videos;
+using Obscura.Infrastructure.Processes;
 using Obscura.Infrastructure.Videos;
 
 namespace Obscura.Infrastructure.Tests;
@@ -45,11 +48,64 @@ public sealed class HlsAssetServiceTests : IDisposable
         Assert.Null(asset);
     }
 
+    [Fact]
+    public async Task StartsGenerationWhenMasterManifestIsMissing()
+    {
+        var videoId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var process = new ManifestWritingProcessExecutor();
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot),
+            new FakeVideoSourceService(new VideoSourceFile(videoId, sourcePath, "video/x-matroska", false)),
+            process,
+            NullLogger<HlsAssetService>.Instance);
+
+        var asset = await service.GetAssetAsync(videoId, "master.m3u8", CancellationToken.None);
+
+        Assert.NotNull(asset);
+        Assert.Equal("application/vnd.apple.mpegurl", asset.ContentType);
+        Assert.True(process.WasCalled);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_cacheRoot))
         {
             Directory.Delete(_cacheRoot, recursive: true);
+        }
+    }
+
+    private sealed class FakeVideoSourceService : IVideoSourceService
+    {
+        private readonly VideoSourceFile _source;
+
+        public FakeVideoSourceService(VideoSourceFile source)
+        {
+            _source = source;
+        }
+
+        public Task<VideoSourceFile?> GetSourceAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(id == _source.EntityId ? _source : null);
+        }
+    }
+
+    private sealed class ManifestWritingProcessExecutor : ProcessExecutor
+    {
+        public bool WasCalled { get; private set; }
+
+        public override async Task<ProcessExecutionResult> RunAsync(
+            string fileName,
+            IReadOnlyList<string> arguments,
+            IReadOnlyDictionary<string, string>? environment,
+            CancellationToken cancellationToken)
+        {
+            WasCalled = true;
+            var manifestPath = arguments[^1];
+            Directory.CreateDirectory(Path.GetDirectoryName(manifestPath)!);
+            await File.WriteAllTextAsync(manifestPath, "#EXTM3U", cancellationToken);
+            return new ProcessExecutionResult(0, string.Empty, string.Empty);
         }
     }
 }

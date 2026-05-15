@@ -31,15 +31,17 @@ export function extractVideoPlayerProps(
   const markers = getCapability(capabilities, CAPABILITY_KIND.markers);
   const subtitles = getCapability(capabilities, CAPABILITY_KIND.subtitles);
 
+  const sourceFile = files?.items.find((f) => f.role === ENTITY_FILE_ROLE.source);
   const trickplayFile = files?.items.find((f) => f.role === ENTITY_FILE_ROLE.trickplay);
   const trickplayVttUrl = trickplayFile ? v2AssetUrl(trickplayFile.path) : "";
   const spriteUrl = trickplayVttUrl
     ? v2AssetUrl(`/assets/videos/${videoId}/sprite.jpg`)
     : "";
+  const directPlayable = isBrowserNativeVideoSource(sourceFile?.path, technical?.container);
 
   return {
     src: v2ApiPath(`/videos/${videoId}/hls/master.m3u8`),
-    directSrc: v2ApiPath(`/videos/${videoId}/stream`),
+    directSrc: directPlayable ? v2ApiPath(`/videos/${videoId}/stream`) : "",
     codec: technical?.codec ?? null,
     poster: v2AssetUrl(images?.thumbnailUrl) || "",
     markers: (markers?.items ?? []).map((m) => ({
@@ -71,7 +73,8 @@ function mapEntitySubtitle(
   },
 ): VideoSubtitleTrack {
   const sourceFormat = parseSubtitleSourceFormat(sub.sourceFormat);
-  const sourceUrl = isServedAssetPath(sub.sourcePath) ? v2AssetUrl(sub.sourcePath) : null;
+  const hasStyledSource =
+    (sourceFormat === "ass" || sourceFormat === "ssa") && Boolean(sub.sourcePath);
 
   return {
     id: sub.id,
@@ -82,8 +85,10 @@ function mapEntitySubtitle(
     source: parseSubtitleSource(sub.source),
     sourceFormat,
     isDefault: sub.isDefault,
-    url: v2AssetUrl(sub.storagePath),
-    sourceUrl,
+    url: v2ApiPath(`/videos/${videoId}/subtitles/${sub.id}`),
+    sourceUrl: hasStyledSource
+      ? v2ApiPath(`/videos/${videoId}/subtitles/${sub.id}/source`)
+      : null,
     createdAt: "",
   };
 }
@@ -116,8 +121,18 @@ function parseSubtitleSourceFormat(
   }
 }
 
-function isServedAssetPath(value: string | null | undefined): value is string {
-  return value?.startsWith("/assets/") === true;
+function isBrowserNativeVideoSource(
+  path: string | null | undefined,
+  container: string | null | undefined,
+): boolean {
+  const normalizedContainer = container?.trim().toLowerCase();
+  if (normalizedContainer && ["matroska", "mkv", "avi", "wmv", "flv", "mpegts"].includes(normalizedContainer)) {
+    return false;
+  }
+
+  const extension = path?.match(/\.([a-z0-9]+)$/i)?.[1]?.toLowerCase();
+  if (!extension) return false;
+  return ["mp4", "m4v", "webm", "ogg", "ogv"].includes(extension);
 }
 
 function parseDotnetTimeSpan(value: string | null | undefined): number {
