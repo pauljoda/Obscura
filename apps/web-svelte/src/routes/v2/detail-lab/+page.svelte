@@ -18,6 +18,7 @@
   let heroSource = $state<HeroSource>("banner");
   let posterSize = $state<EntityDetailPosterSize>("medium");
   let debugNoBlur = $state(false);
+  let debugBlurPx = $state(20);
   let hiddenSections = $state<Set<string>>(new Set());
 
   const allSectionNames = [
@@ -160,6 +161,17 @@
             class:is-active={debugNoBlur}
             onclick={() => (debugNoBlur = !debugNoBlur)}
           >no blur</button>
+          <label class="blur-input">
+            blur
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              bind:value={debugBlurPx}
+            />
+            px
+          </label>
         </div>
       </div>
 
@@ -217,6 +229,7 @@
       {posterSize}
       showHero={true}
       {debugNoBlur}
+      {debugBlurPx}
     />
   {/if}
 </main>
@@ -387,6 +400,28 @@
   .section-chip.is-hidden:hover {
     border-color: rgba(168, 72, 80, 0.6);
     background: rgba(168, 72, 80, 0.15);
+  }
+
+  /* ── Blur input ─────────────────────────────────────────── */
+
+  .blur-input {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.68rem;
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    color: var(--color-text-muted, #8a93a6);
+  }
+
+  .blur-input input {
+    width: 3.5rem;
+    padding: 0.2rem 0.35rem;
+    font-size: 0.68rem;
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    border: 1px solid var(--color-border, #1c2235);
+    background: var(--color-surface-3, #151a28);
+    color: var(--color-text-primary, #f2eed8);
+    text-align: center;
   }
 
   /* ── Status strip ───────────────────────────────────────── */

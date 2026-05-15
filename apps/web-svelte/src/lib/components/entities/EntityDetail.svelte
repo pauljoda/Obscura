@@ -41,6 +41,7 @@
     ratingBusy?: boolean;
     showHero?: boolean;
     debugNoBlur?: boolean;
+    debugBlurPx?: number;
   }
 
   let {
@@ -50,6 +51,7 @@
     ratingBusy = false,
     showHero = true,
     debugNoBlur = false,
+    debugBlurPx = 20,
   }: Props = $props();
 
   type HeroMode = "image" | "poster-blur" | "gradient";
@@ -162,7 +164,7 @@
         <div class="hero-reflection">
           <img src={card.hero!.src} alt="" aria-hidden="true" />
         </div>
-        <div class="hero-blur-overlay"></div>
+        <div class="hero-blur-overlay" style:--hero-blur="{debugBlurPx}px"></div>
         {@render heroContent()}
       </div>
     {:else if heroMode === "poster-blur"}
@@ -555,8 +557,8 @@
     position: absolute;
     inset: 0;
     z-index: 1;
-    backdrop-filter: blur(20px) saturate(1.3) brightness(0.5);
-    -webkit-backdrop-filter: blur(20px) saturate(1.3) brightness(0.5);
+    backdrop-filter: blur(var(--hero-blur, 20px)) saturate(1.3) brightness(0.5);
+    -webkit-backdrop-filter: blur(var(--hero-blur, 20px)) saturate(1.3) brightness(0.5);
     background: linear-gradient(
       to bottom,
       rgba(7, 8, 11, 0.3) 0%,
