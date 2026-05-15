@@ -512,8 +512,7 @@
   }
 
   .action-badge:not(:disabled):not(.active):hover {
-    color: var(--detail-text-muted);
-    border-color: var(--detail-text-muted);
+    opacity: 0.8;
   }
 
   /* Favorite — red when active */
