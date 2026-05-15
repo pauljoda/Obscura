@@ -169,6 +169,7 @@ Two GitHub Actions workflows manage the image lifecycle:
 
 ## Tooling Expectations
 
+- Local dev stack restarts must use the canonical VS Code workflow. Do not start a second API, worker, or Vite instance on an alternate port for live verification. When the running stack needs to be refreshed, first tell the user that the dev stack is being rebooted, run `pnpm dev:kill` (equivalent VS Code task: `Obscura: Kill Orphans`) to clear orphaned .NET/Vite/Docusaurus processes and dev ports, then launch the VS Code compound `Obscura: Full Stack` (preLaunch task: `Obscura: Full Prebuild`; configurations: `Obscura: API` and `Obscura: Worker`). Use `Obscura: Full Stack + Chrome` only when browser launch is explicitly useful.
 - Avoid destructive git commands unless explicitly requested.
 - Keep the repo runnable via Docker Compose.
 - Prefer lightweight validation commands before committing.
