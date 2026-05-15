@@ -50,7 +50,7 @@ public static class DependencyInjection
         services.AddDbContext<ObscuraDbContext>((provider, options) =>
             options.UseNpgsql(provider.GetRequiredService<NpgsqlDataSource>()));
         services.AddSingleton(new V2UpgradeGateOptions(dataDir));
-        services.AddSingleton<IV2UpgradeGate, V2UpgradeGate>();
+        services.AddScoped<IV2UpgradeGate, V2UpgradeGate>();
         services.AddSingleton(new DatabaseBackupServiceOptions(connectionString, dataDir));
         services.AddSingleton<ProcessExecutor>();
         services.AddSingleton<MediaToolService>();

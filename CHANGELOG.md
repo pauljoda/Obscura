@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- V2 upgrade consent now persists in the database, so restarting the dev backend no longer re-opens the upgrade prompt or re-runs the destructive fresh-start reset.
 - Scheduled v2 library scans now target the intended watched folder instead of falling back to all eligible roots, and configured static web builds are served directly even in development/test hosts.
 - Entity detail descriptions now render markdown through a sanitized v2 helper, preserving formatting while stripping unsafe HTML and script URLs.
 - Videos now track playback state on the v2 backend — play count, accumulated watch time, and resume position are persisted per entity. Navigating back to a video resumes from where you left off, and the position is updated every 10 seconds during playback.
@@ -69,6 +70,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- V2 data now persists across backend container/app restarts in dev Docker. The upgrade gate no longer depends only on `/data/upgrade-markers`, which was not mounted by the dev compose backend and could disappear while Postgres data remained.
 - Scheduled v2 scan jobs now share a typed scan-root payload with scan handlers, including compatibility for already queued `libraryRootId` payloads, so per-root auto scans no longer expand into all-root scans.
 - Static SPA fallback now serves a configured web root without the development Vite proxy intercepting static assets or client-side routes.
 - Entity detail markdown now removes unsafe HTML blocks, event handlers, and `javascript:`/`data:` URLs before Svelte renders the generated HTML.
