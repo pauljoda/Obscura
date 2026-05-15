@@ -17,15 +17,12 @@ var staticFileProvider = resolvedStaticWebRoot is not null
     ? new PhysicalFileProvider(resolvedStaticWebRoot)
     : null;
 
-var dataDir = builder.Configuration["OBSCURA_DATA_DIR"] ??
+var dataDir = ResolvePath(builder.Configuration["OBSCURA_DATA_DIR"] ??
     builder.Configuration["Obscura:DataDir"] ??
-    "/data";
-var cacheDir = builder.Configuration["OBSCURA_CACHE_DIR"] ??
+    "/data", builder.Environment.ContentRootPath);
+var cacheDir = ResolvePath(builder.Configuration["OBSCURA_CACHE_DIR"] ??
     builder.Configuration["Obscura:CacheDir"] ??
-    Path.Combine(dataDir, "cache");
-var resolvedCacheDir = Path.IsPathRooted(cacheDir)
-    ? cacheDir
-    : Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, cacheDir));
+    Path.Combine(dataDir, "cache"), builder.Environment.ContentRootPath);
 
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
@@ -44,7 +41,7 @@ builder.Services.AddCors(options =>
     });
 });
 builder.Services.AddObscuraApplication();
-builder.Services.AddObscuraInfrastructure(builder.Configuration);
+builder.Services.AddObscuraInfrastructure(builder.Configuration, builder.Environment.ContentRootPath);
 
 var app = builder.Build();
 
@@ -69,11 +66,11 @@ else
     app.UseStaticFiles();
 }
 
-if (Directory.Exists(resolvedCacheDir))
+if (Directory.Exists(cacheDir))
 {
     app.UseStaticFiles(new StaticFileOptions
     {
-        FileProvider = new PhysicalFileProvider(resolvedCacheDir),
+        FileProvider = new PhysicalFileProvider(cacheDir),
         RequestPath = "/assets",
         ServeUnknownFileTypes = false,
     });
@@ -133,5 +130,10 @@ static string? ResolveStaticWebRoot(string? configuredPath, string contentRootPa
 
     return candidates.FirstOrDefault(Directory.Exists);
 }
+
+static string ResolvePath(string path, string basePath) =>
+    Path.GetFullPath(Path.IsPathRooted(path)
+        ? path
+        : Path.Combine(basePath, path));
 
 public partial class Program;

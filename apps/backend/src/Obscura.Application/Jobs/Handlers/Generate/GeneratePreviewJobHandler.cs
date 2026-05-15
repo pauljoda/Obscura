@@ -39,7 +39,12 @@ public sealed class GeneratePreviewJobHandler(
             using (timer.Phase("trickplay"))
             {
                 await context.ReportProgressAsync(50, "Generating trickplay tiles", cancellationToken);
-                await GenerateTrickplayBatchAsync(entityId, filePath, settings, duration, width, height, cancellationToken);
+                var trickplayGenerated = await GenerateTrickplayBatchAsync(
+                    entityId, filePath, settings, duration, width, height, cancellationToken);
+                if (!trickplayGenerated)
+                {
+                    throw new InvalidOperationException($"Failed to generate trickplay tiles for {entityId}.");
+                }
             }
         }
 
@@ -85,15 +90,15 @@ public sealed class GeneratePreviewJobHandler(
         }
     }
 
-    private async Task GenerateTrickplayBatchAsync(
+    private async Task<bool> GenerateTrickplayBatchAsync(
         Guid entityId, string filePath, LibrarySettingsData settings,
         double? duration, int? width, int? height, CancellationToken cancellationToken)
     {
-        if (duration is null or <= 0) return;
+        if (duration is null or <= 0) return true;
 
         var interval = Math.Max(3, settings.TrickplayIntervalSeconds);
         var frameCount = (int)(duration.Value / interval);
-        if (frameCount < 1) return;
+        if (frameCount < 1) return true;
 
         var (frameWidth, frameHeight) = ComputeTrickplayDimensions(
             width ?? 1920, height ?? 1080, settings.TrickplayQuality);
@@ -108,7 +113,7 @@ public sealed class GeneratePreviewJobHandler(
         if (extractedCount == 0)
         {
             logger.LogWarning("Trickplay batch extraction produced zero frames for {EntityId}", entityId);
-            return;
+            return false;
         }
 
         logger.LogInformation(
@@ -125,7 +130,7 @@ public sealed class GeneratePreviewJobHandler(
         if (tileCount == 0)
         {
             logger.LogWarning("Failed to compose trickplay tiles for {EntityId}", entityId);
-            return;
+            return false;
         }
 
         await Persistence.UpsertTrickplayInfoAsync(
@@ -142,6 +147,8 @@ public sealed class GeneratePreviewJobHandler(
 
         await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Trickplay,
             assets.TrickplayPlaylistUrl(entityId, frameWidth), "application/vnd.apple.mpegurl", null, cancellationToken);
+
+        return true;
     }
 
     private async Task<(double? Duration, int? Width, int? Height)> GetDimensionsAsync(

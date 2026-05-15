@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - V2 adaptive HLS playlists now point at the public Jellyfin-compatible `/Videos/{id}/hls/...` route, fixing variant playlist 404s during playback.
 - V2 adaptive playback now advertises generated Jellyfin trickplay image playlists from the HLS master manifest and stops guessing a fixed trickplay width in the player, preventing scrubber 404s when generated assets use a different size.
 - V2 adaptive playback now lets the browser buffer as much of a video as it can, and thumbnail hover previews show the first trickplay frame as soon as the pointer enters a card.
+- Local trickplay generation now writes real Jellyfin tile sheets in the shared dev cache, so rescans can advertise thumbnail hover previews instead of leaving empty `Trickplay/320` folders behind.
 - Library scans now enqueue trickplay generation whenever trickplay is enabled, even if thumbnail preview generation is disabled.
 - Local dev navigation now ignores browser-aborted backend requests, preventing canceled list loads during refresh/navigation from breaking the .NET debug session.
 - Scheduled v2 library scans now target the intended watched folder instead of falling back to all eligible roots, and configured static web builds are served directly even in development/test hosts.
@@ -101,6 +102,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 - V2 adaptive playback no longer caps the hls.js forward/back buffer at two minutes or 60 MB, allowing long videos to continue prebuffering when the browser has capacity.
 - Thumbnail trickplay hover previews now activate on pointer entry and keyboard focus, so generated Jellyfin image playlists produce visible card previews without requiring an extra mouse move.
+- Local .NET API and worker launches now resolve the same `apps/backend/data` cache root, trickplay tile composition now feeds ffmpeg absolute frame paths so tile sheets are actually written after frame extraction, and failed trickplay composition now fails the preview job instead of appearing complete.
 - The V2 player now uses advertised trickplay asset paths and leaves the filmstrip disabled until trickplay exists, avoiding hardcoded `/Trickplay/320` requests.
 - Jellyfin-compatible trickplay playlist and tile routes now fall back to the nearest generated width when a client asks for a width that was not produced by the current quality setting.
 - V2 video pages no longer block forever on a missing HLS status route. The player now only uses the legacy readiness probe for legacy `hls2` URLs, attaches v2 manifests directly, and falls back to direct streaming when adaptive playback fails.

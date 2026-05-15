@@ -11,7 +11,8 @@ public sealed class AssetPathService
 
     public AssetPathService(string dataDir)
     {
-        _cacheRoot = Path.Combine(dataDir, "cache");
+        var resolvedDataDir = Path.GetFullPath(dataDir);
+        _cacheRoot = Path.Combine(resolvedDataDir, "cache");
     }
 
     public string CacheRoot => _cacheRoot;

@@ -5,7 +5,7 @@ using Obscura.Infrastructure.Persistence;
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddObscuraApplication();
 builder.Services.AddObscuraWorkerApplication();
-builder.Services.AddObscuraInfrastructure(builder.Configuration);
+builder.Services.AddObscuraInfrastructure(builder.Configuration, builder.Environment.ContentRootPath);
 
 var host = builder.Build();
 await ObscuraMigrationRunner.ApplyObscuraMigrationsAsync(host.Services, builder.Configuration);

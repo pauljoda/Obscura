@@ -257,7 +257,10 @@ public sealed class ThumbnailService
         {
             var outputPath = Path.Combine(outputDir, $"{sheetCount}.jpg");
             var concatList = Path.Combine(outputDir, $"_concat_{sheetCount}.txt");
-            await File.WriteAllLinesAsync(concatList, chunk.Select(f => $"file '{f}'"), cancellationToken);
+            await File.WriteAllLinesAsync(
+                concatList,
+                chunk.Select(frame => $"file '{Path.GetFullPath(frame).Replace("'", "'\\''")}'"),
+                cancellationToken);
 
             var result = await _processExecutor.RunAsync("ffmpeg",
                 ["-hide_banner", "-loglevel", "error", "-y",

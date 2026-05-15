@@ -31,7 +31,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddObscuraInfrastructure(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        string? contentRootPath = null)
     {
         var configuredConnectionString =
             configuration["DATABASE_URL"] ??
@@ -39,12 +40,13 @@ public static class DependencyInjection
             throw new InvalidOperationException("Obscura requires DATABASE_URL or ConnectionStrings:Obscura.");
 
         var connectionString = PostgresConnectionString.Normalize(configuredConnectionString);
-        var dataDir = configuration["OBSCURA_DATA_DIR"] ??
+        var pathBase = contentRootPath ?? Directory.GetCurrentDirectory();
+        var dataDir = NormalizePath(configuration["OBSCURA_DATA_DIR"] ??
             configuration["Obscura:DataDir"] ??
-            "/data";
-        var cacheDir = configuration["OBSCURA_CACHE_DIR"] ??
+            "/data", pathBase);
+        var cacheDir = NormalizePath(configuration["OBSCURA_CACHE_DIR"] ??
             configuration["Obscura:CacheDir"] ??
-            Path.Combine(dataDir, "cache");
+            Path.Combine(dataDir, "cache"), pathBase);
 
         services.AddSingleton(_ => NpgsqlDataSource.Create(connectionString));
         services.AddDbContext<ObscuraDbContext>((provider, options) =>
@@ -108,4 +110,9 @@ public static class DependencyInjection
 
         return services;
     }
+
+    private static string NormalizePath(string path, string basePath) =>
+        Path.GetFullPath(Path.IsPathRooted(path)
+            ? path
+            : Path.Combine(basePath, path));
 }
