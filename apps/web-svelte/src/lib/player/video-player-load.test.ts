@@ -127,13 +127,13 @@ describe("video-player-load", () => {
     });
   });
 
-  it("allows adaptive HLS to buffer aggressively without overfilling MediaSource", () => {
+  it("allows adaptive HLS to buffer as much of the video as the browser will accept", () => {
     expect(adaptiveHlsBufferConfig()).toEqual({
-      backBufferLength: 2 * 60,
+      backBufferLength: Number.MAX_SAFE_INTEGER,
       frontBufferFlushThreshold: Infinity,
-      maxBufferLength: 2 * 60,
-      maxMaxBufferLength: 2 * 60,
-      maxBufferSize: 60 * 1000 * 1000,
+      maxBufferLength: Number.MAX_SAFE_INTEGER,
+      maxMaxBufferLength: Number.MAX_SAFE_INTEGER,
+      maxBufferSize: Number.MAX_SAFE_INTEGER,
       startPosition: 0,
     });
   });

@@ -151,10 +151,24 @@
     };
   }
 
-  function handlePointerMove(event: PointerEvent) {
+  function updatePointerRatio(event: PointerEvent) {
     if (!hoverable) return;
     const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
     pointerRatio = bounds.width > 0 ? (event.clientX - bounds.left) / bounds.width : 0;
+  }
+
+  function handlePointerEnter(event: PointerEvent) {
+    updatePointerRatio(event);
+    void ensureSpriteLoaded();
+  }
+
+  function handlePointerMove(event: PointerEvent) {
+    updatePointerRatio(event);
+  }
+
+  function handleFocus() {
+    pointerRatio = hoverable ? 0.5 : null;
+    void ensureSpriteLoaded();
   }
 
   function clearHover() {
@@ -188,9 +202,7 @@
   class:is-selected={selected}
   aria-label={card.entity.title}
   onblur={clearHover}
-  onfocus={() => {
-    pointerRatio = hoverable ? 0.5 : null;
-  }}
+  onfocus={handleFocus}
 >
   <div
     class="media"
@@ -198,7 +210,7 @@
     role="presentation"
     style:aspect-ratio={layout === "list" ? undefined : aspectRatio}
     style:background={showPlaceholder ? gradient : undefined}
-    onpointerenter={() => void ensureSpriteLoaded()}
+    onpointerenter={handlePointerEnter}
     onpointermove={handlePointerMove}
     onpointerleave={clearHover}
   >

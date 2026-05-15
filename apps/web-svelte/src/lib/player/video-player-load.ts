@@ -147,13 +147,13 @@ export function adaptiveAutoLevelSelection(): AdaptiveAutoLevelSelection {
 }
 
 export function adaptiveHlsBufferConfig(): AdaptiveHlsBufferConfig {
-  const twoMinutes = 2 * 60;
+  const browserLimit = Number.MAX_SAFE_INTEGER;
   return {
-    backBufferLength: twoMinutes,
+    backBufferLength: browserLimit,
     frontBufferFlushThreshold: Infinity,
-    maxBufferLength: twoMinutes,
-    maxMaxBufferLength: twoMinutes,
-    maxBufferSize: 60 * 1000 * 1000,
+    maxBufferLength: browserLimit,
+    maxMaxBufferLength: browserLimit,
+    maxBufferSize: browserLimit,
     startPosition: 0,
   };
 }
