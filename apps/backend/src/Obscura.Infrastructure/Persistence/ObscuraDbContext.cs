@@ -60,6 +60,12 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<EntityTechnicalRow> EntityTechnical => Set<EntityTechnicalRow>();
 
+    public DbSet<MediaSourceRow> MediaSources => Set<MediaSourceRow>();
+
+    public DbSet<MediaStreamRow> MediaStreams => Set<MediaStreamRow>();
+
+    public DbSet<TrickplayInfoRow> TrickplayInfos => Set<TrickplayInfoRow>();
+
     public DbSet<EntitySourceRow> EntitySources => Set<EntitySourceRow>();
 
     public DbSet<EntityProgressRow> EntityProgress => Set<EntityProgressRow>();

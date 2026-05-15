@@ -67,6 +67,10 @@ public sealed class VideoSourceService : IVideoSourceService
             return null;
         }
 
+        var mediaSource = await _db.MediaSources.AsNoTracking()
+            .Where(row => row.EntityId == id && row.Path == source.File.Path)
+            .OrderByDescending(row => row.UpdatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
         var extension = Path.GetExtension(source.File.Path);
         var directPlayable =
             BrowserNativeExtensions.Contains(extension) ||
@@ -77,9 +81,17 @@ public sealed class VideoSourceService : IVideoSourceService
             source.File.Path,
             source.File.MimeType ?? MimeForExtension(extension),
             directPlayable,
-            source.Technical?.DurationSeconds,
-            source.Technical?.Width,
-            source.Technical?.Height);
+            mediaSource?.DurationSeconds ?? source.Technical?.DurationSeconds,
+            mediaSource?.Width ?? source.Technical?.Width,
+            mediaSource?.Height ?? source.Technical?.Height,
+            mediaSource?.Id,
+            mediaSource?.Container ?? source.Technical?.Container,
+            mediaSource?.BitRate ?? source.Technical?.BitRate,
+            mediaSource?.VideoCodec ?? source.Technical?.Codec,
+            mediaSource?.AudioCodec,
+            mediaSource?.FrameRate ?? source.Technical?.FrameRate,
+            source.Technical?.SampleRate,
+            source.Technical?.Channels);
     }
 
     private static string MimeForExtension(string extension)

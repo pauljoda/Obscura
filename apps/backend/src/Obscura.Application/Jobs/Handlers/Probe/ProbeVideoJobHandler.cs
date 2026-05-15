@@ -40,6 +40,21 @@ public sealed class ProbeVideoJobHandler(
                 probe.DurationSeconds, probe.Width, probe.Height, probe.FrameRate, probe.BitRate,
                 probe.SampleRate, probe.Channels, probe.Codec, probe.Container, null,
                 cancellationToken);
+            await Persistence.UpsertMediaSourceAsync(
+                entityId,
+                filePath,
+                new MediaSourceProbeData(
+                    probe.DurationSeconds,
+                    probe.FileSize,
+                    probe.BitRate,
+                    probe.Container,
+                    probe.Codec,
+                    probe.AudioCodec,
+                    probe.Width,
+                    probe.Height,
+                    probe.FrameRate),
+                BuildStreams(probe),
+                cancellationToken);
         }
 
         var report = timer.Finish();
@@ -49,5 +64,47 @@ public sealed class ProbeVideoJobHandler(
             report.ToLogString());
 
         await context.ReportProgressAsync(100, "Probe complete", cancellationToken);
+    }
+
+    private static IReadOnlyList<MediaStreamProbeData> BuildStreams(VideoProbeData probe)
+    {
+        var streams = new List<MediaStreamProbeData>();
+        if (probe.Codec is not null || probe.Width is not null || probe.Height is not null)
+        {
+            streams.Add(new MediaStreamProbeData(
+                0,
+                "Video",
+                probe.Codec,
+                null,
+                "Video",
+                probe.Width,
+                probe.Height,
+                probe.FrameRate,
+                probe.BitRate,
+                null,
+                null,
+                IsDefault: true,
+                IsForced: false));
+        }
+
+        if (probe.AudioCodec is not null || probe.SampleRate is not null || probe.Channels is not null)
+        {
+            streams.Add(new MediaStreamProbeData(
+                1,
+                "Audio",
+                probe.AudioCodec,
+                null,
+                "Audio",
+                null,
+                null,
+                null,
+                null,
+                probe.SampleRate,
+                probe.Channels,
+                IsDefault: true,
+                IsForced: false));
+        }
+
+        return streams;
     }
 }

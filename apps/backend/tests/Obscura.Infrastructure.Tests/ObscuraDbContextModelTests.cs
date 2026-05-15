@@ -25,6 +25,9 @@ public sealed class ObscuraDbContextModelTests
     [InlineData(typeof(EntityStatRow), "entity_stats")]
     [InlineData(typeof(EntityDateRow), "entity_dates")]
     [InlineData(typeof(EntityTechnicalRow), "entity_technical")]
+    [InlineData(typeof(MediaSourceRow), "media_sources")]
+    [InlineData(typeof(MediaStreamRow), "media_streams")]
+    [InlineData(typeof(TrickplayInfoRow), "trickplay_infos")]
     [InlineData(typeof(EntitySourceRow), "entity_sources")]
     [InlineData(typeof(EntityProgressRow), "entity_progress")]
     [InlineData(typeof(EntityPositionRow), "entity_positions")]
@@ -134,6 +137,7 @@ public sealed class ObscuraDbContextModelTests
         Assert.Contains("20260513001500_AddCapabilityFirstTables", migrations);
         Assert.Contains("20260513002000_RemoveGalleryPhotographer", migrations);
         Assert.Contains("20260513041249_SlimCapabilityFirstDetails", migrations);
+        Assert.Contains("20260515164712_AddMediaPlaybackSpine", migrations);
     }
 
     [Theory]
@@ -143,6 +147,9 @@ public sealed class ObscuraDbContextModelTests
     [InlineData(typeof(EntityCounterRow), nameof(EntityCounterRow.Code), "code")]
     [InlineData(typeof(EntityStatRow), nameof(EntityStatRow.Code), "code")]
     [InlineData(typeof(EntityTechnicalRow), nameof(EntityTechnicalRow.DurationSeconds), "duration_seconds")]
+    [InlineData(typeof(MediaSourceRow), nameof(MediaSourceRow.VideoCodec), "video_codec")]
+    [InlineData(typeof(MediaStreamRow), nameof(MediaStreamRow.StreamIndex), "stream_index")]
+    [InlineData(typeof(TrickplayInfoRow), nameof(TrickplayInfoRow.TileWidth), "tile_width")]
     [InlineData(typeof(EntitySourceRow), nameof(EntitySourceRow.Value), "value")]
     [InlineData(typeof(EntityProgressRow), nameof(EntityProgressRow.CurrentEntityId), "current_entity_id")]
     [InlineData(typeof(EntityPositionRow), nameof(EntityPositionRow.Label), "label")]

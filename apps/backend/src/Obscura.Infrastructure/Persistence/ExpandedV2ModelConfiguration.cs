@@ -10,6 +10,7 @@ internal static partial class ExpandedV2ModelConfiguration
     {
         ConfigureEntityCapabilities(modelBuilder);
         ConfigureMediaDetails(modelBuilder);
+        ConfigureMediaPlaybackModel(modelBuilder);
         ConfigureTaxonomyDetails(modelBuilder);
         ConfigureCollections(modelBuilder);
         ConfigureSystemTables(modelBuilder);

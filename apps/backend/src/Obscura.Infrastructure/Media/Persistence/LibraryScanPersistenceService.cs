@@ -536,6 +536,76 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task UpsertMediaSourceAsync(
+        Guid entityId,
+        string path,
+        MediaSourceProbeData source,
+        IReadOnlyList<MediaStreamProbeData> streams,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var sourceFileId = await GetSourceFileIdAsync(entityId, cancellationToken);
+        var existing = await db.MediaSources
+            .FirstOrDefaultAsync(row => row.EntityId == entityId && row.Path == path, cancellationToken);
+
+        if (existing is null)
+        {
+            existing = new MediaSourceRow
+            {
+                Id = Guid.NewGuid(),
+                EntityId = entityId,
+                Path = path,
+                Protocol = "File",
+                CreatedAt = now
+            };
+            db.MediaSources.Add(existing);
+        }
+
+        existing.EntityFileId = sourceFileId;
+        existing.Container = source.Container ?? existing.Container;
+        existing.Name = Path.GetFileName(path);
+        existing.SizeBytes = source.SizeBytes ?? existing.SizeBytes ?? TryGetFileSize(path);
+        existing.DurationSeconds = source.DurationSeconds ?? existing.DurationSeconds;
+        existing.BitRate = source.BitRate ?? existing.BitRate;
+        existing.VideoCodec = source.VideoCodec ?? existing.VideoCodec;
+        existing.AudioCodec = source.AudioCodec ?? existing.AudioCodec;
+        existing.Width = source.Width ?? existing.Width;
+        existing.Height = source.Height ?? existing.Height;
+        existing.FrameRate = source.FrameRate ?? existing.FrameRate;
+        existing.UpdatedAt = now;
+
+        var previousStreams = await db.MediaStreams
+            .Where(row => row.MediaSourceId == existing.Id)
+            .ToListAsync(cancellationToken);
+        db.MediaStreams.RemoveRange(previousStreams);
+
+        foreach (var stream in streams)
+        {
+            db.MediaStreams.Add(new MediaStreamRow
+            {
+                Id = Guid.NewGuid(),
+                MediaSourceId = existing.Id,
+                EntityId = entityId,
+                StreamIndex = stream.StreamIndex,
+                Type = stream.Type,
+                Codec = stream.Codec,
+                Language = stream.Language,
+                Title = stream.Title,
+                Width = stream.Width,
+                Height = stream.Height,
+                FrameRate = stream.FrameRate,
+                BitRate = stream.BitRate,
+                SampleRate = stream.SampleRate,
+                Channels = stream.Channels,
+                IsDefault = stream.IsDefault,
+                IsForced = stream.IsForced,
+                CreatedAt = now
+            });
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task UpsertEntityFileAsync(Guid entityId, EntityFileRole role, string path, string? mimeType, long? sizeBytes, CancellationToken cancellationToken)
     {
         var existing = await db.EntityFiles

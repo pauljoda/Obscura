@@ -34,7 +34,7 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
             : request.PlaySessionId!;
         var directPlayAllowed = request?.EnableDirectPlay != false && source.DirectPlayable;
         var transcodingAllowed = request?.EnableTranscoding != false;
-        var mediaSourceId = itemId.ToString("N");
+        var mediaSourceId = (source.MediaSourceId ?? itemId).ToString("N");
 
         if (transcodingAllowed)
         {
@@ -46,7 +46,7 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
             mediaSourceId,
             source.Path,
             "File",
-            ContainerFromPath(source.Path),
+            source.Container ?? ContainerFromPath(source.Path),
             fileInfo.Exists ? fileInfo.Length : null,
             Path.GetFileName(source.Path),
             ToTicks(source.DurationSeconds),
@@ -71,18 +71,37 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
         var videoStream = new MediaStreamInfo(
             0,
             "Video",
-            CodecFromContentType(source.ContentType),
+            source.VideoCodec ?? CodecFromContentType(source.ContentType),
             null,
             "Video",
             source.Width,
             source.Height,
-            null,
-            null,
+            source.FrameRate,
+            source.BitRate,
             null,
             null,
             IsDefault: true);
 
-        return [videoStream];
+        if (source.AudioCodec is null && source.SampleRate is null && source.Channels is null)
+        {
+            return [videoStream];
+        }
+
+        var audioStream = new MediaStreamInfo(
+            1,
+            "Audio",
+            source.AudioCodec,
+            null,
+            "Audio",
+            null,
+            null,
+            null,
+            null,
+            source.SampleRate,
+            source.Channels,
+            IsDefault: true);
+
+        return [videoStream, audioStream];
     }
 
     private static string? CodecFromContentType(string contentType) =>

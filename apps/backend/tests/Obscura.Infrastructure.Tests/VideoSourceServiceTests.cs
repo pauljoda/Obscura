@@ -52,6 +52,58 @@ public sealed class VideoSourceServiceTests : IDisposable
         Assert.False(source.DirectPlayable);
     }
 
+    [Fact]
+    public async Task PrefersPersistedMediaSourceMetadataOverLegacyTechnicalRow()
+    {
+        await using var db = CreateContext();
+        var videoId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var sourceId = Guid.Parse("44444444-4444-4444-4444-444444444444");
+        var filePath = Path.Combine(_tempDir, "video.mkv");
+        await File.WriteAllTextAsync(filePath, "video-bytes");
+        SeedVideoSource(db, videoId, filePath, null);
+        db.EntityTechnical.Add(new EntityTechnicalRow
+        {
+            EntityId = videoId,
+            DurationSeconds = 12,
+            Width = 640,
+            Height = 360,
+            Codec = "h264",
+            Container = "mp4",
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        db.MediaSources.Add(new MediaSourceRow
+        {
+            Id = sourceId,
+            EntityId = videoId,
+            Path = filePath,
+            Protocol = "File",
+            Container = "matroska",
+            DurationSeconds = 42,
+            Width = 1920,
+            Height = 1080,
+            BitRate = 8_000_000,
+            VideoCodec = "hevc",
+            AudioCodec = "aac",
+            FrameRate = 23.976,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var service = new VideoSourceService(db);
+        var source = await service.GetSourceAsync(videoId, CancellationToken.None);
+
+        Assert.NotNull(source);
+        Assert.Equal(sourceId, source.MediaSourceId);
+        Assert.Equal("matroska", source.Container);
+        Assert.Equal(42, source.DurationSeconds);
+        Assert.Equal(1920, source.Width);
+        Assert.Equal(1080, source.Height);
+        Assert.Equal("hevc", source.VideoCodec);
+        Assert.Equal("aac", source.AudioCodec);
+        Assert.Equal(23.976, source.FrameRate);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))

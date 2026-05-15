@@ -24,6 +24,14 @@ public interface IVideoSourceService
 /// <param name="DurationSeconds">Optional probed duration used to build virtual HLS playlists.</param>
 /// <param name="Width">Optional probed source width.</param>
 /// <param name="Height">Optional probed source height.</param>
+/// <param name="MediaSourceId">Optional persisted Jellyfin-style media source identifier.</param>
+/// <param name="Container">Optional probed container name.</param>
+/// <param name="BitRate">Optional probed aggregate bitrate.</param>
+/// <param name="VideoCodec">Optional probed primary video codec.</param>
+/// <param name="AudioCodec">Optional probed primary audio codec.</param>
+/// <param name="FrameRate">Optional probed primary video frame rate.</param>
+/// <param name="SampleRate">Optional probed primary audio sample rate.</param>
+/// <param name="Channels">Optional probed primary audio channel count.</param>
 public sealed record VideoSourceFile(
     Guid EntityId,
     string Path,
@@ -31,4 +39,12 @@ public sealed record VideoSourceFile(
     bool DirectPlayable,
     double? DurationSeconds = null,
     int? Width = null,
-    int? Height = null);
+    int? Height = null,
+    Guid? MediaSourceId = null,
+    string? Container = null,
+    int? BitRate = null,
+    string? VideoCodec = null,
+    string? AudioCodec = null,
+    double? FrameRate = null,
+    int? SampleRate = null,
+    int? Channels = null);

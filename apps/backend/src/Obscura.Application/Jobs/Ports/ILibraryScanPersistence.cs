@@ -65,6 +65,13 @@ public interface ILibraryScanPersistence
         double? frameRate, int? bitRate, int? sampleRate, int? channels,
         string? codec, string? container, string? format, CancellationToken cancellationToken);
 
+    Task UpsertMediaSourceAsync(
+        Guid entityId,
+        string path,
+        MediaSourceProbeData source,
+        IReadOnlyList<MediaStreamProbeData> streams,
+        CancellationToken cancellationToken);
+
     Task UpsertEntityFileAsync(Guid entityId, EntityFileRole role, string path, string? mimeType, long? sizeBytes, CancellationToken cancellationToken);
 
     Task UpsertEntityFingerprintAsync(Guid entityId, FingerprintAlgorithm algorithm, string value, Guid? entityFileId, CancellationToken cancellationToken);
@@ -105,6 +112,32 @@ public sealed record EntityTechnicalData(
     int? Channels,
     string? Codec,
     string? Container);
+
+public sealed record MediaSourceProbeData(
+    double? DurationSeconds,
+    long? SizeBytes,
+    int? BitRate,
+    string? Container,
+    string? VideoCodec,
+    string? AudioCodec,
+    int? Width,
+    int? Height,
+    double? FrameRate);
+
+public sealed record MediaStreamProbeData(
+    int StreamIndex,
+    string Type,
+    string? Codec,
+    string? Language,
+    string? Title,
+    int? Width,
+    int? Height,
+    double? FrameRate,
+    int? BitRate,
+    int? SampleRate,
+    int? Channels,
+    bool IsDefault,
+    bool IsForced);
 
 public sealed record LibrarySettingsData(
     bool AutoGenerateMetadata,
