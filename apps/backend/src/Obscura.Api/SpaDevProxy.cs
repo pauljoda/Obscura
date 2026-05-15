@@ -12,7 +12,11 @@ public static class SpaDevProxy
     [
         "/api",
         "/assets",
-        "/openapi",
+        "/openapi"
+    ];
+
+    private static readonly string[] JellyfinApiPrefixes =
+    [
         "/Items",
         "/Videos",
         "/Sessions",
@@ -34,15 +38,10 @@ public static class SpaDevProxy
 
         app.Use(async (context, next) =>
         {
-            var path = context.Request.Path.Value ?? "";
-
-            foreach (var prefix in ApiPrefixes)
+            if (ShouldPassThroughToBackend(context.Request.Path))
             {
-                if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    await next();
-                    return;
-                }
+                await InvokeBackendRequestAsync(context, next);
+                return;
             }
 
             var targetUrl = $"{trimmedViteUrl}{context.Request.Path}{context.Request.QueryString}";
@@ -105,5 +104,51 @@ public static class SpaDevProxy
                     """);
             }
         });
+    }
+
+    /// <summary>
+    /// Returns whether a request should bypass the development Vite proxy and
+    /// stay in the .NET backend route table. Jellyfin-compatible public routes
+    /// are intentionally case-sensitive so lowercase SPA routes like
+    /// <c>/videos</c> can still be refreshed directly in the browser.
+    /// </summary>
+    public static bool ShouldPassThroughToBackend(PathString requestPath)
+    {
+        var path = requestPath.Value ?? "";
+
+        foreach (var prefix in ApiPrefixes)
+        {
+            if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        foreach (var prefix in JellyfinApiPrefixes)
+        {
+            if (path.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Invokes the backend route table and ignores cancellation that only means
+    /// the browser abandoned the request during navigation or refresh.
+    /// </summary>
+    public static async Task InvokeBackendRequestAsync(HttpContext context, Func<Task> next)
+    {
+        try
+        {
+            await next();
+        }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            // Browser disconnected or navigated away. The request is already gone,
+            // so there is no response to produce and no backend fault to surface.
+        }
     }
 }

@@ -74,9 +74,9 @@
 
   async function ensureSpriteLoaded() {
     if (!isSpriteHover || spriteFrames || spriteError) return;
-    const hover = card.hover as { kind: "sprite"; spriteUrl: string; vttUrl: string };
+    const hover = card.hover as { kind: "sprite"; spriteUrl?: string; vttUrl: string };
     try {
-      if (typeof globalThis.Image !== "undefined") {
+      if (hover.spriteUrl && typeof globalThis.Image !== "undefined") {
         const img = new globalThis.Image();
         img.src = hover.spriteUrl;
       }
@@ -234,7 +234,7 @@
 
     {#if activeSpriteFrame && card.hover.kind === "sprite" && spriteDims.width > 0}
       <div class="sprite-overlay" aria-hidden="true"
-        style:background-image="url({card.hover.spriteUrl})"
+        style:background-image="url({card.hover.spriteUrl ?? activeSpriteFrame.url})"
         style:background-size="{(spriteDims.width / activeSpriteFrame.width) * 100}% {(spriteDims.height / activeSpriteFrame.height) * 100}%"
         style:background-position="{spriteDims.width <= activeSpriteFrame.width ? 0 : (activeSpriteFrame.x / (spriteDims.width - activeSpriteFrame.width)) * 100}% {spriteDims.height <= activeSpriteFrame.height ? 0 : (activeSpriteFrame.y / (spriteDims.height - activeSpriteFrame.height)) * 100}%"
         style:background-repeat="no-repeat"

@@ -31,7 +31,7 @@ export type EntityThumbnailHoverPreview =
     }
   | {
       kind: "sprite";
-      spriteUrl: string;
+      spriteUrl?: string;
       vttUrl: string;
     };
 

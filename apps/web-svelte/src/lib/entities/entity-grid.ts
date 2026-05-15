@@ -180,10 +180,15 @@ function previewAssets(entity: EntityCard, roles: string[]): EntityThumbnailAsse
   return results;
 }
 
-/** Finds the sprite URL and trickplay VTT URL from entity image assets when both exist. */
-function findSpriteHover(entity: EntityCard): { spriteUrl: string; vttUrl: string } | null {
+/** Finds a legacy VTT sprite map or Jellyfin image playlist from entity image assets. */
+function findSpriteHover(entity: EntityCard): { spriteUrl?: string; vttUrl: string } | null {
   const images = getImagesCapability(entity.capabilities);
   if (!images) return null;
+
+  const playlistItem = images.items.find((item) => item.kind === ENTITY_FILE_ROLE.trickplay && item.path.endsWith(".m3u8"));
+  if (playlistItem) {
+    return { vttUrl: playlistItem.path };
+  }
 
   const vttItem = images.items.find((item) => item.kind === ENTITY_FILE_ROLE.trickplay && item.path.endsWith(".vtt"));
   if (!vttItem) return null;

@@ -154,4 +154,24 @@ describe("entity grid helpers", () => {
     });
     expect(thumbnail.meta?.map((item) => item.label)).not.toContain("season 1");
   });
+
+  it("maps Jellyfin image-playlist trickplay assets into sprite hover data", () => {
+    const thumbnail = entityCardToThumbnailCard(card("5", "video", "Tiled Trickplay", [
+      {
+        kind: "images",
+        supportedKinds: ["thumbnail", "trickplay"],
+        thumbnailUrl: "/assets/videos/5/thumb.jpg",
+        coverUrl: "/assets/videos/5/thumb.jpg",
+        items: [
+          { kind: "thumbnail", path: "/assets/videos/5/thumb.jpg", mimeType: "image/jpeg" },
+          { kind: "trickplay", path: "/Videos/5/Trickplay/320/tiles.m3u8", mimeType: "application/vnd.apple.mpegurl" },
+        ],
+      },
+    ]));
+
+    expect(thumbnail.hover).toEqual({
+      kind: "sprite",
+      vttUrl: "/Videos/5/Trickplay/320/tiles.m3u8",
+    });
+  });
 });
