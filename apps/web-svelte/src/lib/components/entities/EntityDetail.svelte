@@ -96,25 +96,28 @@
   }
 </script>
 
-<article class="entity-detail" data-poster-size={posterSize}>
+<article class="entity-detail" data-poster-size={posterSize} data-hero-mode={heroMode}>
   <!-- Hero / Banner -->
-  <div
-    class="hero"
-    data-hero-mode={heroMode}
-    style:background-image={heroMode === "image"
-      ? `url(${card.hero!.src})`
-      : heroMode === "gradient"
-        ? placeholderGradient(card.entity.title)
-        : "none"}
-  >
-    {#if heroMode === "poster-blur"}
-      <div class="hero-poster-bg">
+  <div class="hero" data-hero-mode={heroMode}>
+    <!-- Blurred backdrop layer -->
+    {#if heroMode === "image"}
+      <div class="hero-backdrop">
+        <img src={card.hero!.src} alt="" aria-hidden="true" />
+      </div>
+      <div class="hero-backdrop-blur"></div>
+    {:else if heroMode === "poster-blur"}
+      <div class="hero-backdrop">
         <img src={card.poster!.src} alt="" aria-hidden="true" />
       </div>
-      <div class="hero-poster-blur-overlay"></div>
+      <div class="hero-backdrop-blur"></div>
+    {:else}
+      <div class="hero-gradient-bg" style:background-image={placeholderGradient(card.entity.title)}></div>
     {/if}
-    <div class="hero-scrim"></div>
 
+    <!-- Bottom fade — dissolves into page background -->
+    <div class="hero-fade"></div>
+
+    <!-- Content: poster + text -->
     <div class="hero-content">
       {#if posterVisible}
         <div class="poster-frame">
@@ -481,59 +484,72 @@
 
   .hero {
     position: relative;
-    display: grid;
-    min-height: 14rem;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
     overflow: hidden;
-    border: 1px solid var(--detail-border);
   }
 
-  .hero[data-hero-mode="image"] {
-    min-height: 18rem;
-  }
-
+  .hero[data-hero-mode="image"],
   .hero[data-hero-mode="poster-blur"] {
-    min-height: 18rem;
+    min-height: 20rem;
   }
 
-  /* Poster used as blurred background when no hero banner exists */
-  .hero-poster-bg {
+  .hero[data-hero-mode="gradient"] {
+    min-height: 0;
+  }
+
+  /* ── Blurred backdrop (hero or poster image) ────────────── */
+
+  .hero-backdrop {
     position: absolute;
-    inset: -20px;
+    inset: -30px;
     z-index: 0;
-    overflow: hidden;
   }
 
-  .hero-poster-bg img {
+  .hero-backdrop img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center 25%;
-    transform: scale(1.15);
+    object-position: center 30%;
+    transform: scale(1.1);
   }
 
-  .hero-poster-blur-overlay {
+  .hero-backdrop-blur {
     position: absolute;
     inset: 0;
     z-index: 1;
-    backdrop-filter: blur(40px) saturate(1.4);
-    -webkit-backdrop-filter: blur(40px) saturate(1.4);
-    background: rgba(7, 8, 11, 0.45);
+    backdrop-filter: blur(44px) saturate(1.6) brightness(0.7);
+    -webkit-backdrop-filter: blur(44px) saturate(1.6) brightness(0.7);
+    background: rgba(7, 8, 11, 0.35);
   }
 
-  .hero-scrim {
+  /* Gradient background when no images exist */
+  .hero-gradient-bg {
     position: absolute;
     inset: 0;
+    z-index: 0;
+    background-size: cover;
+  }
+
+  /* Soft fade at the bottom — dissolves into page bg, no hard line */
+  .hero-fade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 50%;
     z-index: 2;
     background: linear-gradient(
       to top,
-      rgba(7, 8, 11, 0.95) 0%,
-      rgba(7, 8, 11, 0.6) 40%,
-      rgba(7, 8, 11, 0.25) 100%
+      var(--color-bg, #07080b) 0%,
+      rgba(7, 8, 11, 0.7) 40%,
+      transparent 100%
     );
+    pointer-events: none;
   }
+
+  /* ── Hero content ──────────────────────────────────────── */
 
   .hero-content {
     position: relative;
@@ -542,17 +558,17 @@
     gap: 1.25rem;
     padding: 1.5rem;
     z-index: 3;
-    align-self: end;
   }
+
+  /* ── Poster / cover ────────────────────────────────────── */
 
   .poster-frame {
     flex-shrink: 0;
     width: var(--poster-width, 7rem);
-    border: 1px solid var(--detail-border);
     background: #050505;
     box-shadow:
-      0 4px 24px rgba(0, 0, 0, 0.5),
-      0 0 0 1px var(--detail-accent-muted);
+      0 8px 32px rgba(0, 0, 0, 0.6),
+      0 0 0 1px rgba(196, 154, 90, 0.2);
     overflow: hidden;
   }
 
@@ -1221,7 +1237,7 @@
   @media (min-width: 640px) {
     .hero[data-hero-mode="image"],
     .hero[data-hero-mode="poster-blur"] {
-      min-height: 22rem;
+      min-height: 24rem;
     }
 
     .hero-content {
@@ -1252,7 +1268,7 @@
   @media (min-width: 1024px) {
     .hero[data-hero-mode="image"],
     .hero[data-hero-mode="poster-blur"] {
-      min-height: 26rem;
+      min-height: 28rem;
     }
 
     [data-poster-size="small"] .poster-frame { --poster-width: 7rem; }

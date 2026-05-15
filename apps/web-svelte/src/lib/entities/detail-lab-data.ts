@@ -227,15 +227,15 @@ function detailCard(options: {
 export const baseDetailCard: EntityDetailCard = (() => {
   const card = detailCard({
     id: "base-all-caps",
-    kind: "video",
-    title: "Big Buck Bunny — Director's Cut",
+    kind: "video-series",
+    title: "Pete the Cat",
     capabilities: [
       images(
-        svgArt("Big Buck Bunny", forest, graphite, brass, "wide"),
-        svgArt("BBB Poster", forest, indigo, brass, "poster"),
+        "/fixtures/banner-petethecat.svg",
+        "/fixtures/poster-petethecat.svg",
       ),
       description(
-        "A large, fluffy rabbit is pestered by three bullying rodents. After they destroy a butterfly he loves, he devises an elaborate plan to teach them a lesson.\n\nThis **extended director's cut** includes:\n\n- Behind-the-scenes commentary\n- Restored animation sequences cut from the original theatrical release\n- *Never-before-seen* storyboard comparisons\n\n> \"One of the most beloved open-source animation projects ever produced.\"\n\nMore information available at the [Blender Foundation](https://peach.blender.org/) website.",
+        "Pete the Cat is a groovy blue cat who never lets anything get him down. With his cool attitude and love of music, Pete faces everyday challenges with a positive outlook.\n\nBased on the **bestselling book series** by James Dean and Kimberly Dean:\n\n- Musical adventures with Pete and his friends\n- Life lessons about staying positive\n- *Far-out* groovy vibes in every episode\n\n> \"It's all good.\"\n\nA Prime Original animated series.",
       ),
       rating(4),
       flags({ isFavorite: true, isNsfw: false, isOrganized: true }),

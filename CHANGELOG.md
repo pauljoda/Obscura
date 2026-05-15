@@ -18,8 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
-- `EntityDetail` hero now has a three-tier backdrop fallback: banner image → blurred poster (poster scaled to cover with 40px blur + saturation boost creating an atmospheric color wash) → deterministic placeholder gradient. Entities without a banner still get a rich, color-consistent hero derived from their poster art.
-- Detail Lab "Hero Source" control replaces the simple on/off toggle, letting you switch between banner, poster-blur, and gradient modes to test all three hero fallback tiers.
+- `EntityDetail` hero uses a blurred backdrop system: the banner (or poster when no banner exists) is scaled to cover the hero area and blurred with saturation boost, creating an atmospheric color wash behind the sharp poster and title. A soft gradient fade at the bottom dissolves seamlessly into the page background with no hard edges. When no images exist, the hero collapses to a compact gradient layout with no reserved space.
+- Detail Lab "Hero Source" control replaces the simple on/off toggle, letting you switch between banner, poster-blur, and gradient modes to test all three hero fallback tiers. Fixture data uses colorful Pete the Cat–style SVG art to demonstrate the blur effect with vivid colors.
 - .NET API `launchSettings.json` now defaults to port 8010 instead of 8008 — prevents the .NET web host from shadowing the Vite dev server when both run in local dev mode.
 - `EntityDetail` hero area now shows an inline metadata row (studio · date · count) and rating stars directly in the hero overlay, matching the established series detail layout.
 - Credits section now renders as a horizontal scroll row of `EntityThumbnail` cards instead of a flat text grid, making referenced entities (performers, studios) visually consistent with the rest of the app.
