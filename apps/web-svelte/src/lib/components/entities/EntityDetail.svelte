@@ -370,14 +370,12 @@
     overflow: hidden;
   }
 
-  /* Reflection: absolute, fills the lower zone as its background */
+  /* Reflection: blurred flipped copy of the banner as a color-wash background */
   .hero-reflection {
     position: absolute;
     inset: 0;
     z-index: 0;
     overflow: hidden;
-    mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%);
   }
 
   .hero-reflection img {
@@ -388,15 +386,14 @@
     height: 100%;
     object-fit: cover;
     transform: scaleY(-1) scale(1.25);
+    filter: blur(15px) saturate(1.3) brightness(0.5);
+    will-change: transform;
   }
 
-  /* Frosted glass: backdrop-filter blurs the reflection underneath */
   .hero-blur-overlay {
     position: absolute;
     inset: 0;
     z-index: 1;
-    backdrop-filter: blur(15px) saturate(1.3) brightness(0.5);
-    -webkit-backdrop-filter: blur(15px) saturate(1.3) brightness(0.5);
     background: rgba(7, 8, 11, 0.45);
   }
 
@@ -421,13 +418,13 @@
     object-fit: cover;
     object-position: center center;
     transform: scale(1.3);
+    filter: blur(15px) saturate(1.3) brightness(0.5);
+    will-change: transform;
   }
 
   .hero-backdrop-blur {
     position: absolute;
     inset: 0;
-    backdrop-filter: blur(15px) saturate(1.3) brightness(0.5);
-    -webkit-backdrop-filter: blur(15px) saturate(1.3) brightness(0.5);
     background: rgba(7, 8, 11, 0.45);
   }
 
