@@ -94,6 +94,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 - Identify review modal redesigned with individually selectable tags (NEW badge for unrecognized tags), EntityThumbnail-based credit and studio cards, multi-line description fields, larger artwork card grid, and a same-size slide-in lightbox with a Confirm button replacing the close icon.
+- Identify credit and studio EntityThumbnail cards now show profile photos and logos from TMDB proposal children, and tag NEW badges now check the entity's full tag list (including NSFW tags) so existing tags are never falsely marked as new.
 
 ### Added
 - V2 plugin credentials now resolve legacy provider key aliases such as `TMDB_API_KEY`, preserving saved API keys while still allowing users to edit the new v2 credential fields.

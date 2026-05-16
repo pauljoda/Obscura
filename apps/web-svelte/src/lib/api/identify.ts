@@ -203,3 +203,13 @@ export function fetchIdentifyEntities(
 ): Promise<V2EntityListResponse> {
   return apiJson(`/entities${query({ kind, query: search })}`);
 }
+
+export async function fetchEntityTagTitles(entityId: string): Promise<string[]> {
+  const card = await apiJson<V2EntityCard>(`/entities/${entityId}`);
+  const tagsCap = card.capabilities?.find((c) => (c as { kind?: string }).kind === "tags") as
+    | { items?: Array<{ title: string }>; values?: string[] }
+    | undefined;
+  if (!tagsCap) return [];
+  if (tagsCap.items?.length) return tagsCap.items.map((i) => i.title);
+  return tagsCap.values ?? [];
+}

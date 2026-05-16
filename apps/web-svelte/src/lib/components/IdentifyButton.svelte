@@ -18,6 +18,7 @@
   import { portal } from "$lib/actions/portal";
   import {
     applyIdentifyProposal,
+    fetchEntityTagTitles,
     fetchIdentifyProviders,
     identifyEntity,
     type CreditPatch,
@@ -90,6 +91,7 @@
   let selectedImages = $state<Record<string, string | null>>({});
   let selectedCredits = $state<Record<string, boolean>>({});
   let selectedTags = $state<Record<string, boolean>>({});
+  let fetchedExistingTags = $state<string[]>([]);
   let applying = $state(false);
   let error = $state<string | null>(null);
   let expandedSections = $state<Record<string, boolean>>({ fields: true, tags: true, credits: true, studio: true, artwork: true, candidates: true });
@@ -174,8 +176,10 @@
     selectedImages = {};
     selectedCredits = {};
     selectedTags = {};
+    fetchedExistingTags = [];
     error = null;
     if (!providersLoaded) await loadProviders();
+    fetchEntityTagTitles(entityId).then((tags) => { fetchedExistingTags = tags; }).catch(() => {});
   }
 
   function closeWorkflow() {
@@ -245,17 +249,27 @@
   }
 
   function isNewTag(tag: string): boolean {
-    const existing = activeTarget?.existingTags ?? [];
+    const existing = fetchedExistingTags.length > 0 ? fetchedExistingTags : (activeTarget?.existingTags ?? []);
     return !existing.some((t) => t.localeCompare(tag, undefined, { sensitivity: "accent" }) === 0);
   }
 
   const selectedTagCount = $derived(Object.values(selectedTags).filter(Boolean).length);
 
-  function creditToCard(credit: CreditPatch): EntityThumbnailCard {
+  function findChildImage(children: EntityMetadataProposal[], targetKind: string, name: string): string | null {
+    const child = children.find(
+      (c) => c.targetKind === targetKind && (c.patch.title ?? "").localeCompare(name, undefined, { sensitivity: "accent" }) === 0,
+    );
+    if (!child?.images.length) return null;
+    const poster = child.images.find((img) => img.kind === "poster") ?? child.images[0];
+    return poster?.url ?? null;
+  }
+
+  function creditToCard(credit: CreditPatch, children: EntityMetadataProposal[]): EntityThumbnailCard {
+    const imageUrl = findChildImage(children, "person", credit.name);
     return {
       entity: { id: `proposal-${credit.name}`, kind: "person", title: credit.name, capabilities: [] },
       aspectRatio: { width: 4, height: 5 },
-      cover: null,
+      cover: imageUrl ? { src: imageUrl, alt: credit.name } : null,
       hover: { kind: "none" },
       subtitle: credit.character ? `${credit.role} · ${credit.character}` : credit.role,
     };
@@ -263,15 +277,16 @@
 
   const creditCards = $derived.by((): EntityThumbnailCard[] => {
     if (!proposal) return [];
-    return proposal.patch.credits.map(creditToCard);
+    return proposal.patch.credits.map((c) => creditToCard(c, proposal!.children));
   });
 
   const studioCard = $derived.by((): EntityThumbnailCard | null => {
     if (!proposal?.patch.studio) return null;
+    const imageUrl = findChildImage(proposal.children, "studio", proposal.patch.studio);
     return {
       entity: { id: `proposal-studio`, kind: "studio", title: proposal.patch.studio, capabilities: [] },
       aspectRatio: "wide",
-      cover: null,
+      cover: imageUrl ? { src: imageUrl, alt: proposal.patch.studio } : null,
       hover: { kind: "none" },
     };
   });
