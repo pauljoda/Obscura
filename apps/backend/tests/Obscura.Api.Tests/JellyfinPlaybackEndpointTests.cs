@@ -35,7 +35,7 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
                     SupportsDirectPlay: false,
                     SupportsDirectStream: false,
                     SupportsTranscoding: true,
-                    TranscodingUrl: $"/Videos/{VideoId}/live.m3u8?PlaySessionId=play-session",
+                    TranscodingUrl: $"/Videos/{VideoId}/master.m3u8?PlaySessionId=play-session",
                     TranscodingSubProtocol: "hls",
                     TranscodingContainer: "ts",
                     MediaStreams:
@@ -58,11 +58,11 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
         Assert.Equal("play-session", body.PlaySessionId);
         Assert.False(body.MediaSources.Single().SupportsDirectPlay);
         Assert.Equal("hls", body.MediaSources.Single().TranscodingSubProtocol);
-        Assert.StartsWith($"/Videos/{VideoId}/live.m3u8", body.MediaSources.Single().TranscodingUrl);
+        Assert.StartsWith($"/Videos/{VideoId}/master.m3u8", body.MediaSources.Single().TranscodingUrl);
     }
 
     [Fact]
-    public async Task LivePlaylistEndpointMapsToMasterHlsAsset()
+    public async Task MasterPlaylistEndpointMapsToMasterHlsAsset()
     {
         var path = Path.Combine(_tempDir, "master.m3u8");
         await File.WriteAllTextAsync(path, "#EXTM3U\n");
@@ -70,7 +70,7 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
         using var factory = CreateFactory(hls: hls);
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync($"/Videos/{VideoId}/live.m3u8");
+        using var response = await client.GetAsync($"/Videos/{VideoId}/master.m3u8");
         var body = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -102,10 +102,10 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
         using var factory = CreateFactory(hls: hls);
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync($"/Videos/{VideoId}/hls/720p/index.m3u8");
+        using var response = await client.GetAsync($"/Videos/{VideoId}/hls/720p/stream.m3u8");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("v/720p/index.m3u8", hls.LastAssetPath);
+        Assert.Equal("v/720p/stream.m3u8", hls.LastAssetPath);
     }
 
     [Fact]
@@ -117,10 +117,10 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
         using var factory = CreateFactory(hls: hls);
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync($"/Videos/{VideoId}/hls/720p/index.m3u8?AudioStreamIndex=2");
+        using var response = await client.GetAsync($"/Videos/{VideoId}/hls/720p/stream.m3u8?AudioStreamIndex=2");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("v/720p/index.m3u8", hls.LastAssetPath);
+        Assert.Equal("v/720p/stream.m3u8", hls.LastAssetPath);
         Assert.Equal(2, hls.LastAudioStreamIndex);
     }
 

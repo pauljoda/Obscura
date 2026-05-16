@@ -100,7 +100,7 @@ public static class DependencyInjection
         services.AddScoped<IVideoSourceService, VideoSourceService>();
         services.AddSingleton(new HlsAssetServiceOptions(
             cacheDir,
-            ParseHlsTranscoderProfile(configuration["OBSCURA_HLS_TRANSCODER"] ?? configuration["Obscura:Hls:Transcoder"]),
+            HlsTranscoderProfiles.ParseOrDefault(configuration["OBSCURA_HLS_TRANSCODER"] ?? configuration["Obscura:Hls:Transcoder"]),
             configuration["OBSCURA_FFMPEG_PATH"] ?? configuration["Obscura:Hls:FfmpegPath"] ?? "ffmpeg",
             configuration["OBSCURA_VAAPI_DEVICE"] ?? configuration["Obscura:Hls:VaapiDevice"] ?? "/dev/dri/renderD128"));
         services.AddSingleton<ITranscodeSessionService, TranscodeSessionService>();
@@ -120,8 +120,4 @@ public static class DependencyInjection
             ? path
             : Path.Combine(basePath, path));
 
-    private static HlsTranscoderProfile ParseHlsTranscoderProfile(string? value) =>
-        Enum.TryParse<HlsTranscoderProfile>(value, ignoreCase: true, out var profile)
-            ? profile
-            : HlsTranscoderProfile.Software;
 }

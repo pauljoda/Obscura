@@ -37,14 +37,14 @@ public static class JellyfinPlaybackEndpoints
             .Produces<ApiProblem>(StatusCodes.Status404NotFound)
             .Produces<ApiProblem>(StatusCodes.Status415UnsupportedMediaType);
 
-        routes.MapMethods("/Videos/{itemId:guid}/live.m3u8", [HttpMethods.Get, HttpMethods.Head], (
+        routes.MapMethods("/Videos/{itemId:guid}/master.m3u8", [HttpMethods.Get, HttpMethods.Head], (
             Guid itemId,
             int? audioStreamIndex,
             IHlsAssetService hlsAssets,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
             StreamHlsAssetAsync(itemId, "master.m3u8", audioStreamIndex, hlsAssets, httpContext, cancellationToken))
-            .WithName("GetJellyfinVideoLivePlaylist")
+            .WithName("GetJellyfinVideoMasterPlaylist")
             .WithTags("Jellyfin Videos");
 
         routes.MapMethods("/Videos/{itemId:guid}/hls/{playlistId}/{segmentId}.{container}", [HttpMethods.Get, HttpMethods.Head], (

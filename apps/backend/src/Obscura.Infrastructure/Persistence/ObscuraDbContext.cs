@@ -188,6 +188,9 @@ public sealed class ObscuraDbContext : DbContext
                 .HasColumnName("default_playback_mode")
                 .HasConversion(value => value.ToCode(), value => value.DecodeAs<PlaybackMode>());
             entity.Property(row => row.ShowCastControls).HasColumnName("show_cast_controls");
+            entity.Property(row => row.HlsTranscoderProfile).HasColumnName("hls_transcoder_profile").HasDefaultValue("Software");
+            entity.Property(row => row.HlsFfmpegPath).HasColumnName("hls_ffmpeg_path").HasDefaultValue("ffmpeg");
+            entity.Property(row => row.HlsVaapiDevice).HasColumnName("hls_vaapi_device").HasDefaultValue("/dev/dri/renderD128");
             entity.Property(row => row.CreatedAt).HasColumnName("created_at");
             entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
         });

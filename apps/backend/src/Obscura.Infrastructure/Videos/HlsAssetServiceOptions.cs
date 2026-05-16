@@ -25,6 +25,25 @@ public enum HlsTranscoderProfile
 }
 
 /// <summary>
+/// Helper methods for converting user-provided transcoder profile values into supported ffmpeg profiles.
+/// </summary>
+public static class HlsTranscoderProfiles
+{
+    /// <summary>
+    /// Parses a profile value while preserving a known-good fallback for unknown or empty input.
+    /// </summary>
+    /// <param name="value">Raw profile value from configuration, persisted settings, or API input.</param>
+    /// <param name="fallback">Profile returned when <paramref name="value" /> is empty or unsupported.</param>
+    /// <returns>A supported HLS transcoder profile.</returns>
+    public static HlsTranscoderProfile ParseOrDefault(
+        string? value,
+        HlsTranscoderProfile fallback = HlsTranscoderProfile.Software) =>
+        Enum.TryParse<HlsTranscoderProfile>(value, ignoreCase: true, out var profile)
+            ? profile
+            : fallback;
+}
+
+/// <summary>
 /// Runtime options for resolving and generating adaptive HLS playback assets.
 /// </summary>
 /// <param name="CacheRoot">Root directory for generated HLS packages.</param>

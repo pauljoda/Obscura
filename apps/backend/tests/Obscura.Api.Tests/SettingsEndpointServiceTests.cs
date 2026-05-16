@@ -52,7 +52,8 @@ public sealed class SettingsEndpointServiceTests
             "/api/settings/library",
             new LibrarySettingsUpdateRequest(
                 null, 15, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null));
         var root = await client.PostAsJsonAsync(
             "/api/libraries",
             new LibraryRootCreateRequest("/media/videos", "Videos", null, null, null, null, null, null, null));
@@ -158,6 +159,9 @@ public sealed class SettingsEndpointServiceTests
                 1,
                 "direct",
                 true,
+                "Software",
+                "ffmpeg",
+                "/dev/dri/renderD128",
                 DateTimeOffset.UnixEpoch,
                 DateTimeOffset.UnixEpoch);
         }

@@ -61,7 +61,7 @@ export function extractVideoPlayerProps(
     : "";
   const hlsSrc = mediaSource?.TranscodingUrl
     ? jellyfinApiPath(mediaSource.TranscodingUrl)
-    : jellyfinApiPath(`/Videos/${videoId}/live.m3u8`);
+    : jellyfinApiPath(`/Videos/${videoId}/master.m3u8`);
 
   return {
     src: hlsSrc,

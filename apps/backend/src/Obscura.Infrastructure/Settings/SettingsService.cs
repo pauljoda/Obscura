@@ -4,6 +4,7 @@ using Obscura.Contracts.Settings;
 using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
+using Obscura.Infrastructure.Videos;
 
 namespace Obscura.Infrastructure.Settings;
 
@@ -84,6 +85,22 @@ public sealed class SettingsService : ISettingsService
         if (request.SubtitleOpacity is { } subtitleOpacity) row.SubtitleOpacity = Math.Clamp(subtitleOpacity, 0.2f, 1f);
         if (request.DefaultPlaybackMode is not null && request.DefaultPlaybackMode.TryDecodeAs<PlaybackMode>(out var playbackMode)) row.DefaultPlaybackMode = playbackMode;
         if (request.ShowCastControls is { } showCastControls) row.ShowCastControls = showCastControls;
+        if (request.HlsTranscoderProfile is not null)
+        {
+            row.HlsTranscoderProfile = HlsTranscoderProfiles
+                .ParseOrDefault(request.HlsTranscoderProfile, HlsTranscoderProfile.Software)
+                .ToString();
+        }
+
+        if (request.HlsFfmpegPath is not null)
+        {
+            row.HlsFfmpegPath = NormalizeSettingPath(request.HlsFfmpegPath, "ffmpeg");
+        }
+
+        if (request.HlsVaapiDevice is not null)
+        {
+            row.HlsVaapiDevice = NormalizeSettingPath(request.HlsVaapiDevice, "/dev/dri/renderD128");
+        }
 
         row.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
@@ -254,8 +271,17 @@ public sealed class SettingsService : ISettingsService
             row.SubtitleOpacity,
             row.DefaultPlaybackMode.ToCode(),
             row.ShowCastControls,
+            row.HlsTranscoderProfile,
+            row.HlsFfmpegPath,
+            row.HlsVaapiDevice,
             row.CreatedAt,
             row.UpdatedAt);
+    }
+
+    private static string NormalizeSettingPath(string value, string fallback)
+    {
+        var trimmed = value.Trim();
+        return string.IsNullOrWhiteSpace(trimmed) ? fallback : trimmed;
     }
 
     private static LibraryRoot ToContract(LibraryRootRow row)

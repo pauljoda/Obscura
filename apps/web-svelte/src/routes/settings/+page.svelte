@@ -18,6 +18,9 @@
   import {
     BACKGROUND_WORKER_CONCURRENCY_MAX,
     BACKGROUND_WORKER_CONCURRENCY_MIN,
+    hlsTranscoderProfiles,
+    normalizeHlsTranscoderProfile,
+    type HlsTranscoderProfile,
     playbackModes,
     type PlaybackMode,
     type SubtitleAppearance,
@@ -41,6 +44,24 @@
 
   const nsfw = useNsfw();
 
+  const hlsTranscoderLabels: Record<HlsTranscoderProfile, string> = {
+    Software: "Software",
+    Auto: "Auto",
+    VideoToolbox: "Apple VT",
+    Vaapi: "VA-API",
+    Nvenc: "NVENC",
+    Qsv: "QSV",
+  };
+
+  const hlsTranscoderDescriptions: Record<HlsTranscoderProfile, string> = {
+    Software: "libx264 CPU baseline",
+    Auto: "Native when safe",
+    VideoToolbox: "macOS hardware path",
+    Vaapi: "Intel / AMD Linux",
+    Nvenc: "NVIDIA hardware",
+    Qsv: "Intel Quick Sync",
+  };
+
   function normalizeSettings(s: LibrarySettings): LibrarySettings {
     return {
       ...s,
@@ -58,6 +79,9 @@
       subtitleOpacity: s.subtitleOpacity ?? 1,
       defaultPlaybackMode: (s.defaultPlaybackMode ?? "direct") as PlaybackMode,
       showCastControls: s.showCastControls ?? true,
+      hlsTranscoderProfile: normalizeHlsTranscoderProfile(s.hlsTranscoderProfile),
+      hlsFfmpegPath: s.hlsFfmpegPath ?? "ffmpeg",
+      hlsVaapiDevice: s.hlsVaapiDevice ?? "/dev/dri/renderD128",
     };
   }
 
@@ -86,6 +110,9 @@
     subtitleOpacity: 1,
     defaultPlaybackMode: "direct",
     showCastControls: true,
+    hlsTranscoderProfile: "Software",
+    hlsFfmpegPath: "ffmpeg",
+    hlsVaapiDevice: "/dev/dri/renderD128",
     createdAt: "",
     updatedAt: "",
   };
@@ -96,6 +123,8 @@
 
   let savedMetadataStorageDedicated = $state(defaultSettings.metadataStorageDedicated);
   let audioLangDraft = $state(defaultSettings.audioPreferredLanguages);
+  let hlsFfmpegPathDraft = $state(defaultSettings.hlsFfmpegPath);
+  let hlsVaapiDeviceDraft = $state(defaultSettings.hlsVaapiDevice);
 
   let message = $state<string | null>(null);
   let error = $state<string | null>(null);
@@ -121,6 +150,11 @@
 
   $effect(() => {
     audioLangDraft = settings.audioPreferredLanguages ?? "en,eng,en-US";
+  });
+
+  $effect(() => {
+    hlsFfmpegPathDraft = settings.hlsFfmpegPath ?? "ffmpeg";
+    hlsVaapiDeviceDraft = settings.hlsVaapiDevice ?? "/dev/dri/renderD128";
   });
 
   onMount(() => {
@@ -263,6 +297,30 @@
       settings = { ...settings, audioPreferredLanguages: next };
       void autoSaveSetting({ audioPreferredLanguages: next });
     }
+  }
+
+  function commitHlsFfmpegPath(el: HTMLInputElement) {
+    const next = hlsFfmpegPathDraft.trim() || "ffmpeg";
+    if (next !== (settings.hlsFfmpegPath ?? "ffmpeg")) {
+      settings = { ...settings, hlsFfmpegPath: next };
+      hlsFfmpegPathDraft = next;
+      void autoSaveSetting({ hlsFfmpegPath: next });
+    } else {
+      hlsFfmpegPathDraft = next;
+    }
+    el.value = next;
+  }
+
+  function commitHlsVaapiDevice(el: HTMLInputElement) {
+    const next = hlsVaapiDeviceDraft.trim() || "/dev/dri/renderD128";
+    if (next !== (settings.hlsVaapiDevice ?? "/dev/dri/renderD128")) {
+      settings = { ...settings, hlsVaapiDevice: next };
+      hlsVaapiDeviceDraft = next;
+      void autoSaveSetting({ hlsVaapiDevice: next });
+    } else {
+      hlsVaapiDeviceDraft = next;
+    }
+    el.value = next;
   }
 </script>
 
@@ -460,6 +518,73 @@
             </span>
           </button>
         {/each}
+      </div>
+    </div>
+
+    <div class="surface-card no-lift p-3.5 flex flex-col gap-3">
+      <div>
+        <div class="control-label">HLS transcoder</div>
+        <p class="text-[0.68rem] text-text-muted">
+          Encoder used for new adaptive HLS segments. Hardware options fall back to software if
+          ffmpeg returns an error.
+        </p>
+      </div>
+
+      <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {#each hlsTranscoderProfiles as profile (profile)}
+          {@const active = settings.hlsTranscoderProfile === profile}
+          <button
+            type="button"
+            onclick={() => {
+              settings = { ...settings, hlsTranscoderProfile: profile };
+              void autoSaveSetting({ hlsTranscoderProfile: profile });
+            }}
+            class={cn(
+              "min-h-[72px] border p-2.5 text-left transition-all duration-fast",
+              active
+                ? "border-border-accent bg-surface-3 shadow-[var(--shadow-glow-accent)] text-accent-400"
+                : "border-border-default bg-surface-1 text-text-muted hover:border-border-subtle hover:bg-surface-2/60 hover:text-text-primary",
+            )}
+          >
+            <span class="block text-[0.75rem] font-medium uppercase tracking-wider">
+              {hlsTranscoderLabels[profile]}
+            </span>
+            <span class="mt-1 block text-[0.64rem] leading-snug text-text-muted">
+              {hlsTranscoderDescriptions[profile]}
+            </span>
+          </button>
+        {/each}
+      </div>
+
+      <div class="grid gap-3 md:grid-cols-2">
+        <div>
+          <label class="control-label" for="hls-ffmpeg-path-input">ffmpeg path</label>
+          <input
+            id="hls-ffmpeg-path-input"
+            type="text"
+            bind:value={hlsFfmpegPathDraft}
+            onblur={(e) => commitHlsFfmpegPath(e.currentTarget)}
+            onkeydown={(e) => {
+              if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+            }}
+            class="allow-compact-input-text mt-2 w-full border border-border-default bg-surface-1 px-2.5 py-1.5 font-mono text-[0.72rem] text-text-primary focus:border-border-accent focus:outline-none"
+            placeholder="ffmpeg"
+          />
+        </div>
+        <div>
+          <label class="control-label" for="hls-vaapi-device-input">VA-API device</label>
+          <input
+            id="hls-vaapi-device-input"
+            type="text"
+            bind:value={hlsVaapiDeviceDraft}
+            onblur={(e) => commitHlsVaapiDevice(e.currentTarget)}
+            onkeydown={(e) => {
+              if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+            }}
+            class="allow-compact-input-text mt-2 w-full border border-border-default bg-surface-1 px-2.5 py-1.5 font-mono text-[0.72rem] text-text-primary focus:border-border-accent focus:outline-none"
+            placeholder="/dev/dri/renderD128"
+          />
+        </div>
       </div>
     </div>
 

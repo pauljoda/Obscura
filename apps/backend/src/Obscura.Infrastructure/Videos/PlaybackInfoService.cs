@@ -95,7 +95,7 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
         string playSessionId,
         int? audioStreamIndex)
     {
-        var url = $"/Videos/{itemId:D}/live.m3u8?MediaSourceId={mediaSourceId}&PlaySessionId={playSessionId}";
+        var url = $"/Videos/{itemId:D}/master.m3u8?MediaSourceId={mediaSourceId}&PlaySessionId={playSessionId}";
         return audioStreamIndex is null ? url : $"{url}&AudioStreamIndex={audioStreamIndex.Value}";
     }
 

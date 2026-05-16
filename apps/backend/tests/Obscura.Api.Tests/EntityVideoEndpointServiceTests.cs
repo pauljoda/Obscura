@@ -431,6 +431,9 @@ public sealed class EntityVideoEndpointServiceTests
                 1,
                 "direct",
                 true,
+                "Software",
+                "ffmpeg",
+                "/dev/dri/renderD128",
                 DateTimeOffset.UnixEpoch,
                 DateTimeOffset.UnixEpoch);
         }

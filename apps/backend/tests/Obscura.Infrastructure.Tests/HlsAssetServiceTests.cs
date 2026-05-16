@@ -74,15 +74,15 @@ public sealed class HlsAssetServiceTests : IDisposable
             NullLogger<HlsAssetService>.Instance);
 
         var master = await service.GetAssetAsync(videoId, "master.m3u8", null, CancellationToken.None);
-        var variant = await service.GetAssetAsync(videoId, "v/720p/index.m3u8", null, CancellationToken.None);
+        var variant = await service.GetAssetAsync(videoId, "v/720p/stream.m3u8", null, CancellationToken.None);
 
         Assert.NotNull(master);
         var masterPlaylist = await File.ReadAllTextAsync(master.Path);
-        Assert.Contains("hls/1920p/index.m3u8", masterPlaylist);
-        Assert.Contains("hls/1440p/index.m3u8", masterPlaylist);
-        Assert.Contains("hls/1080p/index.m3u8", masterPlaylist);
-        Assert.Contains("hls/720p/index.m3u8", masterPlaylist);
-        Assert.Contains("hls/480p/index.m3u8", masterPlaylist);
+        Assert.Contains("hls/1920p/stream.m3u8", masterPlaylist);
+        Assert.Contains("hls/1440p/stream.m3u8", masterPlaylist);
+        Assert.Contains("hls/1080p/stream.m3u8", masterPlaylist);
+        Assert.Contains("hls/720p/stream.m3u8", masterPlaylist);
+        Assert.Contains("hls/480p/stream.m3u8", masterPlaylist);
         Assert.Contains("RESOLUTION=3840x1920", masterPlaylist);
         Assert.NotNull(variant);
         var playlist = await File.ReadAllTextAsync(variant.Path);
@@ -180,7 +180,7 @@ public sealed class HlsAssetServiceTests : IDisposable
         var requests = Enumerable.Range(0, 12)
             .Select(index => service.GetAssetAsync(
                 videoId,
-                index % 2 == 0 ? "master.m3u8" : "v/720p/index.m3u8",
+                index % 2 == 0 ? "master.m3u8" : "v/720p/stream.m3u8",
                 null,
                 CancellationToken.None))
             .ToArray();
@@ -322,6 +322,47 @@ public sealed class HlsAssetServiceTests : IDisposable
             argument.Contains("scale_vaapi=w=1440:h=720:format=nv12", StringComparison.Ordinal));
         Assert.Contains("h264_vaapi", arguments);
         Assert.DoesNotContain("libx264", arguments);
+    }
+
+    [Fact]
+    public async Task VirtualSegmentsUseSavedHlsTranscoderSettings()
+    {
+        await using var db = CreateContext();
+        var videoId = Guid.Parse("45454545-4545-4545-4545-454545454545");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        db.LibrarySettings.Add(new LibrarySettingsRow
+        {
+            Id = Guid.NewGuid(),
+            HlsTranscoderProfile = "Vaapi",
+            HlsFfmpegPath = "/usr/local/bin/ffmpeg-gpu",
+            HlsVaapiDevice = "/dev/dri/renderD129",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+        var process = new ManifestWritingProcessExecutor();
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 13,
+                Width: 1920,
+                Height: 960)),
+            process,
+            NullLogger<HlsAssetService>.Instance,
+            db);
+
+        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00000.ts", null, CancellationToken.None);
+
+        Assert.NotNull(segment);
+        Assert.Equal("/usr/local/bin/ffmpeg-gpu", Assert.Single(process.FileNameHistory));
+        var arguments = Assert.Single(process.ArgumentHistory);
+        Assert.Contains("/dev/dri/renderD129", arguments);
+        Assert.Contains("h264_vaapi", arguments);
     }
 
     [Fact]
@@ -680,6 +721,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     {
         public bool WasCalled { get; private set; }
         public IReadOnlyList<string> LastArguments { get; private set; } = [];
+        public List<string> FileNameHistory { get; } = [];
         public List<IReadOnlyList<string>> ArgumentHistory { get; } = [];
 
         public override async Task<ProcessExecutionResult> RunAsync(
@@ -690,6 +732,7 @@ public sealed class HlsAssetServiceTests : IDisposable
         {
             WasCalled = true;
             LastArguments = arguments;
+            FileNameHistory.Add(fileName);
             ArgumentHistory.Add(arguments);
             var outputPath = arguments[^1];
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);

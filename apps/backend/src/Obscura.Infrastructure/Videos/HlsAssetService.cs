@@ -155,7 +155,7 @@ public sealed class HlsAssetService : IHlsAssetService
         var parts = normalizedAssetPath.Split('/');
         if (parts.Length == 3 &&
             parts[0].Equals("v", StringComparison.OrdinalIgnoreCase) &&
-            parts[2].Equals("index.m3u8", StringComparison.OrdinalIgnoreCase))
+            IsVirtualVariantPlaylist(parts[2]))
         {
             var rendition = renditions.FirstOrDefault(candidate =>
                 candidate.Name.Equals(parts[1], StringComparison.OrdinalIgnoreCase));
@@ -234,7 +234,8 @@ public sealed class HlsAssetService : IHlsAssetService
         var root = VirtualRoot(id);
         var metaPath = Path.Combine(root, "metadata.json");
         var sourceInfo = new FileInfo(source.Path);
-        var transcoderProfile = ResolveTranscoderProfile(_options);
+        var transcoderOptions = await ResolveTranscoderOptionsAsync(cancellationToken);
+        var transcoderProfile = ResolveTranscoderProfile(transcoderOptions);
         var nextMeta = new VirtualCacheMetadata(
             source.Path,
             sourceInfo.Length,
@@ -440,13 +441,14 @@ public sealed class HlsAssetService : IHlsAssetService
         var playlistPath = Path.Combine(stagingDirectory, "index.generated.m3u8");
         var segmentPattern = Path.Combine(stagingDirectory, "seg_%05d.ts");
         Directory.CreateDirectory(Path.GetDirectoryName(playlistPath)!);
-        var transcoderProfile = ResolveTranscoderProfile(_options);
+        var transcoderOptions = await ResolveTranscoderOptionsAsync(cancellationToken);
+        var transcoderProfile = ResolveTranscoderProfile(transcoderOptions);
 
         ProcessExecutionResult result;
         try
         {
             result = await _processes.RunAsync(
-                _options.FfmpegPath,
+                transcoderOptions.FfmpegPath,
                 VirtualRenditionArguments(
                     source,
                     rendition,
@@ -455,7 +457,7 @@ public sealed class HlsAssetService : IHlsAssetService
                     playlistPath,
                     segmentPattern,
                     transcoderProfile,
-                    _options.VaapiDevice),
+                    transcoderOptions.VaapiDevice),
                 environment: null,
                 cancellationToken);
 
@@ -470,7 +472,7 @@ public sealed class HlsAssetService : IHlsAssetService
 
                 ResetStagingDirectory(stagingDirectory);
                 result = await _processes.RunAsync(
-                    _options.FfmpegPath,
+                    transcoderOptions.FfmpegPath,
                     VirtualRenditionArguments(
                         source,
                         rendition,
@@ -479,7 +481,7 @@ public sealed class HlsAssetService : IHlsAssetService
                         playlistPath,
                         segmentPattern,
                         HlsTranscoderProfile.Software,
-                        _options.VaapiDevice),
+                        transcoderOptions.VaapiDevice),
                     environment: null,
                     cancellationToken);
             }
@@ -596,6 +598,10 @@ public sealed class HlsAssetService : IHlsAssetService
         return normalized;
     }
 
+    private static bool IsVirtualVariantPlaylist(string assetName) =>
+        assetName.Equals("index.m3u8", StringComparison.OrdinalIgnoreCase) ||
+        assetName.Equals("stream.m3u8", StringComparison.OrdinalIgnoreCase);
+
     private static string? ResolveInside(string root, string assetPath)
     {
         var rootFullPath = Path.GetFullPath(root);
@@ -665,7 +671,7 @@ public sealed class HlsAssetService : IHlsAssetService
             var codecs = H264CodecForHeight(rendition.Height);
             lines.Add(
                 $"#EXT-X-STREAM-INF:BANDWIDTH={ToBitsPerSecond(rendition.MaxRate)},AVERAGE-BANDWIDTH={ToBitsPerSecond(rendition.VideoBitrate)}{resolution},CODECS=\"{codecs},mp4a.40.2\"");
-            lines.Add(AppendAudioStreamQuery($"hls/{rendition.Name}/index.m3u8", audioStreamIndex));
+            lines.Add(AppendAudioStreamQuery($"hls/{rendition.Name}/stream.m3u8", audioStreamIndex));
         }
 
         foreach (var stream in trickplayStreams)
@@ -1023,6 +1029,36 @@ public sealed class HlsAssetService : IHlsAssetService
         }
 
         return HlsTranscoderProfile.Software;
+    }
+
+    private async Task<HlsAssetServiceOptions> ResolveTranscoderOptionsAsync(CancellationToken cancellationToken)
+    {
+        if (_db is null)
+        {
+            return _options;
+        }
+
+        var settings = await _db.LibrarySettings
+            .AsNoTracking()
+            .OrderBy(row => row.CreatedAt)
+            .Select(row => new
+            {
+                row.HlsTranscoderProfile,
+                row.HlsFfmpegPath,
+                row.HlsVaapiDevice
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (settings is null)
+        {
+            return _options;
+        }
+
+        return new HlsAssetServiceOptions(
+            _options.CacheRoot,
+            HlsTranscoderProfiles.ParseOrDefault(settings.HlsTranscoderProfile, _options.TranscoderProfile),
+            string.IsNullOrWhiteSpace(settings.HlsFfmpegPath) ? _options.FfmpegPath : settings.HlsFfmpegPath.Trim(),
+            string.IsNullOrWhiteSpace(settings.HlsVaapiDevice) ? _options.VaapiDevice : settings.HlsVaapiDevice.Trim());
     }
 
     private static void ResetStagingDirectory(string stagingDirectory)

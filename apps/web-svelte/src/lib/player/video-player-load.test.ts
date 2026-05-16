@@ -103,7 +103,7 @@ describe("video-player-load", () => {
     expect(
       fallbackPlaybackModeForError({
         effectiveMode: "direct",
-        hlsSrc: "/Videos/video-1/live.m3u8",
+        hlsSrc: "/Videos/video-1/master.m3u8",
         directSrc: "/Videos/video-1/stream",
       }),
     ).toBe("hls");
@@ -113,7 +113,7 @@ describe("video-player-load", () => {
     expect(
       fallbackPlaybackModeForError({
         effectiveMode: "hls",
-        hlsSrc: "/Videos/video-1/live.m3u8",
+        hlsSrc: "/Videos/video-1/master.m3u8",
         directSrc: "/Videos/video-1/stream",
         directPlayable: true,
         directFailed: true,

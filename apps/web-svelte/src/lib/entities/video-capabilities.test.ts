@@ -143,7 +143,7 @@ describe("extractVideoPlayerProps", () => {
           SupportsDirectPlay: false,
           SupportsDirectStream: false,
           SupportsTranscoding: true,
-          TranscodingUrl: "/Videos/video-1/live.m3u8?AudioStreamIndex=2",
+          TranscodingUrl: "/Videos/video-1/master.m3u8?AudioStreamIndex=2",
           TranscodingSubProtocol: "hls",
           TranscodingContainer: "ts",
           MediaStreams: [

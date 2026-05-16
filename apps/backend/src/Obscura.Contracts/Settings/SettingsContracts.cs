@@ -46,6 +46,9 @@ public sealed record LibrarySettings(
     float SubtitleOpacity,
     string DefaultPlaybackMode,
     bool ShowCastControls,
+    string HlsTranscoderProfile,
+    string HlsFfmpegPath,
+    string HlsVaapiDevice,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
@@ -75,7 +78,10 @@ public sealed record LibrarySettingsUpdateRequest(
     float? SubtitlePositionPercent,
     float? SubtitleOpacity,
     string? DefaultPlaybackMode,
-    bool? ShowCastControls);
+    bool? ShowCastControls,
+    string? HlsTranscoderProfile,
+    string? HlsFfmpegPath,
+    string? HlsVaapiDevice);
 
 /// <summary>
 /// API-facing watched media root.

@@ -39,6 +39,7 @@ public sealed class PlaybackInfoServiceTests
 
         Assert.NotNull(info);
         var source = Assert.Single(info.MediaSources);
+        Assert.StartsWith($"/Videos/{videoId:D}/master.m3u8", source.TranscodingUrl);
         Assert.Contains("AudioStreamIndex=1", source.TranscodingUrl);
         var audioStreams = source.MediaStreams.Where(stream => stream.Type == "Audio").ToList();
         Assert.Equal(2, audioStreams.Count);
@@ -162,6 +163,9 @@ public sealed class PlaybackInfoServiceTests
                 1,
                 "direct",
                 true,
+                "Software",
+                "ffmpeg",
+                "/dev/dri/renderD128",
                 DateTimeOffset.UnixEpoch,
                 DateTimeOffset.UnixEpoch);
     }

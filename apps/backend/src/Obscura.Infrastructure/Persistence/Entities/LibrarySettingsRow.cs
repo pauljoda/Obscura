@@ -54,6 +54,12 @@ public sealed class LibrarySettingsRow
 
     public bool ShowCastControls { get; set; } = true;
 
+    public string HlsTranscoderProfile { get; set; } = "Software";
+
+    public string HlsFfmpegPath { get; set; } = "ffmpeg";
+
+    public string HlsVaapiDevice { get; set; } = "/dev/dri/renderD128";
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }

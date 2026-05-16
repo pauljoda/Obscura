@@ -24,7 +24,7 @@ public sealed class VideoHlsEndpointTests : IDisposable
             new HlsAsset(filePath, "application/vnd.apple.mpegurl", "public, max-age=60")));
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync($"/Videos/{FakeHlsAssetService.VideoId}/live.m3u8");
+        using var response = await client.GetAsync($"/Videos/{FakeHlsAssetService.VideoId}/master.m3u8");
         var body = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
