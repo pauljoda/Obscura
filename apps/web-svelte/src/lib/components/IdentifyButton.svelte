@@ -648,6 +648,7 @@
     z-index: 1;
     display: flex;
     width: 100%;
+    height: 100dvh;
     max-height: 100dvh;
     flex-direction: column;
     border: 1px solid var(--color-border, #1c2235);
@@ -1094,8 +1095,9 @@
 
     .modal-panel {
       max-width: 1180px;
+      height: calc(100dvh - 2.4rem);
       margin: auto;
-      max-height: min(92dvh, 920px);
+      max-height: none;
     }
 
     .review-grid {
