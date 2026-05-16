@@ -169,16 +169,15 @@
 
   async function loadInstalled() {
     try {
-      const [scrapersRes, endpointsRes, pluginsRes] = await Promise.all([
-        fetchInstalledScrapers(),
+      const [scrapersRes, endpointsRes, v2Providers] = await Promise.all([
+        fetchInstalledScrapers().catch(() => ({ packages: [] as ScraperPackage[] })),
         fetchStashBoxEndpoints().catch(() => ({ endpoints: [] as StashBoxEndpoint[] })),
-        fetchInstalledPlugins().catch(() => [] as InstalledPlugin[]),
+        fetchV2PluginProviders().catch(() => [] as V2PluginProvider[]),
       ]);
-      v2Plugins = await fetchV2PluginProviders().catch(() => [] as V2PluginProvider[]);
       installed = scrapersRes.packages;
       stashBoxEndpoints = endpointsRes.endpoints;
-      installedPlugins = pluginsRes;
-      if (pluginsRes.length > 0) void loadPluginUpdates(false);
+      installedPlugins = [];
+      v2Plugins = v2Providers;
     } catch (err) {
       error = err instanceof Error ? err.message : "Failed to load plugins";
     } finally {
@@ -204,13 +203,9 @@
     obscuraLoading = true;
     error = null;
     try {
-      const entries = await fetchObscuraPluginIndex();
-      obscuraEntries = entries;
+      v2Plugins = await fetchV2PluginProviders();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (!msg.includes("404") && !msg.includes("not found") && !msg.includes("not configured")) {
-        error = msg;
-      }
+      error = err instanceof Error ? err.message : "Failed to fetch v2 plugin catalog";
     } finally {
       obscuraLoaded = true;
       obscuraLoading = false;
@@ -562,6 +557,18 @@
     isSfw ? installedPlugins.filter((p) => !p.isNsfw) : installedPlugins,
   );
   const visibleV2Plugins = $derived(v2Plugins);
+  const visibleV2Installed = $derived(visibleV2Plugins.filter((plugin) => plugin.installed));
+
+  function v2MatchesCapabilityFilter(plugin: V2PluginProvider) {
+    if (capFilter === "all") return true;
+    if (capFilter === "scene") {
+      return plugin.supports.some((support) =>
+        support.entityKind === "video" || support.entityKind === "video-series",
+      );
+    }
+
+    return false;
+  }
 
   const filteredInstalled = $derived.by(() => {
     const q = installedSearch.trim().toLowerCase();
@@ -580,21 +587,22 @@
     });
   });
 
-  const filteredV2Plugins = $derived.by(() => {
+  const filteredV2Installed = $derived.by(() => {
     const q = installedSearch.trim().toLowerCase();
-    return visibleV2Plugins.filter((plugin) => {
+    return visibleV2Installed.filter((plugin) => {
       if (q && !plugin.name.toLowerCase().includes(q) && !plugin.id.toLowerCase().includes(q)) {
         return false;
       }
 
-      if (capFilter === "all") return true;
-      if (capFilter === "scene") {
-        return plugin.supports.some((support) =>
-          support.entityKind === "video" || support.entityKind === "video-series",
-        );
-      }
+      return v2MatchesCapabilityFilter(plugin);
+    });
+  });
 
-      return false;
+  const filteredV2Plugins = $derived.by(() => {
+    const q = obscuraSearch.trim().toLowerCase();
+    return visibleV2Plugins.filter((plugin) => {
+      if (!q) return true;
+      return plugin.name.toLowerCase().includes(q) || plugin.id.toLowerCase().includes(q);
     });
   });
 
@@ -611,16 +619,6 @@
     }).length,
   );
 
-  const filteredObscura = $derived.by(() => {
-    const q = obscuraSearch.trim().toLowerCase();
-    const list = q
-      ? obscuraEntries.filter(
-          (e) => e.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q),
-        )
-      : obscuraEntries;
-    return isSfw ? list.filter((e) => !e.isNsfw) : list;
-  });
-
   const filteredIndex = $derived.by(() => {
     const q = indexSearch.trim().toLowerCase();
     return q
@@ -634,11 +632,11 @@
   const visibleTabs = $derived<TabDef[]>(
     (
       [
-        { key: "installed", label: "Installed", count: visibleInstalled.length + visiblePlugins.length + visibleV2Plugins.filter((plugin) => plugin.installed).length, nsfw: false },
+        { key: "installed", label: "Installed", count: visibleInstalled.length + visiblePlugins.length + visibleV2Installed.length, nsfw: false },
         {
           key: "obscura-index",
           label: "Obscura Community",
-          count: obscuraEntries.length || null,
+          count: visibleV2Plugins.length || null,
           nsfw: false,
         },
         {
@@ -699,7 +697,7 @@
     <div class="surface-stat px-3 py-2">
       <span class="text-kicker !text-text-disabled">Installed</span>
       <div class="text-lg font-semibold text-text-primary leading-tight">
-        {visibleInstalled.length + visiblePlugins.length + visibleV2Plugins.filter((plugin) => plugin.installed).length}
+        {visibleInstalled.length + visiblePlugins.length + visibleV2Installed.length}
       </div>
     </div>
     {#if !isSfw}
@@ -719,7 +717,7 @@
       <div class="surface-stat px-3 py-2">
         <span class="text-kicker !text-text-disabled">Obscura Plugins</span>
         <div class="text-lg font-semibold text-text-primary leading-tight">
-          {obscuraEntries.filter((e) => !e.isNsfw).length}
+          {visibleV2Plugins.length}
         </div>
       </div>
     {/if}
@@ -799,7 +797,7 @@
           </div>
           {#if !isSfw}
             <div class="w-px h-4 bg-border-subtle mx-1"></div>
-            {#each ["all", "scene", "performer"] as const as filter}
+            {#each ["all", "scene", "performer"] as const as filter (filter)}
               <button
                 onclick={() => (capFilter = filter)}
                 class={"flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-all duration-fast " +
@@ -836,14 +834,14 @@
               {/snippet}
             </Button>
           {/if}
-          <span class="text-mono-sm text-text-disabled">{filteredInstalled.length} shown</span>
+          <span class="text-mono-sm text-text-disabled">{filteredInstalled.length + filteredV2Installed.length} shown</span>
         </div>
 
-        {#if filteredInstalled.length === 0 && visiblePlugins.length === 0 && filteredV2Plugins.length === 0}
+        {#if filteredInstalled.length === 0 && visiblePlugins.length === 0 && filteredV2Installed.length === 0}
           <div class="surface-card no-lift p-8 text-center">
             <Package class="h-8 w-8 text-text-disabled mx-auto mb-3" />
             <p class="text-text-muted text-sm">
-              {#if visibleInstalled.length === 0 && installedPlugins.length === 0}
+              {#if visibleInstalled.length === 0 && installedPlugins.length === 0 && visibleV2Installed.length === 0}
                 {isSfw
                   ? "No SFW plugins installed. Browse the Obscura Community tab to find plugins."
                   : "No plugins installed. Browse the community tabs to get started."}
@@ -854,7 +852,7 @@
           </div>
         {:else}
           <div class="space-y-1">
-            {#each filteredV2Plugins as plugin (plugin.id)}
+            {#each filteredV2Installed as plugin (plugin.id)}
               {@const authExpanded = authExpandedFor === `v2:${plugin.id}`}
               {@const hasAuth = plugin.auth.length > 0}
               <div
@@ -947,14 +945,13 @@
                             {/if}
                           </label>
                           {#if field.url}
-                            <a
-                              href={field.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              type="button"
+                              onclick={() => window.open(field.url ?? "", "_blank", "noopener,noreferrer")}
                               class="text-[0.6rem] text-text-accent hover:underline"
                             >
                               {authLinkLabel(field)}
-                            </a>
+                            </button>
                           {/if}
                         </div>
                         <input
@@ -1054,7 +1051,7 @@
                       </p>
                       {#if caps.length > 0}
                         <div class="flex flex-wrap items-center gap-1.5 mt-2.5">
-                          {#each caps as key}
+                          {#each caps as key (key)}
                             <span class="tag-chip-default text-[0.6rem] px-1.5 py-0.5">
                               {CAPABILITY_META[key]?.label ?? key}
                             </span>
@@ -1120,14 +1117,13 @@
                             {/if}
                           </label>
                           {#if field.url}
-                            <a
-                              href={field.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              type="button"
+                              onclick={() => window.open(field.url ?? "", "_blank", "noopener,noreferrer")}
                               class="text-[0.6rem] text-text-accent hover:underline"
                             >
                               {authLinkLabel(field)}
-                            </a>
+                            </button>
                           {/if}
                         </div>
                         <input
@@ -1201,7 +1197,7 @@
                     <p class="text-mono-sm text-text-disabled mt-0.5">{pkg.packageId}</p>
                     {#if caps.length > 0}
                       <div class="flex flex-wrap items-center gap-1.5 mt-2.5">
-                        {#each caps as key}
+                        {#each caps as key (key)}
                           <span class={"text-[0.6rem] px-1.5 py-0.5 " + (CAPABILITY_META[key]?.category === "performer" ? "bg-accent-950/80 text-text-accent border border-border-accent/30" : "tag-chip-default")}>
                             {CAPABILITY_META[key]?.label ?? key}
                           </span>
@@ -1240,10 +1236,7 @@
       <section class="space-y-3">
         <div class="flex items-center justify-between gap-3 flex-wrap">
           <p class="text-text-muted text-[0.72rem]">
-            {obscuraEntries.length} plugins available
-            {#if isSfw && obscuraEntries.some((e) => e.isNsfw)}
-              · {obscuraEntries.filter((e) => e.isNsfw).length} NSFW plugins hidden
-            {/if}
+            {visibleV2Plugins.length} v2 plugins available
           </p>
           <div class="flex items-center gap-2">
             <div class="relative">
@@ -1280,7 +1273,7 @@
           <div class="surface-card no-lift p-12 flex items-center justify-center">
             <Loader2 class="h-6 w-6 animate-spin text-text-muted" />
           </div>
-        {:else if filteredObscura.length === 0}
+        {:else if filteredV2Plugins.length === 0}
           <div class="surface-card no-lift p-8 text-center">
             <Sparkles class="h-8 w-8 text-text-disabled mx-auto mb-3" />
             <p class="text-text-muted text-sm">
@@ -1290,61 +1283,150 @@
                   ? "No plugins available."
                   : "Loading plugin index..."}
             </p>
-            {#if !obscuraLoaded && !obscuraLoading}
-              <p class="text-text-disabled text-xs mt-2">
-                Set <code class="font-mono text-text-muted">OBSCURA_PLUGIN_INDEX_PATH</code> to point to the community plugins repo.
-              </p>
-            {/if}
           </div>
         {:else}
           <div class="space-y-1">
-            {#each filteredObscura as entry (entry.id)}
+            {#each filteredV2Plugins as plugin (plugin.id)}
+              {@const authExpanded = authExpandedFor === `v2:${plugin.id}`}
+              {@const hasAuth = plugin.auth.length > 0}
               <div class="surface-card no-lift px-4 py-3 flex items-center gap-3">
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-2 flex-wrap">
-                    <p class="text-sm font-medium">{entry.name}</p>
-                    <span class="tag-chip tag-chip-accent text-[0.55rem]">Obscura</span>
-                    {#if entry.isNsfw}
-                      <span class="tag-chip text-[0.55rem] bg-status-error/10 text-status-error-text border border-status-error/20">NSFW</span>
+                    <p class="text-sm font-medium">{plugin.name}</p>
+                    <span class="tag-chip tag-chip-accent text-[0.55rem]">V2</span>
+                    <span class="text-mono-sm text-text-disabled">v{plugin.version}</span>
+                    {#if plugin.installed}
+                      <Badge variant={plugin.enabled ? "accent" : "default"}>
+                        {#snippet children()}{plugin.enabled ? "Installed" : "Disabled"}{/snippet}
+                      </Badge>
                     {/if}
-                    <span class="text-mono-sm text-text-disabled">v{entry.version}</span>
+                    {#if plugin.missingAuthKeys.length === 0 && hasAuth}
+                      <span class="inline-flex items-center gap-1 text-[0.55rem] px-1.5 py-0.5 bg-status-success/10 text-status-success-text border border-status-success/20">
+                        <Check class="h-2.5 w-2.5" />
+                        Auth OK
+                      </span>
+                    {:else if plugin.missingAuthKeys.length > 0}
+                      <span class="inline-flex items-center gap-1 text-[0.55rem] px-1.5 py-0.5 bg-status-warning/10 text-status-warning-text border border-status-warning/20">
+                        <AlertCircle class="h-2.5 w-2.5" />
+                        Auth Required
+                      </span>
+                    {/if}
                   </div>
-                  {#if entry.description}
-                    <p class="text-text-muted text-[0.68rem] mt-0.5">{entry.description}</p>
-                  {/if}
+                  <p class="text-text-disabled text-[0.65rem] mt-0.5 font-mono">
+                    {plugin.id} · dotnet-process
+                  </p>
                   <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
-                    {#each enabledCaps(entry.capabilities) as key}
+                    {#each v2SupportLabels(plugin) as label (label)}
                       <span class="tag-chip-default text-[0.55rem] px-1.5 py-0.5">
-                        {CAPABILITY_META[key]?.label ?? key}
+                        {label}
                       </span>
                     {/each}
                   </div>
                 </div>
-                {#if entry.installed}
-                  <Badge variant="accent">
-                    {#snippet children()}<Check class="h-2.5 w-2.5 mr-1" />Installed{/snippet}
-                  </Badge>
-                {:else}
-                  <button
-                    onclick={() => void handleObscuraInstall(entry)}
-                    disabled={obscuraInstallingId === entry.id}
-                    class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted hover:text-text-accent transition-colors duration-fast shrink-0 disabled:opacity-40"
-                  >
-                    {#if obscuraInstallingId === entry.id}
-                      <Loader2 class="h-3.5 w-3.5 animate-spin" />
-                    {:else}
-                      <Download class="h-3.5 w-3.5" />
-                    {/if}
-                    Install
-                  </button>
-                {/if}
+                <div class="flex items-center gap-2 shrink-0">
+                  {#if hasAuth && plugin.installed}
+                    <button
+                      onclick={() => toggleV2AuthExpanded(plugin.id)}
+                      class={"flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors duration-fast " +
+                        (plugin.missingAuthKeys.length > 0 ? "text-status-warning-text" : "text-text-muted hover:text-text-primary")}
+                    >
+                      <KeyRound class="h-3.5 w-3.5" />
+                      {authExpanded ? "Close" : "Configure"}
+                    </button>
+                  {/if}
+                  {#if !plugin.installed || !plugin.enabled}
+                    <button
+                      onclick={() => void handleV2Install(plugin)}
+                      disabled={v2InstallingId === plugin.id}
+                      class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted hover:text-text-accent transition-colors duration-fast shrink-0 disabled:opacity-40"
+                    >
+                      {#if v2InstallingId === plugin.id}
+                        <Loader2 class="h-3.5 w-3.5 animate-spin" />
+                      {:else}
+                        <Download class="h-3.5 w-3.5" />
+                      {/if}
+                      Install
+                    </button>
+                  {/if}
+                </div>
               </div>
+
+              {#if authExpanded}
+                <div class="surface-card no-lift border-t border-border-subtle px-4 py-3 space-y-3 bg-surface-1/50">
+                  <h4 class="text-[0.72rem] font-medium text-text-secondary">Authentication</h4>
+                  {#each plugin.auth as field (field.key)}
+                    <div>
+                      <div class="flex items-center justify-between mb-1">
+                        <label class="text-[0.65rem] text-text-disabled" for="community-v2-auth-{plugin.id}-{field.key}">
+                          {field.label}
+                          {#if field.required}
+                            <span class="text-status-error-text ml-0.5">*</span>
+                          {/if}
+                        </label>
+                        {#if field.url}
+                          <button
+                            type="button"
+                            onclick={() => window.open(field.url ?? "", "_blank", "noopener,noreferrer")}
+                            class="text-[0.6rem] text-text-accent hover:underline"
+                          >
+                            {authLinkLabel(field)}
+                          </button>
+                        {/if}
+                      </div>
+                      <input
+                        id="community-v2-auth-{plugin.id}-{field.key}"
+                        type="password"
+                        value={authValues[`v2:${plugin.id}:${field.key}`] ?? ""}
+                        oninput={(e) => {
+                          authValues = {
+                            ...authValues,
+                            [`v2:${plugin.id}:${field.key}`]: (e.currentTarget as HTMLInputElement).value,
+                          };
+                        }}
+                        placeholder={plugin.missingAuthKeys.includes(field.key) ? "Required" : "Saved - enter a new value to replace"}
+                        class="w-full bg-surface-1 border border-border-subtle px-2.5 py-1.5 text-[0.78rem] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-border-accent transition-colors font-mono"
+                      />
+                    </div>
+                  {/each}
+                  <div class="flex items-center justify-end gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onclick={() => {
+                        authExpandedFor = null;
+                        authValues = {};
+                      }}
+                      class="h-auto px-3 py-1.5 text-[0.72rem]"
+                    >
+                      {#snippet children()}Cancel{/snippet}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      disabled={authSavingFor === `v2:${plugin.id}` ||
+                        !plugin.auth.some((field) => authValues[`v2:${plugin.id}:${field.key}`]?.trim())}
+                      onclick={() => void handleV2SaveAuth(plugin)}
+                      class="h-auto gap-1.5 px-3 py-1.5 text-[0.72rem]"
+                    >
+                      {#snippet children()}
+                        {#if authSavingFor === `v2:${plugin.id}`}
+                          <Loader2 class="h-3 w-3 animate-spin" />
+                        {:else}
+                          <Save class="h-3 w-3" />
+                        {/if}
+                        Save Credentials
+                      {/snippet}
+                    </Button>
+                  </div>
+                </div>
+              {/if}
             {/each}
           </div>
         {/if}
       </section>
     {/if}
-
     <!-- STASH COMMUNITY INDEX TAB -->
     {#if tab === "stash-index" && !isSfw}
       <section class="space-y-3">
@@ -1566,7 +1648,7 @@
                   class="w-full bg-surface-1 border border-border-subtle px-2.5 py-1.5 text-[0.78rem] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-border-accent transition-colors"
                 />
                 <div class="flex gap-1.5 mt-1.5 flex-wrap">
-                  {#each [{ label: "StashDB", url: "https://stashdb.org/graphql" }, { label: "FansDB", url: "https://fansdb.cc/graphql" }, { label: "PMVStash", url: "https://pmvstash.org/graphql" }, { label: "ThePornDB", url: "https://theporndb.net/graphql" }] as preset}
+                  {#each [{ label: "StashDB", url: "https://stashdb.org/graphql" }, { label: "FansDB", url: "https://fansdb.cc/graphql" }, { label: "PMVStash", url: "https://pmvstash.org/graphql" }, { label: "ThePornDB", url: "https://theporndb.net/graphql" }] as preset (preset.url)}
                     <button
                       onclick={() => {
                         sbEndpoint = preset.url;
