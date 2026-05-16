@@ -99,6 +99,30 @@ describe("FilmStrip", () => {
       expect(onSeek).toHaveBeenCalledWith(60);
     });
   });
+
+  it("lets marker labels seek directly without starting a strip drag", async () => {
+    const onSeek = vi.fn();
+    const onStripInteractionChange = vi.fn();
+
+    render(FilmStrip, {
+      props: {
+        playlistUrl: "/trickplay.m3u8",
+        videoEl: null,
+        currentTime: 10,
+        duration: 100,
+        onSeek,
+        onStripInteractionChange,
+        markers: [{ id: "credits", title: "Credits", time: 75 }],
+      },
+    });
+
+    const marker = await screen.findByRole("button", { name: "Seek to Credits" });
+    await fireEvent(marker, pointerEvent("pointerdown", 0));
+    await fireEvent.click(marker);
+
+    expect(onStripInteractionChange).not.toHaveBeenCalled();
+    expect(onSeek).toHaveBeenCalledWith(75);
+  });
 });
 
 function pointerEvent(type: string, clientX: number) {

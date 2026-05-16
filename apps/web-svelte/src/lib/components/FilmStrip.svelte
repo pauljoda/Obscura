@@ -197,6 +197,15 @@
     const nextIndex = Math.max(0, Math.min(frames.length - 1, currentIndex + direction));
     onSeek(frames[nextIndex].start);
   }
+
+  function handleMarkerPointerDown(e: PointerEvent) {
+    e.stopPropagation();
+  }
+
+  function handleMarkerClick(e: MouseEvent, marker: FilmStripMarker) {
+    e.stopPropagation();
+    onSeek(marker.time);
+  }
 </script>
 
 {#if frames && frames.length > 0 && !error}
@@ -256,12 +265,20 @@
         >
           {#each markers as marker (marker.id)}
             {@const left = timeToTrackPosition(frames, marker.time, frameWidth)}
-            <div class="absolute top-0 bottom-0 flex flex-col items-center" style:left="{left}px">
-              <div class="w-px h-full bg-accent-500/50"></div>
-              <div class="absolute bottom-0.5 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-px text-[0.5rem] font-medium tracking-wide uppercase leading-tight bg-black/80 text-accent-300 border border-accent-500/30">
+            <button
+              type="button"
+              class="absolute top-0 bottom-0 flex -translate-x-1/2 flex-col items-center pointer-events-auto group/marker"
+              style:left="{left}px"
+              aria-label={`Seek to ${marker.title}`}
+              title={`Seek to ${marker.title}`}
+              onpointerdown={handleMarkerPointerDown}
+              onclick={(e) => handleMarkerClick(e, marker)}
+            >
+              <div class="w-px flex-1 bg-accent-500/50"></div>
+              <div class="mb-0.5 whitespace-nowrap px-1.5 py-px text-[0.5rem] font-medium tracking-wide uppercase leading-tight bg-black/80 text-accent-300 border border-accent-500/30 transition-colors group-hover/marker:border-accent-400/70 group-hover/marker:text-accent-100 group-focus-visible/marker:border-accent-400/70 group-focus-visible/marker:text-accent-100">
                 {marker.title}
               </div>
-            </div>
+            </button>
           {/each}
         </div>
       {/if}

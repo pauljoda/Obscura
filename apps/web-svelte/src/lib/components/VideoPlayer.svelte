@@ -1516,8 +1516,10 @@
             {@const markerPercent = duration > 0 ? (marker.time / duration) * 100 : 0}
             <button
               type="button"
+              data-testid="video-progress-marker"
               class="absolute top-1/2 h-full w-1 -translate-y-1/2 bg-white/60 transition-all hover:bg-white hover:w-1.5 hover:scale-y-150 z-10"
               style:left="{markerPercent}%"
+              onpointerdown={(event) => event.stopPropagation()}
               onclick={(event) => {
                 event.stopPropagation();
                 seekTo(marker.time);
@@ -1937,6 +1939,24 @@
     height: 100%;
     object-fit: contain;
     width: 100%;
+  }
+
+  .obscura-player-surface:fullscreen,
+  .obscura-player-surface:-webkit-full-screen {
+    align-items: center;
+    background: #000;
+    display: flex;
+    height: 100dvh;
+    justify-content: center;
+    width: 100vw;
+  }
+
+  .obscura-player-surface:fullscreen .obscura-media-engine,
+  .obscura-player-surface:-webkit-full-screen .obscura-media-engine {
+    aspect-ratio: auto;
+    height: 100dvh;
+    max-width: none;
+    width: 100vw;
   }
 
   .obscura-range {

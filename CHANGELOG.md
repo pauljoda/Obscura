@@ -36,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scans now enqueue trickplay generation whenever trickplay is enabled, even if thumbnail preview generation is disabled.
 - Video player controls now give visible hover/click feedback, caption enablement opens the transcript sidecar, settings use a stable mobile sheet and desktop in-video drawer, and Cast preloads the Google sender framework before opening the device picker.
 - Video seekbar hover previews now show the matching trickplay thumbnail frame, so scrubbing from the main controls is easier without opening the full filmstrip.
+- Video markers now seek reliably from both the main timeline and filmstrip, and fullscreen playback uses the full screen with controls overlayed on top of the video.
 - Concurrent video playback requests no longer crash the backend when they refresh the same virtual HLS cache at the same time.
 - Virtual adaptive HLS now generates each rendition as one continuous ffmpeg HLS stream, preventing periodic audio crackles from independently encoded AAC segments.
 - Adaptive HLS playback now honors the source file's default audio track and exposes alternate audio tracks in the player menu, preventing multi-language videos from starting on the wrong language.
@@ -133,6 +134,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- Video player markers now remain clickable instead of being swallowed by scrub gestures, filmstrip marker labels seek directly, and fullscreen playback no longer keeps the normal-view control spacing around the video.
 - Adaptive HLS no longer reuses an early active rendition generation for far-ahead segment requests unless that exact segment has already been produced.
 - Adaptive HLS now stops obsolete same-rendition ffmpeg processes when a far seek starts a replacement generation, preventing old buffer work from starving the requested seek.
 - Adaptive HLS now stops obsolete same-video/audio ffmpeg work across all renditions when a far seek starts a replacement generation, preventing 1080p, 720p, and 480p transcodes from competing after ABR switches or scrubs.

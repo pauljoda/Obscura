@@ -346,6 +346,22 @@ describe("VideoPlayer", () => {
     });
   });
 
+  it("lets fullscreen video fill the fullscreen surface while controls remain overlayed", async () => {
+    const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
+
+    expect(source).toContain(".obscura-player-surface:fullscreen");
+    expect(source).toContain(".obscura-player-surface:fullscreen .obscura-media-engine");
+    expect(source).toContain("max-width: none;");
+    expect(source).toContain("height: 100dvh;");
+  });
+
+  it("keeps timeline marker pointer gestures from being captured by the scrub track", async () => {
+    const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
+
+    expect(source).toContain('data-testid="video-progress-marker"');
+    expect(source).toContain("onpointerdown={(event) => event.stopPropagation()}");
+  });
+
   it("keeps mobile settings top-level and desktop settings inside the video drawer", async () => {
     const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
 
