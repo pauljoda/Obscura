@@ -40,7 +40,10 @@ public sealed class TranscodeSessionService : ITranscodeSessionService
     {
         if (!string.IsNullOrWhiteSpace(playSessionId))
         {
-            _sessions.TryRemove(playSessionId, out _);
+            if (_sessions.TryRemove(playSessionId, out var session))
+            {
+                HlsAssetService.CancelActiveGenerationsForItem(session.ItemId);
+            }
         }
 
         return Task.CompletedTask;
@@ -50,7 +53,8 @@ public sealed class TranscodeSessionService : ITranscodeSessionService
     {
         var count = _sessions.Count;
         _sessions.Clear();
-        return Task.FromResult(count);
+        var activeHlsGenerations = HlsAssetService.CancelAllActiveGenerations();
+        return Task.FromResult(count + activeHlsGenerations);
     }
 
     private sealed record ActiveTranscodeSession(Guid ItemId, DateTimeOffset LastPingedAt);

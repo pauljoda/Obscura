@@ -43,6 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Scrubbing beyond the current buffer now starts virtual HLS generation at the requested segment and continues forward, restoring responsive long-distance seeks without waiting for earlier segments.
 - Scrubbing far ahead while a video is still generating now starts a seek-local HLS transcode instead of waiting for the initial playback transcode to catch up.
 - Scrubbing around partially generated adaptive video now cancels stale same-rendition transcodes and restarts work near the requested segment, and HD sources now advertise 1080p, 720p, and 480p adaptive levels.
+- Adaptive playback now starts cold streams at the lowest rendition and cancels stale cross-quality transcodes when users jump outside the buffer, preventing multiple ffmpeg workers from piling up during scrubbing.
 - Video scrubber interactions no longer make the play button show a pause state unless playback actually starts.
 - Subtitle style controls now use consistent sharp menu rows and squared sliders in both the player and Settings page, with compact language-code text that no longer overpowers subtitle settings.
 - Local dev navigation now ignores browser-aborted backend requests, preventing canceled list loads during refresh/navigation from breaking the .NET debug session.
@@ -124,6 +125,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 - Adaptive HLS no longer reuses an early active rendition generation for far-ahead segment requests unless that exact segment has already been produced.
 - Adaptive HLS now stops obsolete same-rendition ffmpeg processes when a far seek starts a replacement generation, preventing old buffer work from starving the requested seek.
+- Adaptive HLS now stops obsolete same-video/audio ffmpeg work across all renditions when a far seek starts a replacement generation, preventing 1080p, 720p, and 480p transcodes from competing after ABR switches or scrubs.
+- Stopping playback sessions and deleting active encodings now cancels active virtual HLS generation work instead of only clearing the session registry.
+- Adaptive HLS master playlists are now emitted lowest-to-highest quality and hls.js starts cold playback at the lowest level, reducing initial CPU pressure before ABR has enough buffer to climb.
 - Adaptive HLS master playlists now include multiple renditions for HD sources so Auto quality and manual quality selection have real levels to choose from.
 - Scrubbing the video progress bar no longer routes `seeked` events through the playback-start handler, keeping the play button state accurate.
 - Search and Identify routes no longer import removed v1 frontend modules, avoiding Vite overlays when navigating through the v2 shell.

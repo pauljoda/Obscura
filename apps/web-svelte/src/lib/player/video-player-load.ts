@@ -31,6 +31,7 @@ export interface AdaptiveHlsBufferConfig {
   maxBufferLength: number;
   maxMaxBufferLength: number;
   maxBufferSize: number;
+  startLevel: number;
   startPosition: number;
 }
 
@@ -165,6 +166,7 @@ export function adaptiveHlsBufferConfig(): AdaptiveHlsBufferConfig {
     maxBufferLength: ExtendedHlsMaxBufferLengthSeconds,
     maxMaxBufferLength: ExtendedHlsMaxMaxBufferLengthSeconds,
     maxBufferSize: ExtendedHlsMaxBufferSizeBytes,
+    startLevel: 0,
     startPosition: 0,
   };
 }

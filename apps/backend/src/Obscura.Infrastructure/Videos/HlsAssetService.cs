@@ -303,7 +303,7 @@ public sealed class HlsAssetService : IHlsAssetService
         var generation = FindActiveRenditionGeneration(id, rendition, audioCacheKey, segmentIndex);
         if (generation is null)
         {
-            CancelActiveRenditionGenerations(id, rendition, audioCacheKey, generationStartSegment);
+            CancelActiveAudioGenerations(id, audioCacheKey);
             generation = StartVirtualRenditionGeneration(id, source, rendition, audioCacheKey, audioStreamIndex, generationStartSegment);
         }
 
@@ -346,22 +346,40 @@ public sealed class HlsAssetService : IHlsAssetService
         return File.Exists(stagedPath) && new FileInfo(stagedPath).Length > 0;
     }
 
-    private static void CancelActiveRenditionGenerations(
+    private static void CancelActiveAudioGenerations(
         Guid id,
-        VirtualHlsRendition rendition,
-        string audioCacheKey,
-        int nextStartSegment)
+        string audioCacheKey)
     {
-        var prefix = $"{id}/{audioCacheKey}/{rendition.Name}/";
+        var prefix = $"{id}/{audioCacheKey}/";
+        CancelActiveGenerationsByPrefix(prefix);
+    }
+
+    internal static int CancelActiveGenerationsForItem(Guid id)
+    {
+        if (id == Guid.Empty)
+        {
+            return 0;
+        }
+
+        return CancelActiveGenerationsByPrefix($"{id}/");
+    }
+
+    internal static int CancelAllActiveGenerations() =>
+        CancelActiveGenerationsByPrefix(string.Empty);
+
+    private static int CancelActiveGenerationsByPrefix(string prefix)
+    {
+        var cancelled = 0;
         foreach (var (key, generation) in ActiveRenditions)
         {
-            if (key.StartsWith(prefix, StringComparison.Ordinal) &&
-                generation.StartSegment != nextStartSegment &&
-                ActiveRenditions.TryRemove(key, out var removed))
+            if (key.StartsWith(prefix, StringComparison.Ordinal) && ActiveRenditions.TryRemove(key, out var removed))
             {
                 removed.Cancellation.Cancel();
+                cancelled++;
             }
         }
+
+        return cancelled;
     }
 
     private VirtualRenditionGeneration StartVirtualRenditionGeneration(
@@ -589,9 +607,9 @@ public sealed class HlsAssetService : IHlsAssetService
         {
             return
             [
-                new("1080p", 1080, "5000k", "6500k", "10000k", "160k", 19),
+                new("480p", 480, "1400k", "1800k", "2800k", "128k", 21),
                 new("720p", 720, "2800k", "3200k", "5600k", "128k", 20),
-                new("480p", 480, "1400k", "1800k", "2800k", "128k", 21)
+                new("1080p", 1080, "5000k", "6500k", "10000k", "160k", 19)
             ];
         }
 
@@ -599,8 +617,8 @@ public sealed class HlsAssetService : IHlsAssetService
         {
             return
             [
-                new("720p", 720, "2800k", "3200k", "5600k", "128k", 20),
-                new("480p", 480, "1400k", "1800k", "2800k", "128k", 21)
+                new("480p", 480, "1400k", "1800k", "2800k", "128k", 21),
+                new("720p", 720, "2800k", "3200k", "5600k", "128k", 20)
             ];
         }
 

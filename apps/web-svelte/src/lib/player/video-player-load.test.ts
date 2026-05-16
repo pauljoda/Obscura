@@ -157,6 +157,7 @@ describe("video-player-load", () => {
       maxBufferLength: 120,
       maxMaxBufferLength: 600,
       maxBufferSize: 180_000_000,
+      startLevel: 0,
       startPosition: 0,
     });
   });

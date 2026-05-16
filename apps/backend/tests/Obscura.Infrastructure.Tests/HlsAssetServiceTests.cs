@@ -411,6 +411,75 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task FarVirtualSegmentCancelsOtherActiveRenditionsForSameAudioTrack()
+    {
+        var videoId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var process = new BlockingInitialSegmentProcessExecutor();
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 180,
+                Width: 3840,
+                Height: 1920)),
+            process,
+            NullLogger<HlsAssetService>.Instance);
+
+        var initialSegment = service.GetAssetAsync(videoId, "v/1080p/seg_00000.ts", null, CancellationToken.None);
+        await process.InitialGenerationStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var farSegment = await service.GetAssetAsync(videoId, "v/480p/seg_00020.ts", null, CancellationToken.None)
+            .WaitAsync(TimeSpan.FromSeconds(5));
+        var replacedInitialSegment = await initialSegment.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Null(replacedInitialSegment);
+        Assert.NotNull(farSegment);
+        Assert.Equal("seg_00020.ts", Path.GetFileName(farSegment.Path));
+        Assert.Contains(process.ArgumentHistory, arguments =>
+            arguments.Any(argument => argument.Contains("/1080p/", StringComparison.Ordinal)) &&
+            arguments.Contains("0"));
+        Assert.Contains(process.ArgumentHistory, arguments =>
+            arguments.Any(argument => argument.Contains("/480p/", StringComparison.Ordinal)) &&
+            arguments.Contains("19"));
+    }
+
+    [Fact]
+    public async Task CancellingPlaybackSessionCancelsActiveVirtualGenerationForItem()
+    {
+        var videoId = Guid.Parse("fefefefe-fefe-fefe-fefe-fefefefefefe");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var process = new BlockingInitialSegmentProcessExecutor();
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 180,
+                Width: 1920,
+                Height: 960)),
+            process,
+            NullLogger<HlsAssetService>.Instance);
+        var sessions = new TranscodeSessionService();
+        sessions.Register("session-1", videoId);
+
+        var initialSegment = service.GetAssetAsync(videoId, "v/720p/seg_00000.ts", null, CancellationToken.None);
+        await process.InitialGenerationStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        await sessions.CancelAsync("session-1", CancellationToken.None);
+        var cancelledSegment = await initialSegment.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Null(cancelledSegment);
+    }
+
+    [Fact]
     public async Task VirtualSegmentsUseDefaultSourceAudioStream()
     {
         var videoId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
