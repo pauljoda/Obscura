@@ -37,7 +37,9 @@
   import { useAppChrome } from "$lib/stores/app-chrome.svelte";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
   import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
-  import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
+  import EntityDetail, {
+    type EntityDetailTab,
+  } from "$lib/components/entities/EntityDetail.svelte";
   import VideoPlayer, {
     type VideoPlayerHandle,
   } from "$lib/components/VideoPlayer.svelte";
@@ -80,6 +82,7 @@
     if (!video) return null;
     return entityCardToDetailCard(video);
   });
+  const videoId = $derived(video?.id ?? "");
 
   const playerProps = $derived.by(() => {
     if (!video) return null;
@@ -121,6 +124,16 @@
   ));
 
   const hasCastAndCrew = $derived(studioCards.length > 0 || creditCards.length > 0);
+  const detailTabs = $derived.by((): EntityDetailTab[] => {
+    if (!card) return [];
+    return [
+      { id: "details", label: "Details" },
+      { id: "metadata", label: "Metadata" },
+      { id: "markers", label: "Markers", count: card.markers.length },
+      { id: "transcript", label: "Transcript", count: playerProps?.subtitleTracks.length ?? 0 },
+      { id: "files", label: "Files", count: card.files.length },
+    ];
+  });
 
   function creditSubtitle(credit: EntityCredit): string | undefined {
     const character = credit.character?.trim();
@@ -140,6 +153,17 @@
 
   function thumbnailKey(card: EntityThumbnailCard): string {
     return `${card.entity.kind}:${card.entity.id}:${card.subtitle ?? ""}`;
+  }
+
+  function formatTimestamp(seconds: number): string {
+    const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+    const hours = Math.floor(safeSeconds / 3600);
+    const minutes = Math.floor((safeSeconds % 3600) / 60);
+    const wholeSeconds = Math.floor(safeSeconds % 60);
+    if (hours > 0) {
+      return `${hours}:${String(minutes).padStart(2, "0")}:${String(wholeSeconds).padStart(2, "0")}`;
+    }
+    return `${minutes}:${String(wholeSeconds).padStart(2, "0")}`;
   }
 
   const dates = $derived.by(() => {
@@ -608,6 +632,7 @@
       {ratingBusy}
       showHero={false}
       posterSize="none"
+      tabs={detailTabs}
     >
       {#snippet heroMeta()}
         {#if studio}
@@ -670,6 +695,157 @@
               {/if}
             </div>
           </div>
+        {/if}
+      {/snippet}
+
+      {#snippet tabContent(tab)}
+        {#if tab.id === "metadata"}
+          <div class="metadata-tab-grid">
+            {#if card.technical.length > 0}
+              <section class="tab-panel-section">
+                <h2 class="section-label">Technical</h2>
+                <div class="tab-data-list">
+                  {#each card.technical as row (row.label)}
+                    <div class="tab-data-row">
+                      <span>{row.label}</span>
+                      <strong>{row.value}</strong>
+                    </div>
+                  {/each}
+                </div>
+              </section>
+            {/if}
+
+            {#if card.dates.length > 0}
+              <section class="tab-panel-section">
+                <h2 class="section-label">Dates</h2>
+                <div class="tab-data-list">
+                  {#each card.dates as row (row.code)}
+                    <div class="tab-data-row">
+                      <span>{row.label}</span>
+                      <strong>{row.value}</strong>
+                    </div>
+                  {/each}
+                </div>
+              </section>
+            {/if}
+
+            {#if card.counters.length > 0 || playbackState}
+              <section class="tab-panel-section">
+                <h2 class="section-label">Playback</h2>
+                <div class="tab-data-list">
+                  {#if playbackState}
+                    <div class="tab-data-row">
+                      <span>Play Count</span>
+                      <strong>{playbackState.playCount}</strong>
+                    </div>
+                    {#if playbackState.resumeSeconds > 0}
+                      <div class="tab-data-row">
+                        <span>Resume</span>
+                        <strong>{formatTimestamp(playbackState.resumeSeconds)}</strong>
+                      </div>
+                    {/if}
+                  {/if}
+                  {#each card.counters as row (row.code)}
+                    <div class="tab-data-row">
+                      <span>{row.label}</span>
+                      <strong>{row.value}</strong>
+                    </div>
+                  {/each}
+                </div>
+              </section>
+            {/if}
+
+            {#if card.sources.length > 0 || card.fingerprints.length > 0}
+              <section class="tab-panel-section">
+                <h2 class="section-label">Source</h2>
+                <div class="tab-data-list">
+                  {#each card.sources as source (source.code)}
+                    <div class="tab-data-row">
+                      <span>{source.code}</span>
+                      <strong>{source.value}</strong>
+                    </div>
+                  {/each}
+                  {#each card.fingerprints as fingerprint (`${fingerprint.algorithm}:${fingerprint.value}`)}
+                    <div class="tab-data-row">
+                      <span>{fingerprint.algorithm}</span>
+                      <strong>{fingerprint.value}</strong>
+                    </div>
+                  {/each}
+                </div>
+              </section>
+            {/if}
+          </div>
+        {:else if tab.id === "markers"}
+          {#if card.markers.length > 0}
+            <div class="marker-tab-list">
+              {#each card.markers as marker (marker.id)}
+                <button type="button" class="marker-tab-row" onclick={() => handleSeek(marker.seconds)}>
+                  <span class="marker-time">
+                    {marker.timestamp}
+                    {#if marker.endSeconds != null}
+                      <span>→ {formatTimestamp(marker.endSeconds)}</span>
+                    {/if}
+                  </span>
+                  <strong>{marker.title}</strong>
+                </button>
+              {/each}
+            </div>
+          {:else}
+            <div class="tab-empty-state">No markers yet.</div>
+          {/if}
+        {:else if tab.id === "transcript"}
+          {#if isTranscriptDockActive}
+            <div class="transcript-tab-stack">
+              <div class="tab-inline-notice">
+                <span>
+                  {isTranscriptDocked
+                    ? "Transcript is docked next to the video."
+                    : "Transcript is docked under the video."}
+                </span>
+                <button type="button" onclick={toggleTranscriptDock}>Move it back here</button>
+              </div>
+              <VideoTranscriptPanel
+                {videoId}
+                tracks={playerProps.subtitleTracks}
+                activeTrackId={activeSubtitleId}
+                onActiveTrackIdChange={handleActiveSubtitleChange}
+                currentTime={displayTime}
+                onSeek={handleSeek}
+                onTracksChanged={refreshVideo}
+                variant="tracks-only"
+                isDocked
+                onDockToggle={toggleTranscriptDock}
+              />
+            </div>
+          {:else}
+            <VideoTranscriptPanel
+              {videoId}
+              tracks={playerProps.subtitleTracks}
+              activeTrackId={activeSubtitleId}
+              onActiveTrackIdChange={handleActiveSubtitleChange}
+              currentTime={displayTime}
+              onSeek={handleSeek}
+              onTracksChanged={refreshVideo}
+              onDockToggle={hasSubtitles ? toggleTranscriptDock : undefined}
+              isDocked={false}
+            />
+          {/if}
+        {:else if tab.id === "files"}
+          {#if card.files.length > 0}
+            <div class="file-tab-list">
+              {#each card.files as file (file.path)}
+                <div class="file-tab-row">
+                  <span>{file.role}</span>
+                  <strong>{file.path}</strong>
+                  {#if file.mimeType}
+                    <em>{file.mimeType}</em>
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          {:else}
+            <div class="tab-empty-state">No files recorded for this video.</div>
+          {/if}
         {/if}
       {/snippet}
     </EntityDetail>
@@ -824,6 +1000,133 @@
     line-height: 1;
     padding: 0.18rem 0.3rem;
     text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .metadata-tab-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  .tab-panel-section {
+    min-width: 0;
+  }
+
+  .tab-data-list,
+  .marker-tab-list,
+  .file-tab-list,
+  .transcript-tab-stack {
+    display: grid;
+    gap: 0;
+    min-width: 0;
+  }
+
+  .tab-data-row,
+  .file-tab-row {
+    display: grid;
+    grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
+    gap: 0.8rem;
+    align-items: baseline;
+    min-width: 0;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-border, #1c2235) 56%, transparent);
+    font-size: 0.82rem;
+  }
+
+  .tab-data-row span,
+  .file-tab-row span {
+    color: var(--color-text-muted, #8a93a6);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .tab-data-row strong,
+  .file-tab-row strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: var(--color-text-secondary, #c4c9d4);
+    font-weight: 500;
+  }
+
+  .file-tab-row {
+    grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr) max-content;
+  }
+
+  .file-tab-row em {
+    color: var(--color-text-muted, #8a93a6);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.72rem;
+    font-style: normal;
+  }
+
+  .marker-tab-row {
+    display: grid;
+    grid-template-columns: minmax(6rem, max-content) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    padding: 0.75rem 0;
+    border: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-border, #1c2235) 56%, transparent);
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .marker-tab-row:hover {
+    color: var(--color-text-accent, #c49a5a);
+  }
+
+  .marker-time {
+    color: var(--color-text-accent, #c49a5a);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.78rem;
+    tab-size: 4;
+  }
+
+  .marker-time span {
+    color: var(--color-text-disabled, #4a5260);
+  }
+
+  .marker-tab-row strong {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--color-text-secondary, #c4c9d4);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tab-empty-state,
+  .tab-inline-notice {
+    padding: 1rem;
+    border: 1px solid var(--color-border, #1c2235);
+    background: var(--color-surface-2, #101420);
+    color: var(--color-text-muted, #8a93a6);
+    font-size: 0.82rem;
+  }
+
+  .tab-inline-notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .tab-inline-notice button {
+    border: 0;
+    background: transparent;
+    color: var(--color-text-accent, #c49a5a);
+    font-size: 0.78rem;
+    cursor: pointer;
     white-space: nowrap;
   }
 

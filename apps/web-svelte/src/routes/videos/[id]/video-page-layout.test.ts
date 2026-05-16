@@ -63,4 +63,20 @@ describe("/videos/[id] detail layout", () => {
     expect(pageSource).toContain("credit-scroller");
     expect(pageSource).not.toContain("credit-chip");
   });
+
+  it("adds old video panels through shared EntityDetail custom tabs", () => {
+    const pageSource = readLocalSource("./+page.svelte");
+
+    expect(pageSource).toContain("detailTabs");
+    expect(pageSource).toContain("tabs={detailTabs}");
+    expect(pageSource).toContain('id: "details"');
+    expect(pageSource).toContain('id: "metadata"');
+    expect(pageSource).toContain('id: "markers"');
+    expect(pageSource).toContain('id: "transcript"');
+    expect(pageSource).toContain('id: "files"');
+    expect(pageSource).toContain("<VideoTranscriptPanel");
+    expect(pageSource).toContain("marker-tab-row");
+    expect(pageSource).toContain("metadata-tab-grid");
+    expect(pageSource).toContain("file-tab-row");
+  });
 });

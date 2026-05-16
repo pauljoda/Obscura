@@ -16,6 +16,12 @@
 
   export type EntityDetailPosterSize = "none" | "small" | "medium" | "large";
 
+  export interface EntityDetailTab {
+    id: string;
+    label: string;
+    count?: number;
+  }
+
   interface Props {
     card: EntityDetailCard;
     onRatingChange?: (value: number | null) => void;
@@ -24,6 +30,7 @@
     posterSize?: EntityDetailPosterSize;
     ratingBusy?: boolean;
     showHero?: boolean;
+    tabs?: EntityDetailTab[];
     /** Inline metadata rendered below the title (e.g. studio link · date · count). */
     heroMeta?: Snippet;
     /** Badge row rendered below the rating stars (e.g. Season 1, Episode 2). */
@@ -34,6 +41,8 @@
     afterBody?: Snippet;
     /** Extra metadata sections appended inside the lower metadata area. */
     extraSections?: Snippet;
+    /** Custom content for non-core tabs. The built-in `details` tab renders the standard detail body. */
+    tabContent?: Snippet<[EntityDetailTab]>;
   }
 
   let {
@@ -44,17 +53,20 @@
     posterSize = "medium",
     ratingBusy = false,
     showHero = true,
+    tabs = [],
     heroMeta,
     heroBadges,
     extraFlags,
     afterBody,
     extraSections,
+    tabContent,
   }: Props = $props();
 
   let favoriteAnimating = $state(false);
   let organizedAnimating = $state(false);
   let ratingAnim = $state<"fill" | "clear" | null>(null);
   let ratingAnimCount = $state(0);
+  let activeTabId = $state("");
 
   const isFavorite = $derived(card.flags.find((f) => f.code === "favorite")?.active ?? false);
   const isNsfw = $derived(card.flags.find((f) => f.code === "nsfw")?.active ?? false);
@@ -88,6 +100,18 @@
   const posterVisible = $derived(posterSize !== "none" && hasPoster(card));
 
   const renderedDescription = $derived(renderEntityDescriptionMarkdown(card.description));
+  const hasTabs = $derived(tabs.length > 0);
+  const activeTab = $derived(tabs.find((tab) => tab.id === activeTabId) ?? tabs[0] ?? null);
+
+  $effect(() => {
+    if (tabs.length === 0) {
+      activeTabId = "";
+      return;
+    }
+    if (!tabs.some((tab) => tab.id === activeTabId)) {
+      activeTabId = tabs[0]?.id ?? "";
+    }
+  });
 
   function handleRatingClick(e: MouseEvent, value: number) {
     if (!onRatingChange || ratingBusy || !card.rating) return;
@@ -103,6 +127,87 @@
     setTimeout(() => (ratingAnim = null), duration);
   }
 </script>
+
+{#snippet defaultDetailContent()}
+  <div class="detail-body">
+    <!-- Description -->
+    {#if renderedDescription}
+      <div class="description-content markdown-body">
+        {@html renderedDescription}
+      </div>
+    {/if}
+
+    <!-- Tags -->
+    {#if card.tags.length > 0}
+      <div class="tags-row">
+        <span class="tags-label">Tags:</span>
+        {#each card.tags as tag (tag)}
+          <span class="tag-chip">{tag}</span>
+        {/each}
+      </div>
+    {/if}
+  </div>
+
+  <!-- Kind-specific content between body and metadata (studio, credits, etc.) -->
+  {#if afterBody}
+    {@render afterBody()}
+  {/if}
+
+  <!-- Lower metadata sections -->
+  {#if card.links.length > 0 || card.files.length > 0 || extraSections}
+    <div class="metadata-sections">
+      {#if extraSections}
+        {@render extraSections()}
+      {/if}
+
+      <!-- Links (universal) -->
+      {#if card.links.length > 0}
+        <section class="detail-section">
+          <h2 class="section-label">
+            <Link class="h-4 w-4" />
+            Links
+          </h2>
+          <div class="link-list">
+            {#each card.links as link (link.label)}
+              {#if link.url}
+                <a href={link.url} target="_blank" rel="noopener noreferrer" class="link-item">
+                  <ExternalLink class="h-3.5 w-3.5" />
+                  {link.label}
+                </a>
+              {:else}
+                <span class="link-item no-url">
+                  <Link class="h-3.5 w-3.5" />
+                  {link.label}
+                </span>
+              {/if}
+            {/each}
+          </div>
+        </section>
+      {/if}
+
+      <!-- Files (universal) -->
+      {#if card.files.length > 0}
+        <section class="detail-section">
+          <h2 class="section-label">
+            <FileText class="h-4 w-4" />
+            Files
+          </h2>
+          <div class="file-list">
+            {#each card.files as file (file.path)}
+              <div class="file-row">
+                <span class="file-role">{file.role}</span>
+                <span class="file-path mono">{file.path}</span>
+                {#if file.mimeType}
+                  <span class="file-mime mono">{file.mimeType}</span>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        </section>
+      {/if}
+    </div>
+  {/if}
+{/snippet}
 
 <article class="entity-detail" data-poster-size={posterSize} data-hero-mode={heroMode}>
   <!-- Hero -->
@@ -220,83 +325,49 @@
     {/if}
   </div>
 
-  <div class="detail-body">
-    <!-- Description -->
-    {#if renderedDescription}
-      <div class="description-content markdown-body">
-        {@html renderedDescription}
-      </div>
-    {/if}
-
-    <!-- Tags -->
-    {#if card.tags.length > 0}
-      <div class="tags-row">
-        <span class="tags-label">Tags:</span>
-        {#each card.tags as tag (tag)}
-          <span class="tag-chip">{tag}</span>
+  {#if hasTabs}
+    <div class="detail-tabs">
+      <div class="detail-tab-list" role="tablist" aria-label="Detail sections">
+        {#each tabs as tab (tab.id)}
+          {@const active = activeTab?.id === tab.id}
+          <button
+            type="button"
+            role="tab"
+            id={`entity-detail-tab-${tab.id}`}
+            aria-selected={active}
+            aria-controls={`entity-detail-panel-${tab.id}`}
+            class:active
+            onclick={() => (activeTabId = tab.id)}
+          >
+            <span>{tab.label}</span>
+            {#if tab.count != null && tab.count > 0}
+              <strong>{tab.count}</strong>
+            {/if}
+          </button>
         {/each}
       </div>
-    {/if}
-  </div>
 
-  <!-- Kind-specific content between body and metadata (studio, credits, etc.) -->
-  {#if afterBody}
-    {@render afterBody()}
-  {/if}
-
-  <!-- Lower metadata sections -->
-  {#if card.links.length > 0 || card.files.length > 0 || extraSections}
-    <div class="metadata-sections">
-      {#if extraSections}
-        {@render extraSections()}
-      {/if}
-
-      <!-- Links (universal) -->
-      {#if card.links.length > 0}
-        <section class="detail-section">
-          <h2 class="section-label">
-            <Link class="h-4 w-4" />
-            Links
-          </h2>
-          <div class="link-list">
-            {#each card.links as link (link.label)}
-              {#if link.url}
-                <a href={link.url} target="_blank" rel="noopener noreferrer" class="link-item">
-                  <ExternalLink class="h-3.5 w-3.5" />
-                  {link.label}
-                </a>
-              {:else}
-                <span class="link-item no-url">
-                  <Link class="h-3.5 w-3.5" />
-                  {link.label}
-                </span>
-              {/if}
-            {/each}
-          </div>
-        </section>
-      {/if}
-
-      <!-- Files (universal) -->
-      {#if card.files.length > 0}
-        <section class="detail-section">
-          <h2 class="section-label">
-            <FileText class="h-4 w-4" />
-            Files
-          </h2>
-          <div class="file-list">
-            {#each card.files as file (file.path)}
-              <div class="file-row">
-                <span class="file-role">{file.role}</span>
-                <span class="file-path mono">{file.path}</span>
-                {#if file.mimeType}
-                  <span class="file-mime mono">{file.mimeType}</span>
-                {/if}
+      {#if activeTab}
+        <div
+          class="detail-tab-panel"
+          role="tabpanel"
+          id={`entity-detail-panel-${activeTab.id}`}
+          aria-labelledby={`entity-detail-tab-${activeTab.id}`}
+        >
+          {#key activeTab.id}
+            {#if activeTab.id === "details" || !tabContent}
+              {@render defaultDetailContent()}
+            {:else}
+              <div class="custom-tab-content">
+                {@render tabContent(activeTab)}
               </div>
-            {/each}
-          </div>
-        </section>
+            {/if}
+          {/key}
+        </div>
       {/if}
     </div>
+  {:else}
+    {@render defaultDetailContent()}
   {/if}
 </article>
 
@@ -636,6 +707,68 @@
 
   /* ── Detail Body ────────────────────────────────────────── */
 
+  .detail-tabs {
+    min-width: 0;
+    border-top: 1px solid var(--detail-border);
+  }
+
+  .detail-tab-list {
+    display: flex;
+    gap: 0.35rem;
+    min-width: 0;
+    overflow-x: auto;
+    padding: 0.65rem 1.5rem;
+    border-bottom: 1px solid var(--detail-border);
+    background: color-mix(in srgb, var(--detail-surface) 88%, transparent);
+    scrollbar-width: thin;
+  }
+
+  .detail-tab-list button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 2rem;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--detail-text-muted);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  }
+
+  .detail-tab-list button:hover {
+    color: var(--detail-text);
+    background: var(--detail-surface-raised);
+  }
+
+  .detail-tab-list button.active {
+    color: var(--detail-accent);
+    border-color: var(--detail-accent-muted);
+    background: color-mix(in srgb, var(--detail-accent) 8%, var(--detail-surface-raised));
+    box-shadow: 0 0 14px var(--detail-accent-glow);
+  }
+
+  .detail-tab-list strong {
+    color: var(--detail-text-disabled);
+    font-size: 0.65rem;
+    font-weight: 600;
+  }
+
+  .detail-tab-panel {
+    min-width: 0;
+  }
+
+  .custom-tab-content {
+    min-width: 0;
+    padding: 1rem 1.5rem 1.5rem;
+  }
+
   .detail-body {
     display: grid;
     gap: 0;
@@ -903,6 +1036,14 @@
 
     .metadata-sections {
       padding: 0 2rem 2rem;
+    }
+
+    .detail-tab-list {
+      padding-inline: 2rem;
+    }
+
+    .custom-tab-content {
+      padding: 1.25rem 2rem 2rem;
     }
   }
 
