@@ -10,6 +10,16 @@ export interface AppBreadcrumb {
   href?: string;
 }
 
+export function parseSidebarCookie(raw: string | undefined): boolean {
+  return raw === "collapsed";
+}
+
+export function readSidebarCookie(): boolean {
+  if (!browser) return false;
+  const match = document.cookie.match(/(?:^|;\s*)obscura-sidebar=([^;]*)/);
+  return parseSidebarCookie(match ? decodeURIComponent(match[1]) : undefined);
+}
+
 function writeSidebarCookie(collapsed: boolean) {
   if (!browser) return;
   document.cookie = `${COOKIE_NAME}=${collapsed ? "collapsed" : "expanded"};path=/;max-age=${COOKIE_MAX_AGE}`;

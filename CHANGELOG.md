@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- The desktop sidebar now remembers whether it was collapsed before a reload, so the app shell opens at the saved width without flashing expanded first.
 - Video player marker chips now seek to their marker time when clicked, matching the filmstrip marker labels.
 - Video marker tabs can now create, edit, delete, and seek timeline markers again on the v2 video detail page.
 - Detail pages can now define tabs from reusable shared sections plus route-specific sections, with optional tab icons, making rich video panels easier to keep consistent across the app.
@@ -167,6 +168,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- The desktop sidebar collapsed state now hydrates from the existing browser cookie before the root layout renders.
 - Video player marker chips now opt back into pointer events inside the controls overlay, so clicking a chip seeks to that marker instead of doing nothing.
 - Video player markers now remain clickable instead of being swallowed by scrub gestures, filmstrip marker labels seek directly, and fullscreen playback no longer keeps the normal-view control spacing around the video.
 - Adaptive HLS no longer reuses an early active rendition generation for far-ahead segment requests unless that exact segment has already been produced.
