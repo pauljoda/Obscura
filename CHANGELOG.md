@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
-- Identify now opens a full-screen review workflow with provider selection, selected-field apply, artwork previews, and per-credit toggles so metadata review can become the shared flow for single and bulk entity matching.
+- The identify review modal now features a polished Dark Room design with hero artwork cards, glass-layered panels, collapsible sections, interactive provider cards, per-image selection badges, and smooth animations throughout.
 - The Plugins page now manages v2 community plugins directly, including local discovery, install/remove, and editable API-key credentials for TMDB.
 - Saved TMDB API keys from the previous `TMDB_API_KEY` credential shape are now reused by the v2 `apiKey` plugin field.
 - Video and series detail pages now expose the v2 identify review drawer directly from the entity header.
@@ -131,6 +131,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- The identify review modal now uses collapsible sections with animated chevrons, provider cards instead of a dropdown, hero artwork with gradient overlays, per-image selection check badges, and proper Dark Room glass/glow styling throughout.
 - Detail-page Identify actions now open the shared review workflow directly instead of a small provider flyout, keeping provider choice, candidate review, field selection, and apply in one modal process.
 - Series detail headers now spell out the aired date, season count, and total episode count instead of showing a generic item count.
 - EntityDetail now treats migrated `backdrop` artwork as the hero/header image while keeping `poster` artwork in the poster slot.
