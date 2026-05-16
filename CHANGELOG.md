@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- V1-to-v2 migration now preserves TV series artwork and season metadata, including series posters, backdrops, logos, season posters, air dates, descriptions, and external IDs.
 - Scanned and migrated TV-style series now keep their season hierarchy, so shows with `Season 1` folders open as series → season → episode instead of flat episode lists while preserving imported metadata.
 - Series detail pages now show the series metadata, a horizontal season poster row, and ordered episode grids. Season pages now load their own structured detail with episodes from the backend hierarchy instead of relying on a placeholder.
 - Video timeline hover previews now show the active marker chapter name while hovering inside a marked section, and omit the chapter label when no markers define chapters.
@@ -176,6 +177,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- Legacy TV seasons now migrate from the `video_seasons` table before falling back to episode-derived season folders, and custom legacy artwork is no longer purged during fresh-start cleanup.
 - Series detail pages now render cast through the shared `EntityThumbnail` surface and move links/files into a metadata tab so the main details tab stays focused on user-facing information.
 - Series and season detail pages now let the shared app layout own outer spacing, removing the doubled padding around the main content area.
 - Video detail cast thumbnails now show the stored character/role text directly instead of adding a redundant "Character" prefix.

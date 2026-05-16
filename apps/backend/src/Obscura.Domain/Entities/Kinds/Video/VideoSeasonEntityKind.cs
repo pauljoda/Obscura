@@ -18,6 +18,7 @@ public sealed record VideoSeasonEntityKind()
     [
         CapabilityRegistry.Images,
         CapabilityRegistry.Description,
+        CapabilityRegistry.Links,
         CapabilityRegistry.Dates,
         CapabilityRegistry.Source,
         CapabilityRegistry.Position

@@ -38,6 +38,28 @@ public sealed class LegacyVideoImportSqlTests
     }
 
     [Fact]
+    public void ImportSqlPreservesLegacySeriesArtwork()
+    {
+        Assert.Contains("series.poster_path", LegacyVideoImportSql.Import);
+        Assert.Contains("series.backdrop_path", LegacyVideoImportSql.Import);
+        Assert.Contains("series.logo_path", LegacyVideoImportSql.Import);
+        Assert.Contains("'poster'", LegacyVideoImportSql.Import);
+        Assert.Contains("'backdrop'", LegacyVideoImportSql.Import);
+        Assert.Contains("'logo'", LegacyVideoImportSql.Import);
+    }
+
+    [Fact]
+    public void ImportSqlPreservesLegacySeasonMetadata()
+    {
+        Assert.Contains("public.video_seasons", LegacyVideoImportSql.Import);
+        Assert.Contains("season.poster_path", LegacyVideoImportSql.Import);
+        Assert.Contains("season.overview", LegacyVideoImportSql.Import);
+        Assert.Contains("season.air_date", LegacyVideoImportSql.Import);
+        Assert.Contains("season.external_ids", LegacyVideoImportSql.Import);
+        Assert.Contains("jsonb_each_text(COALESCE(legacy.external_ids", LegacyVideoImportSql.Import);
+    }
+
+    [Fact]
     public void ImportSqlDoesNotMutateLegacyTables()
     {
         Assert.DoesNotContain("UPDATE public.", LegacyVideoImportSql.Import, StringComparison.OrdinalIgnoreCase);

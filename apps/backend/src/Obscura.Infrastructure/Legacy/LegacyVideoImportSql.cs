@@ -158,6 +158,21 @@ public static class LegacyVideoImportSql
                     value = EXCLUDED.value,
                     updated_at = EXCLUDED.updated_at;
 
+                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at, source)
+                SELECT gen_random_uuid(), series.id, artwork.role, artwork.path, NULL, NULL, series.created_at, series.updated_at, 'custom'
+                FROM public.video_series series
+                CROSS JOIN LATERAL (VALUES
+                    ('{{EntityFileRole.Poster.ToCode()}}', series.poster_path),
+                    ('{{EntityFileRole.Backdrop.ToCode()}}', series.backdrop_path),
+                    ('{{EntityFileRole.Logo.ToCode()}}', series.logo_path)
+                ) AS artwork(role, path)
+                WHERE artwork.path IS NOT NULL
+                ON CONFLICT (entity_id, role) DO UPDATE SET
+                    path = EXCLUDED.path,
+                    size_bytes = EXCLUDED.size_bytes,
+                    source = EXCLUDED.source,
+                    updated_at = EXCLUDED.updated_at;
+
                 INSERT INTO v2.entity_classifications (entity_id, value, system, updated_at)
                 SELECT id, content_rating, 'content-rating', updated_at
                 FROM public.video_series
@@ -481,6 +496,216 @@ public static class LegacyVideoImportSql
                     value = EXCLUDED.value,
                     label = EXCLUDED.label,
                     updated_at = EXCLUDED.updated_at;
+
+                IF to_regclass('public.video_seasons') IS NOT NULL THEN
+                    WITH legacy_seasons AS (
+                        SELECT
+                            COALESCE(existing.entity_id, season.id) AS entity_id,
+                            season.series_id,
+                            season.season_number,
+                            COALESCE(season.title, 'Season ' || season.season_number::text) AS title,
+                            season.folder_path,
+                            season.overview,
+                            season.poster_path,
+                            season.air_date,
+                            season.external_ids,
+                            season.created_at,
+                            season.updated_at
+                        FROM public.video_seasons season
+                        LEFT JOIN v2.video_season_details existing
+                            ON existing.series_entity_id = season.series_id
+                           AND existing.season_number = season.season_number
+                        WHERE season.series_id IS NOT NULL
+                          AND season.season_number IS NOT NULL
+                    )
+                    INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
+                    SELECT entity_id, '{{EntityKindRegistry.VideoSeason.Code}}', title, created_at, updated_at
+                    FROM legacy_seasons
+                    ON CONFLICT (id) DO UPDATE SET
+                        kind_code = EXCLUDED.kind_code,
+                        title = EXCLUDED.title,
+                        updated_at = EXCLUDED.updated_at;
+
+                    WITH legacy_seasons AS (
+                        SELECT
+                            COALESCE(existing.entity_id, season.id) AS entity_id,
+                            season.series_id,
+                            season.season_number
+                        FROM public.video_seasons season
+                        LEFT JOIN v2.video_season_details existing
+                            ON existing.series_entity_id = season.series_id
+                           AND existing.season_number = season.season_number
+                        WHERE season.series_id IS NOT NULL
+                          AND season.season_number IS NOT NULL
+                    )
+                    INSERT INTO v2.video_season_details (entity_id, series_entity_id, season_number)
+                    SELECT entity_id, series_id, season_number
+                    FROM legacy_seasons
+                    ON CONFLICT (entity_id) DO UPDATE SET
+                        series_entity_id = EXCLUDED.series_entity_id,
+                        season_number = EXCLUDED.season_number;
+
+                    WITH legacy_seasons AS (
+                        SELECT
+                            COALESCE(existing.entity_id, season.id) AS entity_id,
+                            season.overview,
+                            season.updated_at
+                        FROM public.video_seasons season
+                        LEFT JOIN v2.video_season_details existing
+                            ON existing.series_entity_id = season.series_id
+                           AND existing.season_number = season.season_number
+                        WHERE season.overview IS NOT NULL
+                    )
+                    INSERT INTO v2.entity_descriptions (entity_id, value, updated_at)
+                    SELECT entity_id, overview, updated_at
+                    FROM legacy_seasons
+                    ON CONFLICT (entity_id) DO UPDATE SET
+                        value = EXCLUDED.value,
+                        updated_at = EXCLUDED.updated_at;
+
+                    WITH legacy_seasons AS (
+                        SELECT
+                            COALESCE(existing.entity_id, season.id) AS entity_id,
+                            season.air_date,
+                            season.updated_at
+                        FROM public.video_seasons season
+                        LEFT JOIN v2.video_season_details existing
+                            ON existing.series_entity_id = season.series_id
+                           AND existing.season_number = season.season_number
+                        WHERE season.air_date IS NOT NULL
+                    )
+                    INSERT INTO v2.entity_dates (entity_id, code, value, sortable_value, precision, updated_at)
+                    SELECT entity_id, 'air', air_date, NULL, NULL, updated_at
+                    FROM legacy_seasons
+                    ON CONFLICT (entity_id, code) DO UPDATE SET
+                        value = EXCLUDED.value,
+                        sortable_value = EXCLUDED.sortable_value,
+                        precision = EXCLUDED.precision,
+                        updated_at = EXCLUDED.updated_at;
+
+                    WITH legacy_seasons AS (
+                        SELECT
+                            COALESCE(existing.entity_id, season.id) AS entity_id,
+                            season.folder_path,
+                            season.updated_at
+                        FROM public.video_seasons season
+                        LEFT JOIN v2.video_season_details existing
+                            ON existing.series_entity_id = season.series_id
+                           AND existing.season_number = season.season_number
+                        WHERE season.folder_path IS NOT NULL
+                    )
+                    INSERT INTO v2.entity_sources (entity_id, code, value, updated_at)
+                    SELECT entity_id, 'folder', folder_path, updated_at
+                    FROM legacy_seasons
+                    ON CONFLICT (entity_id, code) DO UPDATE SET
+                        value = EXCLUDED.value,
+                        updated_at = EXCLUDED.updated_at;
+
+                    WITH legacy_seasons AS (
+                        SELECT
+                            COALESCE(existing.entity_id, season.id) AS entity_id,
+                            season.folder_path,
+                            season.created_at,
+                            season.updated_at
+                        FROM public.video_seasons season
+                        LEFT JOIN v2.video_season_details existing
+                            ON existing.series_entity_id = season.series_id
+                           AND existing.season_number = season.season_number
+                        WHERE season.folder_path IS NOT NULL
+                    )
+                    INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
+                    SELECT gen_random_uuid(), entity_id, '{{EntityFileRole.Source.ToCode()}}', folder_path, NULL, NULL, created_at, updated_at
+                    FROM legacy_seasons
+                    ON CONFLICT (entity_id, role) DO UPDATE SET
+                        path = EXCLUDED.path,
+                        updated_at = EXCLUDED.updated_at;
+
+                    WITH legacy_seasons AS (
+                        SELECT
+                            COALESCE(existing.entity_id, season.id) AS entity_id,
+                            season.poster_path,
+                            season.created_at,
+                            season.updated_at
+                        FROM public.video_seasons season
+                        LEFT JOIN v2.video_season_details existing
+                            ON existing.series_entity_id = season.series_id
+                           AND existing.season_number = season.season_number
+                        WHERE season.poster_path IS NOT NULL
+                    )
+                    INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at, source)
+                    SELECT gen_random_uuid(), entity_id, '{{EntityFileRole.Poster.ToCode()}}', poster_path, NULL, NULL, created_at, updated_at, 'custom'
+                    FROM legacy_seasons
+                    ON CONFLICT (entity_id, role) DO UPDATE SET
+                        path = EXCLUDED.path,
+                        size_bytes = EXCLUDED.size_bytes,
+                        source = EXCLUDED.source,
+                        updated_at = EXCLUDED.updated_at;
+
+                    WITH legacy_seasons AS (
+                        SELECT
+                            COALESCE(existing.entity_id, season.id) AS entity_id,
+                            season.external_ids,
+                            season.created_at,
+                            season.updated_at
+                        FROM public.video_seasons season
+                        LEFT JOIN v2.video_season_details existing
+                            ON existing.series_entity_id = season.series_id
+                           AND existing.season_number = season.season_number
+                    )
+                    INSERT INTO v2.entity_external_ids (id, entity_id, provider, value, url, created_at, updated_at)
+                    SELECT gen_random_uuid(), legacy.entity_id, external.key, external.value, NULL, legacy.created_at, legacy.updated_at
+                    FROM legacy_seasons legacy
+                    CROSS JOIN LATERAL jsonb_each_text(COALESCE(legacy.external_ids, '{}'::jsonb)) AS external(key, value)
+                    ON CONFLICT (entity_id, provider) DO UPDATE SET
+                        value = EXCLUDED.value,
+                        url = EXCLUDED.url,
+                        updated_at = EXCLUDED.updated_at;
+
+                    WITH legacy_seasons AS (
+                        SELECT
+                            COALESCE(existing.entity_id, season.id) AS entity_id,
+                            season.season_number,
+                            season.updated_at
+                        FROM public.video_seasons season
+                        LEFT JOIN v2.video_season_details existing
+                            ON existing.series_entity_id = season.series_id
+                           AND existing.season_number = season.season_number
+                        WHERE season.season_number IS NOT NULL
+                    )
+                    INSERT INTO v2.entity_positions (entity_id, code, value, label, updated_at)
+                    SELECT entity_id, '{{EntityRelationshipRegistry.Season.Code}}', season_number, season_number::text, updated_at
+                    FROM legacy_seasons
+                    ON CONFLICT (entity_id, code) DO UPDATE SET
+                        value = EXCLUDED.value,
+                        label = EXCLUDED.label,
+                        updated_at = EXCLUDED.updated_at;
+
+                    WITH legacy_seasons AS (
+                        SELECT
+                            COALESCE(existing.entity_id, season.id) AS entity_id,
+                            season.series_id,
+                            season.season_number,
+                            season.created_at
+                        FROM public.video_seasons season
+                        LEFT JOIN v2.video_season_details existing
+                            ON existing.series_entity_id = season.series_id
+                           AND existing.season_number = season.season_number
+                        WHERE season.series_id IS NOT NULL
+                          AND season.season_number IS NOT NULL
+                    )
+                    INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
+                    SELECT series_id, entity_id, '{{EntityRelationshipRegistry.Season.Code}}', season_number, created_at
+                    FROM legacy_seasons
+                    ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
+                        sort_order = EXCLUDED.sort_order;
+
+                    INSERT INTO v2.video_series_details (entity_id, rendering_mode)
+                    SELECT DISTINCT series_id, '{{VideoSeriesRenderingMode.Seasons.ToCode()}}'
+                    FROM public.video_seasons
+                    WHERE series_id IS NOT NULL
+                    ON CONFLICT (entity_id) DO UPDATE SET
+                        rendering_mode = EXCLUDED.rendering_mode;
+                END IF;
 
                 WITH legacy_seasons AS (
                     SELECT

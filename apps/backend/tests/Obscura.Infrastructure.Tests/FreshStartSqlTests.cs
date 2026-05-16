@@ -25,4 +25,13 @@ public sealed class FreshStartSqlTests
         Assert.DoesNotContain("public.galleries", sql);
         Assert.DoesNotContain("public.books", sql);
     }
+
+    [Fact]
+    public void PurgeNonSourceEntityFilesSqlKeepsCustomLegacyArtwork()
+    {
+        var sql = FreshStartSql.PurgeNonSourceEntityFiles;
+
+        Assert.Contains("role <> 'source'", sql);
+        Assert.Contains("source <> 'custom'", sql);
+    }
 }

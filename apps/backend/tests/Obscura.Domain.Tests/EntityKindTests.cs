@@ -92,6 +92,7 @@ public sealed class EntityKindTests
         Assert.Contains(CapabilityRegistry.Position, EntityKindRegistry.BookPage.SupportedCapabilities);
         Assert.Contains(CapabilityRegistry.Stats, EntityKindRegistry.Gallery.SupportedCapabilities);
         Assert.Contains(CapabilityRegistry.Source, EntityKindRegistry.Image.SupportedCapabilities);
+        Assert.Contains(CapabilityRegistry.Links, EntityKindRegistry.VideoSeason.SupportedCapabilities);
 
         Assert.DoesNotContain(CapabilityRegistry.Markers, EntityKindRegistry.Person.SupportedCapabilities);
         Assert.DoesNotContain(CapabilityRegistry.Technical, EntityKindRegistry.Collection.SupportedCapabilities);
