@@ -427,21 +427,8 @@
   }
 
   function qualityLabel(quality: VideoQuality, index: number) {
-    const resolution = qualityResolutionLabel(quality);
-    const bandwidth = quality.bitrate ? formatBandwidth(quality.bitrate) : null;
-    if (resolution && bandwidth) return `${resolution} · ${bandwidth}`;
-    if (resolution) return resolution;
-    if (bandwidth) return bandwidth;
+    if (quality.bitrate) return formatBandwidth(quality.bitrate);
     return `Level ${index + 1}`;
-  }
-
-  function qualityResolutionLabel(quality: VideoQuality) {
-    const width = quality.width ?? 0;
-    const height = quality.height ?? 0;
-    if (width >= 7680 || height >= 4320) return "8K";
-    if (width >= 3840 || height >= 1600) return "4K";
-    if (height > 0) return `${height}p`;
-    return null;
   }
 
   function refreshQualities() {
@@ -458,10 +445,9 @@
       .map((quality, index) => ({
         value: index,
         label: qualityLabel(quality, index),
-        height: quality.height,
         bitrate: quality.bitrate ?? 0,
       }))
-      .sort((a, b) => (b.height - a.height) || (b.bitrate - a.bitrate));
+      .sort((a, b) => b.bitrate - a.bitrate);
     qualityOptions = [
       ...(directAvailable ? [{ value: "direct" as const, label: "Direct" }] : []),
       { value: "auto" as const, label: "Auto" },

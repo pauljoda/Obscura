@@ -685,8 +685,9 @@ public sealed class HlsAssetService : IHlsAssetService
             var width = ScaledWidth(source.Width, source.Height, rendition.Height);
             var resolution = width is null ? "" : $",RESOLUTION={width}x{rendition.Height}";
             var codecs = H264CodecForHeight(rendition.Height);
+            var bandwidth = ToBitsPerSecond(rendition.VideoBitrate);
             lines.Add(
-                $"#EXT-X-STREAM-INF:BANDWIDTH={ToBitsPerSecond(rendition.MaxRate)},AVERAGE-BANDWIDTH={ToBitsPerSecond(rendition.VideoBitrate)}{resolution},CODECS=\"{codecs},mp4a.40.2\"");
+                $"#EXT-X-STREAM-INF:BANDWIDTH={bandwidth},AVERAGE-BANDWIDTH={bandwidth}{resolution},CODECS=\"{codecs},mp4a.40.2\"");
             lines.Add(AppendAudioStreamQuery($"hls/{rendition.Name}/stream.m3u8", audioStreamIndex));
         }
 
