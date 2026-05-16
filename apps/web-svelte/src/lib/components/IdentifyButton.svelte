@@ -10,6 +10,7 @@
     ScanSearch,
     X,
   } from "@lucide/svelte";
+  import { portal } from "$lib/actions/portal";
   import {
     applyIdentifyProposal,
     fetchIdentifyProviders,
@@ -59,6 +60,8 @@
   let selectedProviderId = $state<string | null>(null);
   let selectedFields = $state<Record<string, boolean>>({});
   let selectedImages = $state<Record<string, string | null>>({});
+  let shellEl = $state<HTMLDivElement | null>(null);
+  let menuStyle = $state("");
   let applying = $state(false);
   let error = $state<string | null>(null);
 
@@ -90,7 +93,28 @@
 
   async function toggleMenu() {
     if (!providersLoaded) await loadProviders();
-    open = !open;
+    if (open) {
+      open = false;
+      return;
+    }
+
+    updateMenuPosition();
+    open = true;
+  }
+
+  function updateMenuPosition() {
+    if (!shellEl || typeof window === "undefined") return;
+
+    const rect = shellEl.getBoundingClientRect();
+    const menuWidth = 224;
+    const left = Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8));
+    const top = Math.min(rect.bottom + 6, window.innerHeight - 8);
+
+    menuStyle = `--identify-menu-left:${left}px;--identify-menu-top:${top}px;--identify-menu-width:${menuWidth}px;`;
+  }
+
+  function handleViewportChange() {
+    if (open) updateMenuPosition();
   }
 
   async function run(provider: PluginProvider, candidate?: EntitySearchCandidate) {
@@ -194,8 +218,10 @@
   }
 </script>
 
+<svelte:window onresize={handleViewportChange} onscroll={handleViewportChange} />
+
 {#if installedProviders.length > 0}
-<div class={["identify-button-shell", className]}>
+<div bind:this={shellEl} class={["identify-button-shell", className]}>
   <button type="button" class="identify-button" disabled={Boolean(identifying)} onclick={() => void toggleMenu()}>
     {#if identifying}
       <Loader2 class="h-4 w-4 animate-spin" />
@@ -207,7 +233,7 @@
   </button>
 
   {#if open}
-    <div class="provider-menu">
+    <div class="provider-menu" style={menuStyle} use:portal>
       {#if loadingProviders}
         <div class="menu-state"><Loader2 class="h-4 w-4 animate-spin" /> Loading</div>
       {:else if installedProviders.length === 0}
@@ -338,15 +364,17 @@
   .identify-button { border-color: rgba(196, 154, 90, 0.55); box-shadow: 0 0 14px rgba(196, 154, 90, 0.12); }
   .icon-button { width: 2.2rem; padding: 0; }
   .provider-menu {
-    position: absolute;
-    right: 0;
-    top: calc(100% + 0.35rem);
-    z-index: 50;
+    position: fixed;
+    left: var(--identify-menu-left);
+    top: var(--identify-menu-top);
+    z-index: 1300;
     display: grid;
-    min-width: 14rem;
+    width: var(--identify-menu-width);
+    max-width: calc(100vw - 1rem);
     border: 1px solid var(--color-border, #1c2235);
     background: rgba(9, 12, 18, 0.96);
     backdrop-filter: blur(14px);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45), 0 0 18px rgba(196, 154, 90, 0.12);
   }
   .provider-menu button, .menu-state {
     display: flex;

@@ -196,6 +196,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- The detail-page Identify provider menu now floats above the entity hero and tab chrome instead of being clipped underneath the next section.
 - The Plugins page now loads v2 community providers even when removed v1 scraper routes are unavailable, so TMDB appears in the Obscura Community tab instead of showing a raw `not_found` error.
 - Season detail pages no longer promote poster artwork into the full-width header when no explicit header/backdrop image exists.
 - Migrated series and season artwork now survives fresh-start cache cleanup, and missing artwork files are restored from source-folder images such as `poster.jpg`, `banner.jpg`, `clearlogo.png`, and `season01-poster.jpg`.
