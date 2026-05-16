@@ -374,6 +374,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Docs
 
+- Added a ready-for-review dev-stack rule to `AGENTS.md`, clarifying when Vite HMR is enough during iteration and requiring `pnpm dev:kill` plus the canonical full-stack launch before handoff.
 - Added an `AGENTS.md` rule requiring layout and UI changes to start from shared base components, and to expose route-specific needs through reusable component customization points when possible.
 - Added a local dev-stack restart rule to `AGENTS.md`: announce the reboot, run `pnpm dev:kill`, then relaunch the canonical VS Code `Obscura: Full Stack` compound instead of starting duplicate servers on alternate ports.
 - Documented `@obscura/contracts` as a legacy migration bridge so old TypeScript DTOs are removed only after matching surfaces move to the .NET OpenAPI/Orval contract.
