@@ -176,6 +176,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- Series and season detail pages now let the shared app layout own outer spacing, removing the doubled padding around the main content area.
 - Video detail cast thumbnails now show the stored character/role text directly instead of adding a redundant "Character" prefix.
 - The desktop sidebar now stays above page-level media controls when it expands on hover, preventing video scrub bars from drawing across the navigation drawer.
 - Entity detail tag chips now link to their actual tag detail pages using tag entity IDs from the shared tag capability.
