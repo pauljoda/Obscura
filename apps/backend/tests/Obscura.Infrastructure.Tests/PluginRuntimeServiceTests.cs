@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Obscura.Contracts.Plugins;
+using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
+using Obscura.Infrastructure.Persistence.Entities;
 using Obscura.Infrastructure.Plugins;
 using Obscura.Infrastructure.Processes;
 
@@ -55,6 +57,70 @@ public sealed class PluginRuntimeServiceTests : IDisposable
         Assert.Equal("tmdb", provider.Id);
         Assert.False(provider.Installed);
         Assert.Contains("apiKey", provider.MissingAuthKeys);
+    }
+
+    [Fact]
+    public async Task CatalogReusesLegacyProviderCredentialKeysForV2AuthFields()
+    {
+        var pluginDir = Path.Combine(_tempRoot, "tmdb");
+        Directory.CreateDirectory(pluginDir);
+        await File.WriteAllTextAsync(
+            Path.Combine(pluginDir, "manifest.v2.json"),
+            """
+            {
+              "manifestVersion": 2,
+              "apiTags": ["v2"],
+              "id": "tmdb",
+              "name": "TMDB",
+              "version": "1.2.0",
+              "runtime": "dotnet-process",
+              "entry": "Obscura.Plugin.Tmdb.dll",
+              "compat": {
+                "pluginApiMin": "2.0.0",
+                "pluginApiMax": null,
+                "obscuraMin": "0.22.0",
+                "obscuraMax": null
+              },
+              "auth": [
+                { "key": "apiKey", "label": "API key", "required": true, "url": "https://www.themoviedb.org/settings/api" }
+              ],
+              "supports": [
+                { "entityKind": "video", "actions": ["lookup-id", "lookup-url", "search"] }
+              ]
+            }
+            """);
+        await using var db = CreateContext();
+        var now = DateTimeOffset.UtcNow;
+        var config = new ProviderConfigRow
+        {
+            Id = Guid.NewGuid(),
+            ProviderCode = "tmdb",
+            DisplayName = "TMDB",
+            ProviderType = ProviderType.ExternalProcess,
+            Enabled = true,
+            SettingsJson = "{}",
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        db.ProviderConfigs.Add(config);
+        db.ProviderCredentials.Add(new ProviderCredentialRow
+        {
+            Id = Guid.NewGuid(),
+            ProviderConfigId = config.Id,
+            CredentialKey = "TMDB_API_KEY",
+            EncryptedValue = "legacy-secret",
+            CreatedAt = now,
+            UpdatedAt = now
+        });
+        await db.SaveChangesAsync();
+        var catalog = new PluginCatalogService(db, new PluginCatalogOptions([_tempRoot], _tempRoot, "0.22.1-dev"));
+
+        var provider = Assert.Single(await catalog.ListProvidersAsync(CancellationToken.None));
+        var auth = await catalog.GetAuthAsync((await catalog.FindProviderAsync("tmdb", "video", CancellationToken.None))!.Manifest, CancellationToken.None);
+
+        Assert.True(provider.Installed);
+        Assert.Empty(provider.MissingAuthKeys);
+        Assert.Equal("legacy-secret", auth["apiKey"]);
     }
 
     [Fact]

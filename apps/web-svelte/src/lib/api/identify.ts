@@ -137,6 +137,10 @@ export function installV2Plugin(provider: string): Promise<PluginProvider> {
   return apiJson(`/plugins/${provider}`, { method: "POST" });
 }
 
+export function removeV2Plugin(provider: string): Promise<void> {
+  return apiJson(`/plugins/${provider}`, { method: "DELETE" });
+}
+
 export function saveV2PluginAuth(
   provider: string,
   values: Record<string, string | null>,

@@ -57,6 +57,13 @@
     type ScraperPackage,
     type StashBoxEndpoint,
   } from "$lib/api/plugins";
+  import {
+    fetchV2PluginProviders,
+    installV2Plugin,
+    removeV2Plugin,
+    saveV2PluginAuth,
+    type PluginProvider as V2PluginProvider,
+  } from "$lib/api/identify";
 
   /* ─── Capability label map ──────────────────────────────────── */
 
@@ -103,6 +110,9 @@
 
   let installed = $state<ScraperPackage[]>([]);
   let installedPlugins = $state<InstalledPlugin[]>([]);
+  let v2Plugins = $state<V2PluginProvider[]>([]);
+  let v2InstallingId = $state<string | null>(null);
+  let v2RemovingId = $state<string | null>(null);
   let pluginUpdates = $state<Record<string, PluginUpdateStatus>>({});
   let updatingPluginId = $state<string | null>(null);
   let checkingUpdates = $state(false);
@@ -164,6 +174,7 @@
         fetchStashBoxEndpoints().catch(() => ({ endpoints: [] as StashBoxEndpoint[] })),
         fetchInstalledPlugins().catch(() => [] as InstalledPlugin[]),
       ]);
+      v2Plugins = await fetchV2PluginProviders().catch(() => [] as V2PluginProvider[]);
       installed = scrapersRes.packages;
       stashBoxEndpoints = endpointsRes.endpoints;
       installedPlugins = pluginsRes;
@@ -396,6 +407,68 @@
     }
   }
 
+  async function handleV2Install(plugin: V2PluginProvider) {
+    v2InstallingId = plugin.id;
+    error = null;
+    try {
+      const installed = await installV2Plugin(plugin.id);
+      v2Plugins = v2Plugins.map((row) => (row.id === installed.id ? installed : row));
+      flashMessage(`Installed ${installed.name}`);
+    } catch (err) {
+      error = err instanceof Error ? err.message : `Failed to install ${plugin.name}`;
+    } finally {
+      v2InstallingId = null;
+    }
+  }
+
+  async function handleV2Remove(plugin: V2PluginProvider) {
+    v2RemovingId = plugin.id;
+    error = null;
+    try {
+      await removeV2Plugin(plugin.id);
+      v2Plugins = v2Plugins.map((row) =>
+        row.id === plugin.id ? { ...row, installed: false, enabled: false } : row,
+      );
+      flashMessage(`Removed ${plugin.name}`);
+    } catch (err) {
+      error = err instanceof Error ? err.message : `Failed to remove ${plugin.name}`;
+    } finally {
+      v2RemovingId = null;
+    }
+  }
+
+  function toggleV2AuthExpanded(pluginId: string) {
+    const key = `v2:${pluginId}`;
+    if (authExpandedFor === key) {
+      authExpandedFor = null;
+      authValues = {};
+    } else {
+      authExpandedFor = key;
+      authValues = {};
+    }
+  }
+
+  async function handleV2SaveAuth(plugin: V2PluginProvider) {
+    authSavingFor = `v2:${plugin.id}`;
+    error = null;
+    try {
+      const values: Record<string, string | null> = {};
+      for (const field of plugin.auth) {
+        const value = authValues[`v2:${plugin.id}:${field.key}`]?.trim();
+        if (value) values[field.key] = value;
+      }
+      await saveV2PluginAuth(plugin.id, values);
+      v2Plugins = await fetchV2PluginProviders();
+      flashMessage(`Saved credentials for ${plugin.name}`);
+      authExpandedFor = null;
+      authValues = {};
+    } catch (err) {
+      error = err instanceof Error ? err.message : `Failed to save credentials for ${plugin.name}`;
+    } finally {
+      authSavingFor = null;
+    }
+  }
+
   function openAddStashBox() {
     editingStashBox = null;
     sbName = "";
@@ -488,6 +561,7 @@
   const visiblePlugins = $derived(
     isSfw ? installedPlugins.filter((p) => !p.isNsfw) : installedPlugins,
   );
+  const visibleV2Plugins = $derived(v2Plugins);
 
   const filteredInstalled = $derived.by(() => {
     const q = installedSearch.trim().toLowerCase();
@@ -503,6 +577,24 @@
       if (capFilter === "performer")
         return !!(caps.performerByURL || caps.performerByName || caps.performerByFragment);
       return true;
+    });
+  });
+
+  const filteredV2Plugins = $derived.by(() => {
+    const q = installedSearch.trim().toLowerCase();
+    return visibleV2Plugins.filter((plugin) => {
+      if (q && !plugin.name.toLowerCase().includes(q) && !plugin.id.toLowerCase().includes(q)) {
+        return false;
+      }
+
+      if (capFilter === "all") return true;
+      if (capFilter === "scene") {
+        return plugin.supports.some((support) =>
+          support.entityKind === "video" || support.entityKind === "video-series",
+        );
+      }
+
+      return false;
     });
   });
 
@@ -542,7 +634,7 @@
   const visibleTabs = $derived<TabDef[]>(
     (
       [
-        { key: "installed", label: "Installed", count: visibleInstalled.length, nsfw: false },
+        { key: "installed", label: "Installed", count: visibleInstalled.length + visiblePlugins.length + visibleV2Plugins.filter((plugin) => plugin.installed).length, nsfw: false },
         {
           key: "obscura-index",
           label: "Obscura Community",
@@ -578,6 +670,12 @@
       .filter(([, v]) => v)
       .map(([k]) => k);
   }
+
+  function v2SupportLabels(plugin: V2PluginProvider): string[] {
+    return plugin.supports.map((support) =>
+      `${support.entityKind}: ${support.actions.join(", ")}`,
+    );
+  }
 </script>
 
 <svelte:head>
@@ -601,7 +699,7 @@
     <div class="surface-stat px-3 py-2">
       <span class="text-kicker !text-text-disabled">Installed</span>
       <div class="text-lg font-semibold text-text-primary leading-tight">
-        {visibleInstalled.length + visiblePlugins.length}
+        {visibleInstalled.length + visiblePlugins.length + visibleV2Plugins.filter((plugin) => plugin.installed).length}
       </div>
     </div>
     {#if !isSfw}
@@ -741,7 +839,7 @@
           <span class="text-mono-sm text-text-disabled">{filteredInstalled.length} shown</span>
         </div>
 
-        {#if filteredInstalled.length === 0 && visiblePlugins.length === 0}
+        {#if filteredInstalled.length === 0 && visiblePlugins.length === 0 && filteredV2Plugins.length === 0}
           <div class="surface-card no-lift p-8 text-center">
             <Package class="h-8 w-8 text-text-disabled mx-auto mb-3" />
             <p class="text-text-muted text-sm">
@@ -756,6 +854,160 @@
           </div>
         {:else}
           <div class="space-y-1">
+            {#each filteredV2Plugins as plugin (plugin.id)}
+              {@const authExpanded = authExpandedFor === `v2:${plugin.id}`}
+              {@const hasAuth = plugin.auth.length > 0}
+              <div
+                class={"surface-card no-lift transition-opacity duration-fast " +
+                  (plugin.installed && plugin.enabled ? "" : "opacity-80")}
+              >
+                <div class="p-4">
+                  <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-center gap-2.5 flex-wrap">
+                        <p class="text-sm font-semibold">{plugin.name}</p>
+                        <span class="tag-chip tag-chip-accent text-[0.55rem]">V2</span>
+                        <Badge variant={plugin.installed && plugin.enabled ? "accent" : "default"}>
+                          {#snippet children()}{plugin.installed && plugin.enabled ? "Installed" : "Available"}{/snippet}
+                        </Badge>
+                        {#if plugin.missingAuthKeys.length === 0 && hasAuth}
+                          <span class="inline-flex items-center gap-1 text-[0.55rem] px-1.5 py-0.5 bg-status-success/10 text-status-success-text border border-status-success/20">
+                            <Check class="h-2.5 w-2.5" />
+                            Auth OK
+                          </span>
+                        {:else if plugin.missingAuthKeys.length > 0}
+                          <span class="inline-flex items-center gap-1 text-[0.55rem] px-1.5 py-0.5 bg-status-warning/10 text-status-warning-text border border-status-warning/20">
+                            <AlertCircle class="h-2.5 w-2.5" />
+                            Auth Required
+                          </span>
+                        {/if}
+                      </div>
+                      <p class="text-mono-sm text-text-disabled mt-0.5">
+                        {plugin.id} · v{plugin.version} · dotnet-process
+                      </p>
+                      <div class="flex flex-wrap items-center gap-1.5 mt-2.5">
+                        {#each v2SupportLabels(plugin) as label (label)}
+                          <span class="tag-chip-default text-[0.6rem] px-1.5 py-0.5">{label}</span>
+                        {/each}
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                      {#if !plugin.installed || !plugin.enabled}
+                        <button
+                          onclick={() => void handleV2Install(plugin)}
+                          disabled={v2InstallingId === plugin.id}
+                          class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted hover:text-text-accent transition-colors duration-fast disabled:opacity-40"
+                        >
+                          {#if v2InstallingId === plugin.id}
+                            <Loader2 class="h-3.5 w-3.5 animate-spin" />
+                          {:else}
+                            <Download class="h-3.5 w-3.5" />
+                          {/if}
+                          Install
+                        </button>
+                      {/if}
+                      {#if hasAuth}
+                        <button
+                          onclick={() => toggleV2AuthExpanded(plugin.id)}
+                          class={"flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors duration-fast " +
+                            (plugin.missingAuthKeys.length > 0 ? "text-status-warning-text" : "text-text-muted hover:text-text-primary")}
+                        >
+                          <KeyRound class="h-3.5 w-3.5" />
+                          {authExpanded ? "Close" : "Configure"}
+                        </button>
+                      {/if}
+                      {#if plugin.installed}
+                        <button
+                          onclick={() => void handleV2Remove(plugin)}
+                          disabled={v2RemovingId === plugin.id}
+                          class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted hover:text-status-error-text transition-colors duration-fast disabled:opacity-40"
+                        >
+                          {#if v2RemovingId === plugin.id}
+                            <Loader2 class="h-3.5 w-3.5 animate-spin" />
+                          {:else}
+                            <Trash2 class="h-3.5 w-3.5" />
+                          {/if}
+                          Remove
+                        </button>
+                      {/if}
+                    </div>
+                  </div>
+                </div>
+
+                {#if authExpanded}
+                  <div class="border-t border-border-subtle px-4 py-3 space-y-3 bg-surface-1/50">
+                    <h4 class="text-[0.72rem] font-medium text-text-secondary">Authentication</h4>
+                    {#each plugin.auth as field (field.key)}
+                      <div>
+                        <div class="flex items-center justify-between mb-1">
+                          <label class="text-[0.65rem] text-text-disabled" for="v2-auth-{plugin.id}-{field.key}">
+                            {field.label}
+                            {#if field.required}
+                              <span class="text-status-error-text ml-0.5">*</span>
+                            {/if}
+                          </label>
+                          {#if field.url}
+                            <a
+                              href={field.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              class="text-[0.6rem] text-text-accent hover:underline"
+                            >
+                              {authLinkLabel(field)}
+                            </a>
+                          {/if}
+                        </div>
+                        <input
+                          id="v2-auth-{plugin.id}-{field.key}"
+                          type="password"
+                          value={authValues[`v2:${plugin.id}:${field.key}`] ?? ""}
+                          oninput={(e) => {
+                            authValues = {
+                              ...authValues,
+                              [`v2:${plugin.id}:${field.key}`]: (e.currentTarget as HTMLInputElement).value,
+                            };
+                          }}
+                          placeholder={plugin.missingAuthKeys.includes(field.key) ? "Required" : "Saved - enter a new value to replace"}
+                          class="w-full bg-surface-1 border border-border-subtle px-2.5 py-1.5 text-[0.78rem] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-border-accent transition-colors font-mono"
+                        />
+                      </div>
+                    {/each}
+                    <div class="flex items-center justify-end gap-2 pt-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onclick={() => {
+                          authExpandedFor = null;
+                          authValues = {};
+                        }}
+                        class="h-auto px-3 py-1.5 text-[0.72rem]"
+                      >
+                        {#snippet children()}Cancel{/snippet}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        disabled={authSavingFor === `v2:${plugin.id}` ||
+                          !plugin.auth.some((field) => authValues[`v2:${plugin.id}:${field.key}`]?.trim())}
+                        onclick={() => void handleV2SaveAuth(plugin)}
+                        class="h-auto gap-1.5 px-3 py-1.5 text-[0.72rem]"
+                      >
+                        {#snippet children()}
+                          {#if authSavingFor === `v2:${plugin.id}`}
+                            <Loader2 class="h-3 w-3 animate-spin" />
+                          {:else}
+                            <Save class="h-3 w-3" />
+                          {/if}
+                          Save Credentials
+                        {/snippet}
+                      </Button>
+                    </div>
+                  </div>
+                {/if}
+              </div>
+            {/each}
             {#each visiblePlugins as plugin (plugin.id)}
               {@const update = pluginUpdates[plugin.pluginId]}
               {@const caps = enabledCaps(plugin.capabilities)}

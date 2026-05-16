@@ -85,7 +85,9 @@ public sealed class PluginCatalogService
                 credentialKeys.TryGetValue(descriptor.Manifest.Id, out var keys);
                 keys ??= [];
                 var missing = descriptor.Manifest.Auth
-                    .Where(field => field.Required && !keys.Contains(field.Key) && !HasEnvironmentCredential(descriptor.Manifest.Id, field.Key))
+                    .Where(field => field.Required &&
+                        !HasCredentialForField(keys, descriptor.Manifest.Id, field.Key) &&
+                        !HasEnvironmentCredential(descriptor.Manifest.Id, field.Key))
                     .Select(field => field.Key)
                     .ToArray();
 
@@ -250,7 +252,13 @@ public sealed class PluginCatalogService
 
         foreach (var field in manifest.Auth)
         {
-            var value = Environment.GetEnvironmentVariable(EnvironmentCredentialKey(manifest.Id, field.Key));
+            if (!stored.ContainsKey(field.Key) &&
+                TryResolveStoredCredential(stored, manifest.Id, field.Key, out var legacyValue))
+            {
+                stored[field.Key] = legacyValue;
+            }
+
+            var value = ResolveEnvironmentCredential(manifest.Id, field.Key);
             if (!string.IsNullOrWhiteSpace(value))
             {
                 stored[field.Key] = value;
@@ -337,11 +345,72 @@ public sealed class PluginCatalogService
         return current >= min && (max is null || current <= max);
     }
 
+    private static bool HasCredentialForField(ISet<string> keys, string providerId, string key) =>
+        CredentialKeyAliases(providerId, key).Any(keys.Contains);
+
+    private static bool TryResolveStoredCredential(
+        IReadOnlyDictionary<string, string> stored,
+        string providerId,
+        string key,
+        out string value)
+    {
+        foreach (var alias in CredentialKeyAliases(providerId, key))
+        {
+            if (stored.TryGetValue(alias, out value!) && !string.IsNullOrWhiteSpace(value))
+            {
+                return true;
+            }
+        }
+
+        value = string.Empty;
+        return false;
+    }
+
+    private static IEnumerable<string> CredentialKeyAliases(string providerId, string key)
+    {
+        yield return key;
+        yield return key.ToUpperInvariant();
+        yield return $"{providerId}_{key}";
+        yield return $"{providerId.ToUpperInvariant()}_{key.ToUpperInvariant()}";
+
+        if (key.Equals("apiKey", StringComparison.OrdinalIgnoreCase) ||
+            key.Equals("api_key", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return $"{providerId}_API_KEY";
+            yield return $"{providerId.ToUpperInvariant()}_API_KEY";
+        }
+    }
+
     private static bool HasEnvironmentCredential(string providerId, string key) =>
-        !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(EnvironmentCredentialKey(providerId, key)));
+        !string.IsNullOrWhiteSpace(ResolveEnvironmentCredential(providerId, key));
+
+    private static string? ResolveEnvironmentCredential(string providerId, string key)
+    {
+        foreach (var name in EnvironmentCredentialKeys(providerId, key))
+        {
+            var value = Environment.GetEnvironmentVariable(name);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return null;
+    }
 
     private static string EnvironmentCredentialKey(string providerId, string key) =>
         $"OBSCURA_PLUGIN_{providerId.Replace('-', '_').ToUpperInvariant()}_{key.Replace('-', '_').ToUpperInvariant()}";
+
+    private static IEnumerable<string> EnvironmentCredentialKeys(string providerId, string key)
+    {
+        yield return EnvironmentCredentialKey(providerId, key);
+        if (key.Equals("apiKey", StringComparison.OrdinalIgnoreCase) ||
+            key.Equals("api_key", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return $"OBSCURA_PLUGIN_{providerId.Replace('-', '_').ToUpperInvariant()}_API_KEY";
+            yield return $"{providerId.Replace('-', '_').ToUpperInvariant()}_API_KEY";
+        }
+    }
 
     private static Version ParseVersion(string version)
     {

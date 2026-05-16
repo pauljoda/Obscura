@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import {
     AlertCircle,
     Check,
@@ -52,6 +53,7 @@
   let open = $state(false);
   let providers = $state<PluginProvider[]>([]);
   let loadingProviders = $state(false);
+  let providersLoaded = $state(false);
   let identifying = $state<string | null>(null);
   let proposal = $state<EntityMetadataProposal | null>(null);
   let selectedProviderId = $state<string | null>(null);
@@ -61,13 +63,19 @@
   let error = $state<string | null>(null);
 
   const v2Kind = $derived(mapKind(entityKind));
+  const installedProviders = $derived(
+    providers.filter((provider) => provider.installed && provider.enabled),
+  );
   const selectedProvider = $derived.by(() =>
-    providers.find((provider) => provider.id === selectedProviderId) ?? providers[0] ?? null,
+    installedProviders.find((provider) => provider.id === selectedProviderId) ?? installedProviders[0] ?? null,
   );
 
-  async function toggleMenu() {
-    open = !open;
-    if (!open || providers.length > 0 || loadingProviders) return;
+  onMount(() => {
+    void loadProviders();
+  });
+
+  async function loadProviders() {
+    if (loadingProviders) return;
     loadingProviders = true;
     error = null;
     try {
@@ -76,7 +84,13 @@
       error = readError(err);
     } finally {
       loadingProviders = false;
+      providersLoaded = true;
     }
+  }
+
+  async function toggleMenu() {
+    if (!providersLoaded) await loadProviders();
+    open = !open;
   }
 
   async function run(provider: PluginProvider, candidate?: EntitySearchCandidate) {
@@ -180,6 +194,7 @@
   }
 </script>
 
+{#if installedProviders.length > 0}
 <div class={["identify-button-shell", className]}>
   <button type="button" class="identify-button" disabled={Boolean(identifying)} onclick={() => void toggleMenu()}>
     {#if identifying}
@@ -195,10 +210,10 @@
     <div class="provider-menu">
       {#if loadingProviders}
         <div class="menu-state"><Loader2 class="h-4 w-4 animate-spin" /> Loading</div>
-      {:else if providers.length === 0}
+      {:else if installedProviders.length === 0}
         <div class="menu-state">No providers</div>
       {:else}
-        {#each providers as provider (provider.id)}
+        {#each installedProviders as provider (provider.id)}
           <button
             type="button"
             disabled={provider.missingAuthKeys.length > 0}
@@ -222,6 +237,7 @@
     </div>
   {/if}
 </div>
+{/if}
 
 {#if proposal}
   <aside class="identify-review" aria-label={`Review metadata for ${title}`}>

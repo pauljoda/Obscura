@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- The Plugins page now manages v2 community plugins directly, including local discovery, install/remove, and editable API-key credentials for TMDB.
+- Saved TMDB API keys from the previous `TMDB_API_KEY` credential shape are now reused by the v2 `apiKey` plugin field.
 - Video and series detail pages now expose the v2 identify review drawer directly from the entity header.
 - The Identify page now has a v2 review workflow for movies and series, including provider selection, candidate switching, field toggles, artwork picks, and transient bulk sessions.
 - V2 community plugins can now be discovered from local development folders, installed, configured with credentials, and used by the new identify API without persisting review results.
@@ -90,6 +92,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Added
+- V2 plugin credentials now resolve legacy provider key aliases such as `TMDB_API_KEY`, preserving saved API keys while still allowing users to edit the new v2 credential fields.
+- The Plugins page now lists v2 dotnet-process community plugins from local discovery and supports install, remove, and credential configuration through the new .NET plugin endpoints.
 - Video and series detail headers now include a v2 Identify action that opens provider selection, review field toggles, candidate switching, artwork selection, and selected-field apply without using the removed v1 plugin stack.
 - V2 identify frontend API helpers and review UI now call the .NET plugin endpoints for provider discovery, single identify, bulk identify sessions, candidate re-runs, selected-field apply, and selected artwork apply.
 - V2 plugin management and identify endpoints now support local dotnet-process plugin discovery, v2 manifest compatibility gating, provider install/remove, credential storage, single-entity identify, apply, and transient bulk identify sessions.
