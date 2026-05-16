@@ -69,7 +69,9 @@ public sealed class HlsAssetServiceTests : IDisposable
                 false,
                 DurationSeconds: 13,
                 Width: 3840,
-                Height: 1920)),
+                Height: 1920,
+                BitRate: 22_000_000,
+                VideoCodec: "hevc")),
             process,
             NullLogger<HlsAssetService>.Instance);
 
@@ -78,12 +80,14 @@ public sealed class HlsAssetServiceTests : IDisposable
 
         Assert.NotNull(master);
         var masterPlaylist = await File.ReadAllTextAsync(master.Path);
-        Assert.Contains("hls/1920p/stream.m3u8", masterPlaylist);
-        Assert.Contains("hls/1440p/stream.m3u8", masterPlaylist);
-        Assert.Contains("hls/1080p/stream.m3u8", masterPlaylist);
-        Assert.Contains("hls/720p/stream.m3u8", masterPlaylist);
-        Assert.Contains("hls/480p/stream.m3u8", masterPlaylist);
+        Assert.Contains("hls/40mbps/stream.m3u8", masterPlaylist);
+        Assert.Contains("hls/20mbps/stream.m3u8", masterPlaylist);
+        Assert.Contains("hls/15mbps/stream.m3u8", masterPlaylist);
+        Assert.Contains("hls/8mbps/stream.m3u8", masterPlaylist);
+        Assert.Contains("hls/720kbps/stream.m3u8", masterPlaylist);
         Assert.Contains("RESOLUTION=3840x1920", masterPlaylist);
+        Assert.Contains("RESOLUTION=2880x1440", masterPlaylist);
+        Assert.Contains("RESOLUTION=960x480", masterPlaylist);
         Assert.NotNull(variant);
         var playlist = await File.ReadAllTextAsync(variant.Path);
         Assert.Contains("#EXT-X-PLAYLIST-TYPE:VOD", playlist);
@@ -537,10 +541,10 @@ public sealed class HlsAssetServiceTests : IDisposable
             process,
             NullLogger<HlsAssetService>.Instance);
 
-        var initialSegment = service.GetAssetAsync(videoId, "v/1080p/seg_00000.ts", null, CancellationToken.None);
+        var initialSegment = service.GetAssetAsync(videoId, "v/8mbps/seg_00000.ts", null, CancellationToken.None);
         await process.InitialGenerationStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        var farSegment = await service.GetAssetAsync(videoId, "v/480p/seg_00020.ts", null, CancellationToken.None)
+        var farSegment = await service.GetAssetAsync(videoId, "v/720kbps/seg_00020.ts", null, CancellationToken.None)
             .WaitAsync(TimeSpan.FromSeconds(5));
         var replacedInitialSegment = await initialSegment.WaitAsync(TimeSpan.FromSeconds(5));
 
@@ -548,10 +552,10 @@ public sealed class HlsAssetServiceTests : IDisposable
         Assert.NotNull(farSegment);
         Assert.Equal("seg_00020.ts", Path.GetFileName(farSegment.Path));
         Assert.Contains(process.ArgumentHistory, arguments =>
-            arguments.Any(argument => argument.Contains("/1080p/", StringComparison.Ordinal)) &&
+            arguments.Any(argument => argument.Contains("/8mbps/", StringComparison.Ordinal)) &&
             arguments.Contains("0"));
         Assert.Contains(process.ArgumentHistory, arguments =>
-            arguments.Any(argument => argument.Contains("/480p/", StringComparison.Ordinal)) &&
+            arguments.Any(argument => argument.Contains("/720kbps/", StringComparison.Ordinal)) &&
             arguments.Contains("19"));
     }
 

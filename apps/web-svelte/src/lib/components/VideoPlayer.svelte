@@ -342,7 +342,10 @@
 
   function formatBandwidth(bps: number | null) {
     if (!bps || !Number.isFinite(bps)) return "—";
-    if (bps >= 1_000_000) return `${(bps / 1_000_000).toFixed(1)} Mbps`;
+    if (bps >= 1_000_000) {
+      const mbps = bps / 1_000_000;
+      return `${Number.isInteger(mbps) ? mbps.toFixed(0) : mbps.toFixed(1)} Mbps`;
+    }
     return `${Math.round(bps / 1_000)} Kbps`;
   }
 
@@ -424,9 +427,21 @@
   }
 
   function qualityLabel(quality: VideoQuality, index: number) {
-    if (quality.height > 0) return `${quality.height}p`;
-    if (quality.bitrate) return formatBandwidth(quality.bitrate);
+    const resolution = qualityResolutionLabel(quality);
+    const bandwidth = quality.bitrate ? formatBandwidth(quality.bitrate) : null;
+    if (resolution && bandwidth) return `${resolution} · ${bandwidth}`;
+    if (resolution) return resolution;
+    if (bandwidth) return bandwidth;
     return `Level ${index + 1}`;
+  }
+
+  function qualityResolutionLabel(quality: VideoQuality) {
+    const width = quality.width ?? 0;
+    const height = quality.height ?? 0;
+    if (width >= 7680 || height >= 4320) return "8K";
+    if (width >= 3840 || height >= 1600) return "4K";
+    if (height > 0) return `${height}p`;
+    return null;
   }
 
   function refreshQualities() {
@@ -444,8 +459,9 @@
         value: index,
         label: qualityLabel(quality, index),
         height: quality.height,
+        bitrate: quality.bitrate ?? 0,
       }))
-      .sort((a, b) => b.height - a.height);
+      .sort((a, b) => (b.height - a.height) || (b.bitrate - a.bitrate));
     qualityOptions = [
       ...(directAvailable ? [{ value: "direct" as const, label: "Direct" }] : []),
       { value: "auto" as const, label: "Auto" },

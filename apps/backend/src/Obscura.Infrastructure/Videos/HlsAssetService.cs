@@ -137,7 +137,7 @@ public sealed class HlsAssetService : IHlsAssetService
             return null;
         }
 
-        var renditions = RenditionsFor(source.Height);
+        var renditions = RenditionsFor(source);
         await EnsureVirtualCacheAsync(id, source, renditions, cancellationToken);
         var selectedAudioStreamIndex = SelectAudioStreamIndex(source, requestedAudioStreamIndex);
         var audioCacheKey = AudioCacheKey(selectedAudioStreamIndex);
@@ -157,8 +157,7 @@ public sealed class HlsAssetService : IHlsAssetService
             parts[0].Equals("v", StringComparison.OrdinalIgnoreCase) &&
             IsVirtualVariantPlaylist(parts[2]))
         {
-            var rendition = renditions.FirstOrDefault(candidate =>
-                candidate.Name.Equals(parts[1], StringComparison.OrdinalIgnoreCase));
+            var rendition = ResolveRendition(renditions, parts[1]);
             if (rendition is null) return null;
 
             return await WriteTextAssetAsync(
@@ -170,8 +169,7 @@ public sealed class HlsAssetService : IHlsAssetService
 
         if (parts.Length == 3 && parts[0].Equals("v", StringComparison.OrdinalIgnoreCase))
         {
-            var rendition = renditions.FirstOrDefault(candidate =>
-                candidate.Name.Equals(parts[1], StringComparison.OrdinalIgnoreCase));
+            var rendition = ResolveRendition(renditions, parts[1]);
             var segmentIndex = ParseSegmentIndex(parts[2]);
             if (rendition is null || segmentIndex is null)
             {
@@ -642,19 +640,37 @@ public sealed class HlsAssetService : IHlsAssetService
             audioStreams.FirstOrDefault()?.StreamIndex;
     }
 
-    private static IReadOnlyList<VirtualHlsRendition> RenditionsFor(int? sourceHeight)
+    private static IReadOnlyList<VirtualHlsRendition> RenditionsFor(VideoSourceFile source)
     {
-        var height = NormalizeRenditionHeight(sourceHeight ?? 720);
-        var renditions = BaseRenditions()
-            .Where(rendition => rendition.Height <= height)
-            .ToList();
+        var sourceHeight = NormalizeRenditionHeight(source.Height ?? 720);
+        var sourceBitrate = SourceVideoBitrate(source);
+        return JellyfinQualityOptions(sourceBitrate, source.VideoCodec)
+            .Select(option => RenditionForQualityOption(option, sourceHeight))
+            .GroupBy(rendition => rendition.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToArray();
+    }
 
-        if (renditions.Count == 0 || renditions[^1].Height != height)
+    private static VirtualHlsRendition? ResolveRendition(
+        IReadOnlyList<VirtualHlsRendition> renditions,
+        string name) =>
+        renditions.FirstOrDefault(candidate =>
+            candidate.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) ??
+        ResolveLegacyHeightRendition(renditions, name);
+
+    private static VirtualHlsRendition? ResolveLegacyHeightRendition(
+        IReadOnlyList<VirtualHlsRendition> renditions,
+        string name)
+    {
+        if (!name.EndsWith('p') || !int.TryParse(name[..^1], out var height))
         {
-            renditions.Add(NativeRenditionFor(height));
+            return null;
         }
 
-        return renditions;
+        return renditions
+            .Where(rendition => rendition.Height == height)
+            .OrderByDescending(rendition => ToBitsPerSecond(rendition.VideoBitrate))
+            .FirstOrDefault();
     }
 
     private static string BuildVirtualMasterPlaylist(
@@ -946,26 +962,101 @@ public sealed class HlsAssetService : IHlsAssetService
         return int.TryParse(value, out var raw) ? raw : 0;
     }
 
-    private static IReadOnlyList<VirtualHlsRendition> BaseRenditions() =>
-    [
-        new("480p", 480, "1400k", "1800k", "2800k", "128k", 21),
-        new("720p", 720, "2800k", "3200k", "5600k", "128k", 20),
-        new("1080p", 1080, "5000k", "6500k", "10000k", "160k", 19),
-        new("1440p", 1440, "9000k", "12000k", "18000k", "192k", 18),
-        new("2160p", 2160, "16000k", "22000k", "32000k", "192k", 18)
-    ];
-
-    private static VirtualHlsRendition NativeRenditionFor(int height)
+    private static IReadOnlyList<JellyfinQualityOption> JellyfinQualityOptions(
+        int sourceVideoBitrate,
+        string? videoCodec)
     {
-        if (height < 480)
+        var options = JellyfinQualityPresetOptions();
+        if (sourceVideoBitrate <= 0)
         {
-            return new($"{height}p", height, "800k", "1000k", "1600k", "96k", 22);
+            return options;
         }
 
-        var reference = BaseRenditions().LastOrDefault(rendition => rendition.Height < height) ??
-            BaseRenditions()[0];
-        return reference with { Name = $"{height}p", Height = height };
+        var comparableBitrate = sourceVideoBitrate;
+        if (IsEfficientVideoCodec(videoCodec) && comparableBitrate <= 20_000_000)
+        {
+            comparableBitrate = (int)Math.Round(comparableBitrate * 1.5);
+        }
+
+        var selected = new List<JellyfinQualityOption>();
+        var nextHigher = options
+            .Where(option => option.Bitrate > comparableBitrate)
+            .LastOrDefault();
+        if (nextHigher is not null)
+        {
+            selected.Add(nextHigher);
+        }
+
+        selected.AddRange(options.Where(option => option.Bitrate <= comparableBitrate));
+        return selected.Count > 0 ? selected : [options[^1]];
     }
+
+    private static IReadOnlyList<JellyfinQualityOption> JellyfinQualityPresetOptions() =>
+    [
+        new("120mbps", 2160, 120_000_000),
+        new("80mbps", 2160, 80_000_000),
+        new("60mbps", 2160, 60_000_000),
+        new("40mbps", 2160, 40_000_000),
+        new("20mbps", 2160, 20_000_000),
+        new("15mbps", 1440, 15_000_000),
+        new("10mbps", 1440, 10_000_000),
+        new("8mbps", 1080, 8_000_000),
+        new("6mbps", 1080, 6_000_000),
+        new("4mbps", 720, 4_000_000),
+        new("3mbps", 720, 3_000_000),
+        new("1500kbps", 720, 1_500_000),
+        new("720kbps", 480, 720_000),
+        new("420kbps", 360, 420_000)
+    ];
+
+    private static VirtualHlsRendition RenditionForQualityOption(
+        JellyfinQualityOption option,
+        int sourceHeight)
+    {
+        var height = Math.Min(sourceHeight, option.MaxHeight);
+        var videoBitrate = ToRate(option.Bitrate);
+        var maxRate = ToRate((int)Math.Round(option.Bitrate * 1.15));
+        var bufferSize = ToRate(option.Bitrate * 2);
+        return new(
+            option.Name,
+            height,
+            videoBitrate,
+            maxRate,
+            bufferSize,
+            option.Bitrate >= 15_000_000 ? "192k" : "128k",
+            CrfForHeight(height));
+    }
+
+    private static int SourceVideoBitrate(VideoSourceFile source) =>
+        source.Streams?
+            .Where(stream => stream.Type.Equals("Video", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(stream => stream.StreamIndex)
+            .Select(stream => stream.BitRate)
+            .FirstOrDefault(bitRate => bitRate is > 0) ??
+        source.BitRate ??
+        0;
+
+    private static bool IsEfficientVideoCodec(string? codec) =>
+        codec is not null &&
+        (codec.Equals("hevc", StringComparison.OrdinalIgnoreCase) ||
+            codec.Equals("h265", StringComparison.OrdinalIgnoreCase) ||
+            codec.Equals("av1", StringComparison.OrdinalIgnoreCase) ||
+            codec.Equals("vp9", StringComparison.OrdinalIgnoreCase));
+
+    private static string ToRate(int bitsPerSecond) =>
+        bitsPerSecond % 1_000_000 == 0
+            ? $"{bitsPerSecond / 1_000_000}M"
+            : $"{Math.Max(1, bitsPerSecond / 1_000)}k";
+
+    private static int CrfForHeight(int height) =>
+        height switch
+        {
+            <= 480 => 22,
+            <= 720 => 21,
+            <= 1080 => 20,
+            <= 1440 => 19,
+            _ => 18
+        };
 
     private static int NormalizeRenditionHeight(int height) =>
         Math.Max(2, height % 2 == 0 ? height : height - 1);
@@ -1098,6 +1189,8 @@ public sealed class HlsAssetService : IHlsAssetService
         string BufferSize,
         string AudioBitrate,
         int Crf);
+
+    private sealed record JellyfinQualityOption(string Name, int MaxHeight, int Bitrate);
 
     private sealed record VirtualCacheMetadata(
         string SourcePath,
