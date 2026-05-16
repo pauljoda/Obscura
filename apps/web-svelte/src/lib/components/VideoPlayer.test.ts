@@ -378,6 +378,14 @@ describe("VideoPlayer", () => {
     expect(source).toContain("height: 100dvh;");
   });
 
+  it("keeps VidStack provider media layers from stacking poster below video", async () => {
+    const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
+
+    expect(source).toContain(".obscura-media-engine :global(media-provider)");
+    expect(source).toContain("position: absolute;");
+    expect(source).toContain("inset: 0;");
+  });
+
   it("uses VidStack chapter sliders for marker sections instead of custom marker ticks", async () => {
     const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
 

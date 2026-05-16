@@ -171,6 +171,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 - The desktop sidebar collapsed state now hydrates from the existing browser cookie before the root layout renders.
+- Video player posters no longer stack under the active video after the chapter timeline mounts inside VidStack.
 - Video player marker chips now opt back into pointer events inside the controls overlay, so clicking a chip seeks to that marker instead of doing nothing.
 - Video player markers now remain clickable instead of being swallowed by scrub gestures, filmstrip marker labels seek directly, and fullscreen playback no longer keeps the normal-view control spacing around the video.
 - Adaptive HLS no longer reuses an early active rendition generation for far-ahead segment requests unless that exact segment has already been produced.

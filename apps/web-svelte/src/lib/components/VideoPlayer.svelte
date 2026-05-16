@@ -1923,6 +1923,7 @@
 
   .obscura-player-surface,
   .obscura-media-engine,
+  .obscura-media-engine :global(media-provider),
   .obscura-media-engine :global(video),
   .obscura-media-engine :global(media-poster) {
     outline: none;
@@ -1940,13 +1941,23 @@
     outline: none;
   }
 
+  .obscura-media-engine :global(media-provider) {
+    display: block;
+    height: 100%;
+    inset: 0;
+    position: absolute;
+    width: 100%;
+  }
+
   .obscura-media-engine :global(video),
   .obscura-media-engine :global(media-poster) {
     -webkit-tap-highlight-color: transparent;
     background: #000;
     border-radius: 0;
     height: 100%;
+    inset: 0;
     object-fit: contain;
+    position: absolute;
     width: 100%;
   }
 
