@@ -34,4 +34,22 @@ describe("series detail layout", () => {
     expect(rule).not.toContain("padding: clamp");
     expect(rule).not.toContain("margin: 0 auto");
   });
+
+  it("uses shared thumbnails for series cast instead of custom chips", () => {
+    const source = readLocalSource("./[id]/+page.svelte");
+
+    expect(source).toContain("castCards");
+    expect(source).toContain("<EntityThumbnail card={thumbnailCard}");
+    expect(source).not.toContain('class="credit-chip"');
+  });
+
+  it("moves series links and files out of the main details tab", () => {
+    const source = readLocalSource("./[id]/+page.svelte");
+
+    expect(source).toContain("tabs={detailTabs}");
+    expect(source).toContain("sections={detailSections}");
+    expect(source).toContain('id: "metadata"');
+    expect(source).toContain('sections: ["links", "files"]');
+    expect(source).toContain('sections: ["description", "tags", "cast"]');
+  });
 });

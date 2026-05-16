@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { ArrowLeft, Users, Building2, Calendar } from "@lucide/svelte";
+  import { ArrowLeft, Users, Building2, Calendar, Info, SlidersHorizontal } from "@lucide/svelte";
   import {
     fetchV2Series,
     updateV2EntityRating,
@@ -15,8 +15,11 @@
   } from "$lib/api/capabilities";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
-  import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
-  import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
+  import { entityReferenceToThumbnailCard, type EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
+  import EntityDetail, {
+    type EntityDetailSection,
+    type EntityDetailTab,
+  } from "$lib/components/entities/EntityDetail.svelte";
   import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
   import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
 
@@ -43,6 +46,10 @@
     const cap = getCapability(series.capabilities, "credits");
     return cap?.people ?? [];
   });
+
+  const castCards = $derived.by((): EntityThumbnailCard[] => (
+    credits.map((person) => entityReferenceToThumbnailCard(person))
+  ));
 
   const dates = $derived.by(() => {
     if (!series) return [];
@@ -72,7 +79,43 @@
   const hasSeasons = $derived(seasonCards.length > 0);
   const hasChildSeries = $derived(childSeriesCards.length > 0);
   const hasVideos = $derived(videoCards.length > 0);
+  const hasCast = $derived(castCards.length > 0);
   const totalChildren = $derived(seasonCards.length + childSeriesCards.length + videoCards.length);
+  const detailSections = $derived.by((): EntityDetailSection[] => [
+    {
+      id: "cast",
+      label: "Cast",
+      icon: Users,
+      hidden: !hasCast,
+    },
+  ]);
+  const detailTabs = $derived.by((): EntityDetailTab[] => {
+    if (!card) return [];
+    const tabs: EntityDetailTab[] = [
+      {
+        id: "details",
+        label: "Details",
+        icon: Info,
+        sections: ["description", "tags", "cast"],
+      },
+    ];
+
+    if (card.links.length > 0 || card.files.length > 0) {
+      tabs.push({
+        id: "metadata",
+        label: "Metadata",
+        icon: SlidersHorizontal,
+        count: card.links.length + card.files.length,
+        sections: ["links", "files"],
+      });
+    }
+
+    return tabs;
+  });
+
+  function thumbnailKey(card: EntityThumbnailCard): string {
+    return `${card.entity.kind}:${card.entity.id}:${card.subtitle ?? ""}`;
+  }
 
   onMount(() => {
     void loadSeries();
@@ -156,6 +199,8 @@
       onOrganizedToggle={handleOrganizedToggle}
       {ratingBusy}
       posterSize="large"
+      tabs={detailTabs}
+      sections={detailSections}
     >
       {#snippet heroMeta()}
         {#if studio}
@@ -184,18 +229,14 @@
         {/if}
       {/snippet}
 
-      {#snippet afterBody()}
-        {#if credits.length > 0}
-          <div class="credits-section">
-            <h2 class="section-label">
-              <Users class="h-4 w-4" />
-              Cast
-            </h2>
-            <div class="credits-grid">
-              {#each credits as person (person.id)}
-                <a href={`/performers/${person.id}`} class="credit-chip">
-                  {person.title}
-                </a>
+      {#snippet sectionContent(section)}
+        {#if section.id === "cast" && hasCast}
+          <div class="credit-row" aria-label="Cast">
+            <div class="credit-scroller">
+              {#each castCards as thumbnailCard (thumbnailKey(thumbnailCard))}
+                <div class="credit-thumbnail">
+                  <EntityThumbnail card={thumbnailCard} titleAlign="center" titleSize="compact" />
+                </div>
               {/each}
             </div>
           </div>
@@ -350,45 +391,28 @@
     background: rgba(196, 154, 90, 0.08);
   }
 
-  /* ── Credits section (inside afterBody) ── */
+  /* ── Cast row (inside EntityDetail tab section) ── */
 
-  .credits-section {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid var(--color-border, #1c2235);
+  .credit-row {
+    min-width: 0;
+    overflow: hidden;
   }
 
-  .section-label {
+  .credit-scroller {
     display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    margin: 0 0 0.75rem;
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--color-text-muted, #8a93a6);
+    gap: 0.75rem;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.35rem;
+    scroll-padding-inline: 0.25rem;
+    scrollbar-width: thin;
   }
 
-  .credits-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-  }
-
-  .credit-chip {
-    padding: 0.22rem 0.55rem;
-    font-size: 0.75rem;
-    color: var(--color-text-secondary, #c4c9d4);
-    border: 1px solid var(--color-border, #1c2235);
-    background: var(--color-surface-3, #151a28);
-    text-decoration: none;
-    transition: border-color 0.15s, color 0.15s;
-  }
-
-  .credit-chip:hover {
-    color: var(--color-text-accent, #c49a5a);
-    border-color: rgba(196, 154, 90, 0.35);
+  .credit-thumbnail {
+    flex: 0 0 clamp(7rem, 33vw, 8.75rem);
+    min-width: 0;
   }
 
   /* ── Content sections (seasons, episodes, sub-series) ── */
@@ -444,8 +468,8 @@
   }
 
   @media (min-width: 640px) {
-    .credits-section {
-      padding: 1rem 2rem;
+    .credit-thumbnail {
+      flex-basis: 8.25rem;
     }
   }
 
