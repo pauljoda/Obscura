@@ -231,12 +231,10 @@ function resolveHero(capabilities: EntityCapability[]): EntityDetailHero | null 
   const coverItem = images.items.find(
     (item) =>
       item.kind === ENTITY_FILE_ROLE.backdrop ||
-      item.kind === ENTITY_FILE_ROLE.cover ||
       item.kind === ENTITY_FILE_ROLE.hero ||
       item.kind === ENTITY_FILE_ROLE.banner,
   );
   if (coverItem) return { src: coverItem.path, alt: coverItem.kind };
-  if (images.coverUrl) return { src: images.coverUrl, alt: "Cover" };
   return null;
 }
 
@@ -247,6 +245,7 @@ function resolvePoster(capabilities: EntityCapability[]): EntityDetailPoster | n
     (item) => item.kind === ENTITY_FILE_ROLE.poster || item.kind === ENTITY_FILE_ROLE.thumbnail,
   );
   if (posterItem) return { src: posterItem.path, alt: posterItem.kind };
+  if (images.coverUrl) return { src: images.coverUrl, alt: "Cover" };
   if (images.thumbnailUrl) return { src: images.thumbnailUrl, alt: "Thumbnail" };
   return null;
 }

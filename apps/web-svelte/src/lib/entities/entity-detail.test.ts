@@ -26,4 +26,46 @@ describe("entity detail view model", () => {
     expect(detail.hero?.src).toBe("/assets/series/series-1/backdrop.jpg");
     expect(detail.poster?.src).toBe("/assets/series/series-1/poster.jpg");
   });
+
+  it("does not promote poster cover URLs into header artwork", () => {
+    const detail = entityCardToDetailCard({
+      id: "season-1",
+      kind: "video-season",
+      title: "Season 1",
+      capabilities: [
+        {
+          kind: "images",
+          supportedKinds: ["poster"],
+          thumbnailUrl: null,
+          coverUrl: "/assets/seasons/season-1/poster.jpg",
+          items: [
+            { kind: "poster", path: "/assets/seasons/season-1/poster.jpg", mimeType: "image/jpeg" },
+          ],
+        },
+      ],
+    } satisfies EntityCard);
+
+    expect(detail.hero).toBeNull();
+    expect(detail.poster?.src).toBe("/assets/seasons/season-1/poster.jpg");
+  });
+
+  it("uses cover URLs as poster artwork when no poster item exists", () => {
+    const detail = entityCardToDetailCard({
+      id: "book-1",
+      kind: "book",
+      title: "Book",
+      capabilities: [
+        {
+          kind: "images",
+          supportedKinds: ["cover"],
+          thumbnailUrl: null,
+          coverUrl: "/assets/books/book-1/cover.jpg",
+          items: [],
+        },
+      ],
+    } satisfies EntityCard);
+
+    expect(detail.hero).toBeNull();
+    expect(detail.poster?.src).toBe("/assets/books/book-1/cover.jpg");
+  });
 });

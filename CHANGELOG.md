@@ -182,6 +182,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- Season detail pages no longer promote poster artwork into the full-width header when no explicit header/backdrop image exists.
 - Migrated series and season artwork now survives fresh-start cache cleanup, and missing artwork files are restored from source-folder images such as `poster.jpg`, `banner.jpg`, `clearlogo.png`, and `season01-poster.jpg`.
 - Legacy TV seasons now migrate from the `video_seasons` table before falling back to episode-derived season folders, and custom legacy artwork is no longer purged during fresh-start cleanup.
 - Series detail pages now render cast through the shared `EntityThumbnail` surface and move links/files into a metadata tab so the main details tab stays focused on user-facing information.
