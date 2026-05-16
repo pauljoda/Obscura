@@ -26,6 +26,8 @@
     type ImageCandidate,
     type PluginProvider,
   } from "$lib/api/identify";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
 
   type LegacyEntityKind = "video_series" | "video_movie" | "video_episode" | "book";
 
@@ -34,6 +36,7 @@
     entityId: string;
     title: string;
     existingCreditNames?: string[];
+    existingTags?: string[];
   }
 
   interface Props {
@@ -86,10 +89,13 @@
   let selectedFields = $state<Record<string, boolean>>({});
   let selectedImages = $state<Record<string, string | null>>({});
   let selectedCredits = $state<Record<string, boolean>>({});
+  let selectedTags = $state<Record<string, boolean>>({});
   let applying = $state(false);
   let error = $state<string | null>(null);
-  let expandedSections = $state<Record<string, boolean>>({ fields: true, tags: true, credits: true, artwork: true, candidates: true });
+  let expandedSections = $state<Record<string, boolean>>({ fields: true, tags: true, credits: true, studio: true, artwork: true, candidates: true });
   let lightboxGroup = $state<string | null>(null);
+
+  const scalarFieldKeys = ["title", "description", "externalIds", "urls", "dates", "counters", "stats", "positions", "classification"];
 
   function toggleSection(section: string) {
     expandedSections = { ...expandedSections, [section]: !expandedSections[section] };
@@ -167,6 +173,7 @@
     selectedFields = {};
     selectedImages = {};
     selectedCredits = {};
+    selectedTags = {};
     error = null;
     if (!providersLoaded) await loadProviders();
   }
@@ -178,6 +185,7 @@
     selectedFields = {};
     selectedImages = {};
     selectedCredits = {};
+    selectedTags = {};
     error = null;
   }
 
@@ -211,6 +219,7 @@
       selectedCredits = Object.fromEntries(
         nextProposal.patch.credits.map((credit, index) => [creditKey(credit, index), true]),
       );
+      selectedTags = Object.fromEntries(nextProposal.patch.tags.map((tag) => [tag, true]));
     } catch (err) {
       error = readError(err);
     } finally {
@@ -230,6 +239,42 @@
   function toggleCredit(key: string) {
     selectedCredits = { ...selectedCredits, [key]: !selectedCredits[key] };
   }
+
+  function toggleTag(tag: string) {
+    selectedTags = { ...selectedTags, [tag]: !selectedTags[tag] };
+  }
+
+  function isNewTag(tag: string): boolean {
+    const existing = activeTarget?.existingTags ?? [];
+    return !existing.some((t) => t.localeCompare(tag, undefined, { sensitivity: "accent" }) === 0);
+  }
+
+  const selectedTagCount = $derived(Object.values(selectedTags).filter(Boolean).length);
+
+  function creditToCard(credit: CreditPatch): EntityThumbnailCard {
+    return {
+      entity: { id: `proposal-${credit.name}`, kind: "person", title: credit.name, capabilities: [] },
+      aspectRatio: { width: 4, height: 5 },
+      cover: null,
+      hover: { kind: "none" },
+      subtitle: credit.character ? `${credit.role} · ${credit.character}` : credit.role,
+    };
+  }
+
+  const creditCards = $derived.by((): EntityThumbnailCard[] => {
+    if (!proposal) return [];
+    return proposal.patch.credits.map(creditToCard);
+  });
+
+  const studioCard = $derived.by((): EntityThumbnailCard | null => {
+    if (!proposal?.patch.studio) return null;
+    return {
+      entity: { id: `proposal-studio`, kind: "studio", title: proposal.patch.studio, capabilities: [] },
+      aspectRatio: "wide",
+      cover: null,
+      hover: { kind: "none" },
+    };
+  });
 
   async function apply(closeAfter = true) {
     if (!proposal || !activeTarget) return;
@@ -255,6 +300,7 @@
     activeIndex = index;
     proposal = null;
     selectedFields = {};
+    selectedTags = {};
     selectedImages = {};
     selectedCredits = {};
     error = null;
@@ -265,11 +311,13 @@
     const credits = result.patch.credits.filter((credit, index) =>
       selectedCredits[creditKey(credit, index)] !== false,
     );
+    const tags = result.patch.tags.filter((tag) => selectedTags[tag] !== false);
     return {
       ...result,
       patch: {
         ...result.patch,
         credits,
+        tags,
       },
     };
   }
@@ -463,20 +511,20 @@
               {/if}
             </div>
 
-            <!-- Fields -->
+            <!-- Scalar Fields -->
             <section class="section-card">
               <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('fields')} onkeydown={(e) => e.key === 'Enter' && toggleSection('fields')}>
                 <h4>Fields</h4>
                 <div class="section-meta">
-                  <span class="count-badge">{Object.values(selectedFields).filter(Boolean).length} / {fieldKeys.filter((f) => hasField(proposal!, f)).length}</span>
+                  <span class="count-badge">{scalarFieldKeys.filter((f) => selectedFields[f]).length} / {scalarFieldKeys.filter((f) => hasField(proposal!, f)).length}</span>
                   <span class="chevron" class:rotated={!expandedSections.fields}><ChevronDown class="h-3.5 w-3.5" /></span>
                 </div>
               </div>
               {#if expandedSections.fields}
                 <div class="section-body">
                   <div class="field-list">
-                    {#each fieldKeys as field (field)}
-                      {#if hasField(proposal, field) && field !== "tags" && field !== "credits" && field !== "images"}
+                    {#each scalarFieldKeys as field (field)}
+                      {#if hasField(proposal, field)}
                         <button
                           type="button"
                           class="field-row"
@@ -490,7 +538,7 @@
                           </div>
                           <span class="field-label">{fieldLabels[field]}</span>
                           <span class="field-arrow">→</span>
-                          <span class="field-new-value">{fieldValue(proposal, field)}</span>
+                          <span class="field-new-value" class:field-wrap={field === "description"}>{fieldValue(proposal, field)}</span>
                         </button>
                       {/if}
                     {/each}
@@ -499,20 +547,13 @@
               {/if}
             </section>
 
-            <!-- Tags -->
+            <!-- Tags — individually selectable -->
             {#if proposal.patch.tags.length > 0}
-              <section class="section-card" class:muted={!selectedFields.tags}>
+              <section class="section-card">
                 <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('tags')} onkeydown={(e) => e.key === 'Enter' && toggleSection('tags')}>
                   <h4>Tags</h4>
                   <div class="section-meta">
-                    <button
-                      type="button"
-                      class="toggle-pill"
-                      class:included={selectedFields.tags}
-                      onclick={(e) => { e.stopPropagation(); toggleField("tags"); }}
-                    >
-                      {selectedFields.tags ? "Included" : "Excluded"}
-                    </button>
+                    <span class="count-badge">{selectedTagCount} / {proposal.patch.tags.length}</span>
                     <span class="chevron" class:rotated={!expandedSections.tags}><ChevronDown class="h-3.5 w-3.5" /></span>
                   </div>
                 </div>
@@ -520,8 +561,51 @@
                   <div class="section-body">
                     <div class="tag-cloud">
                       {#each proposal.patch.tags as tag (tag)}
-                        <span class="tag-chip">{tag}</span>
+                        <button
+                          type="button"
+                          class="tag-select"
+                          class:active={selectedTags[tag]}
+                          class:is-new={isNewTag(tag)}
+                          onclick={() => toggleTag(tag)}
+                        >
+                          <span class="tag-check">
+                            {#if selectedTags[tag]}
+                              <Check class="h-2.5 w-2.5" />
+                            {/if}
+                          </span>
+                          <span>{tag}</span>
+                          {#if isNewTag(tag)}
+                            <span class="tag-new-label">NEW</span>
+                          {/if}
+                        </button>
                       {/each}
+                    </div>
+                  </div>
+                {/if}
+              </section>
+            {/if}
+
+            <!-- Studio -->
+            {#if proposal.patch.studio && studioCard}
+              <section class="section-card" class:muted={!selectedFields.studio}>
+                <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('studio')} onkeydown={(e) => e.key === 'Enter' && toggleSection('studio')}>
+                  <h4>Studio</h4>
+                  <div class="section-meta">
+                    <button
+                      type="button"
+                      class="toggle-pill"
+                      class:included={selectedFields.studio}
+                      onclick={(e) => { e.stopPropagation(); toggleField("studio"); }}
+                    >
+                      {selectedFields.studio ? "Included" : "Excluded"}
+                    </button>
+                    <span class="chevron" class:rotated={!expandedSections.studio}><ChevronDown class="h-3.5 w-3.5" /></span>
+                  </div>
+                </div>
+                {#if expandedSections.studio}
+                  <div class="section-body">
+                    <div class="studio-row">
+                      <EntityThumbnail card={studioCard} titleAlign="center" titleSize="compact" />
                     </div>
                   </div>
                 {/if}
@@ -532,7 +616,7 @@
             {#if proposal.patch.credits.length > 0}
               <section class="section-card" class:muted={!selectedFields.credits}>
                 <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('credits')} onkeydown={(e) => e.key === 'Enter' && toggleSection('credits')}>
-                  <h4>Credits</h4>
+                  <h4>Cast & Crew</h4>
                   <div class="section-meta">
                     <button
                       type="button"
@@ -542,33 +626,33 @@
                     >
                       {selectedFields.credits ? "Included" : "Excluded"}
                     </button>
-                    <span class="count-badge">{proposal.patch.credits.length}</span>
+                    <span class="count-badge">{Object.values(selectedCredits).filter(Boolean).length} / {proposal.patch.credits.length}</span>
                     <span class="chevron" class:rotated={!expandedSections.credits}><ChevronDown class="h-3.5 w-3.5" /></span>
                   </div>
                 </div>
                 {#if expandedSections.credits}
                   <div class="section-body">
-                    <div class="credit-grid">
+                    <div class="credit-scroller">
                       {#each proposal.patch.credits as credit, index (creditKey(credit, index))}
                         {@const key = creditKey(credit, index)}
                         {@const state = creditState(credit)}
-                        <button
-                          type="button"
-                          class="credit-card"
-                          class:active={selectedCredits[key] !== false}
-                          onclick={() => toggleCredit(key)}
-                        >
-                          <div class="credit-check">
-                            {#if selectedCredits[key] !== false}
-                              <Check class="h-3 w-3" />
-                            {/if}
-                          </div>
-                          <div class="credit-info">
-                            <strong>{credit.name}</strong>
-                            <small>{credit.character ? `${credit.role} · ${credit.character}` : credit.role}</small>
-                          </div>
-                          <span class="credit-state" class:merge={state === "merge"}>{state === "merge" ? "Merge" : "New"}</span>
-                        </button>
+                        <div class="credit-thumbnail">
+                          <EntityThumbnail
+                            card={creditCards[index]}
+                            titleAlign="center"
+                            titleSize="compact"
+                            selectable
+                            selected={selectedCredits[key] !== false}
+                            onSelectedChange={() => toggleCredit(key)}
+                          >
+                            {#snippet subtitleContent()}
+                              <span class="credit-role-label">{credit.character ? `${credit.role} · ${credit.character}` : credit.role}</span>
+                              {#if state === "new"}
+                                <span class="credit-new-label">NEW</span>
+                              {/if}
+                            {/snippet}
+                          </EntityThumbnail>
+                        </div>
                       {/each}
                     </div>
                   </div>
@@ -576,7 +660,7 @@
               </section>
             {/if}
 
-            <!-- Artwork — one row per kind, click to lightbox -->
+            <!-- Artwork -->
             {#if reviewableImageGroups.length > 0}
               <section class="section-card" class:muted={!selectedFields.images}>
                 <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('artwork')} onkeydown={(e) => e.key === 'Enter' && toggleSection('artwork')}>
@@ -595,36 +679,38 @@
                 </div>
                 {#if expandedSections.artwork}
                   <div class="section-body">
-                    {#each reviewableImageGroups as group (group.kind)}
-                      {@const sel = selectedImages[group.kind]}
-                      <div class="art-row">
-                        <button type="button" class="art-row-check" class:active={!!sel} onclick={(e) => { e.stopPropagation(); if (sel) { selectedImages = { ...selectedImages, [group.kind]: null }; } else { selectedImages = { ...selectedImages, [group.kind]: group.images[0]?.url ?? null }; } }}>
-                          <div class="field-check">
-                            {#if sel}
-                              <Check class="h-3 w-3" />
-                            {/if}
+                    <div class="art-grid">
+                      {#each reviewableImageGroups as group (group.kind)}
+                        {@const sel = selectedImages[group.kind]}
+                        <div class="art-card" class:active={!!sel}>
+                          <div class="art-card-header">
+                            <button type="button" class="art-card-check" class:active={!!sel} onclick={() => { if (sel) { selectedImages = { ...selectedImages, [group.kind]: null }; } else { selectedImages = { ...selectedImages, [group.kind]: group.images[0]?.url ?? null }; } }}>
+                              <div class="field-check">
+                                {#if sel}
+                                  <Check class="h-3 w-3" />
+                                {/if}
+                              </div>
+                            </button>
+                            <span class="art-kind">{group.kind}</span>
+                            <span class="art-count">{group.images.length} option{group.images.length === 1 ? "" : "s"}</span>
                           </div>
-                        </button>
-                        <button type="button" class="art-row-body" onclick={() => openLightbox(group.kind)}>
-                          <span class="art-kind">{group.kind}</span>
-                          {#if sel}
-                            <img src={sel} alt="" class="art-thumb" data-aspect={imageAspect(group.kind)} />
-                          {:else}
-                            <div class="art-thumb-empty" data-aspect={imageAspect(group.kind)}><ImageIcon class="h-4 w-4" /></div>
-                          {/if}
-                          <span class="art-detail">
-                            {group.images.length} option{group.images.length === 1 ? "" : "s"}
+                          <button type="button" class="art-card-preview" onclick={() => openLightbox(group.kind)}>
                             {#if sel}
-                              {@const img = group.images.find((i) => i.url === sel)}
-                              {#if img?.width && img?.height}
-                                · {img.width}×{img.height}
-                              {/if}
+                              <img src={sel} alt="{group.kind} preview" class="art-preview-img" data-aspect={imageAspect(group.kind)} />
+                            {:else}
+                              <div class="art-preview-empty" data-aspect={imageAspect(group.kind)}>
+                                <ImageIcon class="h-6 w-6" />
+                                <span>Select image</span>
+                              </div>
                             {/if}
-                          </span>
-                          <ChevronRight class="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    {/each}
+                            <div class="art-browse-hint">
+                              <span>Browse</span>
+                              <ChevronRight class="h-3.5 w-3.5" />
+                            </div>
+                          </button>
+                        </div>
+                      {/each}
+                    </div>
                   </div>
                 {/if}
               </section>
@@ -691,26 +777,27 @@
   </div>
 {/if}
 
-<!-- Lightbox overlay -->
+<!-- Lightbox overlay — slides in from right, same size as main modal -->
 {#if lightboxGroup && proposal}
   <div class="lightbox" use:portal role="dialog" aria-modal="true" aria-label={`Select ${lightboxGroup}`}>
     <div class="lightbox-backdrop" onclick={closeLightbox} aria-hidden="true"></div>
     <div class="lightbox-panel">
-      <div class="lightbox-header">
+      <header class="lightbox-header">
         <h3>{lightboxGroup}</h3>
-        <button type="button" class="close-btn" onclick={closeLightbox} aria-label="Close"><X class="h-4 w-4" /></button>
-      </div>
+        <button type="button" class="btn-primary" onclick={closeLightbox}>
+          <Check class="h-3.5 w-3.5" />
+          Confirm
+        </button>
+      </header>
 
-      <!-- Large selected image -->
       <div class="lightbox-focus">
         {#if lightboxSelectedUrl}
-          <img src={lightboxSelectedUrl} alt="" data-aspect={imageAspect(lightboxGroup)} />
+          <img src={lightboxSelectedUrl} alt="{lightboxGroup} preview" />
         {:else}
           <div class="lightbox-empty"><ImageIcon class="h-8 w-8" /><span>No image selected</span></div>
         {/if}
       </div>
 
-      <!-- Thumbnail strip -->
       <div class="lightbox-strip">
         {#each lightboxImages as image (image.url)}
           <button
@@ -720,7 +807,6 @@
             onclick={() => { selectedImages = { ...selectedImages, [lightboxGroup!]: image.url }; }}
           >
             <img src={image.url} alt="" data-aspect={imageAspect(lightboxGroup)} />
-            <span class="thumb-dim">{image.width && image.height ? `${image.width}×${image.height}` : image.source}</span>
             {#if selectedImages[lightboxGroup] === image.url}
               <div class="thumb-check"><Check class="h-3 w-3" /></div>
             {/if}
@@ -1170,184 +1256,233 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .field-new-value.field-wrap {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    line-height: 1.45;
+  }
   .field-row.active .field-new-value {
     color: var(--color-text-primary, #f2eed8);
   }
 
-  /* === Tags === */
+  /* === Tags — individually selectable chips === */
   .tag-cloud {
     display: flex;
     flex-wrap: wrap;
     gap: 0.3rem;
   }
-  .tag-chip {
-    border: 1px solid var(--color-border, #1c2235);
-    background: var(--color-surface-1, #0c0f15);
-    color: var(--color-text-secondary, #c4c9d4);
-    padding: 0.2rem 0.5rem;
-    font-size: 0.62rem;
-  }
 
-  /* === Credits === */
-  .credit-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-    gap: 0.35rem;
-  }
-
-  .credit-card {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 0.5rem;
+  .tag-select {
+    display: inline-flex;
     align-items: center;
+    gap: 0.3rem;
     border: 1px solid var(--color-border, #1c2235);
     background: var(--color-surface-1, #0c0f15);
     color: var(--color-text-muted, #8a93a6);
-    padding: 0.45rem 0.6rem;
-    text-align: left;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
     transition: all 0.15s;
   }
-  .credit-card:hover {
-    border-color: rgba(255, 255, 255, 0.06);
+  .tag-select:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
   }
-  .credit-card.active {
-    border-color: rgba(196, 154, 90, 0.4);
+  .tag-select.active {
+    border-color: rgba(196, 154, 90, 0.45);
+    background: rgba(196, 154, 90, 0.08);
     color: var(--color-text-primary, #f2eed8);
   }
+  .tag-select.is-new.active {
+    border-color: rgba(78, 138, 98, 0.5);
+    background: rgba(42, 74, 56, 0.15);
+  }
 
-  .credit-check {
+  .tag-check {
     display: grid;
-    width: 1.15rem;
-    height: 1.15rem;
-    flex-shrink: 0;
+    width: 0.9rem;
+    height: 0.9rem;
     place-items: center;
     border: 1px solid var(--color-border, #1c2235);
     background: var(--color-surface-2, #101420);
     transition: all 0.15s;
   }
-  .credit-card.active .credit-check {
+  .tag-select.active .tag-check {
     border-color: rgba(196, 154, 90, 0.6);
     background: linear-gradient(135deg, rgba(196, 154, 90, 0.3), rgba(196, 154, 90, 0.15));
     color: var(--color-text-accent, #c49a5a);
   }
-
-  .credit-info {
-    display: grid;
-    gap: 0.05rem;
-    min-width: 0;
-  }
-  .credit-info strong {
-    overflow: hidden;
-    font-size: 0.7rem;
-    font-weight: 550;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .credit-info small {
-    overflow: hidden;
-    color: var(--color-text-muted, #8a93a6);
-    font-size: 0.58rem;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .tag-select.is-new.active .tag-check {
+    border-color: rgba(78, 138, 98, 0.5);
+    background: linear-gradient(135deg, rgba(78, 138, 98, 0.3), rgba(78, 138, 98, 0.15));
+    color: var(--color-status-success-text, #80b898);
   }
 
-  .credit-state {
-    padding: 0.12rem 0.35rem;
-    border: 1px solid rgba(196, 154, 90, 0.3);
-    color: var(--color-text-accent, #c49a5a);
-    font-size: 0.52rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-  .credit-state.merge {
-    border-color: rgba(68, 120, 168, 0.35);
-    color: var(--color-status-info-text, #70a4cc);
+  .tag-new-label {
+    padding: 0.05rem 0.25rem;
+    border: 1px solid rgba(78, 138, 98, 0.4);
+    color: var(--color-status-success-text, #80b898);
+    font-size: 0.48rem;
+    letter-spacing: 0.06em;
   }
 
-  /* === Artwork rows === */
-  .art-row {
+  /* === Studio === */
+  .studio-row {
     display: flex;
-    align-items: center;
-    gap: 0;
+    gap: 0.75rem;
+  }
+  .studio-row :global(.entity-thumbnail) {
+    flex: 0 0 clamp(8rem, 30vw, 12rem);
+  }
+
+  /* === Credits — horizontal EntityThumbnail scroller === */
+  .credit-scroller {
+    display: flex;
+    gap: 0.6rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-padding-inline: 0.25rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(196, 154, 90, 0.15) transparent;
+    padding-bottom: 0.25rem;
+  }
+
+  .credit-thumbnail {
+    flex: 0 0 clamp(6.5rem, 28vw, 8.5rem);
+  }
+
+  .credit-role-label {
+    display: block;
+    overflow: hidden;
+    padding: 0.1rem 0.3rem;
     border: 1px solid var(--color-border, #1c2235);
     background: var(--color-surface-1, #0c0f15);
-    margin-bottom: 0.3rem;
+    color: var(--color-text-muted, #8a93a6);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.52rem;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  .art-row:last-child { margin-bottom: 0; }
 
-  .art-row-check {
+  .credit-new-label {
+    display: block;
+    margin-top: 0.15rem;
+    padding: 0.05rem 0.25rem;
+    border: 1px solid rgba(78, 138, 98, 0.4);
+    color: var(--color-status-success-text, #80b898);
+    font-size: 0.48rem;
+    font-family: "JetBrains Mono", monospace;
+    text-align: center;
+    letter-spacing: 0.06em;
+  }
+
+  /* === Artwork cards === */
+  .art-grid {
     display: grid;
-    width: 2.5rem;
-    place-items: center;
-    align-self: stretch;
-    border: none;
-    border-right: 1px solid var(--color-border, #1c2235);
-    background: transparent;
-    color: var(--color-text-disabled, #4a5260);
-    transition: all 0.15s;
-  }
-  .art-row-check:hover {
-    background: rgba(255, 255, 255, 0.02);
-  }
-  .art-row-check.active {
-    color: var(--color-text-accent, #c49a5a);
-    background: rgba(196, 154, 90, 0.04);
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    gap: 0.5rem;
   }
 
-  .art-row-body {
+  .art-card {
+    border: 1px solid var(--color-border, #1c2235);
+    background: var(--color-surface-1, #0c0f15);
+    transition: border-color 0.15s;
+  }
+  .art-card.active {
+    border-color: rgba(196, 154, 90, 0.35);
+  }
+
+  .art-card-header {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    flex: 1;
-    min-width: 0;
+    gap: 0.4rem;
+    padding: 0.4rem 0.55rem;
+    border-bottom: 1px solid var(--color-border, #1c2235);
+  }
+
+  .art-card-check {
     border: none;
     background: transparent;
-    color: var(--color-text-secondary, #c4c9d4);
-    padding: 0.45rem 0.65rem;
-    text-align: left;
-    transition: background 0.15s;
+    padding: 0;
+    color: var(--color-text-disabled, #4a5260);
+    transition: color 0.15s;
   }
-  .art-row-body:hover {
-    background: rgba(255, 255, 255, 0.02);
+  .art-card-check.active {
+    color: var(--color-text-accent, #c49a5a);
   }
 
   .art-kind {
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--color-text-muted, #8a93a6);
-    min-width: 4.5rem;
   }
 
-  .art-thumb {
-    width: 2.5rem;
-    height: auto;
-    border: 1px solid var(--color-border, #1c2235);
-    object-fit: cover;
-    flex-shrink: 0;
-  }
-  .art-thumb[data-aspect="poster"] { aspect-ratio: 2 / 3; }
-  .art-thumb[data-aspect="wide"] { aspect-ratio: 16 / 9; }
-
-  .art-thumb-empty {
-    display: grid;
-    width: 2.5rem;
-    place-items: center;
-    border: 1px solid var(--color-border, #1c2235);
-    background: var(--color-surface-2, #101420);
-    color: var(--color-text-disabled, #4a5260);
-    flex-shrink: 0;
-  }
-  .art-thumb-empty[data-aspect="poster"] { aspect-ratio: 2 / 3; }
-  .art-thumb-empty[data-aspect="wide"] { aspect-ratio: 16 / 9; }
-
-  .art-detail {
-    flex: 1;
-    min-width: 0;
+  .art-count {
+    margin-left: auto;
     color: var(--color-text-disabled, #4a5260);
     font-family: "JetBrains Mono", monospace;
-    font-size: 0.58rem;
+    font-size: 0.52rem;
+  }
+
+  .art-card-preview {
+    position: relative;
+    display: block;
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 0;
+    text-align: left;
+    transition: opacity 0.15s;
+  }
+  .art-card-preview:hover {
+    opacity: 0.85;
+  }
+
+  .art-preview-img {
+    display: block;
+    width: 100%;
+    object-fit: cover;
+  }
+  .art-preview-img[data-aspect="poster"] { aspect-ratio: 2 / 3; }
+  .art-preview-img[data-aspect="wide"] { aspect-ratio: 16 / 9; }
+
+  .art-preview-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    width: 100%;
+    background: var(--color-surface-2, #101420);
+    color: var(--color-text-disabled, #4a5260);
+    font-size: 0.6rem;
+  }
+  .art-preview-empty[data-aspect="poster"] { aspect-ratio: 2 / 3; }
+  .art-preview-empty[data-aspect="wide"] { aspect-ratio: 16 / 9; }
+
+  .art-browse-hint {
+    position: absolute;
+    right: 0.4rem;
+    bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.2rem 0.4rem;
+    background: rgba(5, 6, 9, 0.8);
+    backdrop-filter: blur(4px);
+    color: var(--color-text-secondary, #c4c9d4);
+    font-size: 0.55rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
   /* === Candidates === */
@@ -1472,14 +1607,12 @@
     box-shadow: none;
   }
 
-  /* === Lightbox overlay === */
+  /* === Lightbox — same size as main modal, slide-in from right === */
   .lightbox {
     position: fixed;
     inset: 0;
     z-index: 1600;
     display: flex;
-    align-items: center;
-    justify-content: center;
     isolation: isolate;
     animation: modal-in 0.2s ease-out;
   }
@@ -1492,26 +1625,33 @@
     backdrop-filter: blur(6px);
   }
 
+  @keyframes slide-in-right {
+    from { transform: translateX(100%); opacity: 0.6; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
   .lightbox-panel {
     position: relative;
     z-index: 1;
     display: flex;
     flex-direction: column;
     width: 100%;
-    max-width: 56rem;
-    max-height: 90dvh;
+    height: 100dvh;
+    max-height: 100dvh;
     border: 1px solid var(--color-border, #1c2235);
     background: linear-gradient(180deg, rgb(12, 15, 21) 0%, rgb(8, 10, 15) 100%);
-    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7);
-    animation: panel-in 0.25s ease-out;
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    animation: slide-in-right 0.28s cubic-bezier(0.25, 0, 0.25, 1);
   }
 
   .lightbox-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.6rem 0.85rem;
+    flex-shrink: 0;
+    padding: 0.55rem 0.85rem;
     border-bottom: 1px solid var(--color-border, #1c2235);
+    background: rgba(12, 15, 21, 0.97);
   }
   .lightbox-header h3 {
     margin: 0;
@@ -1528,15 +1668,13 @@
     align-items: center;
     justify-content: center;
     min-height: 0;
-    padding: 1.5rem;
+    padding: 1rem;
     overflow: hidden;
   }
   .lightbox-focus img {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
-    border: 1px solid var(--color-border, #1c2235);
-    box-shadow: 0 0 0 1px rgba(196, 154, 90, 0.3), 0 0 20px rgba(196, 154, 90, 0.1);
   }
 
   .lightbox-empty {
@@ -1551,11 +1689,13 @@
   .lightbox-strip {
     display: flex;
     gap: 0.4rem;
-    padding: 0.75rem 0.85rem;
+    flex-shrink: 0;
+    padding: 0.65rem 0.85rem;
     border-top: 1px solid var(--color-border, #1c2235);
+    background: rgba(10, 12, 17, 0.6);
     overflow-x: auto;
     scrollbar-width: thin;
-    scrollbar-color: rgba(196, 154, 90, 0.2) transparent;
+    scrollbar-color: rgba(196, 154, 90, 0.15) transparent;
   }
 
   .lightbox-thumb {
@@ -1582,20 +1722,6 @@
   .lightbox-thumb img[data-aspect="poster"] { aspect-ratio: 2 / 3; }
   .lightbox-thumb img[data-aspect="wide"] { aspect-ratio: 16 / 9; }
 
-  .thumb-dim {
-    position: absolute;
-    inset: auto 0 0;
-    background: rgba(5, 6, 9, 0.8);
-    padding: 0.15rem 0.25rem;
-    color: var(--color-text-muted, #8a93a6);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 0.48rem;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
   .thumb-check {
     position: absolute;
     top: 0.2rem;
@@ -1621,7 +1747,10 @@
       max-height: none;
     }
     .lightbox-panel {
-      margin: 1rem;
+      max-width: 52rem;
+      height: calc(100dvh - 3rem);
+      margin: auto;
+      max-height: none;
     }
   }
 
@@ -1656,15 +1785,15 @@
     .field-row {
       grid-template-columns: auto 1fr auto minmax(0, 1.5fr);
     }
-    .credit-grid {
-      grid-template-columns: 1fr;
+    .art-grid {
+      grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
     }
     .lightbox-panel {
-      max-height: 100dvh;
+      min-height: 100dvh;
       border: none;
     }
     .lightbox-focus {
-      padding: 0.75rem;
+      padding: 0.5rem;
     }
     .lightbox-thumb {
       width: 3.5rem;
