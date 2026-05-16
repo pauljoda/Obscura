@@ -734,8 +734,10 @@
   }
 
   .details.has-subtitle {
-    grid-template-rows: minmax(0, 2.3rem) auto;
+    grid-template-rows: minmax(0, 2.3rem) minmax(1.15rem, auto);
     gap: 0.35rem;
+    block-size: auto;
+    min-block-size: 4.55rem;
   }
 
   .entity-thumbnail.is-list .details {

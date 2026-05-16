@@ -10,6 +10,16 @@ namespace Obscura.Infrastructure.FreshStart;
 public sealed class V2FreshStartService : IV2FreshStartService
 {
     private const string PreparedPreferenceKey = "system:v2-fresh-start:v2-global-entities:prepared";
+    private static readonly HashSet<string> GeneratedCacheSubdirectories = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "audio-tracks",
+        "book-pages",
+        "hls",
+        "hlsv",
+        "images",
+        "trickplay",
+        "videos"
+    };
 
     private readonly ObscuraDbContext _db;
     private readonly DatabaseBackupService _backupService;
@@ -130,7 +140,7 @@ public sealed class V2FreshStartService : IV2FreshStartService
         var purgedCount = 0;
         long freedBytes = 0;
 
-        foreach (var subDir in Directory.EnumerateDirectories(_cacheDir))
+        foreach (var subDir in Directory.EnumerateDirectories(_cacheDir).Where(ShouldPurgeCacheSubdirectory))
         {
             try
             {
@@ -152,6 +162,9 @@ public sealed class V2FreshStartService : IV2FreshStartService
 
         return purgedCount > 0;
     }
+
+    internal static bool ShouldPurgeCacheSubdirectory(string path) =>
+        GeneratedCacheSubdirectories.Contains(Path.GetFileName(Path.TrimEndingDirectorySeparator(path)));
 
     private static long GetDirectorySize(string path)
     {

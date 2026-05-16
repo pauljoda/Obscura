@@ -10,6 +10,8 @@ namespace Obscura.Infrastructure.Legacy;
 /// </summary>
 public sealed class LegacyAssetNormalizationService : ILegacyAssetNormalizationService
 {
+    private const string VideoSeasonKind = "video-season";
+    private const string VideoSeriesKind = "video-series";
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _cacheDir;
     private readonly ILogger<LegacyAssetNormalizationService> _logger;
@@ -97,7 +99,138 @@ public sealed class LegacyAssetNormalizationService : ILegacyAssetNormalizationS
         if (customFilesDetected > 0)
             _logger.LogInformation("Marked {Count} legacy entity files as custom source", customFilesDetected);
 
+        var filesHydrated = await HydrateMissingLegacyArtworkAsync(cancellationToken);
+        if (filesHydrated > 0)
+            _logger.LogInformation("Hydrated {Count} missing legacy artwork files from source folders", filesHydrated);
+
         return new LegacyAssetNormalizationResult(pathsNormalized, filesRenamed, customFilesDetected);
+    }
+
+    private async Task<int> HydrateMissingLegacyArtworkAsync(CancellationToken cancellationToken)
+    {
+        var rows = new List<LegacyArtworkRow>();
+
+        await using (var connection = await _dataSource.OpenConnectionAsync(cancellationToken))
+        await using (var command = new NpgsqlCommand(MissingLegacyArtworkQuery, connection))
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                rows.Add(new LegacyArtworkRow(
+                    reader.GetString(0),
+                    reader.GetString(1),
+                    reader.GetString(2),
+                    reader.IsDBNull(3) ? null : reader.GetString(3),
+                    reader.IsDBNull(4) ? null : reader.GetInt32(4)));
+            }
+        }
+
+        var hydrated = 0;
+        foreach (var row in rows)
+        {
+            var destination = UrlToDiskPath(row.UrlPath);
+            if (File.Exists(destination))
+            {
+                continue;
+            }
+
+            var sourceFolder = NormalizeSourceFolderPath(row.SourceFolder);
+            if (sourceFolder is null)
+            {
+                continue;
+            }
+
+            var source = LegacyArtworkCandidates(row.KindCode, row.Role, sourceFolder, row.SeasonNumber)
+                .FirstOrDefault(File.Exists);
+            if (source is null)
+            {
+                continue;
+            }
+
+            try
+            {
+                var destinationDir = Path.GetDirectoryName(destination);
+                if (destinationDir is not null && !Directory.Exists(destinationDir))
+                {
+                    Directory.CreateDirectory(destinationDir);
+                }
+
+                File.Copy(source, destination, overwrite: false);
+                hydrated++;
+            }
+            catch (IOException ex)
+            {
+                _logger.LogWarning(ex, "Failed to hydrate legacy artwork {SourcePath} → {DestinationPath}", source, destination);
+            }
+        }
+
+        return hydrated;
+    }
+
+    private static string? NormalizeSourceFolderPath(string? sourcePath)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath))
+        {
+            return null;
+        }
+
+        if (Directory.Exists(sourcePath))
+        {
+            return sourcePath;
+        }
+
+        var parent = Path.GetDirectoryName(sourcePath);
+        return parent is not null && Directory.Exists(parent) ? parent : null;
+    }
+
+    internal static IReadOnlyList<string> LegacyArtworkCandidates(
+        string kindCode,
+        string role,
+        string sourceFolder,
+        int? seasonNumber)
+    {
+        var candidates = new List<string>();
+
+        void AddInFolder(string folder, params string[] names)
+        {
+            foreach (var name in names)
+            {
+                candidates.Add(Path.Combine(folder, name));
+            }
+        }
+
+        if (string.Equals(role, "logo", StringComparison.OrdinalIgnoreCase))
+        {
+            AddInFolder(sourceFolder, "clearlogo.png", "logo.png");
+        }
+        else if (string.Equals(role, "backdrop", StringComparison.OrdinalIgnoreCase))
+        {
+            AddInFolder(sourceFolder, "banner.jpg", "fanart.jpg", "landscape.jpg", "backdrop.jpg");
+        }
+        else if (string.Equals(role, "poster", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.Equals(kindCode, VideoSeasonKind, StringComparison.OrdinalIgnoreCase) && seasonNumber is { } number)
+            {
+                var parent = Directory.GetParent(sourceFolder)?.FullName;
+                if (parent is not null)
+                {
+                    AddInFolder(
+                        parent,
+                        $"season{number:D2}-poster.jpg",
+                        $"season{number}-poster.jpg",
+                        $"season{number:D2}.jpg",
+                        $"season{number}.jpg");
+                }
+
+                AddInFolder(sourceFolder, "poster.jpg", "season-poster.jpg", "folder.jpg");
+            }
+            else if (string.Equals(kindCode, VideoSeriesKind, StringComparison.OrdinalIgnoreCase))
+            {
+                AddInFolder(sourceFolder, "poster.jpg", "cover.jpg", "folder.jpg");
+            }
+        }
+
+        return candidates;
     }
 
     private string UrlToDiskPath(string urlPath)
@@ -192,4 +325,31 @@ public sealed class LegacyAssetNormalizationService : ILegacyAssetNormalizationS
         WHERE source = 'scan'
           AND path LIKE '%-custom%'
         """;
+
+    private const string MissingLegacyArtworkQuery = """
+        SELECT entity.kind_code,
+               artwork.role,
+               artwork.path,
+               COALESCE(source_file.path, source_folder.value) AS source_folder,
+               season.season_number
+        FROM v2.entity_files artwork
+        JOIN v2.entities entity ON entity.id = artwork.entity_id
+        LEFT JOIN v2.entity_files source_file
+          ON source_file.entity_id = artwork.entity_id
+         AND source_file.role = 'source'
+        LEFT JOIN v2.entity_sources source_folder
+          ON source_folder.entity_id = artwork.entity_id
+         AND source_folder.code = 'folder'
+        LEFT JOIN v2.video_season_details season ON season.entity_id = artwork.entity_id
+        WHERE artwork.source = 'custom'
+          AND artwork.role IN ('poster', 'backdrop', 'logo')
+          AND artwork.path LIKE '/assets/%';
+        """;
+
+    private sealed record LegacyArtworkRow(
+        string KindCode,
+        string Role,
+        string UrlPath,
+        string? SourceFolder,
+        int? SeasonNumber);
 }

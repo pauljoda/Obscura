@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 - V1-to-v2 migration now preserves TV series artwork and season metadata, including series posters, backdrops, logos, season posters, air dates, descriptions, and external IDs.
+- V1-to-v2 migration now keeps and rebuilds legacy series artwork files, so migrated posters, banners, logos, and season covers load after a fresh-start reset.
 - Series and video detail pages now share the same Cast and Crew thumbnail section, with studios shown alongside credited people and character names preserved as subtitles.
 - Scanned and migrated TV-style series now keep their season hierarchy, so shows with `Season 1` folders open as series → season → episode instead of flat episode lists while preserving imported metadata.
 - Series detail pages now show the series metadata, a horizontal season poster row, and ordered episode grids. Season pages now load their own structured detail with episodes from the backend hierarchy instead of relying on a placeholder.
@@ -181,6 +182,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- Migrated series and season artwork now survives fresh-start cache cleanup, and missing artwork files are restored from source-folder images such as `poster.jpg`, `banner.jpg`, `clearlogo.png`, and `season01-poster.jpg`.
 - Legacy TV seasons now migrate from the `video_seasons` table before falling back to episode-derived season folders, and custom legacy artwork is no longer purged during fresh-start cleanup.
 - Series detail pages now render cast through the shared `EntityThumbnail` surface and move links/files into a metadata tab so the main details tab stays focused on user-facing information.
 - Series and season detail pages now let the shared app layout own outer spacing, removing the doubled padding around the main content area.

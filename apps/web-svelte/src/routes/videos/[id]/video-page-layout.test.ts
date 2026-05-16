@@ -63,6 +63,8 @@ describe("/videos/[id] detail layout", () => {
     expect(sectionSource).toContain('titleSize="compact"');
     expect(sectionSource).toContain("{#snippet subtitleContent(card)}");
     expect(sectionSource).toContain("credit-scroller");
+    expect(sectionSource).toContain("overflow-wrap: anywhere");
+    expect(sectionSource).toContain("white-space: normal");
     expect(pageSource).not.toContain("credit-scroller");
     expect(pageSource).not.toContain("credit-chip");
   });

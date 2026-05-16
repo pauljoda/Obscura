@@ -123,19 +123,22 @@
   }
 
   .credit-role-label {
-    display: inline-flex;
+    display: flex;
+    width: fit-content;
     max-width: 100%;
     min-width: 0;
-    overflow: hidden;
+    justify-content: center;
+    overflow: visible;
     border: 1px solid rgb(255 255 255 / 0.08);
     background: rgb(255 255 255 / 0.032);
     color: rgb(196 201 212 / 0.72);
     font-family: var(--font-mono, "JetBrains Mono", monospace);
     font-size: 0.58rem;
-    line-height: 1;
+    line-height: 1.16;
     padding: 0.18rem 0.3rem;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    text-align: center;
+    white-space: normal;
   }
 
   @media (min-width: 640px) {
