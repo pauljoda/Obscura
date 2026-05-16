@@ -18,6 +18,7 @@
     withRatingCapability,
   } from "$lib/api/capabilities";
   import EntityCastAndCrewSection from "$lib/components/entities/EntityCastAndCrewSection.svelte";
+  import IdentifyButton from "$lib/components/IdentifyButton.svelte";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { creditSubtitle } from "$lib/entities/entity-credits";
   import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
@@ -264,6 +265,16 @@
         {#if totalEpisodeCount > 0}
           <span class="meta-item">Episodes: {totalEpisodeCount}</span>
         {/if}
+      {/snippet}
+
+      {#snippet extraFlags()}
+        <IdentifyButton
+          entityKind="video_series"
+          entityId={page.params.id ?? ""}
+          title={card.entity.title}
+          label="Identify"
+          onApplied={loadSeries}
+        />
       {/snippet}
 
       {#snippet sectionContent(section)}

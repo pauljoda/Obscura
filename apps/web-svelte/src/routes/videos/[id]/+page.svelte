@@ -35,6 +35,7 @@
     withRatingCapability,
   } from "$lib/api/capabilities";
   import EntityCastAndCrewSection from "$lib/components/entities/EntityCastAndCrewSection.svelte";
+  import IdentifyButton from "$lib/components/IdentifyButton.svelte";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { creditSubtitle } from "$lib/entities/entity-credits";
   import {
@@ -707,6 +708,16 @@
           {/if}
           <span class="meta-item">{date.value}</span>
         {/each}
+      {/snippet}
+
+      {#snippet extraFlags()}
+        <IdentifyButton
+          entityKind="video_movie"
+          entityId={videoId}
+          title={card.entity.title}
+          label="Identify"
+          onApplied={refreshVideo}
+        />
       {/snippet}
 
       {#snippet sectionContent(section)}
