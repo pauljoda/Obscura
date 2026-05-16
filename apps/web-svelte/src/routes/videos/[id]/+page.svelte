@@ -715,6 +715,7 @@
           entityKind="video_movie"
           entityId={videoId}
           title={card.entity.title}
+          existingCreditNames={credits.map((credit) => credit.person.title)}
           label="Identify"
           onApplied={refreshVideo}
         />

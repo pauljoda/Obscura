@@ -272,6 +272,7 @@
           entityKind="video_series"
           entityId={page.params.id ?? ""}
           title={card.entity.title}
+          existingCreditNames={credits.map((credit) => credit.person.title)}
           label="Identify"
           onApplied={loadSeries}
         />
