@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Video Cast and Crew thumbnails are now smaller and use centered titles with role subtitles, so credits feel secondary to the main video while staying scannable.
 - Entity thumbnail titles are now smaller by default and can be aligned per card, helping longer media names fit naturally in dense grids.
 - Mobile breadcrumbs now collapse the previous page behind the `...` menu and ticker long current titles on hover, preventing header controls from overlapping video titles.
 - Video detail pages now show Cast and Crew as horizontally scrollable thumbnail rows, with studios separated from cast and character labels shown under credited people when available.
@@ -72,6 +73,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Added
+- `EntityThumbnail` now accepts a named subtitle snippet so each entity surface can render custom secondary content, such as video detail chips or person role labels, without forking the card.
 - `OverflowTicker` provides a reusable measured text label for constrained UI areas that need ellipsis by default and a hover/focus ticker for long values.
 - Credits API responses now include role and character metadata alongside the existing compatibility people list, allowing actor cards to show character-specific subtitles.
 - VS Code Run and Debug now includes `Obscura: Kill Orphans`, a launch entry that runs `pnpm dev:kill` from the workspace.
@@ -98,6 +100,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- Video Cast and Crew rows now use compact centered thumbnail cards with route-provided role subtitle content.
 - Entity thumbnail titles now use a smaller default type size and expose left, center, or right alignment for callers that need card-specific title placement.
 - Entity thumbnail titles now use the shared overflow ticker instead of their older custom ticker, so narrow poster cards scroll long names with the same behavior as other shell labels.
 - Canvas header breadcrumbs now use the shared overflow ticker and collapse to a single current label on mobile, with previous linked crumbs available from the `...` menu.

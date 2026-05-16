@@ -639,7 +639,7 @@
                   <div class="credit-scroller">
                     {#each studioCards as thumbnailCard (thumbnailKey(thumbnailCard))}
                       <div class="credit-thumbnail is-studio">
-                        <EntityThumbnail card={thumbnailCard} />
+                        <EntityThumbnail card={thumbnailCard} titleAlign="center" />
                       </div>
                     {/each}
                   </div>
@@ -655,7 +655,15 @@
                   <div class="credit-scroller">
                     {#each creditCards as thumbnailCard (thumbnailKey(thumbnailCard))}
                       <div class="credit-thumbnail">
-                        <EntityThumbnail card={thumbnailCard} />
+                        {#if thumbnailCard.subtitle}
+                          <EntityThumbnail card={thumbnailCard} titleAlign="center">
+                            {#snippet subtitleContent(card)}
+                              <span class="credit-role-label">{card.subtitle}</span>
+                            {/snippet}
+                          </EntityThumbnail>
+                        {:else}
+                          <EntityThumbnail card={thumbnailCard} titleAlign="center" />
+                        {/if}
                       </div>
                     {/each}
                   </div>
@@ -796,12 +804,28 @@
   }
 
   .credit-thumbnail {
-    flex: 0 0 clamp(7.25rem, 34vw, 9.5rem);
+    flex: 0 0 clamp(5.85rem, 26vw, 7.25rem);
     min-width: 0;
   }
 
   .credit-thumbnail.is-studio {
-    flex-basis: clamp(9.5rem, 44vw, 13rem);
+    flex-basis: clamp(7.75rem, 34vw, 10rem);
+  }
+
+  .credit-role-label {
+    display: inline-flex;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    background: rgb(255 255 255 / 0.032);
+    color: rgb(196 201 212 / 0.72);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.58rem;
+    line-height: 1;
+    padding: 0.18rem 0.3rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   @media (min-width: 640px) {
@@ -810,11 +834,11 @@
     }
 
     .credit-thumbnail {
-      flex-basis: 9.75rem;
+      flex-basis: 7.25rem;
     }
 
     .credit-thumbnail.is-studio {
-      flex-basis: 13.5rem;
+      flex-basis: 10.5rem;
     }
   }
 

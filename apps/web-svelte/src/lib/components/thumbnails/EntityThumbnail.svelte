@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
   import {
     Album,
     BookOpen,
@@ -41,6 +42,7 @@
     onSelectedChange?: (selected: boolean) => void;
     selectable?: boolean;
     selected?: boolean;
+    subtitleContent?: Snippet<[EntityThumbnailCard]>;
     titleAlign?: EntityThumbnailTitleAlign;
   }
 
@@ -50,6 +52,7 @@
     onSelectedChange,
     selectable = false,
     selected = false,
+    subtitleContent,
     titleAlign = "left",
   }: Props = $props();
 
@@ -259,13 +262,19 @@
   </div>
 
   {#if !imageOnly}
-    <div class="details" class:has-subtitle={Boolean(card.subtitle)}>
+    <div class="details" class:has-subtitle={Boolean(card.subtitle || subtitleContent)}>
       <div class="copy">
         <h3 class={`title-align-${titleAlign}`} aria-label={card.entity.title}>
           <OverflowTicker text={card.entity.title} />
         </h3>
-        {#if card.subtitle}
-          <p class="subtitle" title={card.subtitle}>{card.subtitle}</p>
+        {#if subtitleContent}
+          <div class={`subtitle subtitle-custom title-align-${titleAlign}`}>
+            {@render subtitleContent(card)}
+          </div>
+        {:else if card.subtitle}
+          <div class={`subtitle title-align-${titleAlign}`} title={card.subtitle}>
+            <OverflowTicker text={card.subtitle} />
+          </div>
         {/if}
       </div>
 
@@ -685,6 +694,23 @@
     line-height: 1.25;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .subtitle-custom {
+    display: flex;
+    min-width: 0;
+  }
+
+  .subtitle-custom.title-align-left {
+    justify-content: flex-start;
+  }
+
+  .subtitle-custom.title-align-center {
+    justify-content: center;
+  }
+
+  .subtitle-custom.title-align-right {
+    justify-content: flex-end;
   }
 
   .details {

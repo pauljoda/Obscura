@@ -57,7 +57,9 @@ describe("/videos/[id] detail layout", () => {
     const pageSource = readLocalSource("./+page.svelte");
 
     expect(pageSource).toContain("Cast and Crew");
-    expect(pageSource).toContain("<EntityThumbnail card={thumbnailCard} />");
+    expect(pageSource).toContain("<EntityThumbnail card={thumbnailCard} titleAlign=\"center\">");
+    expect(pageSource).toContain('titleAlign="center"');
+    expect(pageSource).toContain("{#snippet subtitleContent(card)}");
     expect(pageSource).toContain("credit-scroller");
     expect(pageSource).not.toContain("credit-chip");
   });

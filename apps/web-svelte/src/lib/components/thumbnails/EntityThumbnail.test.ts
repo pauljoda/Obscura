@@ -95,6 +95,20 @@ describe("EntityThumbnail", () => {
 
     expect(container.querySelector("h3")?.classList.contains("title-align-center")).toBe(true);
   });
+
+  it("aligns fallback subtitles with the thumbnail title", () => {
+    const { container } = render(EntityThumbnail, {
+      props: {
+        card: {
+          ...personCard(),
+          subtitle: "Character Ronnie",
+        },
+        titleAlign: "center",
+      },
+    });
+
+    expect(container.querySelector(".subtitle")?.classList.contains("title-align-center")).toBe(true);
+  });
 });
 
 function spriteCard(): EntityThumbnailCard {
