@@ -385,6 +385,15 @@ describe("VideoPlayer", () => {
     expect(source).toContain("onpointerdown={(event) => event.stopPropagation()}");
   });
 
+  it("lets in-player marker chips seek without being swallowed by the overlay", async () => {
+    const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
+
+    expect(source).toContain('data-testid="video-marker-chip"');
+    expect(source).toContain('class="pointer-events-auto order-3 hidden flex-wrap gap-1.5 sm:flex"');
+    expect(source).toContain("onpointerdown={(event) => event.stopPropagation()}");
+    expect(source).toContain("aria-label={`Seek to ${marker.title}`}");
+  });
+
   it("keeps mobile settings top-level and desktop settings inside the video drawer", async () => {
     const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
 

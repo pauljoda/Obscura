@@ -1524,14 +1524,19 @@
         </div>
 
         {#if markers.length > 0}
-          <div class="order-3 hidden flex-wrap gap-1.5 sm:flex">
+          <div class="pointer-events-auto order-3 hidden flex-wrap gap-1.5 sm:flex">
             {#each markers as marker (marker.id)}
               <button
                 type="button"
-                onclick={() => {
+                data-testid="video-marker-chip"
+                onpointerdown={(event) => event.stopPropagation()}
+                onclick={(event) => {
+                  event.stopPropagation();
                   seekTo(marker.time);
                   onMarkerClick?.(marker);
                 }}
+                title={`Seek to ${marker.title}`}
+                aria-label={`Seek to ${marker.title}`}
                 class="player-chip px-2.5 py-1 text-[0.68rem] text-white/72 transition-colors hover:border-accent-400/35 hover:text-white"
               >
                 {marker.title}
