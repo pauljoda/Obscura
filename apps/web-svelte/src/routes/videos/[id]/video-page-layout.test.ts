@@ -64,6 +64,13 @@ describe("/videos/[id] detail layout", () => {
     expect(pageSource).not.toContain("credit-chip");
   });
 
+  it("renders character credit subtitles without adding a label prefix", () => {
+    const pageSource = readLocalSource("./+page.svelte");
+
+    expect(pageSource).toContain("if (character) return character;");
+    expect(pageSource).not.toContain("Character ${character}");
+  });
+
   it("adds old video panels through shared EntityDetail section-driven tabs", () => {
     const pageSource = readLocalSource("./+page.svelte");
 

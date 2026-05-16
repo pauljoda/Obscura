@@ -219,7 +219,7 @@
 
   function creditSubtitle(credit: EntityCredit): string | undefined {
     const character = credit.character?.trim();
-    if (character) return `Character ${character}`;
+    if (character) return character;
     const role = labelForCreditRole(credit.role);
     return role === "Person" ? undefined : role;
   }
