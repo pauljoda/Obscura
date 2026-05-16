@@ -62,4 +62,13 @@ describe("series detail layout", () => {
     expect(source).not.toContain("{#snippet heroBadges()}");
     expect(source).not.toContain("meta-item is-studio");
   });
+
+  it("moves season links and files out of the main details tab", () => {
+    const source = readLocalSource("./[id]/seasons/[seasonId]/+page.svelte");
+
+    expect(source).toContain("tabs={detailTabs}");
+    expect(source).toContain('id: "metadata"');
+    expect(source).toContain('sections: ["links", "files"]');
+    expect(source).toContain('sections: ["description", "tags"]');
+  });
 });

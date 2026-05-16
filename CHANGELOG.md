@@ -118,6 +118,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 - EntityDetail now treats migrated `backdrop` artwork as the hero/header image while keeping `poster` artwork in the poster slot.
 - Series detail headers now show date and item count only; studios live in the Cast and Crew section and rendering-mode badges are no longer shown.
+- Season detail pages now put links and files in a metadata tab, matching the series detail layout.
 - Series detail routes now render season posters as a horizontal row and use the shared entity grid's new position sort for episode ordering.
 - Video player hover previews now derive chapter labels from marker chapter ranges instead of only showing labels near marker points.
 - Video timeline markers now feed VidStack chapter tracks, including marker end times when present, so the scrub bar can render sectioned marker ranges natively.

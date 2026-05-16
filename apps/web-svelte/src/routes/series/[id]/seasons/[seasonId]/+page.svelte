@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { ArrowLeft, Film } from "@lucide/svelte";
+  import { ArrowLeft, Film, Info, SlidersHorizontal } from "@lucide/svelte";
   import {
     fetchV2Season,
     fetchV2Series,
@@ -18,7 +18,7 @@
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
-  import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
+  import EntityDetail, { type EntityDetailTab } from "$lib/components/entities/EntityDetail.svelte";
   import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
 
   type LoadState = "loading" | "ready" | "error";
@@ -53,6 +53,30 @@
   const episodeCards = $derived.by((): EntityThumbnailCard[] => {
     if (!season) return [];
     return season.videos.map((video) => entityCardToThumbnailCard(video, `/videos/${video.id}`));
+  });
+
+  const detailTabs = $derived.by((): EntityDetailTab[] => {
+    if (!card) return [];
+    const tabs: EntityDetailTab[] = [
+      {
+        id: "details",
+        label: "Details",
+        icon: Info,
+        sections: ["description", "tags"],
+      },
+    ];
+
+    if (card.links.length > 0 || card.files.length > 0) {
+      tabs.push({
+        id: "metadata",
+        label: "Metadata",
+        icon: SlidersHorizontal,
+        count: card.links.length + card.files.length,
+        sections: ["links", "files"],
+      });
+    }
+
+    return tabs;
   });
 
   onMount(() => {
@@ -142,6 +166,7 @@
       onOrganizedToggle={handleOrganizedToggle}
       {ratingBusy}
       posterSize="large"
+      tabs={detailTabs}
     >
       {#snippet heroMeta()}
         {#if parentSeries}
