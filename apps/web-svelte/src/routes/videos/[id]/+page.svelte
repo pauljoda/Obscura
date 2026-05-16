@@ -1,7 +1,17 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { Building2, Users } from "@lucide/svelte";
+  import {
+    Building2,
+    Captions,
+    FileText,
+    Info,
+    MapPin,
+    MonitorCog,
+    Play,
+    SlidersHorizontal,
+    Users,
+  } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import type { EntityCredit } from "$lib/api/generated/model";
   import type {
@@ -38,6 +48,7 @@
   import { usePlaylist } from "$lib/stores/playlist.svelte";
   import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
   import EntityDetail, {
+    type EntityDetailSection,
     type EntityDetailTab,
   } from "$lib/components/entities/EntityDetail.svelte";
   import VideoPlayer, {
@@ -124,14 +135,84 @@
   ));
 
   const hasCastAndCrew = $derived(studioCards.length > 0 || creditCards.length > 0);
+  const detailSections = $derived.by((): EntityDetailSection[] => [
+    {
+      id: "cast-and-crew",
+      label: "Cast and Crew",
+      icon: Users,
+      hidden: !hasCastAndCrew,
+    },
+    {
+      id: "technical",
+      label: "Technical",
+      icon: MonitorCog,
+      hidden: (card?.technical.length ?? 0) === 0,
+    },
+    {
+      id: "dates",
+      label: "Dates",
+      hidden: (card?.dates.length ?? 0) === 0,
+    },
+    {
+      id: "playback",
+      label: "Playback",
+      icon: Play,
+      hidden: (card?.counters.length ?? 0) === 0 && !playbackState,
+    },
+    {
+      id: "source",
+      label: "Source",
+      hidden: (card?.sources.length ?? 0) === 0 && (card?.fingerprints.length ?? 0) === 0,
+    },
+    {
+      id: "markers",
+      label: "Markers",
+      count: card?.markers.length ?? 0,
+    },
+    {
+      id: "transcript",
+      label: "Transcript",
+      count: playerProps?.subtitleTracks.length ?? 0,
+    },
+  ]);
+
   const detailTabs = $derived.by((): EntityDetailTab[] => {
     if (!card) return [];
     return [
-      { id: "details", label: "Details" },
-      { id: "metadata", label: "Metadata" },
-      { id: "markers", label: "Markers", count: card.markers.length },
-      { id: "transcript", label: "Transcript", count: playerProps?.subtitleTracks.length ?? 0 },
-      { id: "files", label: "Files", count: card.files.length },
+      {
+        id: "details",
+        label: "Details",
+        icon: Info,
+        sections: ["description", "tags", "cast-and-crew", "links"],
+      },
+      {
+        id: "metadata",
+        label: "Metadata",
+        icon: SlidersHorizontal,
+        sections: ["technical", "dates", "playback", "source"],
+        layout: "grid",
+      },
+      {
+        id: "markers",
+        label: "Markers",
+        icon: MapPin,
+        count: card.markers.length,
+        sections: ["markers"],
+      },
+      {
+        id: "transcript",
+        label: "Transcript",
+        icon: Captions,
+        count: playerProps?.subtitleTracks.length ?? 0,
+        sections: ["transcript"],
+      },
+      {
+        id: "files",
+        label: "Files",
+        icon: FileText,
+        count: card.files.length,
+        sections: ["files"],
+      },
     ];
   });
 
@@ -633,6 +714,7 @@
       showHero={false}
       posterSize="none"
       tabs={detailTabs}
+      sections={detailSections}
     >
       {#snippet heroMeta()}
         {#if studio}
@@ -646,13 +728,9 @@
         {/each}
       {/snippet}
 
-      {#snippet afterBody()}
-        {#if hasCastAndCrew}
-          <div class="credits-section">
-            <h2 class="section-label">
-              <Users class="h-4 w-4" />
-              Cast and Crew
-            </h2>
+      {#snippet sectionContent(section)}
+        {#if section.id === "cast-and-crew"}
+          {#if hasCastAndCrew}
             <div class="credit-rows">
               {#if studioCards.length > 0}
                 <section class="credit-row" aria-label="Studios">
@@ -694,88 +772,70 @@
                 </section>
               {/if}
             </div>
-          </div>
-        {/if}
-      {/snippet}
-
-      {#snippet tabContent(tab)}
-        {#if tab.id === "metadata"}
-          <div class="metadata-tab-grid">
-            {#if card.technical.length > 0}
-              <section class="tab-panel-section">
-                <h2 class="section-label">Technical</h2>
-                <div class="tab-data-list">
-                  {#each card.technical as row (row.label)}
-                    <div class="tab-data-row">
-                      <span>{row.label}</span>
-                      <strong>{row.value}</strong>
-                    </div>
-                  {/each}
+          {/if}
+        {:else if section.id === "technical"}
+          {#if card.technical.length > 0}
+            <div class="tab-data-list">
+              {#each card.technical as row (row.label)}
+                <div class="tab-data-row">
+                  <span>{row.label}</span>
+                  <strong>{row.value}</strong>
                 </div>
-              </section>
-            {/if}
-
-            {#if card.dates.length > 0}
-              <section class="tab-panel-section">
-                <h2 class="section-label">Dates</h2>
-                <div class="tab-data-list">
-                  {#each card.dates as row (row.code)}
-                    <div class="tab-data-row">
-                      <span>{row.label}</span>
-                      <strong>{row.value}</strong>
-                    </div>
-                  {/each}
+              {/each}
+            </div>
+          {/if}
+        {:else if section.id === "dates"}
+          {#if card.dates.length > 0}
+            <div class="tab-data-list">
+              {#each card.dates as row (row.code)}
+                <div class="tab-data-row">
+                  <span>{row.label}</span>
+                  <strong>{row.value}</strong>
                 </div>
-              </section>
-            {/if}
-
-            {#if card.counters.length > 0 || playbackState}
-              <section class="tab-panel-section">
-                <h2 class="section-label">Playback</h2>
-                <div class="tab-data-list">
-                  {#if playbackState}
-                    <div class="tab-data-row">
-                      <span>Play Count</span>
-                      <strong>{playbackState.playCount}</strong>
-                    </div>
-                    {#if playbackState.resumeSeconds > 0}
-                      <div class="tab-data-row">
-                        <span>Resume</span>
-                        <strong>{formatTimestamp(playbackState.resumeSeconds)}</strong>
-                      </div>
-                    {/if}
-                  {/if}
-                  {#each card.counters as row (row.code)}
-                    <div class="tab-data-row">
-                      <span>{row.label}</span>
-                      <strong>{row.value}</strong>
-                    </div>
-                  {/each}
+              {/each}
+            </div>
+          {/if}
+        {:else if section.id === "playback"}
+          {#if card.counters.length > 0 || playbackState}
+            <div class="tab-data-list">
+              {#if playbackState}
+                <div class="tab-data-row">
+                  <span>Play Count</span>
+                  <strong>{playbackState.playCount}</strong>
                 </div>
-              </section>
-            {/if}
-
-            {#if card.sources.length > 0 || card.fingerprints.length > 0}
-              <section class="tab-panel-section">
-                <h2 class="section-label">Source</h2>
-                <div class="tab-data-list">
-                  {#each card.sources as source (source.code)}
-                    <div class="tab-data-row">
-                      <span>{source.code}</span>
-                      <strong>{source.value}</strong>
-                    </div>
-                  {/each}
-                  {#each card.fingerprints as fingerprint (`${fingerprint.algorithm}:${fingerprint.value}`)}
-                    <div class="tab-data-row">
-                      <span>{fingerprint.algorithm}</span>
-                      <strong>{fingerprint.value}</strong>
-                    </div>
-                  {/each}
+                {#if playbackState.resumeSeconds > 0}
+                  <div class="tab-data-row">
+                    <span>Resume</span>
+                    <strong>{formatTimestamp(playbackState.resumeSeconds)}</strong>
+                  </div>
+                {/if}
+              {/if}
+              {#each card.counters as row (row.code)}
+                <div class="tab-data-row">
+                  <span>{row.label}</span>
+                  <strong>{row.value}</strong>
                 </div>
-              </section>
-            {/if}
-          </div>
-        {:else if tab.id === "markers"}
+              {/each}
+            </div>
+          {/if}
+        {:else if section.id === "source"}
+          {#if card.sources.length > 0 || card.fingerprints.length > 0}
+            <div class="tab-data-list">
+              {#each card.sources as source (source.code)}
+                <div class="tab-data-row">
+                  <span>{source.code}</span>
+                  <strong>{source.value}</strong>
+                </div>
+              {/each}
+              {#each card.fingerprints as fingerprint (`${fingerprint.algorithm}:${fingerprint.value}`)}
+                <div class="tab-data-row">
+                  <span>{fingerprint.algorithm}</span>
+                  <strong>{fingerprint.value}</strong>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        {:else if section.id === "markers"}
           {#if card.markers.length > 0}
             <div class="marker-tab-list">
               {#each card.markers as marker (marker.id)}
@@ -793,7 +853,7 @@
           {:else}
             <div class="tab-empty-state">No markers yet.</div>
           {/if}
-        {:else if tab.id === "transcript"}
+        {:else if section.id === "transcript"}
           {#if isTranscriptDockActive}
             <div class="transcript-tab-stack">
               <div class="tab-inline-notice">
@@ -829,22 +889,6 @@
               onDockToggle={hasSubtitles ? toggleTranscriptDock : undefined}
               isDocked={false}
             />
-          {/if}
-        {:else if tab.id === "files"}
-          {#if card.files.length > 0}
-            <div class="file-tab-list">
-              {#each card.files as file (file.path)}
-                <div class="file-tab-row">
-                  <span>{file.role}</span>
-                  <strong>{file.path}</strong>
-                  {#if file.mimeType}
-                    <em>{file.mimeType}</em>
-                  {/if}
-                </div>
-              {/each}
-            </div>
-          {:else}
-            <div class="tab-empty-state">No files recorded for this video.</div>
           {/if}
         {/if}
       {/snippet}
@@ -917,25 +961,6 @@
     opacity: 0.5;
   }
 
-  .credits-section {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid var(--color-border, #1c2235);
-    overflow: hidden;
-  }
-
-  .section-label {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    margin: 0 0 0.75rem;
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--color-text-muted, #8a93a6);
-  }
-
   .credit-rows {
     display: grid;
     gap: 1rem;
@@ -1003,28 +1028,15 @@
     white-space: nowrap;
   }
 
-  .metadata-tab-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-    gap: 1rem;
-    min-width: 0;
-  }
-
-  .tab-panel-section {
-    min-width: 0;
-  }
-
   .tab-data-list,
   .marker-tab-list,
-  .file-tab-list,
   .transcript-tab-stack {
     display: grid;
     gap: 0;
     min-width: 0;
   }
 
-  .tab-data-row,
-  .file-tab-row {
+  .tab-data-row {
     display: grid;
     grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
     gap: 0.8rem;
@@ -1035,8 +1047,7 @@
     font-size: 0.82rem;
   }
 
-  .tab-data-row span,
-  .file-tab-row span {
+  .tab-data-row span {
     color: var(--color-text-muted, #8a93a6);
     font-family: var(--font-mono, "JetBrains Mono", monospace);
     font-size: 0.7rem;
@@ -1044,23 +1055,11 @@
     text-transform: uppercase;
   }
 
-  .tab-data-row strong,
-  .file-tab-row strong {
+  .tab-data-row strong {
     min-width: 0;
     overflow-wrap: anywhere;
     color: var(--color-text-secondary, #c4c9d4);
     font-weight: 500;
-  }
-
-  .file-tab-row {
-    grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr) max-content;
-  }
-
-  .file-tab-row em {
-    color: var(--color-text-muted, #8a93a6);
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.72rem;
-    font-style: normal;
   }
 
   .marker-tab-row {
@@ -1087,7 +1086,6 @@
     color: var(--color-text-accent, #c49a5a);
     font-family: var(--font-mono, "JetBrains Mono", monospace);
     font-size: 0.78rem;
-    tab-size: 4;
   }
 
   .marker-time span {
@@ -1131,10 +1129,6 @@
   }
 
   @media (min-width: 640px) {
-    .credits-section {
-      padding: 1rem 2rem;
-    }
-
     .credit-thumbnail {
       flex-basis: 8.25rem;
     }

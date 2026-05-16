@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/svelte";
+import { FileText } from "@lucide/svelte";
 import { createRawSnippet } from "svelte";
 import { describe, expect, it } from "vitest";
 import type { EntityDetailCard } from "$lib/entities/entity-detail";
-import EntityDetail, { type EntityDetailTab } from "./EntityDetail.svelte";
+import EntityDetail, { type EntityDetailSection } from "./EntityDetail.svelte";
 
 function buildCard(): EntityDetailCard {
   return {
@@ -57,39 +58,52 @@ describe("EntityDetail", () => {
     expect(heroChildren.indexOf(ratingRow!)).toBeLessThan(heroChildren.indexOf(actionBadges!));
   });
 
-  it("renders caller-provided detail tabs with counts and custom content", async () => {
+  it("renders caller-provided detail tabs with section mappings and custom content", async () => {
+    const card = buildCard();
+    card.description = "A gentle rabbit adventure.";
+    card.tags = ["animation"];
+    card.files = [{ role: "source", path: "/media/bunny.mp4", mimeType: "video/mp4" }];
+
     render(EntityDetail, {
       props: {
-        card: buildCard(),
+        card,
         tabs: [
           {
-            id: "markers",
-            label: "Markers",
-            count: 2,
+            id: "details",
+            label: "Details",
+            sections: ["description", "tags"],
           },
           {
             id: "files",
             label: "Files",
+            count: 1,
+            icon: FileText,
+            sections: ["custom-files", "files"],
           },
         ],
-        tabContent: createRawSnippet<[EntityDetailTab]>((tab) => ({
-          render: () => (
-            tab().id === "markers"
-              ? "<p>Marker editor panel</p>"
-              : "<p>File info panel</p>"
-          ),
+        sections: [
+          {
+            id: "custom-files",
+            label: "File Notes",
+          },
+        ],
+        sectionContent: createRawSnippet<[EntityDetailSection]>((section) => ({
+          render: () => (section().id === "custom-files" ? "<p>File info panel</p>" : ""),
         })),
       },
     });
 
     expect(screen.getByRole("tablist", { name: "Detail sections" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Markers 2" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByText("Marker editor panel")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Details" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("A gentle rabbit adventure.")).toBeInTheDocument();
+    expect(screen.getByText("animation")).toBeInTheDocument();
 
-    await fireEvent.click(screen.getByRole("tab", { name: "Files" }));
+    await fireEvent.click(screen.getByRole("tab", { name: "Files 1" }));
 
-    expect(screen.getByRole("tab", { name: "Files" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Files 1" })).toHaveAttribute("aria-selected", "true");
+    expect(document.querySelector("svg.lucide-file-text")).toBeInTheDocument();
     expect(screen.getByText("File info panel")).toBeInTheDocument();
-    expect(screen.queryByText("Marker editor panel")).not.toBeInTheDocument();
+    expect(screen.getByText("/media/bunny.mp4")).toBeInTheDocument();
+    expect(screen.queryByText("A gentle rabbit adventure.")).not.toBeInTheDocument();
   });
 });

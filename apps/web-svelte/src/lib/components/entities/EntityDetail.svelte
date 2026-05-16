@@ -9,6 +9,7 @@
     FileText,
     Link,
   } from "@lucide/svelte";
+  import type { LucideIcon } from "@lucide/svelte";
   import type { EntityDetailCard } from "$lib/entities/entity-detail";
   import { renderEntityDescriptionMarkdown } from "$lib/entities/entity-detail-markdown";
   import { hasHero, hasPoster } from "$lib/entities/entity-detail";
@@ -20,6 +21,17 @@
     id: string;
     label: string;
     count?: number;
+    icon?: LucideIcon;
+    sections: string[];
+    layout?: "stack" | "grid";
+  }
+
+  export interface EntityDetailSection {
+    id: string;
+    label?: string;
+    count?: number;
+    icon?: LucideIcon;
+    hidden?: boolean;
   }
 
   interface Props {
@@ -31,6 +43,8 @@
     ratingBusy?: boolean;
     showHero?: boolean;
     tabs?: EntityDetailTab[];
+    /** Route-provided sections that can be assigned to any tab. */
+    sections?: EntityDetailSection[];
     /** Inline metadata rendered below the title (e.g. studio link · date · count). */
     heroMeta?: Snippet;
     /** Badge row rendered below the rating stars (e.g. Season 1, Episode 2). */
@@ -41,8 +55,8 @@
     afterBody?: Snippet;
     /** Extra metadata sections appended inside the lower metadata area. */
     extraSections?: Snippet;
-    /** Custom content for non-core tabs. The built-in `details` tab renders the standard detail body. */
-    tabContent?: Snippet<[EntityDetailTab]>;
+    /** Custom content for route-provided sections. Core section IDs render built-in detail content. */
+    sectionContent?: Snippet<[EntityDetailSection]>;
   }
 
   let {
@@ -54,12 +68,13 @@
     ratingBusy = false,
     showHero = true,
     tabs = [],
+    sections = [],
     heroMeta,
     heroBadges,
     extraFlags,
     afterBody,
     extraSections,
-    tabContent,
+    sectionContent,
   }: Props = $props();
 
   let favoriteAnimating = $state(false);
@@ -102,16 +117,13 @@
   const renderedDescription = $derived(renderEntityDescriptionMarkdown(card.description));
   const hasTabs = $derived(tabs.length > 0);
   const activeTab = $derived(tabs.find((tab) => tab.id === activeTabId) ?? tabs[0] ?? null);
-
-  $effect(() => {
-    if (tabs.length === 0) {
-      activeTabId = "";
-      return;
-    }
-    if (!tabs.some((tab) => tab.id === activeTabId)) {
-      activeTabId = tabs[0]?.id ?? "";
-    }
-  });
+  const coreSections = $derived.by((): EntityDetailSection[] => [
+    { id: "description" },
+    { id: "tags" },
+    { id: "links", label: "Links", icon: Link },
+    { id: "files", label: "Files", icon: FileText },
+  ]);
+  const availableSections = $derived([...coreSections, ...sections]);
 
   function handleRatingClick(e: MouseEvent, value: number) {
     if (!onRatingChange || ratingBusy || !card.rating) return;
@@ -126,26 +138,153 @@
     const duration = clearing ? 350 : 80 * value + 200;
     setTimeout(() => (ratingAnim = null), duration);
   }
+
+  function findSection(sectionId: string): EntityDetailSection | null {
+    return availableSections.find((section) => section.id === sectionId) ?? null;
+  }
+
+  function sectionHasContent(section: EntityDetailSection): boolean {
+    if (section.hidden) return false;
+
+    switch (section.id) {
+      case "description":
+        return Boolean(renderedDescription);
+      case "tags":
+        return card.tags.length > 0;
+      case "links":
+        return card.links.length > 0;
+      case "files":
+        return card.files.length > 0;
+      default:
+        return Boolean(sectionContent);
+    }
+  }
+
+  function sectionsForTab(tab: EntityDetailTab): EntityDetailSection[] {
+    return tab.sections
+      .map(findSection)
+      .filter((section): section is EntityDetailSection => Boolean(section))
+      .filter(sectionHasContent);
+  }
 </script>
+
+{#snippet descriptionContent()}
+  {#if renderedDescription}
+    <div class="description-content markdown-body">
+      {@html renderedDescription}
+    </div>
+  {/if}
+{/snippet}
+
+{#snippet tagsContent()}
+  {#if card.tags.length > 0}
+    <div class="tags-row">
+      <span class="tags-label">Tags:</span>
+      {#each card.tags as tag (tag)}
+        <span class="tag-chip">{tag}</span>
+      {/each}
+    </div>
+  {/if}
+{/snippet}
+
+{#snippet descriptionSection()}
+  <div class="detail-body">
+    {@render descriptionContent()}
+  </div>
+{/snippet}
+
+{#snippet tagsSection()}
+  <div class="detail-body">
+    {@render tagsContent()}
+  </div>
+{/snippet}
+
+{#snippet linksSection()}
+  {#if card.links.length > 0}
+    <section class="detail-section">
+      <h2 class="section-label">
+        <Link class="h-4 w-4" />
+        Links
+      </h2>
+      <div class="link-list">
+        {#each card.links as link (link.label)}
+          {#if link.url}
+            <a href={link.url} target="_blank" rel="noopener noreferrer" class="link-item">
+              <ExternalLink class="h-3.5 w-3.5" />
+              {link.label}
+            </a>
+          {:else}
+            <span class="link-item no-url">
+              <Link class="h-3.5 w-3.5" />
+              {link.label}
+            </span>
+          {/if}
+        {/each}
+      </div>
+    </section>
+  {/if}
+{/snippet}
+
+{#snippet filesSection()}
+  {#if card.files.length > 0}
+    <section class="detail-section">
+      <h2 class="section-label">
+        <FileText class="h-4 w-4" />
+        Files
+      </h2>
+      <div class="file-list">
+        {#each card.files as file (file.path)}
+          <div class="file-row">
+            <span class="file-role">{file.role}</span>
+            <span class="file-path mono">{file.path}</span>
+            {#if file.mimeType}
+              <span class="file-mime mono">{file.mimeType}</span>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
+{/snippet}
+
+{#snippet customSection(section: EntityDetailSection)}
+  {#if sectionContent}
+    <section class="detail-section custom-detail-section" aria-label={section.label ?? section.id}>
+      {#if section.label}
+        {@const SectionIcon = section.icon}
+        <h2 class="section-label">
+          {#if SectionIcon}
+            <SectionIcon class="h-4 w-4" />
+          {/if}
+          {section.label}
+        </h2>
+      {/if}
+      {@render sectionContent(section)}
+    </section>
+  {/if}
+{/snippet}
+
+{#snippet renderDetailSection(section: EntityDetailSection)}
+  {#if section.id === "description"}
+    {@render descriptionSection()}
+  {:else if section.id === "tags"}
+    {@render tagsSection()}
+  {:else if section.id === "links"}
+    {@render linksSection()}
+  {:else if section.id === "files"}
+    {@render filesSection()}
+  {:else}
+    {@render customSection(section)}
+  {/if}
+{/snippet}
 
 {#snippet defaultDetailContent()}
   <div class="detail-body">
     <!-- Description -->
-    {#if renderedDescription}
-      <div class="description-content markdown-body">
-        {@html renderedDescription}
-      </div>
-    {/if}
+    {@render descriptionContent()}
 
     <!-- Tags -->
-    {#if card.tags.length > 0}
-      <div class="tags-row">
-        <span class="tags-label">Tags:</span>
-        {#each card.tags as tag (tag)}
-          <span class="tag-chip">{tag}</span>
-        {/each}
-      </div>
-    {/if}
+    {@render tagsContent()}
   </div>
 
   <!-- Kind-specific content between body and metadata (studio, credits, etc.) -->
@@ -161,50 +300,10 @@
       {/if}
 
       <!-- Links (universal) -->
-      {#if card.links.length > 0}
-        <section class="detail-section">
-          <h2 class="section-label">
-            <Link class="h-4 w-4" />
-            Links
-          </h2>
-          <div class="link-list">
-            {#each card.links as link (link.label)}
-              {#if link.url}
-                <a href={link.url} target="_blank" rel="noopener noreferrer" class="link-item">
-                  <ExternalLink class="h-3.5 w-3.5" />
-                  {link.label}
-                </a>
-              {:else}
-                <span class="link-item no-url">
-                  <Link class="h-3.5 w-3.5" />
-                  {link.label}
-                </span>
-              {/if}
-            {/each}
-          </div>
-        </section>
-      {/if}
+      {@render linksSection()}
 
       <!-- Files (universal) -->
-      {#if card.files.length > 0}
-        <section class="detail-section">
-          <h2 class="section-label">
-            <FileText class="h-4 w-4" />
-            Files
-          </h2>
-          <div class="file-list">
-            {#each card.files as file (file.path)}
-              <div class="file-row">
-                <span class="file-role">{file.role}</span>
-                <span class="file-path mono">{file.path}</span>
-                {#if file.mimeType}
-                  <span class="file-mime mono">{file.mimeType}</span>
-                {/if}
-              </div>
-            {/each}
-          </div>
-        </section>
-      {/if}
+      {@render filesSection()}
     </div>
   {/if}
 {/snippet}
@@ -330,6 +429,7 @@
       <div class="detail-tab-list" role="tablist" aria-label="Detail sections">
         {#each tabs as tab (tab.id)}
           {@const active = activeTab?.id === tab.id}
+          {@const TabIcon = tab.icon}
           <button
             type="button"
             role="tab"
@@ -339,6 +439,9 @@
             class:active
             onclick={() => (activeTabId = tab.id)}
           >
+            {#if TabIcon}
+              <TabIcon class="detail-tab-icon h-3.5 w-3.5" />
+            {/if}
             <span>{tab.label}</span>
             {#if tab.count != null && tab.count > 0}
               <strong>{tab.count}</strong>
@@ -355,13 +458,13 @@
           aria-labelledby={`entity-detail-tab-${activeTab.id}`}
         >
           {#key activeTab.id}
-            {#if activeTab.id === "details" || !tabContent}
-              {@render defaultDetailContent()}
-            {:else}
-              <div class="custom-tab-content">
-                {@render tabContent(activeTab)}
-              </div>
-            {/if}
+            <div class="detail-tab-sections" data-layout={activeTab.layout ?? "stack"}>
+              {#each sectionsForTab(activeTab) as section (section.id)}
+                {@render renderDetailSection(section)}
+              {:else}
+                <div class="tab-empty-state">No details available.</div>
+              {/each}
+            </div>
           {/key}
         </div>
       {/if}
@@ -764,9 +867,35 @@
     min-width: 0;
   }
 
-  .custom-tab-content {
+  .detail-tab-sections {
+    display: grid;
+    gap: 1rem;
     min-width: 0;
     padding: 1rem 1.5rem 1.5rem;
+  }
+
+  .detail-tab-sections[data-layout="grid"] {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  }
+
+  .detail-tab-sections .detail-body {
+    padding: 0;
+  }
+
+  .detail-tab-sections .detail-section {
+    padding: 0 0 1rem;
+  }
+
+  .custom-detail-section {
+    min-width: 0;
+  }
+
+  .tab-empty-state {
+    padding: 1rem;
+    border: 1px solid var(--detail-border);
+    background: var(--detail-surface);
+    color: var(--detail-text-muted);
+    font-size: 0.82rem;
   }
 
   .detail-body {
@@ -1042,7 +1171,7 @@
       padding-inline: 2rem;
     }
 
-    .custom-tab-content {
+    .detail-tab-sections {
       padding: 1.25rem 2rem 2rem;
     }
   }

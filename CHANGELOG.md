@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Detail pages can now define tabs from reusable shared sections plus route-specific sections, with optional tab icons, making rich video panels easier to keep consistent across the app.
 - Video detail pages now bring back richer tabbed panels for metadata, markers, transcripts, and files, using shared detail-page tab chrome.
 - Credit thumbnails now fit more names without immediate clipping by using wider person cards and compact title text that can scale down before ticker scrolling starts.
 - Video Cast and Crew thumbnails are now smaller and use centered titles with role subtitles, so credits feel secondary to the main video while staying scannable.
@@ -75,6 +76,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Added
+- `EntityDetail` tabs now support optional Lucide icons and section mappings, so pages can place core sections and custom snippets on any tab without owning the tab chrome.
 - `EntityDetail` now supports route-provided detail tabs with custom Svelte snippet content, while preserving the built-in details body for shared entity pages.
 - `EntityThumbnail` now accepts a named subtitle snippet so each entity surface can render custom secondary content, such as video detail chips or person role labels, without forking the card.
 - `OverflowTicker` provides a reusable measured text label for constrained UI areas that need ellipsis by default and a hover/focus ticker for long values.
@@ -103,6 +105,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- Video detail tabs now declare reusable detail sections for description, credits, metadata, markers, transcripts, links, and files instead of rendering entire custom tab panels in the route.
 - Video detail pages now define Details, Metadata, Markers, Transcript, and Files panels through the shared `EntityDetail` tab API.
 - `OverflowTicker` now supports shrink-to-fit behavior before scrolling, and entity thumbnail imagery now defaults to cover fitting so artwork fills its card without black bars.
 - Centered overflow tickers now keep overflowing text readable from the leading edge instead of clipping from a centered oversized line.
