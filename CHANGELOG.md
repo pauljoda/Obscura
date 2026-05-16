@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 - The identify review modal now shows individually selectable tags with NEW badges for unrecognized tags, EntityThumbnail-based credit and studio cards, multi-line descriptions, larger artwork previews in a card grid, and a consistent-size lightbox with slide-in animation and a Confirm button.
+- Applying identify results now cascades person profile photos and studio logos from the TMDB proposal into the linked Person and Studio entities, so credited actors and studios show artwork in browse and detail pages.
 - The Plugins page now manages v2 community plugins directly, including local discovery, install/remove, and editable API-key credentials for TMDB.
 - Saved TMDB API keys from the previous `TMDB_API_KEY` credential shape are now reused by the v2 `apiKey` plugin field.
 - Video and series detail pages now expose the v2 identify review drawer directly from the entity header.
@@ -97,6 +98,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Identify credit and studio EntityThumbnail cards now show profile photos and logos from TMDB proposal children, and tag NEW badges now check the entity's full tag list (including NSFW tags) so existing tags are never falsely marked as new.
 
 ### Added
+- Identify apply now cascades person profile photos and studio logos from proposal children into linked Person and Studio entities, giving credited actors and studios artwork without a separate identify pass.
 - V2 plugin credentials now resolve legacy provider key aliases such as `TMDB_API_KEY`, preserving saved API keys while still allowing users to edit the new v2 credential fields.
 - The Plugins page now lists v2 dotnet-process community plugins from local discovery and supports install, remove, and credential configuration through the new .NET plugin endpoints.
 - Video and series detail headers now include a v2 Identify action that opens provider selection, review field toggles, candidate switching, artwork selection, and selected-field apply without using the removed v1 plugin stack.

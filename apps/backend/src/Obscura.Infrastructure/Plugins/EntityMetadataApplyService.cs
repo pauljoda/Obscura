@@ -133,6 +133,11 @@ public sealed class EntityMetadataApplyService
             await DownloadSelectedImagesAsync(entityId, selectedImages, now, cancellationToken);
         }
 
+        if (proposal.Children.Count > 0 && (selected.Contains("credits") || selected.Contains("studio")))
+        {
+            await CascadeChildImagesAsync(proposal.Children, now, cancellationToken);
+        }
+
         entity.UpdatedAt = now;
         await _db.SaveChangesAsync(cancellationToken);
         return true;
@@ -402,6 +407,73 @@ public sealed class EntityMetadataApplyService
                 existing.Path = publicPath;
                 existing.MimeType = MimeTypeFromExtension(ext);
                 existing.UpdatedAt = now;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Downloads images from proposal children into linked Person and Studio entities
+    /// that were created or resolved during credits/studio apply.
+    /// </summary>
+    private async Task CascadeChildImagesAsync(
+        IReadOnlyList<EntityMetadataProposal> children,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        foreach (var child in children)
+        {
+            if (child.Images.Count == 0 || string.IsNullOrWhiteSpace(child.Patch.Title))
+            {
+                continue;
+            }
+
+            if (child.TargetKind is not ("person" or "studio"))
+            {
+                continue;
+            }
+
+            var linkedEntity = await FindEntityByKindAndTitleAsync(child.TargetKind, child.Patch.Title.Trim(), cancellationToken);
+            if (linkedEntity is null)
+            {
+                continue;
+            }
+
+            var hasFile = await _db.EntityFiles.AnyAsync(
+                row => row.EntityId == linkedEntity.Id && (row.Role == EntityFileRole.Poster || row.Role == EntityFileRole.Logo),
+                cancellationToken);
+            if (hasFile)
+            {
+                continue;
+            }
+
+            var image = child.Images.FirstOrDefault(img => img.Kind is "poster") ?? child.Images.FirstOrDefault(img => img.Kind is "logo") ?? child.Images[0];
+            var role = child.TargetKind == "studio" ? EntityFileRole.Logo : EntityFileRole.Poster;
+
+            try
+            {
+                var bytes = await _http.GetByteArrayAsync(image.Url, cancellationToken);
+                var ext = ExtensionFromUrl(image.Url);
+                var relativePath = Path.Combine("plugins", "artwork", linkedEntity.Id.ToString(), $"{role.ToString().ToLowerInvariant()}-{ShortHash(image.Url)}{ext}");
+                var physicalPath = Path.Combine(_options.CacheRoot, relativePath);
+                Directory.CreateDirectory(Path.GetDirectoryName(physicalPath)!);
+                await File.WriteAllBytesAsync(physicalPath, bytes, cancellationToken);
+
+                var publicPath = $"/assets/{relativePath.Replace(Path.DirectorySeparatorChar, '/')}";
+                _db.EntityFiles.Add(new EntityFileRow
+                {
+                    Id = Guid.NewGuid(),
+                    EntityId = linkedEntity.Id,
+                    Role = role,
+                    Path = publicPath,
+                    MimeType = MimeTypeFromExtension(ext),
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+
+                linkedEntity.UpdatedAt = now;
+            }
+            catch (HttpRequestException)
+            {
             }
         }
     }
