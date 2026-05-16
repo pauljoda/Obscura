@@ -300,8 +300,13 @@ public sealed class HlsAssetService : IHlsAssetService
         }
 
         var generationStartSegment = PrerollSegmentIndex(segmentIndex);
-        var generation = FindActiveRenditionGeneration(id, rendition, audioCacheKey, segmentIndex) ??
-            StartVirtualRenditionGeneration(id, source, rendition, audioCacheKey, audioStreamIndex, generationStartSegment);
+        var generation = FindActiveRenditionGeneration(id, rendition, audioCacheKey, segmentIndex);
+        if (generation is null)
+        {
+            CancelActiveRenditionGenerations(id, rendition, audioCacheKey, generationStartSegment);
+            generation = StartVirtualRenditionGeneration(id, source, rendition, audioCacheKey, audioStreamIndex, generationStartSegment);
+        }
+
         await WaitForVirtualSegmentAsync(id, rendition, audioCacheKey, segmentIndex, outputPath, generation, cancellationToken);
         return outputPath;
     }
@@ -341,6 +346,24 @@ public sealed class HlsAssetService : IHlsAssetService
         return File.Exists(stagedPath) && new FileInfo(stagedPath).Length > 0;
     }
 
+    private static void CancelActiveRenditionGenerations(
+        Guid id,
+        VirtualHlsRendition rendition,
+        string audioCacheKey,
+        int nextStartSegment)
+    {
+        var prefix = $"{id}/{audioCacheKey}/{rendition.Name}/";
+        foreach (var (key, generation) in ActiveRenditions)
+        {
+            if (key.StartsWith(prefix, StringComparison.Ordinal) &&
+                generation.StartSegment != nextStartSegment &&
+                ActiveRenditions.TryRemove(key, out var removed))
+            {
+                removed.Cancellation.Cancel();
+            }
+        }
+    }
+
     private VirtualRenditionGeneration StartVirtualRenditionGeneration(
         Guid id,
         VideoSourceFile source,
@@ -354,10 +377,12 @@ public sealed class HlsAssetService : IHlsAssetService
         return ActiveRenditions.GetOrAdd(key, _ =>
         {
             var stagingDirectory = VirtualPath(id, audioCacheKey, "v", rendition.Name, $".gen_{startSegment:00000}_{Guid.NewGuid():N}");
+            var cancellation = new CancellationTokenSource();
             var generation = new VirtualRenditionGeneration(
                 startSegment,
                 endSegment,
                 stagingDirectory,
+                cancellation,
                 Task.CompletedTask);
             generation = generation with
             {
@@ -369,7 +394,8 @@ public sealed class HlsAssetService : IHlsAssetService
                     audioStreamIndex,
                     startSegment,
                     stagingDirectory,
-                    key)
+                    key,
+                    cancellation.Token)
             };
             return generation;
         });
@@ -383,7 +409,8 @@ public sealed class HlsAssetService : IHlsAssetService
         int? audioStreamIndex,
         int startSegment,
         string stagingDirectory,
-        string generationKey)
+        string generationKey,
+        CancellationToken cancellationToken)
     {
         if (_processes is null)
         {
@@ -401,7 +428,7 @@ public sealed class HlsAssetService : IHlsAssetService
                 "ffmpeg",
                 VirtualRenditionArguments(source, rendition, audioStreamIndex, startSegment, playlistPath, segmentPattern),
                 environment: null,
-                CancellationToken.None);
+                cancellationToken);
         }
         finally
         {
@@ -449,7 +476,17 @@ public sealed class HlsAssetService : IHlsAssetService
 
             if (generation.Task.IsCompleted)
             {
-                await generation.Task;
+                try
+                {
+                    await generation.Task;
+                }
+                catch (OperationCanceledException ex)
+                {
+                    throw new FileNotFoundException(
+                        $"HLS rendition generation was replaced before segment {segmentIndex} was produced for {id}/{rendition.Name}.",
+                        ex);
+                }
+
                 if (File.Exists(outputPath) && new FileInfo(outputPath).Length > 0)
                 {
                     return;
@@ -548,11 +585,22 @@ public sealed class HlsAssetService : IHlsAssetService
     private static IReadOnlyList<VirtualHlsRendition> RenditionsFor(int? sourceHeight)
     {
         var height = sourceHeight ?? 720;
+        if (height >= 1080)
+        {
+            return
+            [
+                new("1080p", 1080, "5000k", "6500k", "10000k", "160k", 19),
+                new("720p", 720, "2800k", "3200k", "5600k", "128k", 20),
+                new("480p", 480, "1400k", "1800k", "2800k", "128k", 21)
+            ];
+        }
+
         if (height >= 720)
         {
             return
             [
-                new("720p", 720, "2800k", "3200k", "5600k", "128k", 20)
+                new("720p", 720, "2800k", "3200k", "5600k", "128k", 20),
+                new("480p", 480, "1400k", "1800k", "2800k", "128k", 21)
             ];
         }
 
@@ -832,6 +880,7 @@ public sealed class HlsAssetService : IHlsAssetService
         int StartSegment,
         int EndSegment,
         string StagingDirectory,
+        CancellationTokenSource Cancellation,
         Task Task);
 
     private sealed record VirtualTrickplayStream(int Width, int Height, int Bandwidth);

@@ -68,8 +68,8 @@ public sealed class HlsAssetServiceTests : IDisposable
                 "video/x-matroska",
                 false,
                 DurationSeconds: 13,
-                Width: 1920,
-                Height: 960)),
+                Width: 3840,
+                Height: 1920)),
             process,
             NullLogger<HlsAssetService>.Instance);
 
@@ -77,7 +77,10 @@ public sealed class HlsAssetServiceTests : IDisposable
         var variant = await service.GetAssetAsync(videoId, "v/720p/index.m3u8", null, CancellationToken.None);
 
         Assert.NotNull(master);
-        Assert.Contains("hls/720p/index.m3u8", await File.ReadAllTextAsync(master.Path));
+        var masterPlaylist = await File.ReadAllTextAsync(master.Path);
+        Assert.Contains("hls/1080p/index.m3u8", masterPlaylist);
+        Assert.Contains("hls/720p/index.m3u8", masterPlaylist);
+        Assert.Contains("hls/480p/index.m3u8", masterPlaylist);
         Assert.NotNull(variant);
         var playlist = await File.ReadAllTextAsync(variant.Path);
         Assert.Contains("#EXT-X-PLAYLIST-TYPE:VOD", playlist);
@@ -389,8 +392,9 @@ public sealed class HlsAssetServiceTests : IDisposable
             .WaitAsync(TimeSpan.FromSeconds(5));
 
         process.ReleaseInitialGeneration();
-        await initialSegment.WaitAsync(TimeSpan.FromSeconds(5));
+        var replacedInitialSegment = await initialSegment.WaitAsync(TimeSpan.FromSeconds(5));
 
+        Assert.Null(replacedInitialSegment);
         Assert.NotNull(farSegment);
         Assert.Equal("seg_00020.ts", Path.GetFileName(farSegment.Path));
         Assert.Equal(2, process.ArgumentHistory.Count);

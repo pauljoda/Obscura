@@ -41,14 +41,23 @@ public class ProcessExecutor
         using var process = Process.Start(startInfo) ??
             throw new InvalidOperationException($"Failed to start '{fileName}'.");
 
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
+        try
+        {
+            var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+            var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            await process.WaitForExitAsync(cancellationToken);
 
-        return new ProcessExecutionResult(
-            process.ExitCode,
-            await stdoutTask,
-            await stderrTask);
+            return new ProcessExecutionResult(
+                process.ExitCode,
+                await stdoutTask,
+                await stderrTask);
+        }
+        catch (OperationCanceledException) when (!process.HasExited)
+        {
+            process.Kill(entireProcessTree: true);
+            await process.WaitForExitAsync(CancellationToken.None);
+            throw;
+        }
     }
 
     /// <summary>
@@ -90,14 +99,23 @@ public class ProcessExecutor
             throw new InvalidOperationException($"Failed to start '{fileName}'.");
         await using var output = File.Create(outputPath);
 
-        var copyTask = process.StandardOutput.BaseStream.CopyToAsync(output, cancellationToken);
-        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
-        await copyTask;
+        try
+        {
+            var copyTask = process.StandardOutput.BaseStream.CopyToAsync(output, cancellationToken);
+            var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            await process.WaitForExitAsync(cancellationToken);
+            await copyTask;
 
-        return new ProcessExecutionResult(
-            ExitCode: process.ExitCode,
-            StandardOutput: string.Empty,
-            StandardError: await stderrTask);
+            return new ProcessExecutionResult(
+                ExitCode: process.ExitCode,
+                StandardOutput: string.Empty,
+                StandardError: await stderrTask);
+        }
+        catch (OperationCanceledException) when (!process.HasExited)
+        {
+            process.Kill(entireProcessTree: true);
+            await process.WaitForExitAsync(CancellationToken.None);
+            throw;
+        }
     }
 }

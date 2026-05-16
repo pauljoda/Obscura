@@ -42,6 +42,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Virtual HLS now publishes generated segments atomically and refreshes older segment caches, preventing content-length crashes when users scrub past buffered playback.
 - Scrubbing beyond the current buffer now starts virtual HLS generation at the requested segment and continues forward, restoring responsive long-distance seeks without waiting for earlier segments.
 - Scrubbing far ahead while a video is still generating now starts a seek-local HLS transcode instead of waiting for the initial playback transcode to catch up.
+- Scrubbing around partially generated adaptive video now cancels stale same-rendition transcodes and restarts work near the requested segment, and HD sources now advertise 1080p, 720p, and 480p adaptive levels.
+- Video scrubber interactions no longer make the play button show a pause state unless playback actually starts.
 - Subtitle style controls now use consistent sharp menu rows and squared sliders in both the player and Settings page, with compact language-code text that no longer overpowers subtitle settings.
 - Local dev navigation now ignores browser-aborted backend requests, preventing canceled list loads during refresh/navigation from breaking the .NET debug session.
 - Video detail pages now use the shared page padding without adding a second inset around the player, giving playback more room while matching browse-page spacing.
@@ -121,6 +123,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 - Adaptive HLS no longer reuses an early active rendition generation for far-ahead segment requests unless that exact segment has already been produced.
+- Adaptive HLS now stops obsolete same-rendition ffmpeg processes when a far seek starts a replacement generation, preventing old buffer work from starving the requested seek.
+- Adaptive HLS master playlists now include multiple renditions for HD sources so Auto quality and manual quality selection have real levels to choose from.
+- Scrubbing the video progress bar no longer routes `seeked` events through the playback-start handler, keeping the play button state accurate.
+- Search and Identify routes no longer import removed v1 frontend modules, avoiding Vite overlays when navigating through the v2 shell.
 - Video player focus styling no longer shows the native browser outline on the media surface after mouse/touch interaction.
 - Browse route preloads no longer open Vite overlays from deleted v1 infinite-load, pagination, and scraper helper imports.
 - Video detail routes no longer return dev-server import errors from global Svelte imports of deleted v1 cache, playlist, command palette, and search-result helpers.

@@ -1007,7 +1007,7 @@
       ["ended", handleEnded],
       ["waiting", handleWaiting],
       ["seeking", handleWaiting],
-      ["seeked", handlePlaying],
+      ["seeked", handleSeeked],
       ["volume-change", handleVolumeChangeEvent],
       ["rate-change", handleRateChange],
       ["progress", handleProgress],
@@ -1152,6 +1152,11 @@
 
   function handleWaiting(_event: Event) {
     buffering = true;
+  }
+
+  function handleSeeked(_event: Event) {
+    buffering = false;
+    playing = player ? !player.paused : false;
   }
 
   function handleVolumeChangeEvent(_event: Event) {

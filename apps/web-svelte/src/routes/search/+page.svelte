@@ -16,7 +16,10 @@
     SearchResultItem,
   } from "@obscura/contracts";
   import SearchResultCard from "$lib/components/SearchResultCard.svelte";
-  import { fetchSearch } from "$lib/v1/api/media-v1";
+  import { getRatingValue, getThumbnailUrl } from "$lib/api/capabilities";
+  import { fetchV2Entities, type V2EntityCard } from "$lib/api/v2";
+  import { resolveEntityHref } from "$lib/entities/entity-routes";
+  import { labelForEntityKind } from "$lib/entities/v2-codes";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { entityTerms } from "$lib/terminology";
   import {
@@ -25,8 +28,6 @@
   } from "$lib/components/search-kind-config";
 
   const PAGE_SIZE = 20;
-  const INITIAL_LIMIT = 6;
-
   const nsfw = useNsfw();
   const currentPath = $derived(`${page.url.pathname}${page.url.search}`);
 
@@ -110,20 +111,17 @@
     const requestId = ++activeRequest;
     const timer = window.setTimeout(async () => {
       try {
-        const data = await fetchSearch({
-          q,
-          kinds:
-            kindsList.length > 0 && kindsList.length < ALL_SEARCH_KINDS.length
-              ? kindsList
-              : undefined,
-          limit: INITIAL_LIMIT,
-          rating: rating ?? undefined,
-          dateFrom: from || undefined,
-          dateTo: to || undefined,
-          nsfw: nsfwMode,
+        void kindsList;
+        void rating;
+        void from;
+        void to;
+        const startedAt = performance.now();
+        const data = await fetchV2Entities({
+          query: q,
+          hideNsfw: nsfwMode === "off",
         });
         if (requestId === activeRequest) {
-          results = data;
+          results = toSearchResponse(q, startedAt, data.items);
         }
       } catch {
         if (requestId === activeRequest) {
@@ -157,49 +155,55 @@
     activeKinds = next;
   }
 
-  async function loadMore(kind: EntityKind, currentCount: number, total: number) {
-    expanded = {
-      ...expanded,
-      [kind]: {
-        items: expanded[kind]?.items ?? [],
-        total,
-        loading: true,
-      },
-    };
+  async function loadMore(_kind: EntityKind, _currentCount: number, _total: number) {
+    // V2 entity search currently returns one page per request. The result groups
+    // report their returned total, so this path is only here for template parity.
+  }
 
-    try {
-      const data = await fetchSearch({
-        q: query.trim(),
-        kind,
-        limit: PAGE_SIZE,
-        offset: currentCount,
-        rating: minRating ?? undefined,
-        dateFrom: dateFrom || undefined,
-        dateTo: dateTo || undefined,
-        nsfw: nsfw.mode,
-      });
-      const group = data.groups[0];
-      if (group) {
-        expanded = {
-          ...expanded,
-          [kind]: {
-            items: [...(expanded[kind]?.items ?? []), ...group.items],
-            total: group.total,
-            loading: false,
-          },
-        };
-      } else {
-        expanded = {
-          ...expanded,
-          [kind]: { ...expanded[kind]!, loading: false },
-        };
-      }
-    } catch {
-      expanded = {
-        ...expanded,
-        [kind]: { ...expanded[kind]!, loading: false },
-      };
+  function toSearchKind(kind: string): EntityKind | null {
+    if (kind === "person") return "performer";
+    if ((ALL_SEARCH_KINDS as string[]).includes(kind)) return kind as EntityKind;
+    return null;
+  }
+
+  function entityToSearchItem(entity: V2EntityCard): SearchResultItem | null {
+    const kind = toSearchKind(entity.kind);
+    const href = resolveEntityHref(entity.kind, entity.id);
+    if (!kind || !href) return null;
+
+    return {
+      href,
+      id: entity.id,
+      imagePath: getThumbnailUrl(entity.capabilities) ?? null,
+      kind,
+      meta: {},
+      rating: getRatingValue(entity.capabilities) || null,
+      score: 1,
+      subtitle: labelForEntityKind(entity.kind),
+      title: entity.title,
+    };
+  }
+
+  function toSearchResponse(term: string, startedAt: number, entities: V2EntityCard[]): SearchResponseDto {
+    const groups = new Map<EntityKind, SearchResultItem[]>();
+    for (const entity of entities) {
+      const item = entityToSearchItem(entity);
+      if (!item || !activeKinds.has(item.kind)) continue;
+      if (minRating != null && (item.rating ?? 0) < minRating) continue;
+      groups.set(item.kind, [...(groups.get(item.kind) ?? []), item]);
     }
+
+    return {
+      durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+      groups: [...groups.entries()].map(([kind, groupItems]) => ({
+        hasMore: false,
+        items: groupItems.slice(0, PAGE_SIZE),
+        kind,
+        label: labelForEntityKind(kind === "performer" ? "person" : kind),
+        total: groupItems.length,
+      })),
+      query: term,
+    };
   }
 
   function gridClassFor(kind: EntityKind): string {
