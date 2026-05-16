@@ -59,11 +59,20 @@ public sealed record VideoSeries : Entity
 /// </summary>
 public sealed record VideoSeason : Entity
 {
+    /// <summary>
+    /// Creates a structural season entity with its parent series and ordered episode links.
+    /// </summary>
+    /// <param name="Id">Season entity identifier.</param>
+    /// <param name="Title">Season display title.</param>
+    /// <param name="SeriesId">Parent video-series entity identifier.</param>
+    /// <param name="capabilities">Shared entity capabilities projected for the season.</param>
+    /// <param name="videos">Episode videos linked to this season in hierarchy order.</param>
     public VideoSeason(
         Guid Id,
         string Title,
         Guid SeriesId,
-        IReadOnlyList<ICapability>? capabilities = null)
+        IReadOnlyList<ICapability>? capabilities = null,
+        IReadOnlyList<Entity>? videos = null)
         : base(
             Id,
             EntityKindRegistry.VideoSeason,
@@ -71,12 +80,23 @@ public sealed record VideoSeason : Entity
             capabilities ?? [CapabilityImages.Empty, CapabilityDescription.Empty, CapabilityDates.Empty, CapabilitySource.Empty, CapabilityPosition.Empty])
     {
         this.SeriesId = SeriesId;
+        Videos = videos ?? [];
     }
 
+    /// <summary>Parent video-series entity identifier.</summary>
     public Guid SeriesId { get; init; }
 
-    public VideoSeason(Entity entity, Guid SeriesId)
-        : this(entity.Id, entity.Title, SeriesId, entity.Capabilities)
+    /// <summary>Episode video cards linked to this season in hierarchy order.</summary>
+    public IReadOnlyList<Entity> Videos { get; init; }
+
+    /// <summary>
+    /// Creates a season from an already hydrated entity root.
+    /// </summary>
+    /// <param name="entity">Hydrated season entity root.</param>
+    /// <param name="SeriesId">Parent video-series entity identifier.</param>
+    /// <param name="videos">Episode videos linked to this season in hierarchy order.</param>
+    public VideoSeason(Entity entity, Guid SeriesId, IReadOnlyList<Entity>? videos = null)
+        : this(entity.Id, entity.Title, SeriesId, entity.Capabilities, videos)
     {
     }
 }

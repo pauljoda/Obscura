@@ -73,6 +73,14 @@ export type V2VideoListResponse = VideoListResponse;
 export type V2VideoDetail = VideoDetail;
 export type V2VideoSeriesListResponse = VideoSeriesListResponse;
 export type V2VideoSeriesDetail = VideoSeriesDetail;
+export interface V2VideoSeasonDetail {
+  id: string;
+  kind: string;
+  title: string;
+  capabilities: EntityCapability[];
+  seriesId: string;
+  videos: EntityCard[];
+}
 export type V2JobRun = JobRun & {
   targetKind?: string | null;
   targetId?: string | null;
@@ -279,6 +287,21 @@ export function fetchV2Series(
 
     return response.data;
   });
+}
+
+export async function fetchV2Season(
+  seriesId: string,
+  seasonId: string,
+  options?: V2RequestOptions,
+): Promise<V2VideoSeasonDetail> {
+  const response = await fetch(v2ApiPath(`/series/${seriesId}/seasons/${seasonId}`), {
+    signal: options?.signal,
+  });
+  if (!response.ok) {
+    throw new Error(await response.text() || `Season ${response.status}`);
+  }
+
+  return await response.json() as V2VideoSeasonDetail;
 }
 
 export function fetchV2Images(options?: V2RequestOptions): Promise<V2MediaListResponse> {

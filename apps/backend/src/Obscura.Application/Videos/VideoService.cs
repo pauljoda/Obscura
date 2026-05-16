@@ -73,4 +73,22 @@ public sealed class VideoService
         var series = await _videos.GetSeriesAsync(id, cancellationToken);
         return series is null ? null : ContractMapper.ToVideoSeriesDetail(series);
     }
+
+    /// <summary>
+    /// Gets one video-season aggregate when it belongs to the supplied parent series.
+    /// </summary>
+    /// <param name="seriesId">Parent video series entity identifier from the route.</param>
+    /// <param name="seasonId">Video season entity identifier.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>API-ready video-season detail contract, or null when missing or not linked to the series.</returns>
+    public async Task<VideoSeasonDetail?> GetSeasonAsync(Guid seriesId, Guid seasonId, CancellationToken cancellationToken)
+    {
+        var season = await _videos.GetSeasonAsync(seasonId, cancellationToken);
+        if (season is null || season.SeriesId != seriesId)
+        {
+            return null;
+        }
+
+        return ContractMapper.ToVideoSeasonDetail(season);
+    }
 }

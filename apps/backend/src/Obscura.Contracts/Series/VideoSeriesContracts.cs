@@ -29,3 +29,20 @@ public sealed record VideoSeriesDetail(
     IReadOnlyList<EntityCard> Children,
     IReadOnlyList<EntityCard> Videos,
     string RenderingMode);
+
+/// <summary>
+/// API-facing video-season detail shape with ordered episode videos.
+/// </summary>
+/// <param name="Id">Season entity identifier.</param>
+/// <param name="Kind">Entity kind code.</param>
+/// <param name="Title">Season title.</param>
+/// <param name="Capabilities">Shared entity capabilities for the season.</param>
+/// <param name="SeriesId">Parent series entity identifier.</param>
+/// <param name="Videos">Playable episode cards linked to the season in hierarchy order.</param>
+public sealed record VideoSeasonDetail(
+    Guid Id,
+    string Kind,
+    string Title,
+    IReadOnlyList<EntityCapability> Capabilities,
+    Guid SeriesId,
+    IReadOnlyList<EntityCard> Videos);

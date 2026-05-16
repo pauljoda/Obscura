@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Series detail pages now show the series metadata, a horizontal season poster row, and ordered episode grids. Season pages now load their own structured detail with episodes from the backend hierarchy instead of relying on a placeholder.
 - Video timeline hover previews now show the active marker chapter name while hovering inside a marked section, and omit the chapter label when no markers define chapters.
 - The desktop sidebar now remembers whether it was collapsed before a reload, so the app shell opens at the saved width without flashing expanded first.
 - Video player timelines now use real VidStack chapter sections for markers, with physical section breaks and no separate marker tick overlay.
@@ -81,6 +82,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Added
+- Season detail API responses now include ordered episode cards from the series → season → episode hierarchy, giving the Svelte season page real structured data.
 - V2 entity marker write endpoints now support creating, updating, and deleting timeline markers while returning the refreshed entity projection.
 - `EntityDetail` tabs now support optional Lucide icons and section mappings, so pages can place core sections and custom snippets on any tab without owning the tab chrome.
 - `EntityDetail` now supports route-provided detail tabs with custom Svelte snippet content, while preserving the built-in details body for shared entity pages.
@@ -111,6 +113,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- Series detail routes now render season posters as a horizontal row and use the shared entity grid's new position sort for episode ordering.
 - Video player hover previews now derive chapter labels from marker chapter ranges instead of only showing labels near marker points.
 - Video timeline markers now feed VidStack chapter tracks, including marker end times when present, so the scrub bar can render sectioned marker ranges natively.
 - The video detail Markers tab now uses the shared marker editor against v2 entity marker APIs, restoring marker creation and inline editing without the removed v1 video routes.

@@ -1,5 +1,6 @@
 using Obscura.Contracts.Series;
 using Obscura.Domain.Entities;
+using DomainVideoSeason = Obscura.Domain.Media.VideoSeason;
 using DomainVideoSeries = Obscura.Domain.Media.VideoSeries;
 
 namespace Obscura.Application.Mapping;
@@ -23,4 +24,18 @@ public static partial class ContractMapper
             ToEntityCards(series.Children),
             ToEntityCards(series.Videos),
             series.RenderingMode.ToCode());
+
+    /// <summary>
+    /// Converts a video-season aggregate into the season detail contract.
+    /// </summary>
+    /// <param name="season">Domain season aggregate with ordered episode links and shared capabilities.</param>
+    /// <returns>Video-season detail contract for API callers.</returns>
+    public static VideoSeasonDetail ToVideoSeasonDetail(DomainVideoSeason season) =>
+        new(
+            season.Id,
+            season.Kind.Code,
+            season.Title,
+            ToEntityCapabilities(season.Capabilities),
+            season.SeriesId,
+            ToEntityCards(season.Videos));
 }

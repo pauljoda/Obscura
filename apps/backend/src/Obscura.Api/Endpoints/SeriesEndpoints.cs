@@ -36,6 +36,25 @@ public static class SeriesEndpoints
             .Produces<VideoSeriesDetail>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
+        group.MapGet("/{id:guid}/seasons/{seasonId:guid}", async (
+            Guid id,
+            Guid seasonId,
+            VideoService videos,
+            CancellationToken cancellationToken) =>
+            {
+                var season = await videos.GetSeasonAsync(id, seasonId, cancellationToken);
+
+                return season is null
+                    ? Results.NotFound(new ApiProblem(
+                        "season_not_found",
+                        $"Season '{seasonId}' was not found in series '{id}'."))
+                    : Results.Ok(season);
+            })
+            .WithName("GetSeriesSeason")
+            .WithSummary("Gets one video season detail record with ordered episodes.")
+            .Produces<VideoSeasonDetail>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
+
         return group;
     }
 }

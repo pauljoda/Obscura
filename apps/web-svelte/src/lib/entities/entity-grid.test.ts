@@ -117,6 +117,23 @@ describe("entity grid helpers", () => {
     expect(visible.map((item) => item.entity.id)).toEqual(["1"]);
   });
 
+  it("sorts videos by episode position when position sorting is selected", () => {
+    const visible = applyEntityGridState([
+      entityCardToThumbnailCard(card("episode-10", "video", "Episode Ten", [position([{ code: "episode", value: 10 }])])),
+      entityCardToThumbnailCard(card("episode-2", "video", "Episode Two", [position([{ code: "episode", value: 2 }])])),
+      entityCardToThumbnailCard(card("special", "video", "Behind the Scenes", [])),
+    ], {
+      activeKind: ENTITY_GRID_ALL_KINDS,
+      filterIds: [],
+      includeNsfw: true,
+      query: "",
+      sortBy: "position",
+      sortDir: "asc",
+    });
+
+    expect(visible.map((item) => item.entity.id)).toEqual(["episode-2", "episode-10", "special"]);
+  });
+
   it("serializes request state for backend filtering", () => {
     const options = buildCapabilityFilterOptions(cards);
     const request = entityGridRequestFromState({

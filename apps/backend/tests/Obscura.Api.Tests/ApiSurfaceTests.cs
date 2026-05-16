@@ -27,6 +27,7 @@ using DomainPerson = Obscura.Domain.Taxonomy.Person;
 using DomainStudio = Obscura.Domain.Taxonomy.Studio;
 using DomainTag = Obscura.Domain.Taxonomy.Tag;
 using DomainVideo = Obscura.Domain.Media.Video;
+using DomainVideoSeason = Obscura.Domain.Media.VideoSeason;
 using DomainVideoSeries = Obscura.Domain.Media.VideoSeries;
 
 namespace Obscura.Api.Tests;
@@ -295,6 +296,11 @@ public sealed class ApiSurfaceTests
         public Task<DomainVideoSeries?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
         {
             return Task.FromResult<DomainVideoSeries?>(null);
+        }
+
+        public Task<DomainVideoSeason?> GetSeasonAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<DomainVideoSeason?>(null);
         }
 
         public Task<DomainImage?> GetImageAsync(Guid id, CancellationToken cancellationToken)

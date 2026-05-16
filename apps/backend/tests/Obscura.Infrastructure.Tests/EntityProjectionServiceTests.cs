@@ -411,6 +411,57 @@ public sealed class EntityProjectionServiceTests
     }
 
     [Fact]
+    public async Task SeasonDetailProjectsEpisodesInHierarchyOrder()
+    {
+        await using var db = CreateContext();
+        var seriesId = Guid.Parse("24242424-2424-2424-2424-242424242424");
+        var seasonId = Guid.Parse("25252525-2525-2525-2525-252525252525");
+        var episodeTwoId = Guid.Parse("26262626-2626-2626-2626-262626262626");
+        var episodeOneId = Guid.Parse("27272727-2727-2727-2727-272727272727");
+        SeedEntity(db, seriesId, "video-series", "Ordered Series");
+        SeedEntity(db, seasonId, "video-season", "Season 1");
+        SeedEntity(db, episodeTwoId, "video", "Episode 2");
+        SeedEntity(db, episodeOneId, "video", "Episode 1");
+        db.VideoSeasonDetails.Add(new VideoSeasonDetailRow
+        {
+            EntityId = seasonId,
+            SeriesEntityId = seriesId,
+            SeasonNumber = 1
+        });
+        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        {
+            ParentEntityId = seriesId,
+            ChildEntityId = seasonId,
+            Relationship = EntityRelationshipRegistry.Season.Code,
+            SortOrder = 1
+        });
+        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        {
+            ParentEntityId = seasonId,
+            ChildEntityId = episodeTwoId,
+            Relationship = EntityRelationshipRegistry.Episode.Code,
+            SortOrder = 2
+        });
+        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        {
+            ParentEntityId = seasonId,
+            ChildEntityId = episodeOneId,
+            Relationship = EntityRelationshipRegistry.Episode.Code,
+            SortOrder = 1
+        });
+        SeedPosition(db, episodeTwoId, "episode", 2);
+        SeedPosition(db, episodeOneId, "episode", 1);
+        await db.SaveChangesAsync();
+
+        var service = new EntityProjectionService(db);
+        var detail = await service.GetSeasonAsync(seasonId, CancellationToken.None);
+
+        Assert.NotNull(detail);
+        Assert.Equal(seriesId, detail.SeriesId);
+        Assert.Equal([episodeOneId, episodeTwoId], detail.Videos.Select(video => video.Id).ToArray());
+    }
+
+    [Fact]
     public async Task HierarchyTreeLoadsOrderedChildrenAndSkipsDeletedEntities()
     {
         await using var db = CreateContext();

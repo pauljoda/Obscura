@@ -39,4 +39,12 @@ public interface IVideoLibrary
     /// <param name="cancellationToken">Token used to cancel the query.</param>
     /// <returns>The video series aggregate, or null when the series is missing.</returns>
     Task<VideoSeries?> GetSeriesAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Gets one video season with its ordered episode video links.
+    /// </summary>
+    /// <param name="id">Video season entity identifier.</param>
+    /// <param name="cancellationToken">Token used to cancel the query.</param>
+    /// <returns>The video season aggregate, or null when the season is missing.</returns>
+    Task<VideoSeason?> GetSeasonAsync(Guid id, CancellationToken cancellationToken);
 }

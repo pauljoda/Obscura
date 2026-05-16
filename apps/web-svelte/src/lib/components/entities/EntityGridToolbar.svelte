@@ -88,12 +88,14 @@
   const SORT_LABELS: Record<EntityGridSort, string> = {
     title: "Title",
     kind: "Kind",
+    position: "Position",
     rating: "Rating",
   };
 
   const SORT_OPTIONS: { value: EntityGridSort; label: string }[] = [
     { value: "title", label: "Title" },
     { value: "kind", label: "Kind" },
+    { value: "position", label: "Position" },
     { value: "rating", label: "Rating" },
   ];
 

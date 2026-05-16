@@ -28,7 +28,7 @@ import {
  */
 export const ENTITY_GRID_ALL_KINDS = "all";
 
-export type EntityGridSort = "title" | "kind" | "rating";
+export type EntityGridSort = "title" | "kind" | "rating" | "position";
 export type EntityGridSortDir = "asc" | "desc";
 export type EntityGridViewMode = "grid" | "list";
 
@@ -214,6 +214,15 @@ function metaForEntity(entity: EntityCard): EntityThumbnailCard["meta"] {
 function positionValue(entity: EntityCard, code: string): number | null {
   const value = getCapability(entity.capabilities, CAPABILITY_KIND.position)?.items.find((item) => item.code === code)?.value;
   return numberValue(value);
+}
+
+function primaryPositionValue(entity: EntityCard): number | null {
+  return positionValue(entity, "episode") ??
+    positionValue(entity, "absolute-episode") ??
+    positionValue(entity, "season") ??
+    positionValue(entity, "sort") ??
+    positionValue(entity, "chapter") ??
+    positionValue(entity, "volume");
 }
 
 function customOverlayForEntity(entity: EntityCard): EntityThumbnailCard["custom"] {
@@ -684,6 +693,16 @@ export function applyEntityGridState(
     }
     if (state.sortBy === "kind") {
       return left.entity.kind.localeCompare(right.entity.kind) * direction || left.entity.title.localeCompare(right.entity.title);
+    }
+    if (state.sortBy === "position") {
+      const leftPosition = primaryPositionValue(left.entity);
+      const rightPosition = primaryPositionValue(right.entity);
+      if (leftPosition != null && rightPosition != null && leftPosition !== rightPosition) {
+        return (leftPosition - rightPosition) * direction;
+      }
+      if (leftPosition != null && rightPosition == null) return -1;
+      if (leftPosition == null && rightPosition != null) return 1;
+      return left.entity.title.localeCompare(right.entity.title);
     }
     return left.entity.title.localeCompare(right.entity.title) * direction;
   });

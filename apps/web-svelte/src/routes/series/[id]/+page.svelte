@@ -18,6 +18,7 @@
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
   import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
   import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
 
   type LoadState = "loading" | "ready" | "error";
 
@@ -209,13 +210,13 @@
           Seasons
           <span class="content-count">{seasonCards.length}</span>
         </h2>
-        <EntityGrid
-          cards={seasonCards}
-          prefsKey={`series-${series?.id}-seasons`}
-          selectable={false}
-          emptyTitle="No seasons"
-          emptyMessage="This series has no seasons yet."
-        />
+        <div class="season-row" aria-label="Seasons">
+          {#each seasonCards as seasonCard (seasonCard.entity.id)}
+            <div class="season-card">
+              <EntityThumbnail card={seasonCard} selectable={false} />
+            </div>
+          {/each}
+        </div>
       </section>
     {/if}
 
@@ -245,6 +246,7 @@
         <EntityGrid
           cards={videoCards}
           prefsKey={`series-${series?.id}-videos`}
+          initialSortBy="position"
           selectable={false}
           emptyTitle={hasSeasons ? "No specials" : "No episodes"}
           emptyMessage="No loose videos in this series."
@@ -394,6 +396,21 @@
   .content-section {
     display: grid;
     gap: 0.75rem;
+  }
+
+  .season-row {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(8.5rem, 11rem);
+    gap: 0.75rem;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    padding-bottom: 0.35rem;
+    scrollbar-width: thin;
+  }
+
+  .season-card {
+    min-width: 0;
   }
 
   .content-heading {

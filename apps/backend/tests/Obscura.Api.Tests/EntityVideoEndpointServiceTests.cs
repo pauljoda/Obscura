@@ -29,6 +29,7 @@ using DomainGallery = Obscura.Domain.Media.Gallery;
 using DomainTag = Obscura.Domain.Taxonomy.Tag;
 using DomainRating = Obscura.Domain.Capabilities.Rating;
 using DomainVideo = Obscura.Domain.Media.Video;
+using DomainVideoSeason = Obscura.Domain.Media.VideoSeason;
 using DomainVideoSeries = Obscura.Domain.Media.VideoSeries;
 
 namespace Obscura.Api.Tests;
@@ -232,6 +233,11 @@ public sealed class EntityVideoEndpointServiceTests
         public Task<DomainVideoSeries?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
         {
             return Task.FromResult<DomainVideoSeries?>(null);
+        }
+
+        public Task<DomainVideoSeason?> GetSeasonAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<DomainVideoSeason?>(null);
         }
 
         public Task<Obscura.Domain.Media.Image?> GetImageAsync(Guid id, CancellationToken cancellationToken)

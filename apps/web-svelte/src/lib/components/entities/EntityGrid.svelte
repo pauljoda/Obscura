@@ -28,6 +28,8 @@
     cards: EntityThumbnailCard[];
     emptyMessage?: string;
     emptyTitle?: string;
+    initialSortBy?: EntityGridSort;
+    initialSortDir?: EntityGridSortDir;
     loading?: boolean;
     maxScale?: number;
     minScale?: number;
@@ -43,6 +45,8 @@
     cards,
     emptyMessage = "Try adjusting your search or filters.",
     emptyTitle = "Nothing present",
+    initialSortBy = "title",
+    initialSortDir = "asc",
     loading = false,
     maxScale = 12,
     minScale = 2,
@@ -81,8 +85,10 @@
   let query = $state("");
   let scale = $state(5);
   let selectedIds = $state<string[]>([]);
-  let sortBy = $state<EntityGridSort>("title");
-  let sortDir = $state<EntityGridSortDir>("asc");
+  // svelte-ignore state_referenced_locally
+  let sortBy = $state<EntityGridSort>(initialSortBy);
+  // svelte-ignore state_referenced_locally
+  let sortDir = $state<EntityGridSortDir>(initialSortDir);
   let viewMode = $state<EntityGridViewMode>("grid");
 
   const gridState = $derived({
@@ -221,7 +227,7 @@
     filterIds = preset.filters
       .map((filter) => filter.value)
       .filter((id) => Boolean(entityGridFilterFromId(id, filterOptions)));
-    sortBy = preset.sortBy === "kind" || preset.sortBy === "rating" ? preset.sortBy : "title";
+    sortBy = preset.sortBy === "kind" || preset.sortBy === "rating" || preset.sortBy === "position" ? preset.sortBy : initialSortBy;
     sortDir = preset.sortDir;
     activePresetId = preset.id;
   }
@@ -252,8 +258,8 @@
     includeNsfw = true;
     query = "";
     selectedIds = [];
-    sortBy = "title";
-    sortDir = "asc";
+    sortBy = initialSortBy;
+    sortDir = initialSortDir;
     viewMode = "grid";
     onSelectionChange?.(selectedIds);
   }
@@ -275,8 +281,8 @@
         filterIds.length > 0 ||
         !includeNsfw ||
         query ||
-        sortBy !== "title" ||
-        sortDir !== "asc" ||
+        sortBy !== initialSortBy ||
+        sortDir !== initialSortDir ||
         selectedIds.length > 0,
     )}
     {drawerOpen}

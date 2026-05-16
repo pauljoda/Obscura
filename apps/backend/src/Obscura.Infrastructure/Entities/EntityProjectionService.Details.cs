@@ -254,8 +254,11 @@ public sealed partial class EntityProjectionService
         var detail = await _db.VideoSeasonDetails
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+        var videos = await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.Episode, EntityKindRegistry.Video, cancellationToken);
 
-        return new VideoSeason(entity, detail?.SeriesEntityId ?? Guid.Empty);
+        var seriesId = detail?.SeriesEntityId ?? await ResolveParentSeriesIdAsync(id, cancellationToken);
+
+        return new VideoSeason(entity, seriesId, videos);
     }
 
     /// <summary>

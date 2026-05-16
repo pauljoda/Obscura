@@ -438,4 +438,40 @@ public sealed partial class EntityProjectionService :
 
         return new VideoSeries(card, detail?.Status, renderingMode, seasons, videos);
     }
+
+    /// <inheritdoc />
+    public async Task<VideoSeason?> GetSeasonAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await _db.Entities
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                row => row.Id == id && row.KindCode == EntityKindRegistry.VideoSeason.Code && row.DeletedAt == null,
+                cancellationToken);
+
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var card = (await BuildEntitiesAsync([entity], cancellationToken)).Single();
+        var detail = await _db.VideoSeasonDetails
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+        var seriesId = detail?.SeriesEntityId ?? await ResolveParentSeriesIdAsync(id, cancellationToken);
+        var videos = await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.Episode, EntityKindRegistry.Video, cancellationToken);
+
+        return new VideoSeason(card, seriesId, videos);
+    }
+
+    private async Task<Guid> ResolveParentSeriesIdAsync(Guid seasonId, CancellationToken cancellationToken)
+    {
+        var link = await _db.EntityHierarchyLinks
+            .AsNoTracking()
+            .Where(row => row.ChildEntityId == seasonId && row.Relationship == EntityRelationshipRegistry.Season.Code)
+            .OrderBy(row => row.SortOrder)
+            .ThenBy(row => row.ParentEntityId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return link?.ParentEntityId ?? Guid.Empty;
+    }
 }

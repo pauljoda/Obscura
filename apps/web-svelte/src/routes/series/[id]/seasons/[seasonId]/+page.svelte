@@ -3,9 +3,11 @@
   import { page } from "$app/state";
   import { ArrowLeft, Film } from "@lucide/svelte";
   import {
+    fetchV2Season,
     fetchV2Series,
     updateV2EntityRating,
     updateV2EntityFlags,
+    type V2VideoSeasonDetail,
     type V2VideoSeriesDetail,
   } from "$lib/api/v2";
   import {
@@ -13,7 +15,6 @@
     withFlagCapability,
     withRatingCapability,
   } from "$lib/api/capabilities";
-  import type { EntityCard } from "$lib/api/generated/model";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
@@ -24,7 +25,7 @@
 
   let loadState: LoadState = $state("loading");
   let parentSeries = $state<V2VideoSeriesDetail | null>(null);
-  let season = $state<EntityCard | null>(null);
+  let season = $state<V2VideoSeasonDetail | null>(null);
   let errorMessage: string | null = $state(null);
   let ratingBusy = $state(false);
 
@@ -50,18 +51,8 @@
   });
 
   const episodeCards = $derived.by((): EntityThumbnailCard[] => {
-    if (!parentSeries || !season) return [];
-    // The V2 series detail `videos` contains loose episodes (specials).
-    // Episodes within a season are not yet exposed by the V2 API.
-    // When a season detail endpoint is added, this will be populated.
-    // For now, filter the series' videos that have a matching season position.
-    return parentSeries.videos
-      .filter((video) => {
-        const pos = getCapability(video.capabilities, "position");
-        const seasonPos = pos?.items.find((p) => p.code === "season");
-        return seasonPos && Number(seasonPos.value) === seasonNumber;
-      })
-      .map((video) => entityCardToThumbnailCard(video, `/videos/${video.id}`));
+    if (!season) return [];
+    return season.videos.map((video) => entityCardToThumbnailCard(video, `/videos/${video.id}`));
   });
 
   onMount(() => {
@@ -72,15 +63,12 @@
     loadState = "loading";
     errorMessage = null;
     try {
-      const seriesDetail = await fetchV2Series(seriesId);
+      const [seriesDetail, seasonDetail] = await Promise.all([
+        fetchV2Series(seriesId),
+        fetchV2Season(seriesId, seasonId),
+      ]);
       parentSeries = seriesDetail;
-      const found = seriesDetail.children.find((child) => child.id === seasonId);
-      if (!found) {
-        errorMessage = "Season not found in this series.";
-        loadState = "error";
-        return;
-      }
-      season = found;
+      season = seasonDetail;
       loadState = "ready";
     } catch (err) {
       errorMessage = err instanceof Error ? err.message : String(err);
@@ -186,6 +174,7 @@
         <EntityGrid
           cards={episodeCards}
           prefsKey={`season-${seasonId}-episodes`}
+          initialSortBy="position"
           selectable={false}
           emptyTitle="No episodes"
           emptyMessage="No episodes found in this season."
@@ -193,7 +182,7 @@
       </section>
     {:else}
       <div class="empty-children">
-        <p>Episodes for this season will appear here once the season detail endpoint is available.</p>
+        <p>No episodes found in this season yet.</p>
       </div>
     {/if}
   {/if}
