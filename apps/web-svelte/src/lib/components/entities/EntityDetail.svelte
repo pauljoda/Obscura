@@ -14,6 +14,7 @@
   import { renderEntityDescriptionMarkdown } from "$lib/entities/entity-detail-markdown";
   import { hasHero, hasPoster } from "$lib/entities/entity-detail";
   import { placeholderGradient } from "$lib/entities/entity-thumbnail";
+  import EntityTagChips from "./EntityTagChips.svelte";
 
   export type EntityDetailPosterSize = "none" | "small" | "medium" | "large";
 
@@ -177,14 +178,7 @@
 {/snippet}
 
 {#snippet tagsContent()}
-  {#if card.tags.length > 0}
-    <div class="tags-row">
-      <span class="tags-label">Tags:</span>
-      {#each card.tags as tag (tag)}
-        <span class="tag-chip">{tag}</span>
-      {/each}
-    </div>
-  {/if}
+  <EntityTagChips tags={card.tags} />
 {/snippet}
 
 {#snippet descriptionSection()}
@@ -999,41 +993,6 @@
     border: none;
     border-top: 1px solid var(--detail-border);
     margin: 1rem 0;
-  }
-
-  /* ── Tags ───────────────────────────────────────────────── */
-
-  .tags-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-    padding-top: 0.25rem;
-  }
-
-  .tags-label {
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--detail-text-muted);
-    margin-right: 0.25rem;
-  }
-
-  .tag-chip {
-    padding: 0.18rem 0.55rem;
-    font-size: 0.75rem;
-    color: var(--detail-text-secondary);
-    border: 1px solid var(--detail-border);
-    background: var(--detail-surface-raised);
-    text-transform: uppercase;
-    transition: border-color 0.15s, color 0.15s;
-  }
-
-  .tag-chip:hover {
-    color: var(--detail-text);
-    border-color: var(--detail-accent-muted);
   }
 
   /* ── Metadata sections ──────────────────────────────────── */

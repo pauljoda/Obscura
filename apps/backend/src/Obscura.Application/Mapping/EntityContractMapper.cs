@@ -112,7 +112,7 @@ public static partial class ContractMapper
         {
             CapabilityRating rating => new RatingCapability(
                 rating.Value is null ? null : new ContractRating(rating.Value.Value)),
-            CapabilityTags tags => new TagsCapability(tags.Values),
+            CapabilityTags tags => new TagsCapability(tags.Values, tags.Items.Select(item => ToEntityReference(item.Reference)).ToArray()),
             CapabilityCredits credits => new CreditsCapability(
                 credits.Items.Select(credit => new ContractEntityCredit(
                     ToEntityReference(credit.Person),

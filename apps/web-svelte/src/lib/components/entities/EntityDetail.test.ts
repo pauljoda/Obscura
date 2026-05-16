@@ -61,7 +61,7 @@ describe("EntityDetail", () => {
   it("renders caller-provided detail tabs with section mappings and custom content", async () => {
     const card = buildCard();
     card.description = "A gentle rabbit adventure.";
-    card.tags = ["animation"];
+    card.tags = [{ id: "tag-animation", kind: "tag", title: "animation", href: "/tags/tag-animation" }];
     card.files = [{ role: "source", path: "/media/bunny.mp4", mimeType: "video/mp4" }];
 
     render(EntityDetail, {
@@ -105,5 +105,14 @@ describe("EntityDetail", () => {
     expect(screen.getByText("File info panel")).toBeInTheDocument();
     expect(screen.getByText("/media/bunny.mp4")).toBeInTheDocument();
     expect(screen.queryByText("A gentle rabbit adventure.")).not.toBeInTheDocument();
+  });
+
+  it("renders tags as links to the tag entity", () => {
+    const card = buildCard();
+    card.tags = [{ id: "tag-comedy", kind: "tag", title: "COMEDY", href: "/tags/tag-comedy" }];
+
+    render(EntityDetail, { props: { card } });
+
+    expect(screen.getByRole("link", { name: "COMEDY" })).toHaveAttribute("href", "/tags/tag-comedy");
   });
 });

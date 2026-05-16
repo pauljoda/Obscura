@@ -5,8 +5,10 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapabilityTagsCapabilityKind } from './entityCapabilityTagsCapabilityKind';
+import type { EntityReference } from './entityReference';
 
 export interface EntityCapabilityTagsCapability {
   kind: EntityCapabilityTagsCapabilityKind;
+  items: EntityReference[];
   values: string[];
 }

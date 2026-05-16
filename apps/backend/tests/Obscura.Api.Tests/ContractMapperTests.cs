@@ -39,6 +39,33 @@ public sealed class ContractMapperTests
     }
 
     [Fact]
+    public void EntityCardSerializesTagCapabilityWithReferences()
+    {
+        var tagId = Guid.Parse("12121212-1212-1212-1212-121212121212");
+        var video = new Entity(
+            Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            EntityKindRegistry.Video,
+            "Mapped Video",
+            [
+                new CapabilityTags([
+                    new EntityTag(new Obscura.Domain.Entities.EntityReference(tagId, EntityKindRegistry.Tag, "Comedy"))
+                ])
+            ]);
+
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(ContractMapper.ToEntityCard(video), JsonOptions));
+        var tags = document.RootElement
+            .GetProperty("capabilities")
+            .EnumerateArray()
+            .Single(capability => capability.GetProperty("kind").GetString() == "tags");
+
+        Assert.Equal("Comedy", tags.GetProperty("values").EnumerateArray().Single().GetString());
+        var item = tags.GetProperty("items").EnumerateArray().Single();
+        Assert.Equal(tagId, item.GetProperty("id").GetGuid());
+        Assert.Equal("tag", item.GetProperty("kind").GetString());
+        Assert.Equal("Comedy", item.GetProperty("title").GetString());
+    }
+
+    [Fact]
     public void VideoSeriesDetailKeepsSharedDescriptionInsideCapabilities()
     {
         var series = new VideoSeries(

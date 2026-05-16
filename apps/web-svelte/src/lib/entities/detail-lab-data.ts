@@ -75,7 +75,15 @@ function description(value: string): EntityCapability {
 }
 
 function tags(values: string[]): EntityCapability {
-  return { kind: "tags", values };
+  return {
+    kind: "tags",
+    items: values.map((value) => ({
+      id: `tag-${value}`,
+      kind: "tag",
+      title: value,
+    })),
+    values,
+  };
 }
 
 function studio(id: string, title: string): EntityCapability {

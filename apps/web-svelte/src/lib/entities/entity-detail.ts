@@ -19,7 +19,7 @@ import type {
   EntitySubtitle,
   EntityUrl,
 } from "$lib/api/generated/model";
-import { CAPABILITY_KIND, ENTITY_FILE_ROLE } from "./v2-codes";
+import { CAPABILITY_KIND, ENTITY_FILE_ROLE, ENTITY_KIND, resolveEntityHref } from "./v2-codes";
 import { getEntityKindLabel } from "./entity-grid";
 
 /** Entity payload consumed by the shared detail surface. */
@@ -79,6 +79,14 @@ export interface EntityDetailCredit {
   kind: string;
   title: string;
   thumbnail: string | null;
+}
+
+/** A linked tag shown in the shared detail tag row. */
+export interface EntityDetailTag {
+  id: string;
+  kind: string;
+  title: string;
+  href: string | null;
 }
 
 /** An external link or ID. */
@@ -146,7 +154,7 @@ export interface EntityDetailCard {
   description: string | null;
   rating: EntityDetailRating | null;
   flags: EntityDetailFlag[];
-  tags: string[];
+  tags: EntityDetailTag[];
   links: EntityDetailLink[];
   files: EntityDetailFile[];
   presentCapabilities: EntityCapabilityKind[];
@@ -255,6 +263,26 @@ function resolveFlags(capabilities: EntityCapability[]): EntityDetailFlag[] {
   return result;
 }
 
+function resolveTags(capabilities: EntityCapability[]): EntityDetailTag[] {
+  const tagsCap = getCapability(capabilities, CAPABILITY_KIND.tags);
+  if (!tagsCap) return [];
+  if (tagsCap.items.length > 0) {
+    return tagsCap.items.map((tag) => ({
+      id: tag.id,
+      kind: tag.kind,
+      title: tag.title,
+      href: tag.kind === ENTITY_KIND.tag ? resolveEntityHref(ENTITY_KIND.tag, tag.id) ?? null : null,
+    }));
+  }
+
+  return tagsCap.values.map((title) => ({
+    id: title,
+    kind: ENTITY_KIND.tag,
+    title,
+    href: null,
+  }));
+}
+
 function resolveTechnical(capabilities: EntityCapability[]): EntityDetailTechnicalRow[] {
   const tech = getTechnicalCapability(capabilities);
   if (!tech) return [];
@@ -357,7 +385,6 @@ export function entityCardToDetailCard(entity: EntityCard): EntityDetailCardFull
     ...new Set(capabilities.map((c) => c.kind)),
   ] as EntityCapabilityKind[];
 
-  const tagsCap = getCapability(capabilities, CAPABILITY_KIND.tags);
   const creditsCap = getCapability(capabilities, CAPABILITY_KIND.credits);
   const studioCap = getCapability(capabilities, CAPABILITY_KIND.studio);
   const statsCap = getCapability(capabilities, CAPABILITY_KIND.stats);
@@ -379,7 +406,7 @@ export function entityCardToDetailCard(entity: EntityCard): EntityDetailCardFull
       ? { value: ratingValue, max: 5 }
       : null,
     flags: resolveFlags(capabilities),
-    tags: tagsCap?.values ?? [],
+    tags: resolveTags(capabilities),
     studio: studioCap?.value
       ? { id: studioCap.value.id, kind: studioCap.value.kind, title: studioCap.value.title, thumbnail: null }
       : null,
