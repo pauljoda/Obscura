@@ -45,6 +45,17 @@ export function buildTimelineChapterCues(
   return cues;
 }
 
+export function findTimelineChapterTitle(
+  cues: readonly VTTCueInit[],
+  time: number,
+): string | null {
+  if (!Number.isFinite(time)) return null;
+  const cue = cues.find((candidate) => (
+    time >= candidate.startTime && time < candidate.endTime && candidate.text.trim().length > 0
+  ));
+  return cue?.text.trim() || null;
+}
+
 function clampSecond(value: number, duration: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.max(0, Math.min(value, duration));

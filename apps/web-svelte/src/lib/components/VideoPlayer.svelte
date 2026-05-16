@@ -91,7 +91,10 @@
     resolveSubtitleAppearance,
     writeLocalSubtitleAppearance,
   } from "$lib/player/subtitle-appearance";
-  import { buildTimelineChapterCues } from "$lib/player/timeline-chapters";
+  import {
+    buildTimelineChapterCues,
+    findTimelineChapterTitle,
+  } from "$lib/player/timeline-chapters";
   import AssSubtitleOverlay from "./AssSubtitleOverlay.svelte";
   import FilmStrip from "./FilmStrip.svelte";
 
@@ -227,6 +230,7 @@
   let selectedAudioTrackLabel = $state<string | null>(null);
   let playerNotice = $state<string | null>(null);
   let timelineHover = $state<{
+    chapterTitle: string | null;
     markerTitles: string[];
     percent: number;
     time: number;
@@ -836,7 +840,8 @@
     const markerTitles = markers
       .filter((marker) => Math.abs(marker.time - time) <= windowSec)
       .map((marker) => marker.title);
-    timelineHover = { markerTitles, percent: percent * 100, time };
+    const chapterTitle = findTimelineChapterTitle(markerChapterCues, time);
+    timelineHover = { chapterTitle, markerTitles, percent: percent * 100, time };
   }
 
   function removeMarkerChapterTrack(target: MediaPlayerElement) {
@@ -1339,7 +1344,11 @@
               <div class="text-mono-tabular text-[0.65rem] text-white/82">
                 {formatTime(timelineHover.time)}
               </div>
-              {#if timelineHover.markerTitles.length > 0}
+              {#if timelineHover.chapterTitle}
+                <div class="mt-1 max-w-48 text-[0.65rem] font-medium leading-snug text-accent-100">
+                  {timelineHover.chapterTitle}
+                </div>
+              {:else if timelineHover.markerTitles.length > 0}
                 <div class="mt-1 max-w-48 text-[0.65rem] font-medium leading-snug text-accent-100">
                   {timelineHover.markerTitles.join(" • ")}
                 </div>
