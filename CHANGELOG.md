@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- V2 community plugins can now be discovered from local development folders, installed, configured with credentials, and used by the new identify API without persisting review results.
 - V2 metadata identify can now apply selected provider results into entity metadata, including provider IDs, taxonomy, dates, stats, classifications, and selected artwork files.
 - V1-to-v2 migration now preserves TV series artwork and season metadata, including series posters, backdrops, logos, season posters, air dates, descriptions, and external IDs.
 - V1-to-v2 migration now keeps and rebuilds legacy series artwork files, so migrated posters, banners, logos, and season covers load after a fresh-start reset.
@@ -87,6 +88,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Added
+- V2 plugin management and identify endpoints now support local dotnet-process plugin discovery, v2 manifest compatibility gating, provider install/remove, credential storage, single-entity identify, apply, and transient bulk identify sessions.
 - V2 metadata apply service now writes selected identify proposal fields into entity capability rows, including provider IDs, taxonomy links, dates, counters, stats, classifications, and selected artwork assets.
 - V2 plugin protocol contracts and ID-first provider match-hint resolution, preparing metadata identify to prefer stored provider IDs before URL or title search fallbacks.
 - Season detail API responses now include ordered episode cards from the series → season → episode hierarchy, giving the Svelte season page real structured data.

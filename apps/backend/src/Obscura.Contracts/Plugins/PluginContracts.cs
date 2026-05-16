@@ -36,6 +36,31 @@ public sealed record PluginEntitySupport(
     IReadOnlyList<string> Actions);
 
 /// <summary>
+/// Manifest embedded in a v2 community plugin artifact.
+/// </summary>
+/// <param name="ManifestVersion">Manifest schema version; v2 requires 2.</param>
+/// <param name="ApiTags">Generation tags used by Obscura to ignore older plugin systems.</param>
+/// <param name="Id">Stable provider/plugin code such as tmdb.</param>
+/// <param name="Name">Human-readable plugin name.</param>
+/// <param name="Version">Plugin artifact semantic version.</param>
+/// <param name="Runtime">Runtime code; v2 supports dotnet-process.</param>
+/// <param name="Entry">Entry assembly or executable path, relative to the manifest directory when not rooted.</param>
+/// <param name="Compat">Compatibility bounds for plugin protocol and Obscura versions.</param>
+/// <param name="Auth">Credential fields requested by the plugin.</param>
+/// <param name="Supports">Entity kind/action support declarations.</param>
+public sealed record PluginManifestV2(
+    int ManifestVersion,
+    IReadOnlyList<string> ApiTags,
+    string Id,
+    string Name,
+    string Version,
+    string Runtime,
+    string Entry,
+    PluginCompatibility Compat,
+    IReadOnlyList<PluginAuthField> Auth,
+    IReadOnlyList<PluginEntitySupport> Supports);
+
+/// <summary>
 /// Index entry consumed by the v2 Obscura plugin manager.
 /// </summary>
 /// <param name="Id">Stable plugin identifier.</param>
@@ -176,3 +201,42 @@ public sealed record EntityMetadataProposal(
 /// Response envelope written by v2 plugin processes.
 /// </summary>
 public sealed record IdentifyPluginResponse(bool Ok, EntityMetadataProposal? Result, string? Error);
+
+/// <summary>
+/// API-facing v2 plugin provider summary.
+/// </summary>
+public sealed record PluginProvider(
+    string Id,
+    string Name,
+    string Version,
+    bool Installed,
+    bool Enabled,
+    IReadOnlyList<PluginEntitySupport> Supports,
+    IReadOnlyList<PluginAuthField> Auth,
+    IReadOnlyList<string> MissingAuthKeys);
+
+/// <summary>
+/// Request body for saving plugin credential values.
+/// </summary>
+public sealed record PluginAuthUpdateRequest(IReadOnlyDictionary<string, string?> Values);
+
+/// <summary>
+/// Request body for identifying one entity with a provider.
+/// </summary>
+public sealed record IdentifyEntityRequest(string Provider, IdentifyQuery? Query);
+
+/// <summary>
+/// Request body for applying selected fields from a reviewed metadata proposal.
+/// </summary>
+public sealed record ApplyIdentifyProposalRequest(
+    EntityMetadataProposal Proposal,
+    IReadOnlyList<string> SelectedFields,
+    IReadOnlyDictionary<string, string?>? SelectedImages);
+
+/// <summary>
+/// Request body for starting a transient bulk identify review session.
+/// </summary>
+public sealed record IdentifyBulkStartRequest(
+    string Provider,
+    IReadOnlyList<Guid> EntityIds,
+    IdentifyQuery? Query);
