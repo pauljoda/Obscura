@@ -29,10 +29,11 @@ describe("/videos/[id] detail layout", () => {
     expect(detailPageRule).toContain("margin: 0;");
   });
 
-  it("opens the transcript sidecar whenever captions are enabled", () => {
+  it("keeps caption selection separate from transcript sidecar docking", () => {
     const pageSource = readLocalSource("./+page.svelte");
 
-    expect(pageSource).toContain("if (id) userWantsDock = true;");
-    expect(pageSource).toContain('if (id) window.localStorage.setItem("obscura:transcript-docked", "1");');
+    expect(pageSource).toContain("onTranscriptSidecarToggle={toggleTranscriptDock}");
+    expect(pageSource).not.toContain("if (id) userWantsDock = true;");
+    expect(pageSource).not.toContain('if (id) window.localStorage.setItem("obscura:transcript-docked", "1");');
   });
 });

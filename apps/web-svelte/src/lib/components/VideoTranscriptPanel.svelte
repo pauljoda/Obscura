@@ -447,12 +447,16 @@
 
   {#if showTranscriptList}
     <div class={cn("surface-card-sharp flex flex-col", isListOnly && "flex-1 min-h-0")}>
-      <div class="flex items-center justify-between border-b border-border-default px-3 py-2">
-        <span class="text-[0.7rem] uppercase tracking-[0.14em] text-text-muted">Transcript</span>
-        <div class="flex items-center gap-2">
+      <div class="flex items-start justify-between gap-3 border-b border-border-default px-3 py-2">
+        <div class="min-w-0">
+          <span class="block text-[0.7rem] uppercase tracking-[0.14em] text-text-muted">Transcript</span>
           {#if cues.length > 0}
-            <span class="text-[0.65rem] text-text-disabled">{cues.length} lines</span>
+            <span class="mt-1 block text-[0.66rem] leading-none text-text-disabled">
+              {cues.length} lines in this track
+            </span>
           {/if}
+        </div>
+        <div class="flex shrink-0 items-center gap-2">
           {#if isListOnly && onDockToggle}
             <button
               type="button"

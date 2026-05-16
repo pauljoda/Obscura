@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Video player captions are now controlled from the settings menu, while the row button uses a side-panel icon to show or hide the transcript sidecar without changing caption playback.
 - Adaptive HLS now advertises Jellyfin-style bitrate quality levels and shows the active Auto/manual bitrate beside the player's Adaptive HLS chip, with current/native stream dimensions as a secondary detail instead of height-based menu labels.
 - Adaptive HLS playback now uses Jellyfin's `/Videos/{id}/master.m3u8` playlist shape, with variant playlists advertised as `hls/{quality}/stream.m3u8`, so the player and future Jellyfin-style clients follow the same master-playlist path.
 - Adaptive HLS auto selection now starts with hls.js' normal bandwidth logic and no longer caps choices to the rendered player size, allowing capable clients to climb beyond 720p.
@@ -90,6 +91,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- The transcript panel now shows its line count as small helper text under the header instead of squeezing it into the title row.
 - Adaptive HLS master playlists and player quality menus now use Jellyfin's bitrate-oriented quality ladder, preserving native output when appropriate while showing current/native dimensions only in the playback status chip.
 - The video player now leaves HLS startup quality and viewport-size capping to hls.js instead of forcing the lowest rendition on auto playback.
 - The workspace now depends on the .NET backend for server, database, and worker behavior; Svelte is a frontend-only app served by the .NET host.

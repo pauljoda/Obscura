@@ -308,7 +308,7 @@ describe("VideoPlayer", () => {
     });
   });
 
-  it("toggles captions without showing a non-error notice", async () => {
+  it("toggles captions from settings without showing a non-error notice", async () => {
     const onActiveSubtitleTrackIdChange = vi.fn();
     render(VideoPlayer, {
       props: {
@@ -320,10 +320,33 @@ describe("VideoPlayer", () => {
       },
     });
 
-    await fireEvent.click(screen.getByRole("button", { name: "Turn captions on" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Player settings" }));
+    await fireEvent.click(screen.getByRole("button", { name: /Captions/ }));
+    await fireEvent.click(screen.getByRole("button", { name: /English/ }));
 
     expect(onActiveSubtitleTrackIdChange).toHaveBeenCalledWith("track-en");
     expect(screen.queryByText("Captions on.")).not.toBeInTheDocument();
+  });
+
+  it("uses the player row subtitle button only for the transcript sidecar", async () => {
+    const onActiveSubtitleTrackIdChange = vi.fn();
+    const onTranscriptSidecarToggle = vi.fn();
+
+    render(VideoPlayer, {
+      props: {
+        subtitleTracks: [makeTrack("track-en", "en")],
+        subtitleDefaults,
+        activeSubtitleTrackId: "track-en",
+        subtitleChoiceLocked: true,
+        onActiveSubtitleTrackIdChange,
+        onTranscriptSidecarToggle,
+      },
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Show transcript sidecar" }));
+
+    expect(onTranscriptSidecarToggle).toHaveBeenCalledOnce();
+    expect(onActiveSubtitleTrackIdChange).not.toHaveBeenCalled();
   });
 
   it("shows a notice when fullscreen cannot be entered", async () => {
@@ -375,11 +398,11 @@ describe("VideoPlayer", () => {
     expect(source).toContain("animation: player-settings-flyout-in 160ms ease-out");
   });
 
-  it("keeps the captions button square like the other player controls", async () => {
+  it("keeps the sidecar button square like the other player controls", async () => {
     const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
 
-    expect(source).toContain(".subtitle-control-button {\n    justify-content: center;\n    padding: 0;\n    width: 1.75rem;");
-    expect(source).toContain(".subtitle-control-button {\n      padding: 0;\n      width: 2.25rem;");
+    expect(source).toContain(".sidecar-control-button {\n    justify-content: center;\n    padding: 0;\n    width: 1.75rem;");
+    expect(source).toContain(".sidecar-control-button {\n      padding: 0;\n      width: 2.25rem;");
   });
 
   it("uses menu-row subtitle style controls with square range inputs", async () => {

@@ -39,6 +39,7 @@
     Play,
     RotateCcw,
     RotateCw,
+    PanelRightOpen,
     Settings2,
     Sliders,
     Volume2,
@@ -114,6 +115,8 @@
       preferredLanguages: string;
       appearance: SubtitleAppearance;
     };
+    isTranscriptSidecarOpen?: boolean;
+    onTranscriptSidecarToggle?: () => void;
     defaultPlaybackMode?: "direct" | "hls";
     showCastControls?: boolean;
     onEnded?: () => void;
@@ -170,6 +173,8 @@
     onActiveCueChange,
     subtitleChoiceLocked = false,
     subtitleDefaults,
+    isTranscriptSidecarOpen = false,
+    onTranscriptSidecarToggle,
     defaultPlaybackMode,
     showCastControls = true,
     onEnded,
@@ -573,20 +578,6 @@
     if (controlledSubtitleId === undefined) internalSubtitleId = id;
     onActiveSubtitleTrackIdChange?.(id);
     closeMenus();
-  }
-
-  function toggleSubtitles() {
-    if (activeSubtitleId) {
-      selectSubtitle(null);
-      return;
-    }
-    const preferred = subtitleDefaults
-      ? pickPreferredSubtitleTrack(
-          subtitleTracks.map((track) => ({ id: track.id, language: track.language })),
-          subtitleDefaults.preferredLanguages,
-        )
-      : null;
-    selectSubtitle(preferred ?? subtitleTracks[0]?.id ?? null);
   }
 
   function rangeProgress(value: number, min: number, max: number): string {
@@ -1611,22 +1602,23 @@
 
           <div class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
             <div class="flex min-w-0 shrink items-center gap-2">
-              {#if subtitleTracks.length > 0}
+              {#if subtitleTracks.length > 0 && onTranscriptSidecarToggle}
                 <button
                   type="button"
                   onclick={(event) => {
                     animateControlPress(event);
-                    toggleSubtitles();
+                    onTranscriptSidecarToggle();
                   }}
-                  aria-label={activeSubtitleId ? "Turn captions off" : "Turn captions on"}
+                  aria-label={isTranscriptSidecarOpen ? "Hide transcript sidecar" : "Show transcript sidecar"}
+                  title={isTranscriptSidecarOpen ? "Hide transcript sidecar" : "Show transcript sidecar"}
                   class={cn(
-                    "player-control-button subtitle-control-button text-[0.56rem] sm:text-[0.72rem]",
-                    activeSubtitleId
+                    "player-control-button sidecar-control-button text-[0.56rem] sm:text-[0.72rem]",
+                    isTranscriptSidecarOpen
                       ? "border-accent-500/45 bg-accent-500/12 text-accent-100 shadow-[var(--shadow-glow-accent)]"
                       : "text-white/82",
                   )}
                 >
-                  <Captions class="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <PanelRightOpen class="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 </button>
               {/if}
             </div>
@@ -2061,20 +2053,10 @@
     border-top-width: 0.42rem;
   }
 
-  .subtitle-control-button {
+  .sidecar-control-button {
     justify-content: center;
     padding: 0;
     width: 1.75rem;
-  }
-
-  .subtitle-control-glyph {
-    align-items: center;
-    display: grid;
-    gap: 0.12rem;
-    grid-template-columns: 1fr 1fr;
-    justify-items: center;
-    margin-left: 0.02rem;
-    width: 1.24rem;
   }
 
   .player-settings-menu {
@@ -2344,14 +2326,9 @@
       min-width: 2.25rem;
     }
 
-    .subtitle-control-button {
+    .sidecar-control-button {
       padding: 0;
       width: 2.25rem;
-    }
-
-    .subtitle-control-glyph {
-      gap: 0.28rem;
-      width: 2rem;
     }
 
     .player-settings-menu {
