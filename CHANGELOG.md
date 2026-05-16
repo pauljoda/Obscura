@@ -97,6 +97,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- Entity thumbnail titles now use the shared overflow ticker instead of their older custom ticker, so narrow poster cards scroll long names with the same behavior as other shell labels.
 - Canvas header breadcrumbs now use the shared overflow ticker and collapse to a single current label on mobile, with previous linked crumbs available from the `...` menu.
 - Shared `EntityThumbnail` cards now resolve their own default entity links and support subtitles, so referenced entities can navigate consistently from any page.
 - App-shell breadcrumbs now support configurable inline limits, so longer trails collapse earlier behind the clickable overflow menu while short trails stay readable.

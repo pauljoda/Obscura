@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
-  import { cn } from "@obscura/ui-svelte";
 
   interface Props {
     class?: string;
@@ -11,7 +10,7 @@
   let { class: className = "", text, title }: Props = $props();
 
   let shell: HTMLSpanElement | null = $state(null);
-  let track: HTMLSpanElement | null = $state(null);
+  let measureNode: HTMLSpanElement | null = $state(null);
   let overflowing = $state(false);
   let travel = $state(0);
 
@@ -19,39 +18,53 @@
   const displayTitle = $derived(title ?? text);
 
   function measure() {
-    if (!shell || !track) return;
-    const nextTravel = Math.max(0, Math.ceil(track.scrollWidth - shell.clientWidth));
+    if (!shell || !measureNode) return;
+    const shellWidth = shell.clientWidth;
+    const textWidth = measureNode.scrollWidth;
+    if (shellWidth <= 0 || textWidth <= 0) return;
+    const nextTravel = Math.max(0, Math.ceil(textWidth - shellWidth + 4));
     travel = nextTravel;
     overflowing = nextTravel > 1;
   }
 
+  function scheduleMeasure() {
+    if (typeof requestAnimationFrame === "undefined") {
+      measure();
+      return;
+    }
+    requestAnimationFrame(() => requestAnimationFrame(measure));
+  }
+
   onMount(() => {
-    measure();
+    scheduleMeasure();
+    void document.fonts?.ready.then(scheduleMeasure);
     if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(measure);
+    const observer = new ResizeObserver(scheduleMeasure);
     if (shell) observer.observe(shell);
-    if (track) observer.observe(track);
+    if (measureNode) observer.observe(measureNode);
     return () => observer.disconnect();
   });
 
   $effect(() => {
     text;
-    void tick().then(measure);
+    void tick().then(scheduleMeasure);
   });
 </script>
 
 <span
   bind:this={shell}
-  class={cn("ticker-shell", overflowing && "is-overflowing", className)}
+  class={`ticker-shell${overflowing ? " is-overflowing" : ""}${className ? ` ${className}` : ""}`}
   title={displayTitle}
   style:--ticker-travel={`${travel}px`}
   style:--ticker-duration={duration}
 >
-  <span bind:this={track} class="ticker-track">{text}</span>
+  <span class="ticker-track">{text}</span>
+  <span bind:this={measureNode} class="ticker-measure" aria-hidden="true">{text}</span>
 </span>
 
 <style>
   .ticker-shell {
+    position: relative;
     display: block;
     min-width: 0;
     max-width: 100%;
@@ -66,6 +79,16 @@
     text-overflow: ellipsis;
     vertical-align: bottom;
     white-space: nowrap;
+  }
+
+  .ticker-measure {
+    position: absolute;
+    inset: 0 auto auto 0;
+    display: inline-block;
+    min-width: max-content;
+    visibility: hidden;
+    white-space: nowrap;
+    pointer-events: none;
   }
 
   .ticker-shell.is-overflowing .ticker-track {

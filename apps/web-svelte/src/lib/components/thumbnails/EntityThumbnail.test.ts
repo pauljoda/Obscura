@@ -73,6 +73,17 @@ describe("EntityThumbnail", () => {
 
     expect(container.textContent).toContain("Character Ronnie");
   });
+
+  it("uses the shared overflow ticker for card titles", () => {
+    const { container } = render(EntityThumbnail, {
+      props: {
+        card: personCard(),
+      },
+    });
+
+    expect(container.querySelector(".ticker-shell")?.textContent).toContain("Tim Robinson");
+    expect(container.querySelector(".ticker-title")).toBeNull();
+  });
 });
 
 function spriteCard(): EntityThumbnailCard {

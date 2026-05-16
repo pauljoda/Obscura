@@ -19,6 +19,7 @@
     Users,
   } from "@lucide/svelte";
   import { getRatingValue, isNsfw } from "$lib/api/capabilities";
+  import OverflowTicker from "$lib/components/OverflowTicker.svelte";
   import {
     getThumbnailAsset,
     hasHoverPreview,
@@ -99,59 +100,6 @@
   const imageOnly = $derived(card.entity.kind === ENTITY_KIND.bookPage);
   const bottomLeft = $derived(card.custom?.bottomLeft);
   const href = $derived(resolveEntityThumbnailHref(card));
-
-  function fitTitle(node: HTMLHeadingElement, _title: string) {
-    let frame = 0;
-    let observer: ResizeObserver | null = null;
-
-    function measure() {
-      if (typeof requestAnimationFrame === "undefined") return;
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        const text = node.querySelector<HTMLElement>(".title-text");
-        if (!text) return;
-
-        node.style.setProperty("--title-scale", "1");
-        node.style.setProperty("--title-travel", "0px");
-        node.style.setProperty("--title-duration", "6s");
-        node.dataset.compressed = "false";
-        node.dataset.overflow = "false";
-
-        const indicatorWidth = 10;
-        const width = node.clientWidth;
-        const availableWidth = Math.max(1, width - indicatorWidth);
-        const scrollWidth = text.scrollWidth;
-        if (width <= 0 || scrollWidth <= 0) return;
-        const rawOverflow = scrollWidth > availableWidth + 1;
-        const scale = Math.max(0.78, Math.min(1, availableWidth / scrollWidth));
-        const scaledWidth = scrollWidth * scale;
-        const clippedTravel = Math.max(0, Math.ceil(scaledWidth - availableWidth));
-        const compressedTravel = rawOverflow ? Math.max(8, Math.ceil(width - availableWidth)) : 0;
-        const travel = Math.max(clippedTravel, compressedTravel);
-        const duration = Math.max(5, Math.min(12, travel / 16 + 5));
-
-        node.style.setProperty("--title-scale", String(scale));
-        node.style.setProperty("--title-travel", `${travel}px`);
-        node.style.setProperty("--title-duration", `${duration}s`);
-        node.dataset.compressed = rawOverflow ? "true" : "false";
-        node.dataset.overflow = rawOverflow ? "true" : "false";
-      });
-    }
-
-    if (typeof ResizeObserver !== "undefined") {
-      observer = new ResizeObserver(measure);
-      observer.observe(node);
-    }
-    measure();
-
-    return {
-      update: measure,
-      destroy() {
-        cancelAnimationFrame(frame);
-        observer?.disconnect();
-      },
-    };
-  }
 
   function updatePointerRatio(event: PointerEvent) {
     if (!hoverable) return;
@@ -303,8 +251,8 @@
   {#if !imageOnly}
     <div class="details" class:has-subtitle={Boolean(card.subtitle)}>
       <div class="copy">
-        <h3 class="ticker-title" use:fitTitle={card.entity.title} aria-label={card.entity.title}>
-          <span class="title-text">{card.entity.title}</span>
+        <h3 aria-label={card.entity.title}>
+          <OverflowTicker text={card.entity.title} />
         </h3>
         {#if card.subtitle}
           <p class="subtitle" title={card.subtitle}>{card.subtitle}</p>
@@ -764,76 +712,16 @@
   }
 
   h3 {
+    display: block;
     margin: 0;
     min-width: 0;
     overflow: hidden;
-    white-space: nowrap;
-    position: relative;
     font-family: var(--font-heading, Geist, sans-serif);
-    display: block;
-    font-size: calc(1.05rem * var(--title-scale, 1));
+    font-size: 1.05rem;
     font-weight: 680;
     line-height: 1.16;
     letter-spacing: 0;
     white-space: nowrap;
-    transition: font-size 120ms ease;
-  }
-
-  :global(.ticker-title[data-compressed="true"]) {
-    padding-right: 0.72rem;
-  }
-
-  :global(.ticker-title[data-compressed="true"])::after {
-    position: absolute;
-    top: 0.1rem;
-    right: 0;
-    bottom: 0.12rem;
-    width: 0.55rem;
-    border-right: 1px solid rgb(196 154 90 / 0.55);
-    background: linear-gradient(to right, rgb(10 12 15 / 0), #0a0b0d 72%);
-    content: "";
-    opacity: 0.86;
-    pointer-events: none;
-  }
-
-  .title-text {
-    display: inline-block;
-    width: max-content;
-    max-width: none;
-    min-width: 0;
-    transform: translateX(0);
-    transition: transform 160ms ease;
-    will-change: transform;
-  }
-
-  :global(.ticker-title[data-compressed="true"]:hover)::after {
-    opacity: 0;
-  }
-
-  :global(.ticker-title[data-overflow="true"]:is(:hover, :focus-visible)) .title-text {
-    animation: title-ticker var(--title-duration, 7s) linear infinite;
-  }
-
-  @keyframes title-ticker {
-    0%,
-    12% {
-      transform: translateX(0);
-    }
-
-    46%,
-    62% {
-      transform: translateX(calc(-1 * var(--title-travel, 0px)));
-    }
-
-    100% {
-      transform: translateX(0);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    :global(.ticker-title[data-overflow="true"]:is(:hover, :focus-visible)) .title-text {
-      animation: none;
-    }
   }
 
   .meta {
