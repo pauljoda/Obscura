@@ -13,14 +13,19 @@ public static class EntityEndpoints
             .WithTags("Entities");
 
         group.MapGet("/", async (
-            EntityKindQuery? kind,
             string? query,
             string? cursor,
             bool? hideNsfw,
+            HttpContext httpContext,
             EntityService entities,
             CancellationToken cancellationToken) =>
             {
-                return Results.Ok(await entities.ListAsync(new EntityListQuery(kind?.Value, query, cursor, hideNsfw), cancellationToken));
+                if (!TryGetEntityKindQuery(httpContext, out var kind, out var error))
+                {
+                    return error;
+                }
+
+                return Results.Ok(await entities.ListAsync(new EntityListQuery(kind, query, cursor, hideNsfw), cancellationToken));
             })
             .WithName("ListEntities")
             .WithSummary("Lists global entities with optional kind, search, and cursor filters.")
@@ -117,6 +122,32 @@ public static class EntityEndpoints
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
         return group;
+    }
+
+    private static bool TryGetEntityKindQuery(
+        HttpContext httpContext,
+        out IEntityKind? entityKind,
+        out IResult error)
+    {
+        entityKind = null;
+        error = Results.Empty;
+
+        var rawValue = httpContext.Request.Query["kind"].ToString();
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return true;
+        }
+
+        if (EntityKindRegistry.TryGet(rawValue, out var resolvedKind))
+        {
+            entityKind = resolvedKind;
+            return true;
+        }
+
+        error = Results.BadRequest(new ApiProblem(
+            "invalid_entity_kind",
+            $"Entity kind '{rawValue}' is not recognized."));
+        return false;
     }
 }
 
