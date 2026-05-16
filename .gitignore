@@ -51,3 +51,5 @@ tmp
 
 # Release workflow artifact (regenerated on every release cut)
 RELEASE_NOTES.md
+apps/backend/src/Obscura.Api/Obscura.Api.csproj.lscache
+*.lscache
