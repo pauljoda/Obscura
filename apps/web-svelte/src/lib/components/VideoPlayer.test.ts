@@ -154,6 +154,7 @@ describe("VideoPlayer", () => {
 
     expect(screen.getByTestId("vidstack-video-player")).toBeInTheDocument();
     expect(screen.getByText("Adaptive HLS")).toBeInTheDocument();
+    expect(screen.getByTestId("playback-quality-chip")).toHaveTextContent("Auto");
     expect(screen.getByRole("button", { name: "Cast" })).toBeInTheDocument();
     const settingsButton = screen.getByRole("button", { name: "Player settings" });
     await fireEvent.click(settingsButton);

@@ -78,9 +78,12 @@ public sealed class HlsAssetServiceTests : IDisposable
 
         Assert.NotNull(master);
         var masterPlaylist = await File.ReadAllTextAsync(master.Path);
+        Assert.Contains("hls/1920p/index.m3u8", masterPlaylist);
+        Assert.Contains("hls/1440p/index.m3u8", masterPlaylist);
         Assert.Contains("hls/1080p/index.m3u8", masterPlaylist);
         Assert.Contains("hls/720p/index.m3u8", masterPlaylist);
         Assert.Contains("hls/480p/index.m3u8", masterPlaylist);
+        Assert.Contains("RESOLUTION=3840x1920", masterPlaylist);
         Assert.NotNull(variant);
         var playlist = await File.ReadAllTextAsync(variant.Path);
         Assert.Contains("#EXT-X-PLAYLIST-TYPE:VOD", playlist);
@@ -225,7 +228,7 @@ public sealed class HlsAssetServiceTests : IDisposable
 
         Assert.NotNull(asset);
         var metadata = await File.ReadAllTextAsync(Path.Combine(virtualRoot, "metadata.json"));
-        Assert.Contains("\"FormatVersion\": 3", metadata);
+        Assert.Contains("\"FormatVersion\": 4", metadata);
         Assert.False(File.Exists(Path.Combine(virtualRoot, "v", "720p", "seg_00000.ts")));
     }
 

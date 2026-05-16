@@ -1091,7 +1091,6 @@
     if (isHLSProvider(provider)) {
       provider.config = {
         ...adaptiveHlsBufferConfig(),
-        capLevelToPlayerSize: true,
       };
     }
     syncVideoElement();
@@ -1286,6 +1285,14 @@
         <span class="pointer-events-auto player-chip border-accent-500/40 px-2 py-0.5 text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-accent-100 sm:px-2.5 sm:py-1 sm:text-[0.62rem]">
           {activePlaybackLabel}
         </span>
+        {#if effectiveMode !== "direct"}
+          <span
+            data-testid="playback-quality-chip"
+            class="pointer-events-auto player-chip border-white/10 px-2 py-0.5 text-[0.6rem] text-white/80 sm:px-2.5 sm:py-1 sm:text-[0.7rem]"
+          >
+            {selectedQualityLabel}
+          </span>
+        {/if}
         {#if playerNotice}
           <span class="player-chip border-warning/20 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] text-white/80">
             {playerNotice}
@@ -1703,7 +1710,11 @@
               class={cn("player-settings-option", qualityMode === option.value && "is-active")}
             >
               <span>{option.label}</span>
-              {#if qualityMode === option.value}<span>On</span>{/if}
+              {#if option.value === "auto" && qualityMode === "auto" && activeQualityLabel}
+                <span>{activeQualityLabel}</span>
+              {:else if qualityMode === option.value}
+                <span>On</span>
+              {/if}
             </button>
           {/each}
         {:else if settingsView === "speed"}

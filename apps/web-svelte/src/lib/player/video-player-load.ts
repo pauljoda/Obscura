@@ -27,6 +27,7 @@ export interface AdaptiveAutoLevelSelection {
 
 export interface AdaptiveHlsBufferConfig {
   backBufferLength: number;
+  capLevelToPlayerSize: boolean;
   frontBufferFlushThreshold: number;
   maxBufferLength: number;
   maxMaxBufferLength: number;
@@ -162,11 +163,12 @@ export function adaptiveAutoLevelSelection(): AdaptiveAutoLevelSelection {
 export function adaptiveHlsBufferConfig(): AdaptiveHlsBufferConfig {
   return {
     backBufferLength: Infinity,
+    capLevelToPlayerSize: false,
     frontBufferFlushThreshold: Infinity,
     maxBufferLength: ExtendedHlsMaxBufferLengthSeconds,
     maxMaxBufferLength: ExtendedHlsMaxMaxBufferLengthSeconds,
     maxBufferSize: ExtendedHlsMaxBufferSizeBytes,
-    startLevel: 0,
+    startLevel: -1,
     startPosition: 0,
   };
 }

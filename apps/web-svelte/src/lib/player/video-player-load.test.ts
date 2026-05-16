@@ -153,11 +153,12 @@ describe("video-player-load", () => {
   it("raises adaptive HLS buffer limits without disabling quota recovery", () => {
     expect(adaptiveHlsBufferConfig()).toEqual({
       backBufferLength: Infinity,
+      capLevelToPlayerSize: false,
       frontBufferFlushThreshold: Infinity,
       maxBufferLength: 120,
       maxMaxBufferLength: 600,
       maxBufferSize: 180_000_000,
-      startLevel: 0,
+      startLevel: -1,
       startPosition: 0,
     });
   });

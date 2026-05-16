@@ -14,7 +14,7 @@ namespace Obscura.Infrastructure.Videos;
 public sealed class HlsAssetService : IHlsAssetService
 {
     private const int SegmentDurationSeconds = 6;
-    private const int VirtualCacheFormatVersion = 3;
+    private const int VirtualCacheFormatVersion = 4;
     private const int ActiveGenerationReuseWindowSegments = 12;
     private static readonly TimeSpan SegmentPollInterval = TimeSpan.FromMilliseconds(100);
     private static readonly ConcurrentDictionary<string, VirtualRenditionGeneration> ActiveRenditions = new();
@@ -602,38 +602,17 @@ public sealed class HlsAssetService : IHlsAssetService
 
     private static IReadOnlyList<VirtualHlsRendition> RenditionsFor(int? sourceHeight)
     {
-        var height = sourceHeight ?? 720;
-        if (height >= 1080)
+        var height = NormalizeRenditionHeight(sourceHeight ?? 720);
+        var renditions = BaseRenditions()
+            .Where(rendition => rendition.Height <= height)
+            .ToList();
+
+        if (renditions.Count == 0 || renditions[^1].Height != height)
         {
-            return
-            [
-                new("480p", 480, "1400k", "1800k", "2800k", "128k", 21),
-                new("720p", 720, "2800k", "3200k", "5600k", "128k", 20),
-                new("1080p", 1080, "5000k", "6500k", "10000k", "160k", 19)
-            ];
+            renditions.Add(NativeRenditionFor(height));
         }
 
-        if (height >= 720)
-        {
-            return
-            [
-                new("480p", 480, "1400k", "1800k", "2800k", "128k", 21),
-                new("720p", 720, "2800k", "3200k", "5600k", "128k", 20)
-            ];
-        }
-
-        if (height >= 480)
-        {
-            return
-            [
-                new("480p", 480, "1400k", "1800k", "2800k", "128k", 21)
-            ];
-        }
-
-        return
-        [
-            new("360p", 360, "800k", "1000k", "1600k", "96k", 22)
-        ];
+        return renditions;
     }
 
     private static string BuildVirtualMasterPlaylist(
@@ -647,8 +626,9 @@ public sealed class HlsAssetService : IHlsAssetService
         {
             var width = ScaledWidth(source.Width, source.Height, rendition.Height);
             var resolution = width is null ? "" : $",RESOLUTION={width}x{rendition.Height}";
+            var codecs = H264CodecForHeight(rendition.Height);
             lines.Add(
-                $"#EXT-X-STREAM-INF:BANDWIDTH={ToBitsPerSecond(rendition.MaxRate)},AVERAGE-BANDWIDTH={ToBitsPerSecond(rendition.VideoBitrate)}{resolution},CODECS=\"avc1.4d401f,mp4a.40.2\"");
+                $"#EXT-X-STREAM-INF:BANDWIDTH={ToBitsPerSecond(rendition.MaxRate)},AVERAGE-BANDWIDTH={ToBitsPerSecond(rendition.VideoBitrate)}{resolution},CODECS=\"{codecs},mp4a.40.2\"");
             lines.Add(AppendAudioStreamQuery($"hls/{rendition.Name}/index.m3u8", audioStreamIndex));
         }
 
@@ -827,6 +807,40 @@ public sealed class HlsAssetService : IHlsAssetService
 
         return int.TryParse(value, out var raw) ? raw : 0;
     }
+
+    private static IReadOnlyList<VirtualHlsRendition> BaseRenditions() =>
+    [
+        new("480p", 480, "1400k", "1800k", "2800k", "128k", 21),
+        new("720p", 720, "2800k", "3200k", "5600k", "128k", 20),
+        new("1080p", 1080, "5000k", "6500k", "10000k", "160k", 19),
+        new("1440p", 1440, "9000k", "12000k", "18000k", "192k", 18),
+        new("2160p", 2160, "16000k", "22000k", "32000k", "192k", 18)
+    ];
+
+    private static VirtualHlsRendition NativeRenditionFor(int height)
+    {
+        if (height < 480)
+        {
+            return new($"{height}p", height, "800k", "1000k", "1600k", "96k", 22);
+        }
+
+        var reference = BaseRenditions().LastOrDefault(rendition => rendition.Height < height) ??
+            BaseRenditions()[0];
+        return reference with { Name = $"{height}p", Height = height };
+    }
+
+    private static int NormalizeRenditionHeight(int height) =>
+        Math.Max(2, height % 2 == 0 ? height : height - 1);
+
+    private static string H264CodecForHeight(int height) =>
+        height switch
+        {
+            <= 480 => "avc1.4d401e",
+            <= 720 => "avc1.4d401f",
+            <= 1080 => "avc1.4d4029",
+            <= 1440 => "avc1.4d4032",
+            _ => "avc1.4d4033"
+        };
 
     private static int? ScaledWidth(int? sourceWidth, int? sourceHeight, int targetHeight)
     {
