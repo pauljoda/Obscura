@@ -552,6 +552,7 @@
       onOrganizedToggle={handleOrganizedToggle}
       {ratingBusy}
       showHero={false}
+      posterSize="none"
     >
       {#snippet heroMeta()}
         {#if studio}

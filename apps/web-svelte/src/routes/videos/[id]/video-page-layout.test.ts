@@ -29,6 +29,13 @@ describe("/videos/[id] detail layout", () => {
     expect(detailPageRule).toContain("margin: 0;");
   });
 
+  it("uses the shared no-image detail hero because the video player is the media preview", () => {
+    const pageSource = readLocalSource("./+page.svelte");
+
+    expect(pageSource).toContain("showHero={false}");
+    expect(pageSource).toContain('posterSize="none"');
+  });
+
   it("keeps caption selection separate from transcript sidecar docking", () => {
     const pageSource = readLocalSource("./+page.svelte");
 
