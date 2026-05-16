@@ -8,6 +8,7 @@
   import { useSearch } from "$lib/stores/search.svelte";
   import { getCanvasHeaderBreadcrumbItems } from "./canvas-header-breadcrumbs";
   import LogoMark from "./LogoMark.svelte";
+  import OverflowTicker from "./OverflowTicker.svelte";
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -45,7 +46,7 @@
       : pathCrumbs,
   );
   const desktopCrumbItems = $derived(getCanvasHeaderBreadcrumbItems(crumbs, 3));
-  const mobileCrumbItems = $derived(getCanvasHeaderBreadcrumbItems(crumbs, 2));
+  const mobileCrumbItems = $derived(getCanvasHeaderBreadcrumbItems(crumbs, 1));
 
   const search = useSearch();
 
@@ -98,7 +99,7 @@
     >
       <LogoMark size={24} alt="" />
     </a>
-    <nav class="hidden min-w-0 items-center gap-1.5 text-mono-sm sm:flex" aria-label="Breadcrumb">
+    <nav class="hidden min-w-0 flex-1 items-center gap-1.5 overflow-hidden text-mono-sm sm:flex" aria-label="Breadcrumb">
       {#if crumbs.length === 0}
         <span class="truncate text-text-muted">Dashboard</span>
       {:else}
@@ -106,7 +107,7 @@
           {#if i > 0 && desktopCrumbItems[i - 1]?.kind !== "overflow"}
             <span class="shrink-0 text-text-disabled">/</span>
           {/if}
-          <span class="flex min-w-0 items-center">
+          <span class={cn("flex min-w-0 items-center", item.kind === "crumb" && item.isLast && "flex-1")}>
             {#if item.kind === "overflow"}
               <span class="relative shrink-0">
                 <button
@@ -142,7 +143,7 @@
                 {/if}
               </span>
             {:else if item.isLast}
-              <span class="min-w-0 truncate text-text-primary">{item.label}</span>
+              <OverflowTicker text={item.label} class="text-text-primary" />
             {:else}
               <a
                 href={resolveHref(item.href)}
@@ -158,7 +159,7 @@
         {/each}
       {/if}
     </nav>
-    <nav class="flex min-w-0 items-center gap-1 text-mono-sm sm:hidden" aria-label="Breadcrumb">
+    <nav class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-mono-sm sm:hidden" aria-label="Breadcrumb">
       {#if mobileCrumbItems.length === 0}
         <span class="truncate text-text-muted">Dashboard</span>
       {:else}
@@ -166,7 +167,7 @@
           {#if i > 0 && mobileCrumbItems[i - 1]?.kind !== "overflow"}
             <span class="shrink-0 text-text-disabled">/</span>
           {/if}
-          <span class="flex min-w-0 items-center">
+          <span class={cn("flex min-w-0 items-center", item.kind === "crumb" && item.isLast && "flex-1")}>
             {#if item.kind === "overflow"}
               <span class="relative shrink-0">
                 <button
@@ -202,7 +203,7 @@
                 {/if}
               </span>
             {:else if item.isLast}
-              <span class="min-w-0 truncate text-text-primary">{item.label}</span>
+              <OverflowTicker text={item.label} class="text-text-primary" />
             {:else}
               <a
                 href={resolveHref(item.href)}

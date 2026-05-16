@@ -24,7 +24,7 @@ export function getCanvasHeaderBreadcrumbItems(
   const current = crumbs.at(-1);
   const previousLinks = crumbs.slice(0, -1).filter((crumb) => !crumb.isLast && crumb.href !== "#");
 
-  if (!current || previousLinks.length < 2) {
+  if (!current || previousLinks.length < 1) {
     return crumbs.map((crumb) => ({ kind: "crumb", ...crumb }));
   }
 

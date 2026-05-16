@@ -85,4 +85,23 @@ describe("getCanvasHeaderBreadcrumbItems", () => {
       { kind: "crumb", label: "Gallery", href: "#", isLast: true },
     ]);
   });
+
+  it("can collapse a single previous link for tight mobile headers", () => {
+    expect(
+      getCanvasHeaderBreadcrumbItems([
+        { label: "Videos", href: "/videos", isLast: false },
+        { label: "A very long video title", href: "#", isLast: true },
+      ], 1),
+    ).toEqual([
+      {
+        kind: "overflow",
+        label: "More breadcrumbs",
+        separatorAfter: false,
+        items: [
+          { label: "Videos", href: "/videos", isLast: false },
+        ],
+      },
+      { kind: "crumb", label: "A very long video title", href: "#", isLast: true },
+    ]);
+  });
 });

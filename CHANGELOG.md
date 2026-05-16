@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Mobile breadcrumbs now collapse the previous page behind the `...` menu and ticker long current titles on hover, preventing header controls from overlapping video titles.
 - Video detail pages now show Cast and Crew as horizontally scrollable thumbnail rows, with studios separated from cast and character labels shown under credited people when available.
 - Video detail pages now use the app-shell breadcrumb instead of a page-local Videos back link, keeping navigation compact at the top of the screen.
 - Video detail pages now use a plain no-image detail header below the player, keeping the video player itself as the visual preview instead of repeating the thumbnail.
@@ -70,6 +71,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Added
+- `OverflowTicker` provides a reusable measured text label for constrained UI areas that need ellipsis by default and a hover/focus ticker for long values.
 - Credits API responses now include role and character metadata alongside the existing compatibility people list, allowing actor cards to show character-specific subtitles.
 - VS Code Run and Debug now includes `Obscura: Kill Orphans`, a launch entry that runs `pnpm dev:kill` from the workspace.
 - Playback Settings now include HLS transcoder controls for software, auto, VideoToolbox, VA-API, NVENC, and QSV profiles, plus ffmpeg executable and VA-API device overrides.
@@ -95,6 +97,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- Canvas header breadcrumbs now use the shared overflow ticker and collapse to a single current label on mobile, with previous linked crumbs available from the `...` menu.
 - Shared `EntityThumbnail` cards now resolve their own default entity links and support subtitles, so referenced entities can navigate consistently from any page.
 - App-shell breadcrumbs now support configurable inline limits, so longer trails collapse earlier behind the clickable overflow menu while short trails stay readable.
 - Video Cast and Crew sections now use shared `EntityThumbnail` cards in mobile-safe horizontal rows instead of compact text chips.
