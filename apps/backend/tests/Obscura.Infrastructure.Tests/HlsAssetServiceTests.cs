@@ -228,7 +228,7 @@ public sealed class HlsAssetServiceTests : IDisposable
 
         Assert.NotNull(asset);
         var metadata = await File.ReadAllTextAsync(Path.Combine(virtualRoot, "metadata.json"));
-        Assert.Contains("\"FormatVersion\": 4", metadata);
+        Assert.Contains("\"FormatVersion\": 5", metadata);
         Assert.False(File.Exists(Path.Combine(virtualRoot, "v", "720p", "seg_00000.ts")));
     }
 
@@ -259,6 +259,69 @@ public sealed class HlsAssetServiceTests : IDisposable
         Assert.True(process.WasCalled);
         Assert.Contains(process.ArgumentHistory, arguments =>
             arguments.Contains("-hls_segment_filename"));
+        Assert.Contains(process.ArgumentHistory, arguments =>
+            arguments.Contains("libx264"));
+    }
+
+    [Fact]
+    public async Task VirtualSegmentsUseVideoToolboxEncoderWhenConfigured()
+    {
+        var videoId = Guid.Parse("42424242-4242-4242-4242-424242424242");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var process = new ManifestWritingProcessExecutor();
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot, HlsTranscoderProfile.VideoToolbox),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 13,
+                Width: 1920,
+                Height: 960)),
+            process,
+            NullLogger<HlsAssetService>.Instance);
+
+        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00000.ts", null, CancellationToken.None);
+
+        Assert.NotNull(segment);
+        var arguments = Assert.Single(process.ArgumentHistory);
+        Assert.Contains("h264_videotoolbox", arguments);
+        Assert.Contains("-allow_sw", arguments);
+        Assert.DoesNotContain("libx264", arguments);
+    }
+
+    [Fact]
+    public async Task VirtualSegmentsUseVaapiEncoderWhenConfigured()
+    {
+        var videoId = Guid.Parse("43434343-4343-4343-4343-434343434343");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var process = new ManifestWritingProcessExecutor();
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot, HlsTranscoderProfile.Vaapi, VaapiDevice: "/dev/dri/renderD129"),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 13,
+                Width: 1920,
+                Height: 960)),
+            process,
+            NullLogger<HlsAssetService>.Instance);
+
+        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00000.ts", null, CancellationToken.None);
+
+        Assert.NotNull(segment);
+        var arguments = Assert.Single(process.ArgumentHistory);
+        Assert.Contains("-vaapi_device", arguments);
+        Assert.Contains("/dev/dri/renderD129", arguments);
+        Assert.Contains(arguments, argument =>
+            argument.Contains("scale_vaapi=w=1440:h=720:format=nv12", StringComparison.Ordinal));
+        Assert.Contains("h264_vaapi", arguments);
+        Assert.DoesNotContain("libx264", arguments);
     }
 
     [Fact]

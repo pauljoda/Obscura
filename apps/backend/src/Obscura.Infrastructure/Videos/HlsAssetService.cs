@@ -14,7 +14,7 @@ namespace Obscura.Infrastructure.Videos;
 public sealed class HlsAssetService : IHlsAssetService
 {
     private const int SegmentDurationSeconds = 6;
-    private const int VirtualCacheFormatVersion = 4;
+    private const int VirtualCacheFormatVersion = 5;
     private const int ActiveGenerationReuseWindowSegments = 12;
     private static readonly TimeSpan SegmentPollInterval = TimeSpan.FromMilliseconds(100);
     private static readonly ConcurrentDictionary<string, VirtualRenditionGeneration> ActiveRenditions = new();
@@ -234,12 +234,14 @@ public sealed class HlsAssetService : IHlsAssetService
         var root = VirtualRoot(id);
         var metaPath = Path.Combine(root, "metadata.json");
         var sourceInfo = new FileInfo(source.Path);
+        var transcoderProfile = ResolveTranscoderProfile(_options);
         var nextMeta = new VirtualCacheMetadata(
             source.Path,
             sourceInfo.Length,
             sourceInfo.LastWriteTimeUtc,
             source.DurationSeconds!.Value,
             renditions.Select(rendition => rendition.Name).ToArray(),
+            transcoderProfile.ToString(),
             VirtualCacheFormatVersion);
 
         if (File.Exists(metaPath))
@@ -438,15 +440,49 @@ public sealed class HlsAssetService : IHlsAssetService
         var playlistPath = Path.Combine(stagingDirectory, "index.generated.m3u8");
         var segmentPattern = Path.Combine(stagingDirectory, "seg_%05d.ts");
         Directory.CreateDirectory(Path.GetDirectoryName(playlistPath)!);
+        var transcoderProfile = ResolveTranscoderProfile(_options);
 
         ProcessExecutionResult result;
         try
         {
             result = await _processes.RunAsync(
-                "ffmpeg",
-                VirtualRenditionArguments(source, rendition, audioStreamIndex, startSegment, playlistPath, segmentPattern),
+                _options.FfmpegPath,
+                VirtualRenditionArguments(
+                    source,
+                    rendition,
+                    audioStreamIndex,
+                    startSegment,
+                    playlistPath,
+                    segmentPattern,
+                    transcoderProfile,
+                    _options.VaapiDevice),
                 environment: null,
                 cancellationToken);
+
+            if (result.ExitCode != 0 && transcoderProfile != HlsTranscoderProfile.Software)
+            {
+                _logger?.LogWarning(
+                    "Virtual HLS generation using {TranscoderProfile} failed for {VideoId} rendition {Rendition}; retrying with software x264. Error: {Error}",
+                    transcoderProfile,
+                    id,
+                    rendition.Name,
+                    result.StandardError);
+
+                ResetStagingDirectory(stagingDirectory);
+                result = await _processes.RunAsync(
+                    _options.FfmpegPath,
+                    VirtualRenditionArguments(
+                        source,
+                        rendition,
+                        audioStreamIndex,
+                        startSegment,
+                        playlistPath,
+                        segmentPattern,
+                        HlsTranscoderProfile.Software,
+                        _options.VaapiDevice),
+                    environment: null,
+                    cancellationToken);
+            }
         }
         finally
         {
@@ -697,41 +733,52 @@ public sealed class HlsAssetService : IHlsAssetService
         int? audioStreamIndex,
         int startSegment,
         string playlistPath,
-        string segmentPattern)
+        string segmentPattern,
+        HlsTranscoderProfile transcoderProfile,
+        string vaapiDevice)
     {
         var gop = Math.Max(1, (int)Math.Ceiling(SegmentDurationSeconds * (source.FrameRate ?? 24)));
         var startSeconds = startSegment * SegmentDurationSeconds;
-        return
-        [
+        var arguments = new List<string>
+        {
             "-hide_banner",
             "-y",
             "-loglevel",
             "error",
             "-nostats",
             "-ss",
-            startSeconds.ToString("0.000"),
+            startSeconds.ToString("0.000")
+        };
+
+        if (transcoderProfile == HlsTranscoderProfile.Vaapi)
+        {
+            arguments.AddRange(["-vaapi_device", vaapiDevice]);
+        }
+
+        arguments.AddRange(
+        [
             "-i",
             source.Path,
             "-map_metadata",
             "-1",
             "-map_chapters",
-            "-1",
-            "-vf",
-            $"scale=w=-2:h={rendition.Height}:force_original_aspect_ratio=decrease:force_divisible_by=2,format=yuv420p",
+            "-1"
+        ]);
+
+        arguments.AddRange(VideoFilterArguments(source, rendition, transcoderProfile));
+
+        arguments.AddRange(
+        [
             "-map",
             "0:v:0",
             "-map",
-            audioStreamIndex is null ? "0:a:0?" : $"0:{audioStreamIndex.Value}?",
-            "-c:v",
-            "libx264",
-            "-preset",
-            "veryfast",
-            "-crf",
-            rendition.Crf.ToString(),
-            "-profile:v",
-            "main",
-            "-pix_fmt",
-            "yuv420p",
+            audioStreamIndex is null ? "0:a:0?" : $"0:{audioStreamIndex.Value}?"
+        ]);
+
+        arguments.AddRange(VideoEncoderArguments(rendition, transcoderProfile));
+
+        arguments.AddRange(
+        [
             "-force_key_frames:0",
             $"expr:gte(t,n_forced*{SegmentDurationSeconds})",
             "-g",
@@ -740,12 +787,6 @@ public sealed class HlsAssetService : IHlsAssetService
             gop.ToString(),
             "-sc_threshold",
             "0",
-            "-b:v",
-            rendition.VideoBitrate,
-            "-maxrate",
-            rendition.MaxRate,
-            "-bufsize",
-            rendition.BufferSize,
             "-c:a",
             "aac",
             "-b:a",
@@ -778,7 +819,98 @@ public sealed class HlsAssetService : IHlsAssetService
             "-hls_segment_filename",
             segmentPattern,
             playlistPath
+        ]);
+
+        return arguments;
+    }
+
+    private static IReadOnlyList<string> VideoFilterArguments(
+        VideoSourceFile source,
+        VirtualHlsRendition rendition,
+        HlsTranscoderProfile transcoderProfile)
+    {
+        if (transcoderProfile == HlsTranscoderProfile.Vaapi)
+        {
+            var width = ScaledWidth(source.Width, source.Height, rendition.Height);
+            var scaleWidth = width?.ToString() ?? "-2";
+            return
+            [
+                "-vf",
+                $"format=nv12,hwupload,scale_vaapi=w={scaleWidth}:h={rendition.Height}:format=nv12"
+            ];
+        }
+
+        var outputFormat = transcoderProfile == HlsTranscoderProfile.Qsv ? "nv12" : "yuv420p";
+        return
+        [
+            "-vf",
+            $"scale=w=-2:h={rendition.Height}:force_original_aspect_ratio=decrease:force_divisible_by=2,format={outputFormat}"
         ];
+    }
+
+    private static IReadOnlyList<string> VideoEncoderArguments(
+        VirtualHlsRendition rendition,
+        HlsTranscoderProfile transcoderProfile)
+    {
+        var encoder = transcoderProfile switch
+        {
+            HlsTranscoderProfile.VideoToolbox => "h264_videotoolbox",
+            HlsTranscoderProfile.Vaapi => "h264_vaapi",
+            HlsTranscoderProfile.Nvenc => "h264_nvenc",
+            HlsTranscoderProfile.Qsv => "h264_qsv",
+            _ => "libx264"
+        };
+
+        var arguments = new List<string>
+        {
+            "-c:v",
+            encoder
+        };
+
+        if (transcoderProfile == HlsTranscoderProfile.Software)
+        {
+            arguments.AddRange(
+            [
+                "-preset",
+                "veryfast",
+                "-crf",
+                rendition.Crf.ToString(),
+                "-profile:v",
+                "main",
+                "-pix_fmt",
+                "yuv420p"
+            ]);
+        }
+        else
+        {
+            if (transcoderProfile == HlsTranscoderProfile.VideoToolbox)
+            {
+                arguments.AddRange(["-allow_sw", "1"]);
+            }
+
+            arguments.AddRange(
+            [
+                "-profile:v",
+                "main"
+            ]);
+
+            if (transcoderProfile != HlsTranscoderProfile.Vaapi)
+            {
+                arguments.AddRange(["-pix_fmt", transcoderProfile == HlsTranscoderProfile.Qsv ? "nv12" : "yuv420p"]);
+            }
+        }
+
+        arguments.AddRange(
+        [
+            "-b:v",
+            rendition.VideoBitrate,
+            "-maxrate",
+            rendition.MaxRate,
+            "-bufsize",
+            rendition.BufferSize
+        ]);
+
+        return arguments;
     }
 
     private static int SegmentCount(double durationSeconds) =>
@@ -870,7 +1002,38 @@ public sealed class HlsAssetService : IHlsAssetService
         left.SourceModifiedUtc == right.SourceModifiedUtc &&
         Math.Abs(left.DurationSeconds - right.DurationSeconds) < 0.001 &&
         left.Renditions.SequenceEqual(right.Renditions) &&
+        left.TranscoderProfile == right.TranscoderProfile &&
         left.FormatVersion == right.FormatVersion;
+
+    private static HlsTranscoderProfile ResolveTranscoderProfile(HlsAssetServiceOptions options)
+    {
+        if (options.TranscoderProfile != HlsTranscoderProfile.Auto)
+        {
+            return options.TranscoderProfile;
+        }
+
+        if (OperatingSystem.IsMacOS())
+        {
+            return HlsTranscoderProfile.VideoToolbox;
+        }
+
+        if (OperatingSystem.IsLinux() && File.Exists(options.VaapiDevice))
+        {
+            return HlsTranscoderProfile.Vaapi;
+        }
+
+        return HlsTranscoderProfile.Software;
+    }
+
+    private static void ResetStagingDirectory(string stagingDirectory)
+    {
+        if (Directory.Exists(stagingDirectory))
+        {
+            Directory.Delete(stagingDirectory, recursive: true);
+        }
+
+        Directory.CreateDirectory(stagingDirectory);
+    }
 
     private static string MimeForExtension(string extension)
     {
@@ -906,6 +1069,7 @@ public sealed class HlsAssetService : IHlsAssetService
         DateTime SourceModifiedUtc,
         double DurationSeconds,
         IReadOnlyList<string> Renditions,
+        string TranscoderProfile = nameof(HlsTranscoderProfile.Software),
         int FormatVersion = 0);
 
     private sealed record VirtualRenditionGeneration(
