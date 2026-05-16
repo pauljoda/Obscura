@@ -164,11 +164,41 @@ public sealed record LibrarySettingsData(
     int ThumbnailQuality,
     int TrickplayQuality);
 
+/// <summary>
+/// Describes a video file discovered by a scan and the structural series context inferred from its path.
+/// </summary>
+/// <param name="FilePath">Absolute path to the playable video file.</param>
+/// <param name="Title">Display title inferred from the filename or imported metadata.</param>
+/// <param name="LibraryRootId">Library root that owns the file.</param>
+/// <param name="IsNsfw">Whether the owning library root marks discovered media as NSFW.</param>
+/// <param name="Series">Optional series folder context for episode-style video files.</param>
+/// <param name="Season">Optional season folder context when the file lives beneath a season grouping.</param>
+/// <param name="EpisodeNumber">Episode number parsed from the filename when available.</param>
+/// <param name="AbsoluteEpisodeNumber">Absolute episode number parsed from the filename when available.</param>
 public sealed record VideoUpsertItem(
     string FilePath,
     string Title,
     Guid LibraryRootId,
-    bool IsNsfw);
+    bool IsNsfw,
+    VideoSeriesScanInfo? Series = null,
+    VideoSeasonScanInfo? Season = null,
+    int? EpisodeNumber = null,
+    int? AbsoluteEpisodeNumber = null);
+
+/// <summary>
+/// Series folder context inferred during a scan.
+/// </summary>
+/// <param name="FolderPath">Absolute folder path that identifies the series in the library.</param>
+/// <param name="Title">Series title inferred from the folder name.</param>
+public sealed record VideoSeriesScanInfo(string FolderPath, string Title);
+
+/// <summary>
+/// Season folder context inferred during a scan.
+/// </summary>
+/// <param name="FolderPath">Absolute folder path that identifies the season in the library.</param>
+/// <param name="Title">Season title inferred from the folder name.</param>
+/// <param name="SeasonNumber">Numeric season index used for ordering and metadata.</param>
+public sealed record VideoSeasonScanInfo(string FolderPath, string Title, int SeasonNumber);
 
 /// <summary>
 /// Flags indicating which downstream jobs are still needed for an entity.

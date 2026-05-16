@@ -2,6 +2,7 @@ using Obscura.Application.Jobs.Handlers;
 using Microsoft.Extensions.Logging;
 using Obscura.Application.Jobs.Ports;
 using Obscura.Domain.Entities;
+using System.Text.RegularExpressions;
 
 namespace Obscura.Application.Jobs.Handlers.Scan;
 
@@ -16,6 +17,12 @@ public sealed class ScanLibraryJobHandler(
     ILibraryScanPersistence persistence) : ScanJobHandler(logger, fileDiscovery, persistence)
 {
     private const int BatchSize = 50;
+    private static readonly Regex SeasonFolderPattern = new(
+        @"^(?:Season\s*(?<season>\d{1,3})|S(?<season>\d{1,3}))$",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex EpisodeTokenPattern = new(
+        @"(?:^|[\s._-])[Ss](?<season>\d{1,3})[\s._-]*[Ee](?<episode>\d{1,4})(?:\D|$)",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     public override JobType Type => JobType.ScanLibrary;
 
@@ -49,9 +56,8 @@ public sealed class ScanLibraryJobHandler(
                 for (var i = batchStart; i < batchEnd; i++)
                 {
                     var filePath = files[i];
-                    var title = Path.GetFileNameWithoutExtension(filePath);
                     validPaths.Add(filePath);
-                    batchItems.Add(new VideoUpsertItem(filePath, title, root.Id, root.IsNsfw));
+                    batchItems.Add(BuildVideoUpsertItem(filePath, root));
                 }
 
                 var entityIds = await Persistence.UpsertVideosBatchAsync(batchItems, cancellationToken);
@@ -125,4 +131,80 @@ public sealed class ScanLibraryJobHandler(
             "[METRICS] scan-library {Label} — {FileCount} files, {Removed} stale — {Timing}",
             root.Label, files.Count, removed, report.ToLogString());
     }
+
+    private static VideoUpsertItem BuildVideoUpsertItem(string filePath, LibraryRootData root)
+    {
+        var title = Path.GetFileNameWithoutExtension(filePath);
+        var episodeToken = ParseEpisodeToken(title);
+        var parentFolder = Path.GetDirectoryName(filePath);
+
+        if (!string.IsNullOrWhiteSpace(parentFolder))
+        {
+            var parentFolderName = Path.GetFileName(parentFolder);
+            if (TryParseSeasonFolder(parentFolderName, out var seasonNumber))
+            {
+                var seriesFolder = Path.GetDirectoryName(parentFolder);
+                if (!string.IsNullOrWhiteSpace(seriesFolder) && !SamePath(seriesFolder, root.Path))
+                {
+                    return new VideoUpsertItem(
+                        filePath,
+                        title,
+                        root.Id,
+                        root.IsNsfw,
+                        new VideoSeriesScanInfo(seriesFolder, Path.GetFileName(seriesFolder)),
+                        new VideoSeasonScanInfo(parentFolder, parentFolderName, seasonNumber),
+                        episodeToken?.EpisodeNumber,
+                        AbsoluteEpisodeNumber: null);
+                }
+            }
+
+            if (episodeToken is not null && !SamePath(parentFolder, root.Path))
+            {
+                return new VideoUpsertItem(
+                    filePath,
+                    title,
+                    root.Id,
+                    root.IsNsfw,
+                    new VideoSeriesScanInfo(parentFolder, parentFolderName),
+                    Season: null,
+                    episodeToken.EpisodeNumber,
+                    AbsoluteEpisodeNumber: null);
+            }
+        }
+
+        return new VideoUpsertItem(filePath, title, root.Id, root.IsNsfw);
+    }
+
+    private static bool TryParseSeasonFolder(string folderName, out int seasonNumber)
+    {
+        var match = SeasonFolderPattern.Match(folderName);
+        if (match.Success && int.TryParse(match.Groups["season"].Value, out seasonNumber))
+        {
+            return true;
+        }
+
+        seasonNumber = 0;
+        return false;
+    }
+
+    private static EpisodeToken? ParseEpisodeToken(string fileName)
+    {
+        var match = EpisodeTokenPattern.Match(fileName);
+        if (!match.Success)
+        {
+            return null;
+        }
+
+        return int.TryParse(match.Groups["episode"].Value, out var episodeNumber)
+            ? new EpisodeToken(episodeNumber)
+            : null;
+    }
+
+    private static bool SamePath(string left, string right) =>
+        string.Equals(
+            Path.TrimEndingDirectorySeparator(left),
+            Path.TrimEndingDirectorySeparator(right),
+            StringComparison.OrdinalIgnoreCase);
+
+    private sealed record EpisodeToken(int EpisodeNumber);
 }

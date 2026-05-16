@@ -28,6 +28,9 @@ public sealed class LegacyVideoImportSqlTests
         Assert.Contains("v2.entity_markers", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_subtitles", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_counters", LegacyVideoImportSql.Import);
+        Assert.Contains("v2.video_season_details", LegacyVideoImportSql.Import);
+        Assert.Contains("'season'", LegacyVideoImportSql.Import);
+        Assert.Contains("season_folder_path", LegacyVideoImportSql.Import);
         Assert.Contains("orgasm_count", LegacyVideoImportSql.Import);
         Assert.Contains("checksum_md5", LegacyVideoImportSql.Import);
         Assert.Contains("oshash", LegacyVideoImportSql.Import);

@@ -482,6 +482,147 @@ public static class LegacyVideoImportSql
                     label = EXCLUDED.label,
                     updated_at = EXCLUDED.updated_at;
 
+                WITH legacy_seasons AS (
+                    SELECT
+                        series_id,
+                        season_number,
+                        'Season ' || season_number::text AS title,
+                        regexp_replace(MIN(file_path), '/[^/]*$', '') AS folder_path,
+                        MIN(created_at) AS created_at,
+                        MAX(updated_at) AS updated_at
+                    FROM public.video_episodes
+                    WHERE series_id IS NOT NULL
+                      AND season_number IS NOT NULL
+                    GROUP BY series_id, season_number
+                ),
+                existing_seasons AS (
+                    SELECT
+                        season.entity_id,
+                        legacy.series_id,
+                        legacy.season_number,
+                        legacy.title,
+                        legacy.folder_path,
+                        legacy.created_at,
+                        legacy.updated_at
+                    FROM legacy_seasons legacy
+                    INNER JOIN v2.video_season_details season
+                        ON season.series_entity_id = legacy.series_id
+                       AND season.season_number = legacy.season_number
+                ),
+                new_seasons AS (
+                    SELECT
+                        gen_random_uuid() AS entity_id,
+                        legacy.series_id,
+                        legacy.season_number,
+                        legacy.title,
+                        legacy.folder_path,
+                        legacy.created_at,
+                        legacy.updated_at
+                    FROM legacy_seasons legacy
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM existing_seasons existing
+                        WHERE existing.series_id = legacy.series_id
+                          AND existing.season_number = legacy.season_number
+                    )
+                ),
+                inserted_entities AS (
+                    INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
+                    SELECT entity_id, '{{EntityKindRegistry.VideoSeason.Code}}', title, created_at, updated_at
+                    FROM new_seasons
+                    ON CONFLICT (id) DO UPDATE SET
+                        kind_code = EXCLUDED.kind_code,
+                        title = EXCLUDED.title,
+                        updated_at = EXCLUDED.updated_at
+                    RETURNING id
+                ),
+                season_entities AS (
+                    SELECT * FROM existing_seasons
+                    UNION ALL
+                    SELECT * FROM new_seasons
+                )
+                INSERT INTO v2.video_season_details (entity_id, series_entity_id, season_number)
+                SELECT entity_id, series_id, season_number
+                FROM season_entities
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    series_entity_id = EXCLUDED.series_entity_id,
+                    season_number = EXCLUDED.season_number;
+
+                WITH season_folder_paths AS (
+                    SELECT
+                        season.entity_id,
+                        regexp_replace(MIN(episode.file_path), '/[^/]*$', '') AS season_folder_path,
+                        MAX(episode.updated_at) AS updated_at
+                    FROM public.video_episodes episode
+                    INNER JOIN v2.video_season_details season
+                        ON season.series_entity_id = episode.series_id
+                       AND season.season_number = episode.season_number
+                    WHERE episode.file_path IS NOT NULL
+                    GROUP BY season.entity_id
+                )
+                INSERT INTO v2.entity_sources (entity_id, code, value, updated_at)
+                SELECT entity_id, 'folder', season_folder_path, updated_at
+                FROM season_folder_paths
+                WHERE season_folder_path IS NOT NULL
+                ON CONFLICT (entity_id, code) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    updated_at = EXCLUDED.updated_at;
+
+                WITH season_folder_paths AS (
+                    SELECT
+                        season.entity_id,
+                        regexp_replace(MIN(episode.file_path), '/[^/]*$', '') AS season_folder_path,
+                        MIN(episode.created_at) AS created_at,
+                        MAX(episode.updated_at) AS updated_at
+                    FROM public.video_episodes episode
+                    INNER JOIN v2.video_season_details season
+                        ON season.series_entity_id = episode.series_id
+                       AND season.season_number = episode.season_number
+                    WHERE episode.file_path IS NOT NULL
+                    GROUP BY season.entity_id
+                )
+                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
+                SELECT gen_random_uuid(), entity_id, 'source', season_folder_path, NULL, NULL, created_at, updated_at
+                FROM season_folder_paths
+                WHERE season_folder_path IS NOT NULL
+                ON CONFLICT (entity_id, role) DO UPDATE SET
+                    path = EXCLUDED.path,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.video_series_details (entity_id, rendering_mode)
+                SELECT DISTINCT series_id, '{{VideoSeriesRenderingMode.Seasons.ToCode()}}'
+                FROM public.video_episodes
+                WHERE series_id IS NOT NULL
+                  AND season_number IS NOT NULL
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    rendering_mode = EXCLUDED.rendering_mode;
+
+                INSERT INTO v2.entity_positions (entity_id, code, value, label, updated_at)
+                SELECT season.entity_id, 'season', season.season_number, season.season_number::text, NOW()
+                FROM v2.video_season_details season
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM public.video_episodes episode
+                    WHERE episode.series_id = season.series_entity_id
+                      AND episode.season_number = season.season_number
+                )
+                ON CONFLICT (entity_id, code) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    label = EXCLUDED.label,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
+                SELECT season.series_entity_id, season.entity_id, '{{EntityRelationshipRegistry.Season.Code}}', season.season_number, NOW()
+                FROM v2.video_season_details season
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM public.video_episodes episode
+                    WHERE episode.series_id = season.series_entity_id
+                      AND episode.season_number = season.season_number
+                )
+                ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
+                    sort_order = EXCLUDED.sort_order;
+
                 INSERT INTO v2.entity_playback (entity_id, play_count, play_duration_seconds, resume_seconds, last_played_at, completed_at, updated_at)
                 SELECT id, play_count, play_duration, resume_time, last_played_at, NULL, updated_at
                 FROM public.video_episodes
@@ -513,9 +654,32 @@ public static class LegacyVideoImportSql
                 ON CONFLICT (entity_id, algorithm) DO UPDATE SET
                     value = EXCLUDED.value;
 
+                DELETE FROM v2.entity_hierarchy_links link
+                USING public.video_episodes episode
+                INNER JOIN v2.video_season_details season
+                    ON season.series_entity_id = episode.series_id
+                   AND season.season_number = episode.season_number
+                WHERE link.child_entity_id = episode.id
+                  AND link.relationship = '{{EntityRelationshipRegistry.Episode.Code}}'
+                  AND link.parent_entity_id <> season.entity_id;
+
                 INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT series_id, id, '{{EntityRelationshipRegistry.Episode.Code}}', (season_number * 10000) + COALESCE(episode_number, absolute_episode_number, 0), created_at
-                FROM public.video_episodes
+                SELECT season.entity_id, episode.id, '{{EntityRelationshipRegistry.Episode.Code}}', COALESCE(episode.episode_number, episode.absolute_episode_number, 0), episode.created_at
+                FROM public.video_episodes episode
+                INNER JOIN v2.video_season_details season
+                    ON season.series_entity_id = episode.series_id
+                   AND season.season_number = episode.season_number
+                ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
+                    sort_order = EXCLUDED.sort_order;
+
+                INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
+                SELECT episode.series_id, episode.id, '{{EntityRelationshipRegistry.Episode.Code}}', (COALESCE(episode.season_number, 0) * 10000) + COALESCE(episode.episode_number, episode.absolute_episode_number, 0), episode.created_at
+                FROM public.video_episodes episode
+                LEFT JOIN v2.video_season_details season
+                    ON season.series_entity_id = episode.series_id
+                   AND season.season_number = episode.season_number
+                WHERE episode.series_id IS NOT NULL
+                  AND season.entity_id IS NULL
                 ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
                     sort_order = EXCLUDED.sort_order;
 

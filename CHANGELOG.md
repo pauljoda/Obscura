@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Scanned and migrated TV-style series now keep their season hierarchy, so shows with `Season 1` folders open as series → season → episode instead of flat episode lists while preserving imported metadata.
 - Series detail pages now show the series metadata, a horizontal season poster row, and ordered episode grids. Season pages now load their own structured detail with episodes from the backend hierarchy instead of relying on a placeholder.
 - Video timeline hover previews now show the active marker chapter name while hovering inside a marked section, and omit the chapter label when no markers define chapters.
 - The desktop sidebar now remembers whether it was collapsed before a reload, so the app shell opens at the saved width without flashing expanded first.
@@ -175,6 +176,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- TV-style series scans and v1 video imports now create `video-season` entities plus series → season and season → episode links, while reusing migrated series IDs and metadata instead of duplicating or flattening the graph.
 - The desktop sidebar collapsed state now hydrates from the existing browser cookie before the root layout renders.
 - Video player posters no longer stack under the active video after the chapter timeline mounts inside VidStack.
 - Video player marker chips now opt back into pointer events inside the controls overlay, so clicking a chip seeks to that marker instead of doing nothing.

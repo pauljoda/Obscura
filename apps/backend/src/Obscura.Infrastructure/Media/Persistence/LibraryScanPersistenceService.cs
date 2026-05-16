@@ -403,6 +403,8 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         if (items.Count == 0) return [];
 
         var filePaths = items.Select(i => i.FilePath).ToList();
+        var seriesCache = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        var seasonCache = new Dictionary<(Guid SeriesId, int SeasonNumber), Guid>();
 
         var existingEntities = await db.EntityFiles.AsNoTracking()
             .Where(f => f.Role == EntityFileRole.Source && filePaths.Contains(f.Path))
@@ -419,6 +421,13 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
             {
                 var tracked = await db.Entities.FindAsync([existing.Id], cancellationToken);
                 if (tracked is not null) tracked.UpdatedAt = now;
+                await MaterializeVideoHierarchyAsync(
+                    existing.Id,
+                    item,
+                    now,
+                    seriesCache,
+                    seasonCache,
+                    cancellationToken);
                 results.Add(existing.Id);
                 continue;
             }
@@ -435,11 +444,350 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
             {
                 db.EntityFlags.Add(new EntityFlagRow { EntityId = id, IsNsfw = true, UpdatedAt = now });
             }
+            await MaterializeVideoHierarchyAsync(
+                id,
+                item,
+                now,
+                seriesCache,
+                seasonCache,
+                cancellationToken);
             results.Add(id);
         }
 
         await db.SaveChangesAsync(cancellationToken);
         return results;
+    }
+
+    private async Task MaterializeVideoHierarchyAsync(
+        Guid videoId,
+        VideoUpsertItem item,
+        DateTimeOffset now,
+        Dictionary<string, Guid> seriesCache,
+        Dictionary<(Guid SeriesId, int SeasonNumber), Guid> seasonCache,
+        CancellationToken cancellationToken)
+    {
+        if (item.EpisodeNumber is { } episodeNumber)
+        {
+            await UpsertPositionAsync(videoId, "episode", episodeNumber, episodeNumber.ToString(), now, cancellationToken);
+        }
+
+        if (item.AbsoluteEpisodeNumber is { } absoluteEpisodeNumber)
+        {
+            await UpsertPositionAsync(videoId, "absolute-episode", absoluteEpisodeNumber, absoluteEpisodeNumber.ToString(), now, cancellationToken);
+        }
+
+        if (item.Series is null)
+        {
+            return;
+        }
+
+        var seriesId = await UpsertVideoSeriesFromScanAsync(
+            item.Series,
+            item.Season is not null,
+            item.IsNsfw,
+            now,
+            seriesCache,
+            cancellationToken);
+
+        if (item.Season is { } season)
+        {
+            await UpsertPositionAsync(videoId, "season", season.SeasonNumber, season.SeasonNumber.ToString(), now, cancellationToken);
+            var seasonId = await UpsertVideoSeasonFromScanAsync(
+                seriesId,
+                season,
+                item.IsNsfw,
+                now,
+                seasonCache,
+                cancellationToken);
+            var episodeSortOrder = item.EpisodeNumber ?? item.AbsoluteEpisodeNumber ?? 0;
+            await UpsertExclusiveHierarchyLinkAsync(
+                seasonId,
+                videoId,
+                EntityRelationshipRegistry.Episode.Code,
+                episodeSortOrder,
+                now,
+                cancellationToken);
+            return;
+        }
+
+        var sortOrder = item.EpisodeNumber ?? item.AbsoluteEpisodeNumber ?? 0;
+        await UpsertExclusiveHierarchyLinkAsync(
+            seriesId,
+            videoId,
+            EntityRelationshipRegistry.Episode.Code,
+            sortOrder,
+            now,
+            cancellationToken);
+    }
+
+    private async Task<Guid> UpsertVideoSeriesFromScanAsync(
+        VideoSeriesScanInfo series,
+        bool hasSeasons,
+        bool isNsfw,
+        DateTimeOffset now,
+        Dictionary<string, Guid> seriesCache,
+        CancellationToken cancellationToken)
+    {
+        if (seriesCache.TryGetValue(series.FolderPath, out var cachedSeriesId))
+        {
+            return cachedSeriesId;
+        }
+
+        var existing = await FindEntityBySourcePath(EntityKindRegistry.VideoSeries.Code, series.FolderPath, cancellationToken)
+            ?? await FindEntityBySourceValueAsync(EntityKindRegistry.VideoSeries.Code, "folder", series.FolderPath, cancellationToken);
+        var seriesId = existing?.Id ?? Guid.NewGuid();
+
+        if (existing is null)
+        {
+            db.Entities.Add(new EntityRow
+            {
+                Id = seriesId,
+                KindCode = EntityKindRegistry.VideoSeries.Code,
+                Title = series.Title,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+        else
+        {
+            var tracked = await db.Entities.FindAsync([seriesId], cancellationToken);
+            if (tracked is not null) tracked.UpdatedAt = now;
+        }
+
+        await EnsureEntityFileAsync(seriesId, EntityFileRole.Source, series.FolderPath, sizeBytes: null, now, cancellationToken);
+        await EnsureEntitySourceAsync(seriesId, "folder", series.FolderPath, now, cancellationToken);
+        await EnsureVideoSeriesDetailAsync(seriesId, hasSeasons, now, cancellationToken);
+        if (isNsfw)
+        {
+            await EnsureEntityFlagAsync(seriesId, now, cancellationToken);
+        }
+
+        seriesCache[series.FolderPath] = seriesId;
+        return seriesId;
+    }
+
+    private async Task<Guid> UpsertVideoSeasonFromScanAsync(
+        Guid seriesId,
+        VideoSeasonScanInfo season,
+        bool isNsfw,
+        DateTimeOffset now,
+        Dictionary<(Guid SeriesId, int SeasonNumber), Guid> seasonCache,
+        CancellationToken cancellationToken)
+    {
+        var cacheKey = (seriesId, season.SeasonNumber);
+        if (seasonCache.TryGetValue(cacheKey, out var cachedSeasonId))
+        {
+            return cachedSeasonId;
+        }
+
+        var existingDetail = db.VideoSeasonDetails.Local.FirstOrDefault(row =>
+                row.SeriesEntityId == seriesId && row.SeasonNumber == season.SeasonNumber)
+            ?? await db.VideoSeasonDetails.FirstOrDefaultAsync(row =>
+                row.SeriesEntityId == seriesId && row.SeasonNumber == season.SeasonNumber, cancellationToken);
+        var seasonId = existingDetail?.EntityId ?? Guid.NewGuid();
+
+        if (existingDetail is null)
+        {
+            db.Entities.Add(new EntityRow
+            {
+                Id = seasonId,
+                KindCode = EntityKindRegistry.VideoSeason.Code,
+                Title = season.Title,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            db.VideoSeasonDetails.Add(new VideoSeasonDetailRow
+            {
+                EntityId = seasonId,
+                SeriesEntityId = seriesId,
+                SeasonNumber = season.SeasonNumber
+            });
+        }
+        else
+        {
+            var tracked = await db.Entities.FindAsync([seasonId], cancellationToken);
+            if (tracked is not null)
+            {
+                tracked.Title = season.Title;
+                tracked.UpdatedAt = now;
+            }
+        }
+
+        await EnsureEntityFileAsync(seasonId, EntityFileRole.Source, season.FolderPath, sizeBytes: null, now, cancellationToken);
+        await EnsureEntitySourceAsync(seasonId, "folder", season.FolderPath, now, cancellationToken);
+        await UpsertPositionAsync(seasonId, "season", season.SeasonNumber, season.SeasonNumber.ToString(), now, cancellationToken);
+        await UpsertExclusiveHierarchyLinkAsync(
+            seriesId,
+            seasonId,
+            EntityRelationshipRegistry.Season.Code,
+            season.SeasonNumber,
+            now,
+            cancellationToken);
+        if (isNsfw)
+        {
+            await EnsureEntityFlagAsync(seasonId, now, cancellationToken);
+        }
+
+        seasonCache[cacheKey] = seasonId;
+        return seasonId;
+    }
+
+    private async Task EnsureVideoSeriesDetailAsync(
+        Guid seriesId,
+        bool hasSeasons,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var detail = db.VideoSeriesDetails.Local.FirstOrDefault(row => row.EntityId == seriesId)
+            ?? await db.VideoSeriesDetails.FindAsync([seriesId], cancellationToken);
+        if (detail is null)
+        {
+            db.VideoSeriesDetails.Add(new VideoSeriesDetailRow
+            {
+                EntityId = seriesId,
+                RenderingMode = hasSeasons ? VideoSeriesRenderingMode.Seasons : VideoSeriesRenderingMode.Flat
+            });
+            return;
+        }
+
+        if (hasSeasons)
+        {
+            detail.RenderingMode = VideoSeriesRenderingMode.Seasons;
+        }
+    }
+
+    private async Task UpsertPositionAsync(
+        Guid entityId,
+        string code,
+        int value,
+        string? label,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var position = db.EntityPositions.Local.FirstOrDefault(row => row.EntityId == entityId && row.Code == code)
+            ?? await db.EntityPositions.FindAsync([entityId, code], cancellationToken);
+        if (position is null)
+        {
+            db.EntityPositions.Add(new EntityPositionRow
+            {
+                EntityId = entityId,
+                Code = code,
+                Value = value,
+                Label = label,
+                UpdatedAt = now
+            });
+            return;
+        }
+
+        position.Value = value;
+        position.Label = label;
+        position.UpdatedAt = now;
+    }
+
+    private async Task UpsertExclusiveHierarchyLinkAsync(
+        Guid parentId,
+        Guid childId,
+        string relationship,
+        int sortOrder,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var localLinks = db.EntityHierarchyLinks.Local
+            .Where(link => link.ChildEntityId == childId && link.Relationship == relationship)
+            .ToList();
+        var storedLinks = await db.EntityHierarchyLinks
+            .Where(link => link.ChildEntityId == childId && link.Relationship == relationship)
+            .ToListAsync(cancellationToken);
+
+        foreach (var link in localLinks.Concat(storedLinks).DistinctBy(link => new { link.ParentEntityId, link.ChildEntityId, link.Relationship }))
+        {
+            if (link.ParentEntityId == parentId)
+            {
+                link.SortOrder = sortOrder;
+                return;
+            }
+
+            db.EntityHierarchyLinks.Remove(link);
+        }
+
+        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        {
+            ParentEntityId = parentId,
+            ChildEntityId = childId,
+            Relationship = relationship,
+            SortOrder = sortOrder,
+            CreatedAt = now
+        });
+    }
+
+    private async Task EnsureEntityFileAsync(
+        Guid entityId,
+        EntityFileRole role,
+        string path,
+        long? sizeBytes,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var file = db.EntityFiles.Local.FirstOrDefault(row => row.EntityId == entityId && row.Role == role)
+            ?? await db.EntityFiles.FirstOrDefaultAsync(row =>
+                row.EntityId == entityId && row.Role == role, cancellationToken);
+        if (file is null)
+        {
+            db.EntityFiles.Add(new EntityFileRow
+            {
+                Id = Guid.NewGuid(),
+                EntityId = entityId,
+                Role = role,
+                Path = path,
+                SizeBytes = sizeBytes,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            return;
+        }
+
+        file.Path = path;
+        file.SizeBytes = sizeBytes;
+        file.UpdatedAt = now;
+    }
+
+    private async Task EnsureEntitySourceAsync(
+        Guid entityId,
+        string code,
+        string value,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var source = db.EntitySources.Local.FirstOrDefault(row => row.EntityId == entityId && row.Code == code)
+            ?? await db.EntitySources.FindAsync([entityId, code], cancellationToken);
+        if (source is null)
+        {
+            db.EntitySources.Add(new EntitySourceRow
+            {
+                EntityId = entityId,
+                Code = code,
+                Value = value,
+                UpdatedAt = now
+            });
+            return;
+        }
+
+        source.Value = value;
+        source.UpdatedAt = now;
+    }
+
+    private async Task EnsureEntityFlagAsync(Guid entityId, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var flag = db.EntityFlags.Local.FirstOrDefault(row => row.EntityId == entityId)
+            ?? await db.EntityFlags.FindAsync([entityId], cancellationToken);
+        if (flag is null)
+        {
+            db.EntityFlags.Add(new EntityFlagRow { EntityId = entityId, IsNsfw = true, UpdatedAt = now });
+            return;
+        }
+
+        flag.IsNsfw = true;
+        flag.UpdatedAt = now;
     }
 
     public async Task<IReadOnlyDictionary<Guid, DownstreamNeeds>> CheckDownstreamNeedsBatchAsync(
@@ -787,6 +1135,23 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
 
         return await db.Entities
             .FirstOrDefaultAsync(e => e.Id == entityId.Value && e.KindCode == kindCode, cancellationToken);
+    }
+
+    private async Task<EntityRow?> FindEntityBySourceValueAsync(
+        string kindCode,
+        string sourceCode,
+        string value,
+        CancellationToken cancellationToken)
+    {
+        var entityId = await db.EntitySources.AsNoTracking()
+            .Where(source => source.Code == sourceCode && source.Value == value)
+            .Select(source => (Guid?)source.EntityId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (entityId is null) return null;
+
+        return await db.Entities
+            .FirstOrDefaultAsync(entity => entity.Id == entityId.Value && entity.KindCode == kindCode, cancellationToken);
     }
 
     private async Task<int> RemoveStaleEntitiesBySourcePath(
