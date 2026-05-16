@@ -121,6 +121,79 @@ public static class EntityEndpoints
             .Produces<EntityCard>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
+        group.MapPost("/{id:guid}/markers", async (
+            Guid id,
+            EntityMarkerWriteRequest request,
+            EntityService entities,
+            CancellationToken cancellationToken) =>
+            {
+                var entity = await entities.CreateMarkerAsync(
+                    new CreateEntityMarkerCommand(
+                        id,
+                        request.Title,
+                        request.Seconds,
+                        request.EndSeconds),
+                    cancellationToken);
+
+                return entity is null
+                    ? Results.NotFound(new ApiProblem(
+                        "entity_not_found",
+                        $"Entity '{id}' was not found."))
+                    : Results.Ok(entity);
+            })
+            .WithName("CreateEntityMarker")
+            .WithSummary("Adds a timeline marker to one entity.")
+            .Produces<EntityCard>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
+
+        group.MapPatch("/{id:guid}/markers/{markerId:guid}", async (
+            Guid id,
+            Guid markerId,
+            EntityMarkerWriteRequest request,
+            EntityService entities,
+            CancellationToken cancellationToken) =>
+            {
+                var entity = await entities.UpdateMarkerAsync(
+                    new UpdateEntityMarkerCommand(
+                        id,
+                        markerId,
+                        request.Title,
+                        request.Seconds,
+                        request.EndSeconds),
+                    cancellationToken);
+
+                return entity is null
+                    ? Results.NotFound(new ApiProblem(
+                        "entity_not_found",
+                        $"Entity '{id}' was not found."))
+                    : Results.Ok(entity);
+            })
+            .WithName("UpdateEntityMarker")
+            .WithSummary("Updates a timeline marker for one entity.")
+            .Produces<EntityCard>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
+
+        group.MapDelete("/{id:guid}/markers/{markerId:guid}", async (
+            Guid id,
+            Guid markerId,
+            EntityService entities,
+            CancellationToken cancellationToken) =>
+            {
+                var entity = await entities.DeleteMarkerAsync(
+                    new DeleteEntityMarkerCommand(id, markerId),
+                    cancellationToken);
+
+                return entity is null
+                    ? Results.NotFound(new ApiProblem(
+                        "entity_not_found",
+                        $"Entity '{id}' was not found."))
+                    : Results.Ok(entity);
+            })
+            .WithName("DeleteEntityMarker")
+            .WithSummary("Deletes a timeline marker from one entity.")
+            .Produces<EntityCard>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
+
         return group;
     }
 

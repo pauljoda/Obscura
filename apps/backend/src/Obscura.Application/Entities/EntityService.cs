@@ -13,6 +13,7 @@ public sealed class EntityService
 {
     private readonly IEntityCatalog _entities;
     private readonly IRatingService _ratings;
+    private readonly IEntityMarkerService _markers;
     private readonly ISettingsService _settings;
 
     /// <summary>
@@ -20,11 +21,17 @@ public sealed class EntityService
     /// </summary>
     /// <param name="entities">Catalog used for entity read projections.</param>
     /// <param name="ratings">Capability writer used for rating and flag changes.</param>
+    /// <param name="markers">Capability writer used for marker collection changes.</param>
     /// <param name="settings">Server-side settings used to enforce visibility before contracts are serialized.</param>
-    public EntityService(IEntityCatalog entities, IRatingService ratings, ISettingsService settings)
+    public EntityService(
+        IEntityCatalog entities,
+        IRatingService ratings,
+        IEntityMarkerService markers,
+        ISettingsService settings)
     {
         _entities = entities;
         _ratings = ratings;
+        _markers = markers;
         _settings = settings;
     }
 
@@ -118,6 +125,62 @@ public sealed class EntityService
             command.ResumeSeconds,
             command.DurationSeconds,
             command.Completed,
+            cancellationToken);
+        return entity is null ? null : ContractMapper.ToEntityCard(entity);
+    }
+
+    /// <summary>
+    /// Adds a marker to an entity and returns the updated projection.
+    /// </summary>
+    /// <param name="command">Marker creation command from the application boundary.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>API-ready updated entity card, or null when the entity is missing.</returns>
+    public async Task<EntityCard?> CreateMarkerAsync(
+        CreateEntityMarkerCommand command,
+        CancellationToken cancellationToken)
+    {
+        var entity = await _markers.CreateMarkerAsync(
+            command.EntityId,
+            command.Title,
+            command.Seconds,
+            command.EndSeconds,
+            cancellationToken);
+        return entity is null ? null : ContractMapper.ToEntityCard(entity);
+    }
+
+    /// <summary>
+    /// Updates an entity marker and returns the updated projection.
+    /// </summary>
+    /// <param name="command">Marker update command from the application boundary.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>API-ready updated entity card, or null when the entity is missing.</returns>
+    public async Task<EntityCard?> UpdateMarkerAsync(
+        UpdateEntityMarkerCommand command,
+        CancellationToken cancellationToken)
+    {
+        var entity = await _markers.UpdateMarkerAsync(
+            command.EntityId,
+            command.MarkerId,
+            command.Title,
+            command.Seconds,
+            command.EndSeconds,
+            cancellationToken);
+        return entity is null ? null : ContractMapper.ToEntityCard(entity);
+    }
+
+    /// <summary>
+    /// Deletes an entity marker and returns the updated projection.
+    /// </summary>
+    /// <param name="command">Marker delete command from the application boundary.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>API-ready updated entity card, or null when the entity is missing.</returns>
+    public async Task<EntityCard?> DeleteMarkerAsync(
+        DeleteEntityMarkerCommand command,
+        CancellationToken cancellationToken)
+    {
+        var entity = await _markers.DeleteMarkerAsync(
+            command.EntityId,
+            command.MarkerId,
             cancellationToken);
         return entity is null ? null : ContractMapper.ToEntityCard(entity);
     }

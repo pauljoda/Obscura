@@ -79,3 +79,14 @@ public sealed record PlaybackUpdateRequest(
     double? ResumeSeconds,
     double? DurationSeconds,
     bool? Completed);
+
+/// <summary>
+/// Request body for creating or updating a timeline marker.
+/// </summary>
+/// <param name="Title">Human-readable marker label.</param>
+/// <param name="Seconds">Marker start time in seconds.</param>
+/// <param name="EndSeconds">Optional marker end time in seconds.</param>
+public sealed record EntityMarkerWriteRequest(
+    string Title,
+    double Seconds,
+    double? EndSeconds);

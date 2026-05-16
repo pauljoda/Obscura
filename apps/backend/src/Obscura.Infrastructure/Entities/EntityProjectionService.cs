@@ -12,7 +12,13 @@ namespace Obscura.Infrastructure.Entities;
 /// <summary>
 /// Projects v2 PostgreSQL entity rows into Domain objects used by application services.
 /// </summary>
-public sealed partial class EntityProjectionService : IEntityCatalog, IEntityDetails, IEntityHierarchy, IRatingService, IVideoLibrary
+public sealed partial class EntityProjectionService :
+    IEntityCatalog,
+    IEntityDetails,
+    IEntityHierarchy,
+    IRatingService,
+    IEntityMarkerService,
+    IVideoLibrary
 {
     private const int PageSize = 50;
     private readonly ObscuraDbContext _db;
@@ -269,6 +275,113 @@ public sealed partial class EntityProjectionService : IEntityCatalog, IEntityDet
 
         return await GetAsync(id, cancellationToken);
     }
+
+    /// <inheritdoc />
+    public async Task<Entity?> CreateMarkerAsync(
+        Guid id,
+        string title,
+        double seconds,
+        double? endSeconds,
+        CancellationToken cancellationToken)
+    {
+        var entity = await _db.Entities
+            .FirstOrDefaultAsync(row => row.Id == id && row.DeletedAt == null, cancellationToken);
+
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        _db.EntityMarkers.Add(new EntityMarkerRow
+        {
+            Id = Guid.NewGuid(),
+            EntityId = id,
+            Title = NormalizeMarkerTitle(title),
+            Seconds = NormalizeMarkerSeconds(seconds),
+            EndSeconds = NormalizeOptionalMarkerSeconds(endSeconds),
+            CreatedAt = now,
+            UpdatedAt = now
+        });
+
+        entity.UpdatedAt = now;
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<Entity?> UpdateMarkerAsync(
+        Guid id,
+        Guid markerId,
+        string title,
+        double seconds,
+        double? endSeconds,
+        CancellationToken cancellationToken)
+    {
+        var entity = await _db.Entities
+            .FirstOrDefaultAsync(row => row.Id == id && row.DeletedAt == null, cancellationToken);
+
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var marker = await _db.EntityMarkers
+            .FirstOrDefaultAsync(row => row.Id == markerId && row.EntityId == id, cancellationToken);
+
+        if (marker is not null)
+        {
+            var now = DateTimeOffset.UtcNow;
+            marker.Title = NormalizeMarkerTitle(title);
+            marker.Seconds = NormalizeMarkerSeconds(seconds);
+            marker.EndSeconds = NormalizeOptionalMarkerSeconds(endSeconds);
+            marker.UpdatedAt = now;
+            entity.UpdatedAt = now;
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        return await GetAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<Entity?> DeleteMarkerAsync(
+        Guid id,
+        Guid markerId,
+        CancellationToken cancellationToken)
+    {
+        var entity = await _db.Entities
+            .FirstOrDefaultAsync(row => row.Id == id && row.DeletedAt == null, cancellationToken);
+
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var marker = await _db.EntityMarkers
+            .FirstOrDefaultAsync(row => row.Id == markerId && row.EntityId == id, cancellationToken);
+
+        if (marker is not null)
+        {
+            _db.EntityMarkers.Remove(marker);
+            entity.UpdatedAt = DateTimeOffset.UtcNow;
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        return await GetAsync(id, cancellationToken);
+    }
+
+    private static string NormalizeMarkerTitle(string title)
+    {
+        var normalized = title.Trim();
+        return string.IsNullOrWhiteSpace(normalized) ? "Marker" : normalized;
+    }
+
+    private static double NormalizeMarkerSeconds(double seconds) =>
+        double.IsFinite(seconds) ? Math.Max(0, seconds) : 0;
+
+    private static double? NormalizeOptionalMarkerSeconds(double? seconds) =>
+        seconds.HasValue ? NormalizeMarkerSeconds(seconds.Value) : null;
 
     /// <inheritdoc />
     public Task<EntityPage> ListVideosAsync(bool hideNsfw, CancellationToken cancellationToken) =>

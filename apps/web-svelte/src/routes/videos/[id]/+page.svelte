@@ -54,6 +54,7 @@
   import VideoPlayer, {
     type VideoPlayerHandle,
   } from "$lib/components/VideoPlayer.svelte";
+  import VideoMarkerEditor from "$lib/components/VideoMarkerEditor.svelte";
   import VideoTranscriptPanel from "$lib/components/VideoTranscriptPanel.svelte";
 
   type LoadState = "loading" | "ready" | "error";
@@ -836,23 +837,14 @@
             </div>
           {/if}
         {:else if section.id === "markers"}
-          {#if card.markers.length > 0}
-            <div class="marker-tab-list">
-              {#each card.markers as marker (marker.id)}
-                <button type="button" class="marker-tab-row" onclick={() => handleSeek(marker.seconds)}>
-                  <span class="marker-time">
-                    {marker.timestamp}
-                    {#if marker.endSeconds != null}
-                      <span>→ {formatTimestamp(marker.endSeconds)}</span>
-                    {/if}
-                  </span>
-                  <strong>{marker.title}</strong>
-                </button>
-              {/each}
-            </div>
-          {:else}
-            <div class="tab-empty-state">No markers yet.</div>
-          {/if}
+          <VideoMarkerEditor
+            entityId={videoId}
+            markers={card.markers}
+            getCurrentTime={() => currentTime}
+            {displayTime}
+            onSeek={handleSeek}
+            onRefresh={refreshVideo}
+          />
         {:else if section.id === "transcript"}
           {#if isTranscriptDockActive}
             <div class="transcript-tab-stack">
@@ -1029,7 +1021,6 @@
   }
 
   .tab-data-list,
-  .marker-tab-list,
   .transcript-tab-stack {
     display: grid;
     gap: 0;
@@ -1060,46 +1051,6 @@
     overflow-wrap: anywhere;
     color: var(--color-text-secondary, #c4c9d4);
     font-weight: 500;
-  }
-
-  .marker-tab-row {
-    display: grid;
-    grid-template-columns: minmax(6rem, max-content) minmax(0, 1fr);
-    gap: 1rem;
-    align-items: center;
-    width: 100%;
-    min-width: 0;
-    padding: 0.75rem 0;
-    border: 0;
-    border-bottom: 1px solid color-mix(in srgb, var(--color-border, #1c2235) 56%, transparent);
-    background: transparent;
-    color: inherit;
-    text-align: left;
-    cursor: pointer;
-  }
-
-  .marker-tab-row:hover {
-    color: var(--color-text-accent, #c49a5a);
-  }
-
-  .marker-time {
-    color: var(--color-text-accent, #c49a5a);
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.78rem;
-  }
-
-  .marker-time span {
-    color: var(--color-text-disabled, #4a5260);
-  }
-
-  .marker-tab-row strong {
-    min-width: 0;
-    overflow: hidden;
-    color: var(--color-text-secondary, #c4c9d4);
-    font-size: 0.88rem;
-    font-weight: 600;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .tab-empty-state,

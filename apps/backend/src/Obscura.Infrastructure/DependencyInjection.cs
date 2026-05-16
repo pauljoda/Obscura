@@ -96,6 +96,7 @@ public static class DependencyInjection
         services.AddScoped<IEntityDetails>(provider => provider.GetRequiredService<EntityProjectionService>());
         services.AddScoped<IEntityHierarchy>(provider => provider.GetRequiredService<EntityProjectionService>());
         services.AddScoped<IRatingService>(provider => provider.GetRequiredService<EntityProjectionService>());
+        services.AddScoped<IEntityMarkerService>(provider => provider.GetRequiredService<EntityProjectionService>());
         services.AddScoped<IVideoLibrary>(provider => provider.GetRequiredService<EntityProjectionService>());
         services.AddScoped<IVideoSourceService, VideoSourceService>();
         services.AddSingleton(new HlsAssetServiceOptions(

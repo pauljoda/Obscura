@@ -418,6 +418,60 @@ export async function updateV2EntityPlayback(
   return (await response.json()) as V2EntityCard;
 }
 
+export interface V2EntityMarkerWriteRequest {
+  title: string;
+  seconds: number;
+  endSeconds?: number | null;
+}
+
+async function writeV2EntityMarker(
+  id: string,
+  method: "POST" | "PATCH" | "DELETE",
+  markerId: string | null,
+  payload?: V2EntityMarkerWriteRequest,
+  options?: V2RequestOptions,
+): Promise<V2EntityCard> {
+  const markerPath = markerId ? `/${encodeURIComponent(markerId)}` : "";
+  const response = await fetch(v2ApiPath(`/entities/${encodeURIComponent(id)}/markers${markerPath}`), {
+    method,
+    headers: payload ? { "Content-Type": "application/json" } : undefined,
+    body: payload ? JSON.stringify(payload) : undefined,
+    signal: options?.signal,
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Failed to ${method.toLowerCase()} marker for ${id}`);
+  }
+
+  return (await response.json()) as V2EntityCard;
+}
+
+export function createV2EntityMarker(
+  id: string,
+  payload: V2EntityMarkerWriteRequest,
+  options?: V2RequestOptions,
+): Promise<V2EntityCard> {
+  return writeV2EntityMarker(id, "POST", null, payload, options);
+}
+
+export function updateV2EntityMarker(
+  id: string,
+  markerId: string,
+  payload: V2EntityMarkerWriteRequest,
+  options?: V2RequestOptions,
+): Promise<V2EntityCard> {
+  return writeV2EntityMarker(id, "PATCH", markerId, payload, options);
+}
+
+export function deleteV2EntityMarker(
+  id: string,
+  markerId: string,
+  options?: V2RequestOptions,
+): Promise<V2EntityCard> {
+  return writeV2EntityMarker(id, "DELETE", markerId, undefined, options);
+}
+
 export function fetchV2Jobs(options?: V2RequestOptions): Promise<V2JobListResponse> {
   return listJobs({ signal: options?.signal }).then((response) => response.data);
 }

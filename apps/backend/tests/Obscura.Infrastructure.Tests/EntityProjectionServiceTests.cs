@@ -213,6 +213,42 @@ public sealed class EntityProjectionServiceTests
     }
 
     [Fact]
+    public async Task MarkerWritesRefreshMarkerCapability()
+    {
+        await using var db = CreateContext();
+        var videoId = Guid.Parse("31313131-3131-3131-3131-313131313131");
+        SeedEntity(db, videoId, "video", "Marked Video");
+        await db.SaveChangesAsync();
+
+        var service = new EntityProjectionService(db);
+        var created = await service.CreateMarkerAsync(
+            videoId,
+            "Cold Open",
+            seconds: 12,
+            endSeconds: 18,
+            CancellationToken.None);
+        var marker = Assert.Single(created?.GetCapability(CapabilityRegistry.Markers).Items!);
+
+        var updated = await service.UpdateMarkerAsync(
+            videoId,
+            marker.Id,
+            "Opening Beat",
+            seconds: 14,
+            endSeconds: null,
+            CancellationToken.None);
+
+        marker = Assert.Single(updated?.GetCapability(CapabilityRegistry.Markers).Items!);
+        Assert.Equal("Opening Beat", marker.Title);
+        Assert.Equal(14, marker.Seconds);
+        Assert.Null(marker.EndSeconds);
+
+        var deleted = await service.DeleteMarkerAsync(videoId, marker.Id, CancellationToken.None);
+
+        Assert.False(deleted?.TryGetCapability(CapabilityRegistry.Markers, out _) ?? true);
+        Assert.Empty(db.EntityMarkers);
+    }
+
+    [Fact]
     public async Task ListHidesNsfwEntitiesWhenRequested()
     {
         await using var db = CreateContext();

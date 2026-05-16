@@ -67,6 +67,7 @@ describe("/videos/[id] detail layout", () => {
   it("adds old video panels through shared EntityDetail section-driven tabs", () => {
     const pageSource = readLocalSource("./+page.svelte");
 
+    expect(pageSource).toContain("VideoMarkerEditor");
     expect(pageSource).toContain("detailSections");
     expect(pageSource).toContain("detailTabs");
     expect(pageSource).toContain("sections: [");
@@ -80,7 +81,9 @@ describe("/videos/[id] detail layout", () => {
     expect(pageSource).toContain("icon:");
     expect(pageSource).toContain("{#snippet sectionContent(section)}");
     expect(pageSource).toContain("<VideoTranscriptPanel");
-    expect(pageSource).toContain("marker-tab-row");
+    expect(pageSource).toContain("<VideoMarkerEditor");
+    expect(pageSource).toContain("markers={card.markers}");
+    expect(pageSource).toContain("entityId={videoId}");
     expect(pageSource).toContain('layout: "grid"');
     expect(pageSource).toContain('sections: ["files"]');
   });

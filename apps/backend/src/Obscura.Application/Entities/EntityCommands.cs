@@ -34,3 +34,38 @@ public sealed record UpdatePlaybackCommand(
     double? ResumeSeconds,
     double? DurationSeconds,
     bool? Completed);
+
+/// <summary>
+/// Use-case command for creating a timeline marker on a media entity.
+/// </summary>
+/// <param name="EntityId">Entity whose marker collection should change.</param>
+/// <param name="Title">Human-readable marker label.</param>
+/// <param name="Seconds">Marker start time in seconds.</param>
+/// <param name="EndSeconds">Optional marker end time in seconds.</param>
+public sealed record CreateEntityMarkerCommand(
+    Guid EntityId,
+    string Title,
+    double Seconds,
+    double? EndSeconds);
+
+/// <summary>
+/// Use-case command for updating a timeline marker on a media entity.
+/// </summary>
+/// <param name="EntityId">Entity whose marker collection should change.</param>
+/// <param name="MarkerId">Marker to update.</param>
+/// <param name="Title">Human-readable marker label.</param>
+/// <param name="Seconds">Marker start time in seconds.</param>
+/// <param name="EndSeconds">Optional marker end time in seconds.</param>
+public sealed record UpdateEntityMarkerCommand(
+    Guid EntityId,
+    Guid MarkerId,
+    string Title,
+    double Seconds,
+    double? EndSeconds);
+
+/// <summary>
+/// Use-case command for deleting a timeline marker from a media entity.
+/// </summary>
+/// <param name="EntityId">Entity whose marker collection should change.</param>
+/// <param name="MarkerId">Marker to delete.</param>
+public sealed record DeleteEntityMarkerCommand(Guid EntityId, Guid MarkerId);

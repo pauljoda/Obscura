@@ -1,23 +1,32 @@
 <script lang="ts">
   import { Plus, Pencil, Trash2 } from "@lucide/svelte";
   import { Button } from "@obscura/ui-svelte";
-  import type { VideoDetailDto, VideoMarkerDto } from "@obscura/contracts";
   import {
-    createVideoMarker,
-    updateVideoMarker,
-    deleteVideoMarker,
-  } from "$lib/v1/api/videos-v1";
+    createV2EntityMarker,
+    updateV2EntityMarker,
+    deleteV2EntityMarker,
+  } from "$lib/api/v2";
+  import type { EntityDetailMarker } from "$lib/entities/entity-detail";
   import TimeMarkerForm, { formatSecondsInput } from "./TimeMarkerForm.svelte";
 
   interface Props {
-    video: VideoDetailDto;
+    entityId: string;
+    markers: EntityDetailMarker[];
     /** A reactive getter for the current playback time so we can sync now-buttons. */
     getCurrentTime: () => number;
     displayTime: number;
-    onRefresh: () => void;
+    onSeek?: (seconds: number) => void;
+    onRefresh: () => void | Promise<void>;
   }
 
-  let { video, getCurrentTime, displayTime, onRefresh }: Props = $props();
+  let {
+    entityId,
+    markers,
+    getCurrentTime,
+    displayTime,
+    onSeek,
+    onRefresh,
+  }: Props = $props();
 
   let editingMarker = $state<string | null>(null);
   let markerTitle = $state("");
@@ -32,7 +41,7 @@
     markerEndSeconds = null;
   }
 
-  function startEditMarker(m: VideoMarkerDto) {
+  function startEditMarker(m: EntityDetailMarker) {
     editingMarker = m.id;
     markerTitle = m.title;
     markerSeconds = m.seconds;
@@ -48,20 +57,20 @@
     savingMarker = true;
     try {
       if (editingMarker === "new") {
-        await createVideoMarker(video.id, {
+        await createV2EntityMarker(entityId, {
           title: markerTitle.trim(),
           seconds: payload.seconds,
           endSeconds: payload.endSeconds,
         });
       } else if (editingMarker) {
-        await updateVideoMarker(editingMarker, {
+        await updateV2EntityMarker(entityId, editingMarker, {
           title: markerTitle.trim(),
           seconds: payload.seconds,
           endSeconds: payload.endSeconds,
         });
       }
       editingMarker = null;
-      onRefresh();
+      await onRefresh();
     } catch {
       // silent
     } finally {
@@ -71,8 +80,8 @@
 
   async function handleDeleteMarker(markerId: string) {
     try {
-      await deleteVideoMarker(markerId);
-      onRefresh();
+      await deleteV2EntityMarker(entityId, markerId);
+      await onRefresh();
     } catch {
       // silent
     }
@@ -82,10 +91,8 @@
 <div class="space-y-3">
   {#if editingMarker !== "new"}
     <Button variant="secondary" size="sm" onclick={startNewMarker}>
-      {#snippet children()}
-        <Plus class="h-3.5 w-3.5" />
-        Add Marker at {formatSecondsInput(Math.floor(displayTime))}
-      {/snippet}
+      <Plus class="h-3.5 w-3.5" />
+      Add Marker at {formatSecondsInput(Math.floor(displayTime))}
     </Button>
   {/if}
 
@@ -105,13 +112,13 @@
     />
   {/if}
 
-  {#if video.markers.length === 0 && editingMarker !== "new"}
+  {#if markers.length === 0 && editingMarker !== "new"}
     <div class="surface-well p-8 text-center">
       <p class="text-text-muted text-sm">No markers yet</p>
     </div>
   {/if}
 
-  {#each video.markers as marker (marker.id)}
+  {#each markers as marker (marker.id)}
     {#if editingMarker === marker.id}
       <TimeMarkerForm
         title={markerTitle}
@@ -139,9 +146,14 @@
         <span class="text-mono-tabular text-accent-400 w-24 flex-shrink-0">
           {timeStr}{#if endStr}<span class="text-text-disabled">{endStr}</span>{/if}
         </span>
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium truncate">{marker.title}</p>
-        </div>
+        <button
+          type="button"
+          class="flex-1 min-w-0 text-left"
+          onclick={() => onSeek?.(marker.seconds)}
+          aria-label={`Seek to ${marker.title}`}
+        >
+          <span class="block text-sm font-medium truncate">{marker.title}</span>
+        </button>
         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
           <button
             type="button"
