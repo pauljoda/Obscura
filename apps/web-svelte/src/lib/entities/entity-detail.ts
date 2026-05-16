@@ -228,11 +228,15 @@ function markerTimestamp(seconds: number): string {
 function resolveHero(capabilities: EntityCapability[]): EntityDetailHero | null {
   const images = getImagesCapability(capabilities);
   if (!images) return null;
-  if (images.coverUrl) return { src: images.coverUrl, alt: "Cover" };
   const coverItem = images.items.find(
-    (item) => item.kind === ENTITY_FILE_ROLE.cover || item.kind === ENTITY_FILE_ROLE.hero || item.kind === ENTITY_FILE_ROLE.banner,
+    (item) =>
+      item.kind === ENTITY_FILE_ROLE.backdrop ||
+      item.kind === ENTITY_FILE_ROLE.cover ||
+      item.kind === ENTITY_FILE_ROLE.hero ||
+      item.kind === ENTITY_FILE_ROLE.banner,
   );
   if (coverItem) return { src: coverItem.path, alt: coverItem.kind };
+  if (images.coverUrl) return { src: images.coverUrl, alt: "Cover" };
   return null;
 }
 

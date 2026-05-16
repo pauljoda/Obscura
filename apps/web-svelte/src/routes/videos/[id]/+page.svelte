@@ -2,7 +2,6 @@
   import { onMount } from "svelte";
   import { page } from "$app/state";
   import {
-    Building2,
     Captions,
     FileText,
     Info,
@@ -35,8 +34,9 @@
     withFlagCapability,
     withRatingCapability,
   } from "$lib/api/capabilities";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityCastAndCrewSection from "$lib/components/entities/EntityCastAndCrewSection.svelte";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
+  import { creditSubtitle } from "$lib/entities/entity-credits";
   import {
     entityReferenceToThumbnailCard,
     type EntityThumbnailCard,
@@ -216,26 +216,6 @@
       },
     ];
   });
-
-  function creditSubtitle(credit: EntityCredit): string | undefined {
-    const character = credit.character?.trim();
-    if (character) return character;
-    const role = labelForCreditRole(credit.role);
-    return role === "Person" ? undefined : role;
-  }
-
-  function labelForCreditRole(role: string | null | undefined): string {
-    const normalized = (role ?? "").trim();
-    if (!normalized) return "Person";
-    return normalized
-      .replaceAll("-", " ")
-      .replaceAll("_", " ")
-      .replace(/\b\w/g, (value) => value.toUpperCase());
-  }
-
-  function thumbnailKey(card: EntityThumbnailCard): string {
-    return `${card.entity.kind}:${card.entity.id}:${card.subtitle ?? ""}`;
-  }
 
   function formatTimestamp(seconds: number): string {
     const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
@@ -731,49 +711,7 @@
 
       {#snippet sectionContent(section)}
         {#if section.id === "cast-and-crew"}
-          {#if hasCastAndCrew}
-            <div class="credit-rows">
-              {#if studioCards.length > 0}
-                <section class="credit-row" aria-label="Studios">
-                  <h3 class="credit-row-label">
-                    <Building2 class="h-3.5 w-3.5" />
-                    Studios
-                  </h3>
-                  <div class="credit-scroller">
-                    {#each studioCards as thumbnailCard (thumbnailKey(thumbnailCard))}
-                      <div class="credit-thumbnail is-studio">
-                        <EntityThumbnail card={thumbnailCard} titleAlign="center" titleSize="compact" />
-                      </div>
-                    {/each}
-                  </div>
-                </section>
-              {/if}
-
-              {#if creditCards.length > 0}
-                <section class="credit-row" aria-label="Cast">
-                  <h3 class="credit-row-label">
-                    <Users class="h-3.5 w-3.5" />
-                    Cast
-                  </h3>
-                  <div class="credit-scroller">
-                    {#each creditCards as thumbnailCard (thumbnailKey(thumbnailCard))}
-                      <div class="credit-thumbnail">
-                        {#if thumbnailCard.subtitle}
-                          <EntityThumbnail card={thumbnailCard} titleAlign="center" titleSize="compact">
-                            {#snippet subtitleContent(card)}
-                              <span class="credit-role-label">{card.subtitle}</span>
-                            {/snippet}
-                          </EntityThumbnail>
-                        {:else}
-                          <EntityThumbnail card={thumbnailCard} titleAlign="center" titleSize="compact" />
-                        {/if}
-                      </div>
-                    {/each}
-                  </div>
-                </section>
-              {/if}
-            </div>
-          {/if}
+          <EntityCastAndCrewSection {studioCards} {creditCards} />
         {:else if section.id === "technical"}
           {#if card.technical.length > 0}
             <div class="tab-data-list">
@@ -953,73 +891,6 @@
     opacity: 0.5;
   }
 
-  .credit-rows {
-    display: grid;
-    gap: 1rem;
-    min-width: 0;
-  }
-
-  .credit-row {
-    display: grid;
-    gap: 0.55rem;
-    min-width: 0;
-    overflow: hidden;
-  }
-
-  .credit-row-label {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin: 0;
-    color: var(--color-text-secondary, #c4c9d4);
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .credit-row-label :global(svg) {
-    color: var(--color-text-muted, #8a93a6);
-  }
-
-  .credit-scroller {
-    display: flex;
-    gap: 0.75rem;
-    min-width: 0;
-    max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding-bottom: 0.35rem;
-    scroll-padding-inline: 0.25rem;
-    scrollbar-width: thin;
-  }
-
-  .credit-thumbnail {
-    flex: 0 0 clamp(7rem, 33vw, 8.75rem);
-    min-width: 0;
-  }
-
-  .credit-thumbnail.is-studio {
-    flex-basis: clamp(7.75rem, 34vw, 10rem);
-  }
-
-  .credit-role-label {
-    display: inline-flex;
-    max-width: 100%;
-    min-width: 0;
-    overflow: hidden;
-    border: 1px solid rgb(255 255 255 / 0.08);
-    background: rgb(255 255 255 / 0.032);
-    color: rgb(196 201 212 / 0.72);
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.58rem;
-    line-height: 1;
-    padding: 0.18rem 0.3rem;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .tab-data-list,
   .transcript-tab-stack {
     display: grid;
@@ -1077,16 +948,6 @@
     font-size: 0.78rem;
     cursor: pointer;
     white-space: nowrap;
-  }
-
-  @media (min-width: 640px) {
-    .credit-thumbnail {
-      flex-basis: 8.25rem;
-    }
-
-    .credit-thumbnail.is-studio {
-      flex-basis: 10.5rem;
-    }
   }
 
   @keyframes pulse {

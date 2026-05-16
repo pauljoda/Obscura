@@ -38,9 +38,11 @@ describe("series detail layout", () => {
   it("uses shared thumbnails for series cast instead of custom chips", () => {
     const source = readLocalSource("./[id]/+page.svelte");
 
-    expect(source).toContain("castCards");
-    expect(source).toContain("<EntityThumbnail card={thumbnailCard}");
+    expect(source).toContain("EntityCastAndCrewSection");
+    expect(source).toContain("creditCards");
+    expect(source).toContain("studioCards");
     expect(source).not.toContain('class="credit-chip"');
+    expect(source).not.toContain("credit-scroller");
   });
 
   it("moves series links and files out of the main details tab", () => {
@@ -50,6 +52,14 @@ describe("series detail layout", () => {
     expect(source).toContain("sections={detailSections}");
     expect(source).toContain('id: "metadata"');
     expect(source).toContain('sections: ["links", "files"]');
-    expect(source).toContain('sections: ["description", "tags", "cast"]');
+    expect(source).toContain('sections: ["description", "tags", "cast-and-crew"]');
+  });
+
+  it("keeps studio and rendering mode out of the series hero header", () => {
+    const source = readLocalSource("./[id]/+page.svelte");
+
+    expect(source).not.toContain("series.renderingMode");
+    expect(source).not.toContain("{#snippet heroBadges()}");
+    expect(source).not.toContain("meta-item is-studio");
   });
 });

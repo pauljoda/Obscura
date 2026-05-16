@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ENTITY_FILE_ROLE,
   ENTITY_KINDS,
   isTopLevelEntityKind,
   labelForEntityKind,
@@ -25,5 +26,11 @@ describe("v2 code registries", () => {
     expect(resolveEntityHref("book-chapter", "chapter", { kind: "book", id: "book" })).toBe(
       "/books/book/chapters/chapter",
     );
+  });
+
+  it("includes server image roles used by detail artwork", () => {
+    expect(ENTITY_FILE_ROLE.backdrop).toBe("backdrop");
+    expect(ENTITY_FILE_ROLE.logo).toBe("logo");
+    expect(ENTITY_FILE_ROLE.poster).toBe("poster");
   });
 });

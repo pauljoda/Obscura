@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 - V1-to-v2 migration now preserves TV series artwork and season metadata, including series posters, backdrops, logos, season posters, air dates, descriptions, and external IDs.
+- Series and video detail pages now share the same Cast and Crew thumbnail section, with studios shown alongside credited people and character names preserved as subtitles.
 - Scanned and migrated TV-style series now keep their season hierarchy, so shows with `Season 1` folders open as series → season → episode instead of flat episode lists while preserving imported metadata.
 - Series detail pages now show the series metadata, a horizontal season poster row, and ordered episode grids. Season pages now load their own structured detail with episodes from the backend hierarchy instead of relying on a placeholder.
 - Video timeline hover previews now show the active marker chapter name while hovering inside a marked section, and omit the chapter label when no markers define chapters.
@@ -115,6 +116,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- EntityDetail now treats migrated `backdrop` artwork as the hero/header image while keeping `poster` artwork in the poster slot.
+- Series detail headers now show date and item count only; studios live in the Cast and Crew section and rendering-mode badges are no longer shown.
 - Series detail routes now render season posters as a horizontal row and use the shared entity grid's new position sort for episode ordering.
 - Video player hover previews now derive chapter labels from marker chapter ranges instead of only showing labels near marker points.
 - Video timeline markers now feed VidStack chapter tracks, including marker end times when present, so the scrub bar can render sectioned marker ranges natively.

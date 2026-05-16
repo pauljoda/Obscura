@@ -55,20 +55,23 @@ describe("/videos/[id] detail layout", () => {
 
   it("uses shared thumbnails for the cast and crew rows", () => {
     const pageSource = readLocalSource("./+page.svelte");
+    const sectionSource = readLocalSource("../../../lib/components/entities/EntityCastAndCrewSection.svelte");
 
     expect(pageSource).toContain("Cast and Crew");
-    expect(pageSource).toContain('titleAlign="center"');
-    expect(pageSource).toContain('titleSize="compact"');
-    expect(pageSource).toContain("{#snippet subtitleContent(card)}");
-    expect(pageSource).toContain("credit-scroller");
+    expect(pageSource).toContain("EntityCastAndCrewSection");
+    expect(sectionSource).toContain('titleAlign="center"');
+    expect(sectionSource).toContain('titleSize="compact"');
+    expect(sectionSource).toContain("{#snippet subtitleContent(card)}");
+    expect(sectionSource).toContain("credit-scroller");
+    expect(pageSource).not.toContain("credit-scroller");
     expect(pageSource).not.toContain("credit-chip");
   });
 
   it("renders character credit subtitles without adding a label prefix", () => {
-    const pageSource = readLocalSource("./+page.svelte");
+    const helperSource = readLocalSource("../../../lib/entities/entity-credits.ts");
 
-    expect(pageSource).toContain("if (character) return character;");
-    expect(pageSource).not.toContain("Character ${character}");
+    expect(helperSource).toContain("if (character) return character;");
+    expect(helperSource).not.toContain("Character ${character}");
   });
 
   it("adds old video panels through shared EntityDetail section-driven tabs", () => {

@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { page } from "$app/state";
   import { ArrowLeft, Users, Building2, Calendar, Info, SlidersHorizontal } from "@lucide/svelte";
+  import type { EntityCredit } from "$lib/api/generated/model";
   import {
     fetchV2Series,
     updateV2EntityRating,
@@ -13,7 +14,9 @@
     withFlagCapability,
     withRatingCapability,
   } from "$lib/api/capabilities";
+  import EntityCastAndCrewSection from "$lib/components/entities/EntityCastAndCrewSection.svelte";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
+  import { creditSubtitle } from "$lib/entities/entity-credits";
   import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
   import { entityReferenceToThumbnailCard, type EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
   import EntityDetail, {
@@ -41,14 +44,30 @@
     return cap?.value ?? null;
   });
 
-  const credits = $derived.by(() => {
+  const credits = $derived.by((): EntityCredit[] => {
     if (!series) return [];
     const cap = getCapability(series.capabilities, "credits");
-    return cap?.people ?? [];
+    if (cap?.items?.length) return cap.items;
+    return (cap?.people ?? []).map((person) => ({
+      character: null,
+      person,
+      role: "person",
+    }));
   });
 
-  const castCards = $derived.by((): EntityThumbnailCard[] => (
-    credits.map((person) => entityReferenceToThumbnailCard(person))
+  const studioCards = $derived.by((): EntityThumbnailCard[] => {
+    if (!studio) return [];
+    return [
+      entityReferenceToThumbnailCard(studio, {
+        aspectRatio: "wide",
+      }),
+    ];
+  });
+
+  const creditCards = $derived.by((): EntityThumbnailCard[] => (
+    credits.map((credit) => entityReferenceToThumbnailCard(credit.person, {
+      subtitle: creditSubtitle(credit),
+    }))
   ));
 
   const dates = $derived.by(() => {
@@ -79,14 +98,14 @@
   const hasSeasons = $derived(seasonCards.length > 0);
   const hasChildSeries = $derived(childSeriesCards.length > 0);
   const hasVideos = $derived(videoCards.length > 0);
-  const hasCast = $derived(castCards.length > 0);
+  const hasCastAndCrew = $derived(studioCards.length > 0 || creditCards.length > 0);
   const totalChildren = $derived(seasonCards.length + childSeriesCards.length + videoCards.length);
   const detailSections = $derived.by((): EntityDetailSection[] => [
     {
-      id: "cast",
-      label: "Cast",
+      id: "cast-and-crew",
+      label: "Cast and Crew",
       icon: Users,
-      hidden: !hasCast,
+      hidden: !hasCastAndCrew,
     },
   ]);
   const detailTabs = $derived.by((): EntityDetailTab[] => {
@@ -96,7 +115,7 @@
         id: "details",
         label: "Details",
         icon: Info,
-        sections: ["description", "tags", "cast"],
+        sections: ["description", "tags", "cast-and-crew"],
       },
     ];
 
@@ -112,10 +131,6 @@
 
     return tabs;
   });
-
-  function thumbnailKey(card: EntityThumbnailCard): string {
-    return `${card.entity.kind}:${card.entity.id}:${card.subtitle ?? ""}`;
-  }
 
   onMount(() => {
     void loadSeries();
@@ -203,19 +218,13 @@
       sections={detailSections}
     >
       {#snippet heroMeta()}
-        {#if studio}
-          <span class="meta-item is-studio">{studio.title}</span>
-        {/if}
-        {#if studio && dates.length > 0}
-          <span class="meta-sep"></span>
-        {/if}
         {#each dates as date, i (date.code)}
           {#if i > 0}
             <span class="meta-sep"></span>
           {/if}
           <span class="meta-item">{date.value}</span>
         {/each}
-        {#if (studio || dates.length > 0) && totalChildren > 0}
+        {#if dates.length > 0 && totalChildren > 0}
           <span class="meta-sep"></span>
         {/if}
         {#if totalChildren > 0}
@@ -223,23 +232,9 @@
         {/if}
       {/snippet}
 
-      {#snippet heroBadges()}
-        {#if series?.renderingMode}
-          <span class="position-badge">{series.renderingMode}</span>
-        {/if}
-      {/snippet}
-
       {#snippet sectionContent(section)}
-        {#if section.id === "cast" && hasCast}
-          <div class="credit-row" aria-label="Cast">
-            <div class="credit-scroller">
-              {#each castCards as thumbnailCard (thumbnailKey(thumbnailCard))}
-                <div class="credit-thumbnail">
-                  <EntityThumbnail card={thumbnailCard} titleAlign="center" titleSize="compact" />
-                </div>
-              {/each}
-            </div>
-          </div>
+        {#if section.id === "cast-and-crew"}
+          <EntityCastAndCrewSection {studioCards} {creditCards} />
         {/if}
       {/snippet}
     </EntityDetail>
@@ -364,10 +359,6 @@
     font-size: 0.82rem;
   }
 
-  :global(.meta-item.is-studio) {
-    color: var(--color-text-accent, #c49a5a);
-  }
-
   :global(.meta-sep) {
     display: inline-block;
     width: 3px;
@@ -375,44 +366,6 @@
     margin: 0 0.5rem;
     background: var(--color-text-muted, #8a93a6);
     opacity: 0.5;
-  }
-
-  .position-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.15rem 0.5rem;
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--color-text-accent, #c49a5a);
-    border: 1px solid rgba(196, 154, 90, 0.35);
-    background: rgba(196, 154, 90, 0.08);
-  }
-
-  /* ── Cast row (inside EntityDetail tab section) ── */
-
-  .credit-row {
-    min-width: 0;
-    overflow: hidden;
-  }
-
-  .credit-scroller {
-    display: flex;
-    gap: 0.75rem;
-    min-width: 0;
-    max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding-bottom: 0.35rem;
-    scroll-padding-inline: 0.25rem;
-    scrollbar-width: thin;
-  }
-
-  .credit-thumbnail {
-    flex: 0 0 clamp(7rem, 33vw, 8.75rem);
-    min-width: 0;
   }
 
   /* ── Content sections (seasons, episodes, sub-series) ── */
@@ -465,12 +418,6 @@
     color: var(--color-text-muted, #8a93a6);
     text-align: center;
     font-size: 0.85rem;
-  }
-
-  @media (min-width: 640px) {
-    .credit-thumbnail {
-      flex-basis: 8.25rem;
-    }
   }
 
   @keyframes pulse {

@@ -53,9 +53,11 @@ export type CapabilityKindCode = (typeof CAPABILITY_KIND)[keyof typeof CAPABILIT
 /** V2 entity file/image role codes used by shared thumbnail and detail surfaces. */
 export const ENTITY_FILE_ROLE = {
   banner: "banner",
+  backdrop: "backdrop",
   cover: "cover",
   full: "full",
   hero: "hero",
+  logo: "logo",
   original: "original",
   poster: "poster",
   preview: "preview",
