@@ -33,15 +33,25 @@
   import { ENTITY_KIND } from "$lib/entities/v2-codes";
   import { loadTrickplayFrames, type TrickplayFrame } from "@obscura/ui-svelte";
 
+  type EntityThumbnailTitleAlign = "left" | "center" | "right";
+
   interface Props {
     card: EntityThumbnailCard;
     layout?: "grid" | "list";
     onSelectedChange?: (selected: boolean) => void;
     selectable?: boolean;
     selected?: boolean;
+    titleAlign?: EntityThumbnailTitleAlign;
   }
 
-  let { card, layout = "grid", onSelectedChange, selectable = false, selected = false }: Props = $props();
+  let {
+    card,
+    layout = "grid",
+    onSelectedChange,
+    selectable = false,
+    selected = false,
+    titleAlign = "left",
+  }: Props = $props();
 
   let pointerRatio = $state<number | null>(null);
   let imageFailed = $state(false);
@@ -251,7 +261,7 @@
   {#if !imageOnly}
     <div class="details" class:has-subtitle={Boolean(card.subtitle)}>
       <div class="copy">
-        <h3 aria-label={card.entity.title}>
+        <h3 class={`title-align-${titleAlign}`} aria-label={card.entity.title}>
           <OverflowTicker text={card.entity.title} />
         </h3>
         {#if card.subtitle}
@@ -717,11 +727,23 @@
     min-width: 0;
     overflow: hidden;
     font-family: var(--font-heading, Geist, sans-serif);
-    font-size: 1.05rem;
+    font-size: 0.92rem;
     font-weight: 680;
-    line-height: 1.16;
+    line-height: 1.18;
     letter-spacing: 0;
     white-space: nowrap;
+  }
+
+  .title-align-left {
+    text-align: left;
+  }
+
+  .title-align-center {
+    text-align: center;
+  }
+
+  .title-align-right {
+    text-align: right;
   }
 
   .meta {
@@ -779,7 +801,7 @@
     }
 
     h3 {
-      font-size: 0.92rem;
+      font-size: 0.84rem;
     }
 
     .meta div {

@@ -84,6 +84,17 @@ describe("EntityThumbnail", () => {
     expect(container.querySelector(".ticker-shell")?.textContent).toContain("Tim Robinson");
     expect(container.querySelector(".ticker-title")).toBeNull();
   });
+
+  it("allows callers to choose thumbnail title alignment", () => {
+    const { container } = render(EntityThumbnail, {
+      props: {
+        card: personCard(),
+        titleAlign: "center",
+      },
+    });
+
+    expect(container.querySelector("h3")?.classList.contains("title-align-center")).toBe(true);
+  });
 });
 
 function spriteCard(): EntityThumbnailCard {

@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Entity thumbnail titles are now smaller by default and can be aligned per card, helping longer media names fit naturally in dense grids.
 - Mobile breadcrumbs now collapse the previous page behind the `...` menu and ticker long current titles on hover, preventing header controls from overlapping video titles.
 - Video detail pages now show Cast and Crew as horizontally scrollable thumbnail rows, with studios separated from cast and character labels shown under credited people when available.
 - Video detail pages now use the app-shell breadcrumb instead of a page-local Videos back link, keeping navigation compact at the top of the screen.
@@ -97,6 +98,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- Entity thumbnail titles now use a smaller default type size and expose left, center, or right alignment for callers that need card-specific title placement.
 - Entity thumbnail titles now use the shared overflow ticker instead of their older custom ticker, so narrow poster cards scroll long names with the same behavior as other shell labels.
 - Canvas header breadcrumbs now use the shared overflow ticker and collapse to a single current label on mobile, with previous linked crumbs available from the `...` menu.
 - Shared `EntityThumbnail` cards now resolve their own default entity links and support subtitles, so referenced entities can navigate consistently from any page.
