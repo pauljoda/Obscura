@@ -35,6 +35,7 @@
   import { loadTrickplayFrames, type TrickplayFrame } from "@obscura/ui-svelte";
 
   type EntityThumbnailTitleAlign = "left" | "center" | "right";
+  type EntityThumbnailTitleSize = "default" | "compact";
 
   interface Props {
     card: EntityThumbnailCard;
@@ -44,6 +45,7 @@
     selected?: boolean;
     subtitleContent?: Snippet<[EntityThumbnailCard]>;
     titleAlign?: EntityThumbnailTitleAlign;
+    titleSize?: EntityThumbnailTitleSize;
   }
 
   let {
@@ -54,6 +56,7 @@
     selected = false,
     subtitleContent,
     titleAlign = "left",
+    titleSize = "default",
   }: Props = $props();
 
   let pointerRatio = $state<number | null>(null);
@@ -67,7 +70,7 @@
   const isSpriteHover = $derived(card.hover.kind === "sprite");
   const asset = $derived(getThumbnailAsset(card, hoverBroken || isSpriteHover ? null : pointerRatio));
   const aspectRatio = $derived(toAspectRatioValue(card.aspectRatio));
-  const imageFit = $derived(card.fit ?? "contain");
+  const imageFit = $derived(card.fit ?? "cover");
   const placeholderIcon = $derived(iconForKind(card.entity.kind));
   const showPlaceholder = $derived(isSpriteHover ? !card.cover : !asset || imageFailed);
   const gradient = $derived(placeholderGradient(card.entity.title));
@@ -264,8 +267,13 @@
   {#if !imageOnly}
     <div class="details" class:has-subtitle={Boolean(card.subtitle || subtitleContent)}>
       <div class="copy">
-        <h3 class={`title-align-${titleAlign}`} aria-label={card.entity.title}>
-          <OverflowTicker text={card.entity.title} />
+        <h3 class={`title-align-${titleAlign} title-size-${titleSize}`} aria-label={card.entity.title}>
+          <OverflowTicker
+            text={card.entity.title}
+            align={titleAlign}
+            scaleToFit={titleSize === "compact"}
+            minScale={0.62}
+          />
         </h3>
         {#if subtitleContent}
           <div class={`subtitle subtitle-custom title-align-${titleAlign}`}>
@@ -273,7 +281,7 @@
           </div>
         {:else if card.subtitle}
           <div class={`subtitle title-align-${titleAlign}`} title={card.subtitle}>
-            <OverflowTicker text={card.subtitle} />
+            <OverflowTicker text={card.subtitle} align={titleAlign} />
           </div>
         {/if}
       </div>
@@ -753,11 +761,17 @@
     min-width: 0;
     overflow: hidden;
     font-family: var(--font-heading, Geist, sans-serif);
-    font-size: 0.92rem;
+    font-size: 0.88rem;
     font-weight: 680;
     line-height: 1.18;
     letter-spacing: 0;
     white-space: nowrap;
+  }
+
+  .title-size-compact {
+    font-size: 0.66rem;
+    font-weight: 620;
+    line-height: 1.12;
   }
 
   .title-align-left {

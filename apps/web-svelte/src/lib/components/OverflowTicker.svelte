@@ -2,18 +2,30 @@
   import { onMount, tick } from "svelte";
 
   interface Props {
+    align?: "left" | "center" | "right";
     class?: string;
+    minScale?: number;
+    scaleToFit?: boolean;
     text: string;
     title?: string;
   }
 
-  let { class: className = "", text, title }: Props = $props();
+  let {
+    align = "left",
+    class: className = "",
+    minScale = 0.72,
+    scaleToFit = false,
+    text,
+    title,
+  }: Props = $props();
 
   let shell: HTMLSpanElement | null = $state(null);
   let measureNode: HTMLSpanElement | null = $state(null);
   let overflowing = $state(false);
+  let scale = $state(1);
   let travel = $state(0);
 
+  const boundedMinScale = $derived(Math.max(0.5, Math.min(1, minScale)));
   const duration = $derived(`${Math.max(5, Math.min(14, travel / 18 + 5))}s`);
   const displayTitle = $derived(title ?? text);
 
@@ -22,7 +34,12 @@
     const shellWidth = shell.clientWidth;
     const textWidth = measureNode.scrollWidth;
     if (shellWidth <= 0 || textWidth <= 0) return;
-    const nextTravel = Math.max(0, Math.ceil(textWidth - shellWidth + 4));
+    const nextScale = scaleToFit && textWidth > shellWidth
+      ? Math.max(boundedMinScale, Math.min(1, shellWidth / textWidth))
+      : 1;
+    const scaledTextWidth = textWidth * nextScale;
+    const nextTravel = Math.max(0, Math.ceil(scaledTextWidth - shellWidth + 4));
+    scale = nextScale;
     travel = nextTravel;
     overflowing = nextTravel > 1;
   }
@@ -53,8 +70,11 @@
 
 <span
   bind:this={shell}
-  class={`ticker-shell${overflowing ? " is-overflowing" : ""}${className ? ` ${className}` : ""}`}
+  class={`ticker-shell${overflowing ? " is-overflowing" : ""}${scale < 0.999 ? " is-scaled" : ""}${className ? ` ${className}` : ""}`}
+  data-align={align}
   title={displayTitle}
+  style:--ticker-align={align}
+  style:--ticker-scale={scale}
   style:--ticker-travel={`${travel}px`}
   style:--ticker-duration={duration}
 >
@@ -69,6 +89,7 @@
     min-width: 0;
     max-width: 100%;
     overflow: hidden;
+    text-align: var(--ticker-align, left);
     white-space: nowrap;
   }
 
@@ -77,6 +98,8 @@
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
+    transform: scale(var(--ticker-scale, 1));
+    transform-origin: left center;
     vertical-align: bottom;
     white-space: nowrap;
   }
@@ -91,8 +114,20 @@
     pointer-events: none;
   }
 
-  .ticker-shell.is-overflowing .ticker-track {
+  .ticker-shell:is(.is-overflowing, .is-scaled) .ticker-track {
     max-width: none;
+  }
+
+  .ticker-shell.is-overflowing {
+    text-align: left;
+  }
+
+  .ticker-shell:not(.is-overflowing)[data-align="center"] .ticker-track {
+    transform-origin: center;
+  }
+
+  .ticker-shell:not(.is-overflowing)[data-align="right"] .ticker-track {
+    transform-origin: right center;
   }
 
   .ticker-shell.is-overflowing:is(:hover, :focus-visible, :focus-within) .ticker-track {
@@ -101,11 +136,11 @@
 
   @keyframes overflow-ticker {
     0%, 12% {
-      transform: translateX(0);
+      transform: translateX(0) scale(var(--ticker-scale, 1));
     }
 
     88%, 100% {
-      transform: translateX(calc(-1 * var(--ticker-travel, 0px)));
+      transform: translateX(calc(-1 * var(--ticker-travel, 0px))) scale(var(--ticker-scale, 1));
     }
   }
 

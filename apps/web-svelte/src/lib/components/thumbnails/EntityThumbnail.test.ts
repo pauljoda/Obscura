@@ -94,6 +94,18 @@ describe("EntityThumbnail", () => {
     });
 
     expect(container.querySelector("h3")?.classList.contains("title-align-center")).toBe(true);
+    expect(container.querySelector(".ticker-shell")?.getAttribute("data-align")).toBe("center");
+  });
+
+  it("allows callers to choose compact thumbnail title sizing", () => {
+    const { container } = render(EntityThumbnail, {
+      props: {
+        card: personCard(),
+        titleSize: "compact",
+      },
+    });
+
+    expect(container.querySelector("h3")?.classList.contains("title-size-compact")).toBe(true);
   });
 
   it("aligns fallback subtitles with the thumbnail title", () => {

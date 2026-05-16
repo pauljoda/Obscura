@@ -155,6 +155,15 @@ describe("entity grid helpers", () => {
     expect(thumbnail.meta?.map((item) => item.label)).not.toContain("season 1");
   });
 
+  it("uses cover fit for entity thumbnail images by default", () => {
+    const thumbnail = entityCardToThumbnailCard(card("6", "person", "Performer", [
+      flags(false),
+      image(),
+    ]));
+
+    expect(thumbnail.fit).toBe("cover");
+  });
+
   it("maps Jellyfin image-playlist trickplay assets into sprite hover data", () => {
     const thumbnail = entityCardToThumbnailCard(card("5", "video", "Tiled Trickplay", [
       {

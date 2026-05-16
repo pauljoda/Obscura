@@ -286,7 +286,7 @@ export function entityCardToThumbnailCard(
       ...entity,
       capabilities: entity.capabilities,
     },
-    fit: entity.kind === ENTITY_KIND.video || entity.kind === ENTITY_KIND.collection ? "cover" : "contain",
+    fit: "cover",
     hover,
     href,
     meta: metaForEntity(entity),

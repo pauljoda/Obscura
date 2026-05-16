@@ -125,7 +125,7 @@ export function aspectRatioForKind(kind: string): EntityThumbnailAspectRatio {
   if (kind === ENTITY_KIND.video) return "video";
   if (kind === ENTITY_KIND.videoSeries || kind === ENTITY_KIND.videoSeason) return "poster";
   if (kind === ENTITY_KIND.book || kind === ENTITY_KIND.bookChapter || kind === ENTITY_KIND.bookPage || kind === ENTITY_KIND.bookVolume) return "poster";
-  if (kind === ENTITY_KIND.person) return "portrait";
+  if (kind === ENTITY_KIND.person) return { width: 4, height: 5 };
   if (kind === ENTITY_KIND.studio) return "wide";
   if (kind === ENTITY_KIND.collection) return "video";
   return "square";
@@ -150,7 +150,7 @@ export function entityReferenceToThumbnailCard(
       title: entity.title,
       capabilities: [],
     },
-    fit: options.fit ?? (entity.kind === ENTITY_KIND.video || entity.kind === ENTITY_KIND.collection ? "cover" : "contain"),
+    fit: options.fit ?? "cover",
     hover: options.hover ?? { kind: "none" },
     href: options.href,
     meta: options.meta,

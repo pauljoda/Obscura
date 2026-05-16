@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Credit thumbnails now fit more names without immediate clipping by using wider person cards and compact title text that can scale down before ticker scrolling starts.
 - Video Cast and Crew thumbnails are now smaller and use centered titles with role subtitles, so credits feel secondary to the main video while staying scannable.
 - Entity thumbnail titles are now smaller by default and can be aligned per card, helping longer media names fit naturally in dense grids.
 - Mobile breadcrumbs now collapse the previous page behind the `...` menu and ticker long current titles on hover, preventing header controls from overlapping video titles.
@@ -100,6 +101,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- `OverflowTicker` now supports shrink-to-fit behavior before scrolling, and entity thumbnail imagery now defaults to cover fitting so artwork fills its card without black bars.
+- Centered overflow tickers now keep overflowing text readable from the leading edge instead of clipping from a centered oversized line.
+- Person thumbnails now use a wider 4:5 portrait frame by default, giving names more room while keeping people cards distinct from video posters.
 - Video Cast and Crew rows now use compact centered thumbnail cards with route-provided role subtitle content.
 - Entity thumbnail titles now use a smaller default type size and expose left, center, or right alignment for callers that need card-specific title placement.
 - Entity thumbnail titles now use the shared overflow ticker instead of their older custom ticker, so narrow poster cards scroll long names with the same behavior as other shell labels.

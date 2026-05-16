@@ -115,7 +115,6 @@
   const creditCards = $derived.by((): EntityThumbnailCard[] => (
     credits.map((credit) => (
       entityReferenceToThumbnailCard(credit.person, {
-        aspectRatio: "portrait",
         subtitle: creditSubtitle(credit),
       })
     ))
@@ -639,7 +638,7 @@
                   <div class="credit-scroller">
                     {#each studioCards as thumbnailCard (thumbnailKey(thumbnailCard))}
                       <div class="credit-thumbnail is-studio">
-                        <EntityThumbnail card={thumbnailCard} titleAlign="center" />
+                        <EntityThumbnail card={thumbnailCard} titleAlign="center" titleSize="compact" />
                       </div>
                     {/each}
                   </div>
@@ -656,13 +655,13 @@
                     {#each creditCards as thumbnailCard (thumbnailKey(thumbnailCard))}
                       <div class="credit-thumbnail">
                         {#if thumbnailCard.subtitle}
-                          <EntityThumbnail card={thumbnailCard} titleAlign="center">
+                          <EntityThumbnail card={thumbnailCard} titleAlign="center" titleSize="compact">
                             {#snippet subtitleContent(card)}
                               <span class="credit-role-label">{card.subtitle}</span>
                             {/snippet}
                           </EntityThumbnail>
                         {:else}
-                          <EntityThumbnail card={thumbnailCard} titleAlign="center" />
+                          <EntityThumbnail card={thumbnailCard} titleAlign="center" titleSize="compact" />
                         {/if}
                       </div>
                     {/each}
@@ -804,7 +803,7 @@
   }
 
   .credit-thumbnail {
-    flex: 0 0 clamp(5.85rem, 26vw, 7.25rem);
+    flex: 0 0 clamp(7rem, 33vw, 8.75rem);
     min-width: 0;
   }
 
@@ -834,7 +833,7 @@
     }
 
     .credit-thumbnail {
-      flex-basis: 7.25rem;
+      flex-basis: 8.25rem;
     }
 
     .credit-thumbnail.is-studio {

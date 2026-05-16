@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  aspectRatioForKind,
   hasHoverPreview,
   pickHoverAsset,
   toAspectRatioValue,
@@ -37,6 +38,10 @@ describe("entity thumbnail helpers", () => {
 
   it("falls back to a stable video card shape for invalid ratios", () => {
     expect(toAspectRatioValue({ width: 0, height: 5 })).toBe("16 / 9");
+  });
+
+  it("uses a wider portrait shape for people by default", () => {
+    expect(aspectRatioForKind("person")).toEqual({ width: 4, height: 5 });
   });
 
   it("selects hover assets by pointer ratio and clamps edge values", () => {
