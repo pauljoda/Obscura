@@ -138,6 +138,7 @@ No bridges, no staging tables, no legacy-schema snapshots. Early users expect br
 
 - TypeScript is required in the Svelte frontend and TypeScript packages; C# is required for all server, persistence, and worker logic.
 - Prefer typed contracts over ad hoc object shapes.
+- When making layout, interaction, or styling changes, first look for the base component that owns the pattern and prefer changing that component unless the behavior is truly specific to one route. Core components such as `EntityThumbnail`, `EntityGrid`, and `EntityDetail` should carry shared behavior; route-specific needs should be evaluated as configurable hooks, props, snippets, or composition points on the base component so other pages can reuse the same customization path.
 - Public classes, records, interfaces, and non-trivial public methods should have rich documentation comments that explain the domain meaning, parameters, return values, and important behavior. Prefer C# XML documentation comments for .NET code so IDEs surface the intent while editing.
 - Add tests with new logic when behavior can regress.
 - Keep app boundaries explicit: UI in `apps/web-svelte`, HTTP/persistence/worker logic in `apps/backend`, and frontend-only shared utilities in `packages/*`.

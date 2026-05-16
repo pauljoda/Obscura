@@ -347,6 +347,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Docs
 
+- Added an `AGENTS.md` rule requiring layout and UI changes to start from shared base components, and to expose route-specific needs through reusable component customization points when possible.
 - Added a local dev-stack restart rule to `AGENTS.md`: announce the reboot, run `pnpm dev:kill`, then relaunch the canonical VS Code `Obscura: Full Stack` compound instead of starting duplicate servers on alternate ports.
 - Documented `@obscura/contracts` as a legacy migration bridge so old TypeScript DTOs are removed only after matching surfaces move to the .NET OpenAPI/Orval contract.
 - Added the codebase rule for rich public documentation comments and documented the v2 .NET Domain, Application, and contract types so the new backend model is easier to read in C# tooling.
