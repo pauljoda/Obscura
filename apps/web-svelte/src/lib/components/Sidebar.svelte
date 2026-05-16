@@ -35,7 +35,7 @@
   onmouseenter={() => (hovered = true)}
   onmouseleave={() => (hovered = false)}
   class={cn(
-    "fixed left-0 top-0 z-40 flex h-dvh flex-col bg-surface-1 border-r border-border-subtle transition-[width] duration-moderate overflow-hidden",
+    "fixed left-0 top-0 z-[1200] flex h-dvh flex-col bg-surface-1 border-r border-border-subtle transition-[width] duration-moderate overflow-hidden",
     isExpanded ? "w-60" : "w-14",
   )}
   style:transition-timing-function="var(--ease-mechanical)"

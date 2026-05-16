@@ -176,6 +176,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- The desktop sidebar now stays above page-level media controls when it expands on hover, preventing video scrub bars from drawing across the navigation drawer.
 - Entity detail tag chips now link to their actual tag detail pages using tag entity IDs from the shared tag capability.
 - TV-style series scans and v1 video imports now create `video-season` entities plus series → season and season → episode links, while reusing migrated series IDs and metadata instead of duplicating or flattening the graph.
 - The desktop sidebar collapsed state now hydrates from the existing browser cookie before the root layout renders.
