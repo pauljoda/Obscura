@@ -86,6 +86,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Added
+- V2 plugin protocol contracts and ID-first provider match-hint resolution, preparing metadata identify to prefer stored provider IDs before URL or title search fallbacks.
 - Season detail API responses now include ordered episode cards from the series → season → episode hierarchy, giving the Svelte season page real structured data.
 - V2 entity marker write endpoints now support creating, updating, and deleting timeline markers while returning the refreshed entity projection.
 - `EntityDetail` tabs now support optional Lucide icons and section mappings, so pages can place core sections and custom snippets on any tab without owning the tab chrome.
