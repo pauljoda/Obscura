@@ -131,6 +131,31 @@ describe("extractVideoPlayerProps", () => {
     expect(extractVideoPlayerProps("video-1", []).trickplayPlaylist).toBe("");
   });
 
+  it("maps marker end times into player chapter markers", () => {
+    const capabilities: EntityCapability[] = [
+      {
+        kind: "markers",
+        items: [
+          {
+            id: "marker-1",
+            title: "Intro",
+            seconds: 8,
+            endSeconds: 42,
+          },
+        ],
+      },
+    ];
+
+    expect(extractVideoPlayerProps("video-1", capabilities).markers).toEqual([
+      {
+        id: "marker-1",
+        time: 8,
+        endTime: 42,
+        title: "Intro",
+      },
+    ]);
+  });
+
   it("maps Jellyfin audio streams into player audio options", () => {
     const props = extractVideoPlayerProps("video-1", [], {
       PlaySessionId: "session-1",

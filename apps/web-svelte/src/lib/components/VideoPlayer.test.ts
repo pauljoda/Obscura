@@ -378,11 +378,14 @@ describe("VideoPlayer", () => {
     expect(source).toContain("height: 100dvh;");
   });
 
-  it("keeps timeline marker pointer gestures from being captured by the scrub track", async () => {
+  it("uses VidStack chapter sliders for marker sections instead of custom marker ticks", async () => {
     const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
 
-    expect(source).toContain('data-testid="video-progress-marker"');
-    expect(source).toContain("onpointerdown={(event) => event.stopPropagation()}");
+    expect(source).toContain('import "vidstack/player/ui";');
+    expect(source).toContain("<media-time-slider");
+    expect(source).toContain("<media-slider-chapters>");
+    expect(source).toContain('kind: "chapters"');
+    expect(source).not.toContain('data-testid="video-progress-marker"');
   });
 
   it("lets in-player marker chips seek without being swallowed by the overlay", async () => {

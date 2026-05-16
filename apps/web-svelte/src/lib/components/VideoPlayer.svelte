@@ -12,6 +12,7 @@
   export interface VideoPlayerMarker {
     id: string;
     time: number;
+    endTime?: number | null;
     title: string;
   }
 
@@ -25,6 +26,7 @@
 
 <script lang="ts">
   import "vidstack/player";
+  import "vidstack/player/ui";
 
   import { onMount } from "svelte";
   import {
@@ -59,6 +61,8 @@
     type MediaErrorEvent,
     type MediaProviderChangeEvent,
     type MediaTimeUpdateEvent,
+    TextTrack,
+    type VTTCueInit,
     type VideoQuality,
   } from "vidstack";
   import type { MediaPlayerElement } from "vidstack/elements";
@@ -87,6 +91,7 @@
     resolveSubtitleAppearance,
     writeLocalSubtitleAppearance,
   } from "$lib/player/subtitle-appearance";
+  import { buildTimelineChapterCues } from "$lib/player/timeline-chapters";
   import AssSubtitleOverlay from "./AssSubtitleOverlay.svelte";
   import FilmStrip from "./FilmStrip.svelte";
 
@@ -184,6 +189,7 @@
 
   const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2];
   const HLS_RETRY_AFTER_SECONDS = 2;
+  const MARKER_CHAPTERS_TRACK_ID = "obscura-marker-chapters";
   const GOOGLE_CAST_SENDER_URL =
     "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1";
 
@@ -194,10 +200,10 @@
   let mediaMounted = $state(false);
   let controlsTimeout: number | null = null;
   let playTracked = false;
-  let isDraggingRef = false;
   let lastSourceKey = "";
   let pendingSeekTime: number | null = null;
   let pendingAutoPlay = false;
+  let markerChaptersTrack: TextTrack | null = null;
   let hlsReadySrc: string | undefined = $state();
   let failedDirectSrc = $state<string | null>(null);
 
@@ -211,8 +217,6 @@
   let volume = $state(1);
   let playbackRate = $state(1);
   let showControls = $state(true);
-  let isDragging = $state(false);
-  let bufferedProgress = $state(0);
   let bufferAhead = $state(0);
   let bandwidthEstimate = $state<number | null>(null);
   let droppedFrames = $state<number | null>(null);
@@ -257,8 +261,8 @@
   );
   const requestedPlayerSrc = $derived(effectiveMode === "direct" ? directSrc : src);
   const playerSrc = $derived(requestedPlayerSrc === hlsReadySrc ? requestedPlayerSrc : undefined);
-  const progress = $derived(duration > 0 ? (currentTime / duration) * 100 : 0);
   const hasFilmStrip = $derived(Boolean(trickplayPlaylist && duration > 0));
+  const markerChapterCues = $derived(buildTimelineChapterCues(markers, duration));
   const timelinePreviewFrame = $derived.by(() => {
     if (
       timelineTrickplayError ||
@@ -441,7 +445,6 @@
   function updateBuffered() {
     const video = videoEl;
     if (!video || duration <= 0) {
-      bufferedProgress = 0;
       bufferAhead = 0;
       return;
     }
@@ -455,7 +458,6 @@
       }
       bufferedEnd = Math.max(bufferedEnd, end);
     }
-    bufferedProgress = Math.min(100, (bufferedEnd / duration) * 100);
     bufferAhead = Math.max(0, bufferedEnd - video.currentTime);
   }
 
@@ -837,6 +839,34 @@
     timelineHover = { markerTitles, percent: percent * 100, time };
   }
 
+  function removeMarkerChapterTrack(target: MediaPlayerElement) {
+    const existing = markerChaptersTrack ?? target.textTracks.getById(MARKER_CHAPTERS_TRACK_ID);
+    if (existing) target.textTracks.remove(existing);
+    markerChaptersTrack = null;
+  }
+
+  function setMarkerChapterTrack(target: MediaPlayerElement, cues: readonly VTTCueInit[]) {
+    removeMarkerChapterTrack(target);
+    if (cues.length === 0) return;
+
+    const track = new TextTrack({
+      id: MARKER_CHAPTERS_TRACK_ID,
+      kind: "chapters",
+      label: "Markers",
+      default: true,
+    });
+    for (const cue of cues) {
+      track.addCue(new window.VTTCue(cue.startTime, cue.endTime, cue.text));
+    }
+    target.textTracks.add(track);
+    markerChaptersTrack = track;
+  }
+
+  function syncMarkerChapterTrack() {
+    if (!player?.textTracks) return;
+    setMarkerChapterTrack(player, markerChapterCues);
+  }
+
   function handleFilmStripInteraction(active: boolean) {
     if (active) {
       clearControlsTimer();
@@ -883,7 +913,6 @@
     qualityMode = playbackMode === "direct" ? "direct" : "auto";
     currentTime = 0;
     duration = propDuration ?? 0;
-    bufferedProgress = 0;
     bufferAhead = 0;
     playerNotice = null;
     activeQualityLabel = null;
@@ -947,6 +976,15 @@
 
   $effect(() => {
     if (propDuration && propDuration > duration) duration = propDuration;
+  });
+
+  $effect(() => {
+    const el = player;
+    const cues = markerChapterCues;
+    if (!el?.textTracks) return;
+
+    setMarkerChapterTrack(el, cues);
+    return () => removeMarkerChapterTrack(el);
   });
 
   $effect(() => {
@@ -1135,6 +1173,7 @@
     syncVideoElement();
     refreshQualities();
     refreshAudioTracks();
+    syncMarkerChapterTrack();
     updateBuffered();
     if (pendingSeekTime !== null) {
       player!.currentTime = Math.min(duration || pendingSeekTime, pendingSeekTime);
@@ -1263,6 +1302,65 @@
             <media-poster class="vds-poster" src={poster} alt="Video poster"></media-poster>
           {/if}
         </media-provider>
+        <media-time-slider
+          class={cn(
+            "video-time-slider mobile-video-progress group/track",
+            showControls ? "opacity-100" : "opacity-0",
+          )}
+          data-testid="video-progress-track"
+          aria-label="Seek"
+          onpointerdown={(event) => event.stopPropagation()}
+          onpointermove={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            updateTimelineHover(event.clientX, rect);
+          }}
+          onpointerleave={() => (timelineHover = null)}
+        >
+          {#if timelineHover}
+            <div
+              class="pointer-events-none absolute bottom-[calc(100%+0.6rem)] z-20 w-[min(11rem,54vw)] -translate-x-1/2 border border-white/10 bg-black/88 p-1.5 text-center shadow-[0_0_16px_rgba(0,0,0,0.35)]"
+              style:left="{timelineHover.percent}%"
+            >
+              {#if timelinePreviewFrame && timelinePreviewSpriteDims.width > 0 && timelinePreviewSpriteDims.height > 0}
+                <div
+                  class="timeline-trickplay-preview"
+                  data-testid="timeline-trickplay-preview"
+                  style:aspect-ratio="{timelinePreviewFrame.width} / {timelinePreviewFrame.height}"
+                  style:background-image="url({timelinePreviewFrame.url})"
+                  style:background-size="{(timelinePreviewSpriteDims.width / timelinePreviewFrame.width) * 100}% {(timelinePreviewSpriteDims.height / timelinePreviewFrame.height) * 100}%"
+                  style:background-position="{timelinePreviewSpriteDims.width <= timelinePreviewFrame.width
+                    ? 0
+                    : (timelinePreviewFrame.x / (timelinePreviewSpriteDims.width - timelinePreviewFrame.width)) * 100}% {timelinePreviewSpriteDims.height <= timelinePreviewFrame.height
+                    ? 0
+                    : (timelinePreviewFrame.y / (timelinePreviewSpriteDims.height - timelinePreviewFrame.height)) * 100}%"
+                  style:background-repeat="no-repeat"
+                ></div>
+              {/if}
+              <div class="text-mono-tabular text-[0.65rem] text-white/82">
+                {formatTime(timelineHover.time)}
+              </div>
+              {#if timelineHover.markerTitles.length > 0}
+                <div class="mt-1 max-w-48 text-[0.65rem] font-medium leading-snug text-accent-100">
+                  {timelineHover.markerTitles.join(" • ")}
+                </div>
+              {/if}
+            </div>
+          {/if}
+          <media-slider-chapters>
+            <template>
+              <div class="video-slider-chapter">
+                <div class="video-slider-track"></div>
+                <div class="video-slider-track-progress"></div>
+                <div class="video-slider-track-fill"></div>
+              </div>
+            </template>
+          </media-slider-chapters>
+          <media-slider-preview class="video-slider-preview">
+            <span data-part="chapter-title" class="video-slider-chapter-title"></span>
+            <media-slider-value type="pointer" class="video-slider-time"></media-slider-value>
+          </media-slider-preview>
+          <div class="video-slider-thumb"></div>
+        </media-time-slider>
       </media-player>
     {:else if requestedPlayerSrc}
       <div class="obscura-media-engine flex items-center justify-center">
@@ -1436,93 +1534,6 @@
       )}
     >
       <div class="flex flex-col gap-2">
-        <div class="pointer-events-auto order-2 py-2 sm:order-1 sm:py-2.5">
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div
-          class="video-progress-track mobile-video-progress group/track"
-          data-testid="video-progress-track"
-          data-dragging={isDragging}
-          onpointerdown={(event) => {
-            event.currentTarget.setPointerCapture(event.pointerId);
-            isDraggingRef = true;
-            isDragging = true;
-            const rect = event.currentTarget.getBoundingClientRect();
-            updateTimelineHover(event.clientX, rect);
-            const nextPercent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-            seekTo(nextPercent * duration);
-          }}
-          onpointermove={(event) => {
-            const rect = event.currentTarget.getBoundingClientRect();
-            updateTimelineHover(event.clientX, rect);
-            if (!isDraggingRef) return;
-            const nextPercent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-            seekTo(nextPercent * duration);
-          }}
-          onpointerup={(event) => {
-            event.currentTarget.releasePointerCapture(event.pointerId);
-            isDraggingRef = false;
-            isDragging = false;
-          }}
-          onpointercancel={() => {
-            isDraggingRef = false;
-            isDragging = false;
-          }}
-          onpointerleave={() => {
-            if (!isDraggingRef) timelineHover = null;
-          }}
-        >
-          {#if timelineHover}
-            <div
-              class="pointer-events-none absolute bottom-[calc(100%+0.6rem)] z-20 w-[min(11rem,54vw)] -translate-x-1/2 border border-white/10 bg-black/88 p-1.5 text-center shadow-[0_0_16px_rgba(0,0,0,0.35)]"
-              style:left="{timelineHover.percent}%"
-            >
-              {#if timelinePreviewFrame && timelinePreviewSpriteDims.width > 0 && timelinePreviewSpriteDims.height > 0}
-                <div
-                  class="timeline-trickplay-preview"
-                  data-testid="timeline-trickplay-preview"
-                  style:aspect-ratio="{timelinePreviewFrame.width} / {timelinePreviewFrame.height}"
-                  style:background-image="url({timelinePreviewFrame.url})"
-                  style:background-size="{(timelinePreviewSpriteDims.width / timelinePreviewFrame.width) * 100}% {(timelinePreviewSpriteDims.height / timelinePreviewFrame.height) * 100}%"
-                  style:background-position="{timelinePreviewSpriteDims.width <= timelinePreviewFrame.width
-                    ? 0
-                    : (timelinePreviewFrame.x / (timelinePreviewSpriteDims.width - timelinePreviewFrame.width)) * 100}% {timelinePreviewSpriteDims.height <= timelinePreviewFrame.height
-                    ? 0
-                    : (timelinePreviewFrame.y / (timelinePreviewSpriteDims.height - timelinePreviewFrame.height)) * 100}%"
-                  style:background-repeat="no-repeat"
-                ></div>
-              {/if}
-              <div class="text-mono-tabular text-[0.65rem] text-white/82">
-                {formatTime(timelineHover.time)}
-              </div>
-              {#if timelineHover.markerTitles.length > 0}
-                <div class="mt-1 max-w-48 text-[0.65rem] font-medium leading-snug text-accent-100">
-                  {timelineHover.markerTitles.join(" • ")}
-                </div>
-              {/if}
-            </div>
-          {/if}
-          <div class="video-progress-buffered" style:width="{bufferedProgress}%"></div>
-          <div class="video-progress-fill" style:width="{progress}%"></div>
-          {#each markers as marker (marker.id)}
-            {@const markerPercent = duration > 0 ? (marker.time / duration) * 100 : 0}
-            <button
-              type="button"
-              data-testid="video-progress-marker"
-              class="absolute top-1/2 h-full w-1 -translate-y-1/2 bg-white/60 transition-all hover:bg-white hover:w-1.5 hover:scale-y-150 z-10"
-              style:left="{markerPercent}%"
-              onpointerdown={(event) => event.stopPropagation()}
-              onclick={(event) => {
-                event.stopPropagation();
-                seekTo(marker.time);
-                onMarkerClick?.(marker);
-              }}
-              title={marker.title}
-              aria-label={marker.title}
-            ></button>
-          {/each}
-        </div>
-        </div>
-
         {#if markers.length > 0}
           <div class="pointer-events-auto order-3 hidden flex-wrap gap-1.5 sm:flex">
             {#each markers as marker (marker.id)}
@@ -1906,6 +1917,7 @@
     display: block;
     margin-inline: auto;
     max-width: calc((100dvh - 14rem) * 16 / 9);
+    position: relative;
     width: 100%;
   }
 
@@ -2303,9 +2315,93 @@
     height: 5px;
   }
 
-  .mobile-video-progress:hover,
-  .mobile-video-progress[data-dragging="true"] {
+  .mobile-video-progress:hover {
     height: 6px;
+  }
+
+  .video-time-slider {
+    --media-slider-track-bg: rgba(255, 255, 255, 0.22);
+    --media-slider-track-fill-bg: linear-gradient(90deg, var(--color-accent-400), var(--color-accent-300));
+    --media-slider-track-progress-bg: transparent;
+    --media-slider-chapter-hover-transform: scaleY(1.9);
+    bottom: 4.85rem;
+    cursor: pointer;
+    display: block;
+    left: 1rem;
+    position: absolute;
+    right: 1rem;
+    touch-action: none;
+    transition: height 120ms ease;
+    z-index: 45;
+  }
+
+  .video-time-slider media-slider-chapters {
+    align-items: center;
+    display: flex;
+    height: 100%;
+    position: relative;
+    width: 100%;
+  }
+
+  .video-slider-chapter {
+    height: 100%;
+    margin-right: 2px;
+    min-width: 0.35rem;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .video-slider-chapter:last-child {
+    margin-right: 0;
+  }
+
+  .video-slider-track,
+  .video-slider-track-progress,
+  .video-slider-track-fill {
+    height: 100%;
+    left: 0;
+    position: absolute;
+    top: 0;
+  }
+
+  .video-slider-track {
+    background: var(--media-slider-track-bg);
+    width: 100%;
+  }
+
+  .video-slider-track-progress {
+    background: var(--media-slider-track-progress-bg);
+    width: var(--chapter-progress, 0%);
+    z-index: 1;
+  }
+
+  .video-slider-track-fill {
+    background: var(--media-slider-track-fill-bg);
+    box-shadow: 0 0 10px rgba(196, 154, 90, 0.35);
+    width: var(--chapter-fill, 0%);
+    z-index: 2;
+  }
+
+  .video-slider-thumb {
+    background: var(--color-accent-400);
+    box-shadow: 0 0 12px rgba(196, 154, 90, 0.55);
+    height: 0.95rem;
+    left: var(--slider-fill, 0%);
+    pointer-events: none;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 0.45rem;
+    z-index: 4;
+  }
+
+  .video-slider-preview {
+    display: none;
+  }
+
+  .video-slider-chapter-title,
+  .video-slider-time {
+    display: none;
   }
 
   .timeline-trickplay-preview {
@@ -2316,12 +2412,15 @@
   }
 
   @media (min-width: 640px) {
+    .video-time-slider {
+      bottom: 5.75rem;
+    }
+
     .mobile-video-progress {
       height: 8px;
     }
 
-    .mobile-video-progress:hover,
-    .mobile-video-progress[data-dragging="true"] {
+    .mobile-video-progress:hover {
       height: 10px;
     }
 

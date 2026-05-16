@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 - The desktop sidebar now remembers whether it was collapsed before a reload, so the app shell opens at the saved width without flashing expanded first.
+- Video player timelines now use real VidStack chapter sections for markers, with physical section breaks and no separate marker tick overlay.
 - Video player marker chips now seek to their marker time when clicked, matching the filmstrip marker labels.
 - Video marker tabs can now create, edit, delete, and seek timeline markers again on the v2 video detail page.
 - Detail pages can now define tabs from reusable shared sections plus route-specific sections, with optional tab icons, making rich video panels easier to keep consistent across the app.
@@ -109,6 +110,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- Video timeline markers now feed VidStack chapter tracks, including marker end times when present, so the scrub bar can render sectioned marker ranges natively.
 - The video detail Markers tab now uses the shared marker editor against v2 entity marker APIs, restoring marker creation and inline editing without the removed v1 video routes.
 - Video detail tabs now declare reusable detail sections for description, credits, metadata, markers, transcripts, links, and files instead of rendering entire custom tab panels in the route.
 - Video detail pages now define Details, Metadata, Markers, Transcript, and Files panels through the shared `EntityDetail` tab API.

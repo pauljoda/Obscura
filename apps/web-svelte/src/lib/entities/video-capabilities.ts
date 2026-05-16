@@ -75,6 +75,7 @@ export function extractVideoPlayerProps(
     markers: (markers?.items ?? []).map((m) => ({
       id: m.id,
       time: Number(m.seconds),
+      endTime: m.endSeconds == null ? null : Number(m.endSeconds),
       title: m.title,
     })),
     duration: ticksToSeconds(mediaSource?.RunTimeTicks) || parseDotnetTimeSpan(technical?.duration),
