@@ -17,6 +17,8 @@ export interface VideoPlayerProps {
   src: string;
   directSrc: string;
   codec: string | null;
+  sourceWidth: number | null;
+  sourceHeight: number | null;
   poster: string;
   markers: VideoPlayerMarker[];
   duration: number;
@@ -67,6 +69,8 @@ export function extractVideoPlayerProps(
     src: hlsSrc,
     directSrc,
     codec: videoStream?.Codec ?? technical?.codec ?? null,
+    sourceWidth: videoStream?.Width ?? numberValue(technical?.width),
+    sourceHeight: videoStream?.Height ?? numberValue(technical?.height),
     poster: v2AssetUrl(images?.thumbnailUrl) || "",
     markers: (markers?.items ?? []).map((m) => ({
       id: m.id,
@@ -182,6 +186,13 @@ function parseSubtitleSourceFormat(
     default:
       return "vtt";
   }
+}
+
+function numberValue(value: number | string | null | undefined): number | null {
+  if (typeof value === "number") return Number.isFinite(value) && value > 0 ? value : null;
+  if (typeof value !== "string" || value.trim() === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 function isBrowserNativeVideoSource(

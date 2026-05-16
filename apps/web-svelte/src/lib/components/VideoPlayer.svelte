@@ -93,6 +93,8 @@
     src?: string;
     directSrc?: string;
     codec?: string | null;
+    sourceWidth?: number | null;
+    sourceHeight?: number | null;
     poster?: string;
     markers?: VideoPlayerMarker[];
     duration?: number;
@@ -151,6 +153,8 @@
     src,
     directSrc,
     codec,
+    sourceWidth = null,
+    sourceHeight = null,
     poster,
     markers = [],
     duration: propDuration,
@@ -209,6 +213,7 @@
   let droppedFrames = $state<number | null>(null);
   let qualityOptions = $state<QualityOption[]>([{ value: "auto", label: "Auto" }]);
   let activeQualityLabel = $state<string | null>(null);
+  let activeQualityDimensionsLabel = $state<string | null>(null);
   let audioTracks = $state<AudioTrackOption[]>([]);
   let selectedAudioTrackLabel = $state<string | null>(null);
   let playerNotice = $state<string | null>(null);
@@ -280,6 +285,18 @@
         ? `Auto${activeQualityLabel ? ` · ${activeQualityLabel}` : ""}`
         : activeQualityLabel ?? "Quality",
   );
+  const sourceResolutionLabel = $derived(formatDimensions(sourceWidth, sourceHeight));
+  const activeQualityDetailLabel = $derived.by(() => {
+    if (activeQualityDimensionsLabel && sourceResolutionLabel) {
+      if (activeQualityDimensionsLabel === sourceResolutionLabel) {
+        return `Native ${sourceResolutionLabel}`;
+      }
+      return `Current ${activeQualityDimensionsLabel} · Native ${sourceResolutionLabel}`;
+    }
+    if (activeQualityDimensionsLabel) return `Current ${activeQualityDimensionsLabel}`;
+    if (sourceResolutionLabel) return `Native ${sourceResolutionLabel}`;
+    return null;
+  });
   const activePlaybackLabel = $derived(
     effectiveMode === "direct" ? "Direct Playback" : "Adaptive HLS",
   );
@@ -347,6 +364,17 @@
       return `${Number.isInteger(mbps) ? mbps.toFixed(0) : mbps.toFixed(1)} Mbps`;
     }
     return `${Math.round(bps / 1_000)} Kbps`;
+  }
+
+  function formatDimensions(width: number | null | undefined, height: number | null | undefined) {
+    const safeWidth = typeof width === "number" && Number.isFinite(width) && width > 0
+      ? Math.round(width)
+      : null;
+    const safeHeight = typeof height === "number" && Number.isFinite(height) && height > 0
+      ? Math.round(height)
+      : null;
+    if (safeWidth && safeHeight) return `${safeWidth}x${safeHeight}`;
+    return null;
   }
 
   function languageLabel(language: string): string {
@@ -431,6 +459,10 @@
     return `Level ${index + 1}`;
   }
 
+  function qualityDimensionsLabel(quality: VideoQuality) {
+    return formatDimensions(quality.width, quality.height);
+  }
+
   function refreshQualities() {
     if (!player || effectiveMode === "direct") {
       qualityOptions = [
@@ -438,6 +470,7 @@
         { value: "auto" as const, label: "Auto" },
       ];
       activeQualityLabel = null;
+      activeQualityDimensionsLabel = null;
       return;
     }
     const qualities = player.qualities?.toArray?.() ?? [];
@@ -457,6 +490,9 @@
     activeQualityLabel = selected
       ? qualityLabel(selected, qualities.indexOf(selected))
       : activeQualityLabel;
+    activeQualityDimensionsLabel = selected
+      ? qualityDimensionsLabel(selected)
+      : activeQualityDimensionsLabel;
     if (player.qualities?.auto) qualityMode = "auto";
   }
 
@@ -528,6 +564,9 @@
     remote?.changeQuality?.(nextQualityMode);
     if (quality) quality.selected = true;
     activeQualityLabel = quality ? qualityLabel(quality, nextQualityMode) : activeQualityLabel;
+    activeQualityDimensionsLabel = quality
+      ? qualityDimensionsLabel(quality)
+      : activeQualityDimensionsLabel;
   }
 
   function selectSubtitle(id: string | null) {
@@ -1290,9 +1329,15 @@
         {#if effectiveMode !== "direct"}
           <span
             data-testid="playback-quality-chip"
-            class="pointer-events-auto player-chip border-white/10 px-2 py-0.5 text-[0.6rem] text-white/80 sm:px-2.5 sm:py-1 sm:text-[0.7rem]"
+            title={activeQualityDetailLabel ?? selectedQualityLabel}
+            class="pointer-events-auto player-chip flex max-w-[14rem] flex-col border-white/10 px-2 py-0.5 text-[0.6rem] text-white/80 sm:px-2.5 sm:py-1 sm:text-[0.7rem]"
           >
-            {selectedQualityLabel}
+            <span class="truncate">{selectedQualityLabel}</span>
+            {#if activeQualityDetailLabel}
+              <span class="truncate text-[0.52rem] uppercase tracking-[0.12em] text-white/45 sm:text-[0.58rem]">
+                {activeQualityDetailLabel}
+              </span>
+            {/if}
           </span>
         {/if}
         {#if playerNotice}

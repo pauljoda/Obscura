@@ -470,6 +470,8 @@
             src={playerProps.src}
             directSrc={playerProps.directSrc}
             codec={playerProps.codec}
+            sourceWidth={playerProps.sourceWidth}
+            sourceHeight={playerProps.sourceHeight}
             poster={playerProps.poster}
             markers={playerProps.markers}
             duration={playerProps.duration || undefined}

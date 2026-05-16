@@ -168,6 +168,22 @@ describe("VideoPlayer", () => {
     });
   });
 
+  it("shows native source dimensions in the adaptive quality chip", () => {
+    render(VideoPlayer, {
+      props: {
+        src: "/api/videos/video-1/hls/master.m3u8",
+        defaultPlaybackMode: "hls",
+        sourceWidth: 3840,
+        sourceHeight: 1920,
+      },
+    });
+
+    const chip = screen.getByTestId("playback-quality-chip");
+    expect(chip).toHaveTextContent("Auto");
+    expect(chip).toHaveTextContent("Native 3840x1920");
+    expect(chip).toHaveAttribute("title", "Native 3840x1920");
+  });
+
   it("shows server-provided audio tracks when the HLS provider exposes only one muxed track", async () => {
     const onAudioTrackChange = vi.fn();
 

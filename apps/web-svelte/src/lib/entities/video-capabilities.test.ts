@@ -72,7 +72,11 @@ describe("extractVideoPlayerProps", () => {
       },
     ];
 
-    expect(extractVideoPlayerProps("video-1", capabilities).directSrc).toBe("");
+    const props = extractVideoPlayerProps("video-1", capabilities);
+
+    expect(props.directSrc).toBe("");
+    expect(props.sourceWidth).toBe(1920);
+    expect(props.sourceHeight).toBe(1080);
   });
 
   it("uses v2 subtitle endpoints instead of raw storage paths", () => {
