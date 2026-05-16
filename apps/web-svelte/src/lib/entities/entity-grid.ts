@@ -15,6 +15,7 @@ import {
   labelForEntityKind,
 } from "./v2-codes";
 import {
+  aspectRatioForKind,
   iconForKind,
   type EntityThumbnailAsset,
   type EntityThumbnailCard,
@@ -26,13 +27,6 @@ import {
  * instead of narrowing to one tab.
  */
 export const ENTITY_GRID_ALL_KINDS = "all";
-
-const BOOK_ENTITY_KINDS = new Set<string>([
-  ENTITY_KIND.book,
-  ENTITY_KIND.bookChapter,
-  ENTITY_KIND.bookPage,
-  ENTITY_KIND.bookVolume,
-]);
 
 export type EntityGridSort = "title" | "kind" | "rating";
 export type EntityGridSortDir = "asc" | "desc";
@@ -150,13 +144,7 @@ function aspectRatioForEntity(entity: EntityCard): EntityThumbnailCard["aspectRa
   const height = numberValue(technical?.height);
 
   if (entity.kind === ENTITY_KIND.image && width && height) return { width, height };
-  if (entity.kind === ENTITY_KIND.video) return "video";
-  if (entity.kind === ENTITY_KIND.videoSeries || entity.kind === ENTITY_KIND.videoSeason) return "poster";
-  if (BOOK_ENTITY_KINDS.has(entity.kind)) return "poster";
-  if (entity.kind === ENTITY_KIND.person) return "portrait";
-  if (entity.kind === ENTITY_KIND.studio) return "wide";
-  if (entity.kind === ENTITY_KIND.collection) return "video";
-  return "square";
+  return aspectRatioForKind(entity.kind);
 }
 
 function assetFromPath(path: string, title: string, role?: string): EntityThumbnailAsset {

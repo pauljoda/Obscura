@@ -1,5 +1,5 @@
 import type { EntityCapability, EntityCard } from "$lib/api/generated/model";
-import { ENTITY_KIND } from "./v2-codes";
+import { ENTITY_KIND, resolveEntityHref, type EntityRouteContext } from "./v2-codes";
 
 /** Standard thumbnail shapes used by global entity cards before route-specific layout chooses a size. */
 export type EntityThumbnailAspectRatio =
@@ -80,6 +80,19 @@ export interface EntityThumbnailCard {
   hover: EntityThumbnailHoverPreview;
   href?: string;
   meta?: EntityThumbnailMetaItem[];
+  routeContext?: EntityRouteContext;
+  subtitle?: string;
+}
+
+export interface EntityReferenceThumbnailOptions {
+  aspectRatio?: EntityThumbnailAspectRatio;
+  cover?: EntityThumbnailAsset | null;
+  fit?: "contain" | "cover";
+  href?: string;
+  hover?: EntityThumbnailHoverPreview;
+  meta?: EntityThumbnailMetaItem[];
+  routeContext?: EntityRouteContext;
+  subtitle?: string;
 }
 
 /** Converts a named or numeric entity aspect ratio into a CSS aspect-ratio value. */
@@ -105,6 +118,45 @@ export function toAspectRatioValue(ratio: EntityThumbnailAspectRatio): string {
   }
 
   return `${ratio.width} / ${ratio.height}`;
+}
+
+/** Chooses the default thumbnail frame for a referenced entity kind. */
+export function aspectRatioForKind(kind: string): EntityThumbnailAspectRatio {
+  if (kind === ENTITY_KIND.video) return "video";
+  if (kind === ENTITY_KIND.videoSeries || kind === ENTITY_KIND.videoSeason) return "poster";
+  if (kind === ENTITY_KIND.book || kind === ENTITY_KIND.bookChapter || kind === ENTITY_KIND.bookPage || kind === ENTITY_KIND.bookVolume) return "poster";
+  if (kind === ENTITY_KIND.person) return "portrait";
+  if (kind === ENTITY_KIND.studio) return "wide";
+  if (kind === ENTITY_KIND.collection) return "video";
+  return "square";
+}
+
+/** Resolves the link owned by a thumbnail card, using explicit overrides before entity defaults. */
+export function resolveEntityThumbnailHref(card: EntityThumbnailCard): string | undefined {
+  return card.href ?? resolveEntityHref(card.entity.kind, card.entity.id, card.routeContext);
+}
+
+/** Builds a lightweight thumbnail card from a referenced entity. */
+export function entityReferenceToThumbnailCard(
+  entity: Pick<EntityCard, "id" | "kind" | "title">,
+  options: EntityReferenceThumbnailOptions = {},
+): EntityThumbnailCard {
+  return {
+    aspectRatio: options.aspectRatio ?? aspectRatioForKind(entity.kind),
+    cover: options.cover ?? null,
+    entity: {
+      id: entity.id,
+      kind: entity.kind,
+      title: entity.title,
+      capabilities: [],
+    },
+    fit: options.fit ?? (entity.kind === ENTITY_KIND.video || entity.kind === ENTITY_KIND.collection ? "cover" : "contain"),
+    hover: options.hover ?? { kind: "none" },
+    href: options.href,
+    meta: options.meta,
+    routeContext: options.routeContext,
+    subtitle: options.subtitle,
+  };
 }
 
 /** Returns whether a card has enough preview assets to respond to hover or focus. */

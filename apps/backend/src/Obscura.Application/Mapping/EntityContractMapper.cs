@@ -10,6 +10,7 @@ using DomainEntity = Obscura.Domain.Entities.Entity;
 using DomainEntityPage = Obscura.Domain.Entities.EntityPage;
 using DomainEntityReference = Obscura.Domain.Entities.EntityReference;
 using ContractEntityCounter = Obscura.Contracts.Entities.EntityCounter;
+using ContractEntityCredit = Obscura.Contracts.Entities.EntityCredit;
 using ContractEntityDate = Obscura.Contracts.Entities.EntityDate;
 using ContractEntityExternalId = Obscura.Contracts.Entities.EntityExternalId;
 using ContractEntityFile = Obscura.Contracts.Entities.EntityFile;
@@ -112,7 +113,12 @@ public static partial class ContractMapper
             CapabilityRating rating => new RatingCapability(
                 rating.Value is null ? null : new ContractRating(rating.Value.Value)),
             CapabilityTags tags => new TagsCapability(tags.Values),
-            CapabilityCredits credits => new CreditsCapability(credits.People.Select(ToEntityReference).ToArray()),
+            CapabilityCredits credits => new CreditsCapability(
+                credits.Items.Select(credit => new ContractEntityCredit(
+                    ToEntityReference(credit.Person),
+                    credit.Role.ToCode(),
+                    credit.Character)).ToArray(),
+                credits.People.Select(ToEntityReference).ToArray()),
             CapabilityStudio studio => new StudioCapability(studio.Value is null ? null : ToEntityReference(studio.Value)),
             CapabilityImages images => new ImagesCapability(
                 images.SupportedKinds.Select(kind => kind.ToCode()).ToArray(),

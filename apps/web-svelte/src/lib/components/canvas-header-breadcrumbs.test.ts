@@ -37,6 +37,43 @@ describe("getCanvasHeaderBreadcrumbItems", () => {
     ]);
   });
 
+  it("keeps three desktop breadcrumbs inline before collapsing", () => {
+    expect(
+      getCanvasHeaderBreadcrumbItems([
+        { label: "Books", href: "/books", isLast: false },
+        { label: "Novel", href: "/books/b1", isLast: false },
+        { label: "Volume 1", href: "#", isLast: true },
+      ], 3),
+    ).toEqual([
+      { kind: "crumb", label: "Books", href: "/books", isLast: false },
+      { kind: "crumb", label: "Novel", href: "/books/b1", isLast: false },
+      { kind: "crumb", label: "Volume 1", href: "#", isLast: true },
+    ]);
+  });
+
+  it("collapses desktop breadcrumbs after the inline limit", () => {
+    expect(
+      getCanvasHeaderBreadcrumbItems([
+        { label: "Books", href: "/books", isLast: false },
+        { label: "Novel", href: "/books/b1", isLast: false },
+        { label: "Volume 1", href: "/books/b1/volumes/v1", isLast: false },
+        { label: "Chapter 2", href: "#", isLast: true },
+      ], 3),
+    ).toEqual([
+      {
+        kind: "overflow",
+        label: "More breadcrumbs",
+        separatorAfter: false,
+        items: [
+          { label: "Books", href: "/books", isLast: false },
+          { label: "Novel", href: "/books/b1", isLast: false },
+          { label: "Volume 1", href: "/books/b1/volumes/v1", isLast: false },
+        ],
+      },
+      { kind: "crumb", label: "Chapter 2", href: "#", isLast: true },
+    ]);
+  });
+
   it("does not include unlinked crumbs in the overflow menu", () => {
     expect(
       getCanvasHeaderBreadcrumbItems([

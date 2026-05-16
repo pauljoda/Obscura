@@ -49,6 +49,30 @@ describe("EntityThumbnail", () => {
       expect(container.querySelector(".sprite-overlay")).not.toBeNull();
     });
   });
+
+  it("resolves default entity links inside the shared thumbnail", () => {
+    const { container } = render(EntityThumbnail, {
+      props: {
+        card: personCard(),
+      },
+    });
+
+    const link = container.querySelector<HTMLAnchorElement>("a.entity-thumbnail");
+    expect(link?.getAttribute("href")).toBe("/performers/person-1");
+  });
+
+  it("renders credit subtitles when present", () => {
+    const { container } = render(EntityThumbnail, {
+      props: {
+        card: {
+          ...personCard(),
+          subtitle: "Character Ronnie",
+        },
+      },
+    });
+
+    expect(container.textContent).toContain("Character Ronnie");
+  });
 });
 
 function spriteCard(): EntityThumbnailCard {
@@ -67,6 +91,22 @@ function spriteCard(): EntityThumbnailCard {
     hover: {
       kind: "sprite",
       vttUrl: "/Videos/1/Trickplay/280/tiles.m3u8",
+    },
+  };
+}
+
+function personCard(): EntityThumbnailCard {
+  return {
+    entity: {
+      id: "person-1",
+      kind: "person",
+      title: "Tim Robinson",
+      capabilities: [],
+    },
+    aspectRatio: "portrait",
+    cover: null,
+    hover: {
+      kind: "none",
     },
   };
 }

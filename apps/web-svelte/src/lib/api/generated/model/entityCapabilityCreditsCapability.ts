@@ -5,9 +5,11 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapabilityCreditsCapabilityKind } from './entityCapabilityCreditsCapabilityKind';
+import type { EntityCredit } from './entityCredit';
 import type { EntityReference } from './entityReference';
 
 export interface EntityCapabilityCreditsCapability {
   kind: EntityCapabilityCreditsCapabilityKind;
+  items: EntityCredit[];
   people: EntityReference[];
 }

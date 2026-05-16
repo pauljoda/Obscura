@@ -54,6 +54,7 @@ export * from './entityCapabilityTechnicalCapability';
 export * from './entityCapabilityTechnicalCapabilityKind';
 export * from './entityCard';
 export * from './entityCounter';
+export * from './entityCredit';
 export * from './entityDate';
 export * from './entityExternalId';
 export * from './entityFile';

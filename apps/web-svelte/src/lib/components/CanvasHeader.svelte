@@ -44,7 +44,8 @@
         }))
       : pathCrumbs,
   );
-  const mobileCrumbItems = $derived(getCanvasHeaderBreadcrumbItems(crumbs));
+  const desktopCrumbItems = $derived(getCanvasHeaderBreadcrumbItems(crumbs, 3));
+  const mobileCrumbItems = $derived(getCanvasHeaderBreadcrumbItems(crumbs, 2));
 
   const search = useSearch();
 
@@ -101,22 +102,59 @@
       {#if crumbs.length === 0}
         <span class="truncate text-text-muted">Dashboard</span>
       {:else}
-        {#each crumbs as crumb, i (crumb.href)}
-          <span class="flex min-w-0 items-center gap-1.5">
-            {#if i > 0}
-              <span class="shrink-0 text-text-disabled">/</span>
-            {/if}
-            {#if crumb.isLast}
-              <span class="truncate text-text-primary">{crumb.label}</span>
+        {#each desktopCrumbItems as item, i (`desktop-${item.kind}-${i}`)}
+          {#if i > 0 && desktopCrumbItems[i - 1]?.kind !== "overflow"}
+            <span class="shrink-0 text-text-disabled">/</span>
+          {/if}
+          <span class="flex min-w-0 items-center">
+            {#if item.kind === "overflow"}
+              <span class="relative shrink-0">
+                <button
+                  type="button"
+                  class={cn(
+                    "flex h-6 w-6 items-center justify-center border border-border-subtle bg-glass-1 text-text-muted backdrop-blur-md",
+                    "hover:text-text-primary hover:border-border-accent focus-visible:border-border-accent-strong focus-visible:shadow-focus-accent",
+                    "transition-colors duration-fast outline-none",
+                  )}
+                  aria-label={item.label}
+                  aria-haspopup="menu"
+                  aria-expanded={breadcrumbMenuOpen}
+                  onclick={() => (breadcrumbMenuOpen = !breadcrumbMenuOpen)}
+                >
+                  <Ellipsis class="h-3.5 w-3.5" />
+                </button>
+                {#if breadcrumbMenuOpen}
+                  <div
+                    class="absolute left-0 top-full z-[120] mt-2 w-[min(14rem,calc(100vw-2rem))] border border-border-default bg-glass-2 p-1 shadow-glass backdrop-blur-xl"
+                    role="menu"
+                  >
+                    {#each item.items as crumb (crumb.href)}
+                      <a
+                        href={resolveHref(crumb.href)}
+                        role="menuitem"
+                        class="block min-w-0 truncate px-3 py-2 text-text-muted transition-colors duration-fast hover:bg-surface-2 hover:text-text-primary focus-visible:bg-surface-2 focus-visible:text-text-primary outline-none"
+                        onclick={closeBreadcrumbMenu}
+                      >
+                        {crumb.label}
+                      </a>
+                    {/each}
+                  </div>
+                {/if}
+              </span>
+            {:else if item.isLast}
+              <span class="min-w-0 truncate text-text-primary">{item.label}</span>
             {:else}
               <a
-                href={resolveHref(crumb.href)}
+                href={resolveHref(item.href)}
                 class="shrink-0 text-text-muted hover:text-text-primary transition-colors duration-fast"
               >
-                {crumb.label}
+                {item.label}
               </a>
             {/if}
           </span>
+          {#if item.kind === "overflow"}
+            <span class="shrink-0 text-text-disabled">/</span>
+          {/if}
         {/each}
       {/if}
     </nav>
@@ -174,6 +212,9 @@
               </a>
             {/if}
           </span>
+          {#if item.kind === "overflow"}
+            <span class="shrink-0 text-text-disabled">/</span>
+          {/if}
         {/each}
       {/if}
     </nav>

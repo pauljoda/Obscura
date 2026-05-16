@@ -83,7 +83,12 @@ function studio(id: string, title: string): EntityCapability {
 }
 
 function credits(people: Array<{ id: string; title: string }>): EntityCapability {
-  return { kind: "credits", people: people.map((p) => ({ ...p, kind: "person" })) };
+  const references = people.map((p) => ({ ...p, kind: "person" }));
+  return {
+    kind: "credits",
+    items: references.map((person) => ({ character: null, person, role: "person" })),
+    people: references,
+  };
 }
 
 function stats(items: Array<{ code: string; value: number }>): EntityCapability {

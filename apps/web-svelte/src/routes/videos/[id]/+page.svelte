@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { ArrowLeft, Users } from "@lucide/svelte";
+  import { Building2, Users } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
+  import type { EntityCredit } from "$lib/api/generated/model";
   import type {
     SubtitleAppearance,
     SubtitleDisplayStyle,
@@ -24,10 +25,16 @@
     withFlagCapability,
     withRatingCapability,
   } from "$lib/api/capabilities";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
+  import {
+    entityReferenceToThumbnailCard,
+    type EntityThumbnailCard,
+  } from "$lib/entities/entity-thumbnail";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
   import { extractVideoPlayerProps, getPlaybackState } from "$lib/entities/video-capabilities";
   import { useNsfw } from "$lib/nsfw/store.svelte";
+  import { useAppChrome } from "$lib/stores/app-chrome.svelte";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
   import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
   import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
@@ -39,6 +46,7 @@
   type LoadState = "loading" | "ready" | "error";
 
   const nsfw = useNsfw();
+  const appChrome = useAppChrome();
   const playlist = usePlaylist();
 
   let loadState: LoadState = $state("loading");
@@ -84,11 +92,56 @@
     return cap?.value ?? null;
   });
 
-  const credits = $derived.by(() => {
+  const credits = $derived.by((): EntityCredit[] => {
     if (!video) return [];
     const cap = getCapability(video.capabilities, "credits");
-    return cap?.people ?? [];
+    if (cap?.items?.length) return cap.items;
+    return (cap?.people ?? []).map((person) => ({
+      character: null,
+      person,
+      role: "person",
+    }));
   });
+
+  const studioCards = $derived.by((): EntityThumbnailCard[] => {
+    if (!studio) return [];
+    return [
+      entityReferenceToThumbnailCard(studio, {
+        aspectRatio: "wide",
+      }),
+    ];
+  });
+
+  const creditCards = $derived.by((): EntityThumbnailCard[] => (
+    credits.map((credit) => (
+      entityReferenceToThumbnailCard(credit.person, {
+        aspectRatio: "portrait",
+        subtitle: creditSubtitle(credit),
+      })
+    ))
+  ));
+
+  const hasCastAndCrew = $derived(studioCards.length > 0 || creditCards.length > 0);
+
+  function creditSubtitle(credit: EntityCredit): string | undefined {
+    const character = credit.character?.trim();
+    if (character) return `Character ${character}`;
+    const role = labelForCreditRole(credit.role);
+    return role === "Person" ? undefined : role;
+  }
+
+  function labelForCreditRole(role: string | null | undefined): string {
+    const normalized = (role ?? "").trim();
+    if (!normalized) return "Person";
+    return normalized
+      .replaceAll("-", " ")
+      .replaceAll("_", " ")
+      .replace(/\b\w/g, (value) => value.toUpperCase());
+  }
+
+  function thumbnailKey(card: EntityThumbnailCard): string {
+    return `${card.entity.kind}:${card.entity.id}:${card.subtitle ?? ""}`;
+  }
 
   const dates = $derived.by(() => {
     if (!video) return [];
@@ -182,6 +235,14 @@
       playbackUpdateTimer = null;
     }
     video?.id;
+  });
+
+  $effect(() => {
+    if (!video) return;
+    return appChrome.setBreadcrumbs([
+      { label: "Videos", href: "/videos" },
+      { label: video.title },
+    ]);
   });
 
   // Hydrate subtitle preference from localStorage.
@@ -443,11 +504,6 @@
 </svelte:head>
 
 <div class="detail-page">
-  <a href="/videos" class="back-link">
-    <ArrowLeft class="h-4 w-4" />
-    Videos
-  </a>
-
   {#if loadState === "loading"}
     <div class="loading-shell" aria-busy="true"></div>
   {:else if loadState === "error"}
@@ -567,18 +623,44 @@
       {/snippet}
 
       {#snippet afterBody()}
-        {#if credits.length > 0}
+        {#if hasCastAndCrew}
           <div class="credits-section">
             <h2 class="section-label">
               <Users class="h-4 w-4" />
-              Cast
+              Cast and Crew
             </h2>
-            <div class="credits-grid">
-              {#each credits as person (person.id)}
-                <a href={resolveEntityHref("person", person.id)} class="credit-chip">
-                  {person.title}
-                </a>
-              {/each}
+            <div class="credit-rows">
+              {#if studioCards.length > 0}
+                <section class="credit-row" aria-label="Studios">
+                  <h3 class="credit-row-label">
+                    <Building2 class="h-3.5 w-3.5" />
+                    Studios
+                  </h3>
+                  <div class="credit-scroller">
+                    {#each studioCards as thumbnailCard (thumbnailKey(thumbnailCard))}
+                      <div class="credit-thumbnail is-studio">
+                        <EntityThumbnail card={thumbnailCard} />
+                      </div>
+                    {/each}
+                  </div>
+                </section>
+              {/if}
+
+              {#if creditCards.length > 0}
+                <section class="credit-row" aria-label="Cast">
+                  <h3 class="credit-row-label">
+                    <Users class="h-3.5 w-3.5" />
+                    Cast
+                  </h3>
+                  <div class="credit-scroller">
+                    {#each creditCards as thumbnailCard (thumbnailKey(thumbnailCard))}
+                      <div class="credit-thumbnail">
+                        <EntityThumbnail card={thumbnailCard} />
+                      </div>
+                    {/each}
+                  </div>
+                </section>
+              {/if}
             </div>
           </div>
         {/if}
@@ -594,23 +676,6 @@
     padding: 0;
     max-width: none;
     margin: 0;
-  }
-
-  .back-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: var(--color-text-muted, #8a93a6);
-    font-size: 0.78rem;
-    text-decoration: none;
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    transition: color 0.15s;
-  }
-
-  .back-link:hover {
-    color: var(--color-text-primary, #f2eed8);
   }
 
   .loading-shell {
@@ -672,6 +737,7 @@
   .credits-section {
     padding: 1rem 1.5rem;
     border-top: 1px solid var(--color-border, #1c2235);
+    overflow: hidden;
   }
 
   .section-label {
@@ -687,30 +753,68 @@
     color: var(--color-text-muted, #8a93a6);
   }
 
-  .credits-grid {
+  .credit-rows {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  .credit-row {
+    display: grid;
+    gap: 0.55rem;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .credit-row-label {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-  }
-
-  .credit-chip {
-    padding: 0.22rem 0.55rem;
-    font-size: 0.75rem;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0;
     color: var(--color-text-secondary, #c4c9d4);
-    border: 1px solid var(--color-border, #1c2235);
-    background: var(--color-surface-3, #151a28);
-    text-decoration: none;
-    transition: border-color 0.15s, color 0.15s;
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
-  .credit-chip:hover {
-    color: var(--color-text-accent, #c49a5a);
-    border-color: rgba(196, 154, 90, 0.35);
+  .credit-row-label :global(svg) {
+    color: var(--color-text-muted, #8a93a6);
+  }
+
+  .credit-scroller {
+    display: flex;
+    gap: 0.75rem;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.35rem;
+    scroll-padding-inline: 0.25rem;
+    scrollbar-width: thin;
+  }
+
+  .credit-thumbnail {
+    flex: 0 0 clamp(7.25rem, 34vw, 9.5rem);
+    min-width: 0;
+  }
+
+  .credit-thumbnail.is-studio {
+    flex-basis: clamp(9.5rem, 44vw, 13rem);
   }
 
   @media (min-width: 640px) {
     .credits-section {
       padding: 1rem 2rem;
+    }
+
+    .credit-thumbnail {
+      flex-basis: 9.75rem;
+    }
+
+    .credit-thumbnail.is-studio {
+      flex-basis: 13.5rem;
     }
   }
 

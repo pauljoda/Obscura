@@ -24,6 +24,7 @@
     hasHoverPreview,
     iconForKind,
     placeholderGradient,
+    resolveEntityThumbnailHref,
     toAspectRatioValue,
     type EntityThumbnailCard,
     type EntityThumbnailMetaIcon,
@@ -97,6 +98,7 @@
   const rating = $derived(getRatingValue(card.entity.capabilities));
   const imageOnly = $derived(card.entity.kind === ENTITY_KIND.bookPage);
   const bottomLeft = $derived(card.custom?.bottomLeft);
+  const href = $derived(resolveEntityThumbnailHref(card));
 
   function fitTitle(node: HTMLHeadingElement, _title: string) {
     let frame = 0;
@@ -191,10 +193,10 @@
 </script>
 
 <svelte:element
-  this={card.href ? "a" : "article"}
-  href={card.href || undefined}
-  role={card.href ? undefined : "group"}
-  tabindex={card.href ? undefined : 0}
+  this={href ? "a" : "article"}
+  href={href || undefined}
+  role={href ? undefined : "group"}
+  tabindex={href ? undefined : 0}
   class="entity-thumbnail"
   class:is-hovering={pointerRatio !== null}
   class:is-image-only={imageOnly}
@@ -299,11 +301,14 @@
   </div>
 
   {#if !imageOnly}
-    <div class="details">
+    <div class="details" class:has-subtitle={Boolean(card.subtitle)}>
       <div class="copy">
         <h3 class="ticker-title" use:fitTitle={card.entity.title} aria-label={card.entity.title}>
           <span class="title-text">{card.entity.title}</span>
         </h3>
+        {#if card.subtitle}
+          <p class="subtitle" title={card.subtitle}>{card.subtitle}</p>
+        {/if}
       </div>
 
       {#if card.meta?.length}
@@ -713,6 +718,17 @@
     min-width: 0;
   }
 
+  .subtitle {
+    overflow: hidden;
+    margin: 0.18rem 0 0;
+    color: rgb(196 201 212 / 0.72);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.64rem;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .details {
     display: grid;
     grid-template-rows: 1.35rem 1.3rem;
@@ -723,6 +739,11 @@
     background:
       linear-gradient(180deg, rgb(10 12 15 / 0.94), rgb(9 10 12 / 0.98)),
       #0a0b0d;
+  }
+
+  .details.has-subtitle {
+    grid-template-rows: minmax(0, 2.3rem) auto;
+    gap: 0.35rem;
   }
 
   .entity-thumbnail.is-list .details {

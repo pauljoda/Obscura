@@ -36,11 +36,29 @@ describe("/videos/[id] detail layout", () => {
     expect(pageSource).toContain('posterSize="none"');
   });
 
+  it("uses app-shell breadcrumbs instead of a page-local back link", () => {
+    const pageSource = readLocalSource("./+page.svelte");
+
+    expect(pageSource).toContain("appChrome.setBreadcrumbs");
+    expect(pageSource).toContain('{ label: "Videos", href: "/videos" }');
+    expect(pageSource).not.toContain('class="back-link"');
+    expect(pageSource).not.toContain('<a href="/videos"');
+  });
+
   it("keeps caption selection separate from transcript sidecar docking", () => {
     const pageSource = readLocalSource("./+page.svelte");
 
     expect(pageSource).toContain("onTranscriptSidecarToggle={toggleTranscriptDock}");
     expect(pageSource).not.toContain("if (id) userWantsDock = true;");
     expect(pageSource).not.toContain('if (id) window.localStorage.setItem("obscura:transcript-docked", "1");');
+  });
+
+  it("uses shared thumbnails for the cast and crew rows", () => {
+    const pageSource = readLocalSource("./+page.svelte");
+
+    expect(pageSource).toContain("Cast and Crew");
+    expect(pageSource).toContain("<EntityThumbnail card={thumbnailCard} />");
+    expect(pageSource).toContain("credit-scroller");
+    expect(pageSource).not.toContain("credit-chip");
   });
 });

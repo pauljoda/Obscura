@@ -15,8 +15,9 @@ export type CanvasHeaderBreadcrumbItem =
 
 export function getCanvasHeaderBreadcrumbItems(
   crumbs: CanvasHeaderBreadcrumb[],
+  maxInline = 2,
 ): CanvasHeaderBreadcrumbItem[] {
-  if (crumbs.length <= 2) {
+  if (crumbs.length <= maxInline) {
     return crumbs.map((crumb) => ({ kind: "crumb", ...crumb }));
   }
 

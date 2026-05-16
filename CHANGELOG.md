@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Video detail pages now show Cast and Crew as horizontally scrollable thumbnail rows, with studios separated from cast and character labels shown under credited people when available.
+- Video detail pages now use the app-shell breadcrumb instead of a page-local Videos back link, keeping navigation compact at the top of the screen.
 - Video detail pages now use a plain no-image detail header below the player, keeping the video player itself as the visual preview instead of repeating the thumbnail.
 - Video player captions are now controlled from the settings menu, while the row button uses a side-panel icon to show or hide the transcript sidecar without changing caption playback.
 - Adaptive HLS now advertises Jellyfin-style bitrate quality levels and shows the active Auto/manual bitrate beside the player's Adaptive HLS chip, with current/native stream dimensions as a secondary detail instead of height-based menu labels.
@@ -68,6 +70,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Added
+- Credits API responses now include role and character metadata alongside the existing compatibility people list, allowing actor cards to show character-specific subtitles.
 - VS Code Run and Debug now includes `Obscura: Kill Orphans`, a launch entry that runs `pnpm dev:kill` from the workspace.
 - Playback Settings now include HLS transcoder controls for software, auto, VideoToolbox, VA-API, NVENC, and QSV profiles, plus ffmpeg executable and VA-API device overrides.
 - Adaptive HLS transcoder settings: `OBSCURA_HLS_TRANSCODER`, `OBSCURA_FFMPEG_PATH`, and `OBSCURA_VAAPI_DEVICE` let advanced installs opt into software, auto, VideoToolbox, VA-API, NVENC, or QSV ffmpeg encoder profiles.
@@ -92,6 +95,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- Shared `EntityThumbnail` cards now resolve their own default entity links and support subtitles, so referenced entities can navigate consistently from any page.
+- App-shell breadcrumbs now support configurable inline limits, so longer trails collapse earlier behind the clickable overflow menu while short trails stay readable.
+- Video Cast and Crew sections now use shared `EntityThumbnail` cards in mobile-safe horizontal rows instead of compact text chips.
 - Video detail pages now opt into the shared `EntityDetail` no-poster mode instead of showing a thumbnail inside the detail hero.
 - The transcript panel now shows its line count as small helper text under the header instead of squeezing it into the title row.
 - Adaptive HLS master playlists and player quality menus now use Jellyfin's bitrate-oriented quality ladder, preserving native output when appropriate while showing current/native dimensions only in the playback status chip.
