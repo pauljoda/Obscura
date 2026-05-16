@@ -1,12 +1,15 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { resolve } from "$app/paths";
   import { page } from "$app/state";
   import { ArrowLeft, Users, Building2, Calendar, Info, SlidersHorizontal } from "@lucide/svelte";
   import type { EntityCredit } from "$lib/api/generated/model";
   import {
+    fetchV2Season,
     fetchV2Series,
     updateV2EntityRating,
     updateV2EntityFlags,
+    type V2VideoSeasonDetail,
     type V2VideoSeriesDetail,
   } from "$lib/api/v2";
   import {
@@ -30,6 +33,7 @@
 
   let loadState: LoadState = $state("loading");
   let series = $state<V2VideoSeriesDetail | null>(null);
+  let seasonEpisodeCounts = $state<Record<string, number>>({});
   let errorMessage: string | null = $state(null);
   let ratingBusy = $state(false);
 
@@ -76,6 +80,11 @@
     return cap?.items ?? [];
   });
 
+  const dateAired = $derived.by(() => {
+    const date = dates.find((item) => item.code === "first-air") ?? dates[0];
+    return date ? formatDateForHero(date.value) : null;
+  });
+
   const seasonCards = $derived.by((): EntityThumbnailCard[] => {
     if (!series) return [];
     return series.children
@@ -99,7 +108,10 @@
   const hasChildSeries = $derived(childSeriesCards.length > 0);
   const hasVideos = $derived(videoCards.length > 0);
   const hasCastAndCrew = $derived(studioCards.length > 0 || creditCards.length > 0);
-  const totalChildren = $derived(seasonCards.length + childSeriesCards.length + videoCards.length);
+  const seasonCount = $derived(seasonCards.length);
+  const totalEpisodeCount = $derived(
+    videoCards.length + Object.values(seasonEpisodeCounts).reduce((total, count) => total + count, 0),
+  );
   const detailSections = $derived.by((): EntityDetailSection[] => [
     {
       id: "cast-and-crew",
@@ -140,7 +152,9 @@
     loadState = "loading";
     errorMessage = null;
     try {
-      series = await fetchV2Series(page.params.id ?? "");
+      const nextSeries = await fetchV2Series(page.params.id ?? "");
+      seasonEpisodeCounts = await loadSeasonEpisodeCounts(nextSeries);
+      series = nextSeries;
       loadState = "ready";
     } catch (err) {
       errorMessage = err instanceof Error ? err.message : String(err);
@@ -187,6 +201,23 @@
       series = previous;
     }
   }
+
+  async function loadSeasonEpisodeCounts(nextSeries: V2VideoSeriesDetail): Promise<Record<string, number>> {
+    const seasons = nextSeries.children.filter((child) => child.kind === "video-season");
+    if (seasons.length === 0) return {};
+
+    const details = await Promise.all(
+      seasons.map((season) => fetchV2Season(nextSeries.id, season.id)),
+    );
+
+    return Object.fromEntries(details.map((detail: V2VideoSeasonDetail) => [detail.id, detail.videos.length]));
+  }
+
+  function formatDateForHero(value: string): string {
+    const match = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})$/.exec(value);
+    if (!match?.groups) return value;
+    return `${match.groups.day}-${match.groups.month}-${match.groups.year}`;
+  }
 </script>
 
 <svelte:head>
@@ -194,7 +225,7 @@
 </svelte:head>
 
 <div class="series-page">
-  <a href="/series" class="back-link">
+  <a href={resolve("/series")} class="back-link">
     <ArrowLeft class="h-4 w-4" />
     Series
   </a>
@@ -218,17 +249,20 @@
       sections={detailSections}
     >
       {#snippet heroMeta()}
-        {#each dates as date, i (date.code)}
-          {#if i > 0}
-            <span class="meta-sep"></span>
-          {/if}
-          <span class="meta-item">{date.value}</span>
-        {/each}
-        {#if dates.length > 0 && totalChildren > 0}
+        {#if dateAired}
+          <span class="meta-item">Date Aired: {dateAired}</span>
+        {/if}
+        {#if dateAired && (seasonCount > 0 || totalEpisodeCount > 0)}
           <span class="meta-sep"></span>
         {/if}
-        {#if totalChildren > 0}
-          <span class="meta-item">{totalChildren} {totalChildren === 1 ? "item" : "items"}</span>
+        {#if seasonCount > 0}
+          <span class="meta-item">Seasons: {seasonCount}</span>
+        {/if}
+        {#if seasonCount > 0 && totalEpisodeCount > 0}
+          <span class="meta-sep"></span>
+        {/if}
+        {#if totalEpisodeCount > 0}
+          <span class="meta-item">Episodes: {totalEpisodeCount}</span>
         {/if}
       {/snippet}
 

@@ -117,6 +117,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail Lab "Base" tab — shows all shared capability sections with interactive controls for hero image toggle, poster size selector (none/small/medium/large), and per-section visibility chips for rapid iteration on the core detail surface layout.
 
 ### Changed
+- Series detail headers now spell out the aired date, season count, and total episode count instead of showing a generic item count.
 - EntityDetail now treats migrated `backdrop` artwork as the hero/header image while keeping `poster` artwork in the poster slot.
 - Series detail headers now show date and item count only; studios live in the Cast and Crew section and rendering-mode badges are no longer shown.
 - Season detail pages now put links and files in a metadata tab, matching the series detail layout.

@@ -63,6 +63,16 @@ describe("series detail layout", () => {
     expect(source).not.toContain("meta-item is-studio");
   });
 
+  it("shows labeled aired date, season count, and episode count in the series hero", () => {
+    const source = readLocalSource("./[id]/+page.svelte");
+
+    expect(source).toContain("Date Aired:");
+    expect(source).toContain("Seasons:");
+    expect(source).toContain("Episodes:");
+    expect(source).toContain("loadSeasonEpisodeCounts");
+    expect(source).not.toContain("item\" : \"items\"");
+  });
+
   it("moves season links and files out of the main details tab", () => {
     const source = readLocalSource("./[id]/seasons/[seasonId]/+page.svelte");
 
