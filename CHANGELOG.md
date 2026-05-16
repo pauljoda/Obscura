@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
-- The identify review modal now features a polished Dark Room design with hero artwork cards, glass-layered panels, collapsible sections, interactive provider cards, per-image selection badges, and smooth animations throughout.
+- The identify review modal is now a focused review tool with togglable field rows showing current→new values, checkbox artwork rows with a full-screen lightbox for image selection, and a compact toolbar replacing the old hero header.
 - The Plugins page now manages v2 community plugins directly, including local discovery, install/remove, and editable API-key credentials for TMDB.
 - Saved TMDB API keys from the previous `TMDB_API_KEY` credential shape are now reused by the v2 `apiKey` plugin field.
 - Video and series detail pages now expose the v2 identify review drawer directly from the entity header.
