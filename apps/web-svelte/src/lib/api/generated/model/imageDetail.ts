@@ -5,10 +5,14 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapability } from './entityCapability';
+import type { EntityChildGroup } from './entityChildGroup';
 
 export interface ImageDetail {
   id: string;
   kind: string;
   title: string;
+  /** @nullable */
+  parentEntityId: string | null;
   capabilities: EntityCapability[];
+  childrenByKind: EntityChildGroup[];
 }

@@ -5,12 +5,14 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapability } from './entityCapability';
+import type { EntityChildGroup } from './entityChildGroup';
 
 export interface StudioDetail {
   id: string;
   kind: string;
   title: string;
-  capabilities: EntityCapability[];
   /** @nullable */
-  parentStudioId: string | null;
+  parentEntityId: string | null;
+  capabilities: EntityCapability[];
+  childrenByKind: EntityChildGroup[];
 }

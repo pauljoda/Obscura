@@ -28,6 +28,7 @@ import {
   listBooks,
   listGalleries,
   listImages,
+  getSeriesSeason,
 } from "./generated/obscura-v2";
 import type {
   AudioLibraryDetail,
@@ -37,6 +38,7 @@ import type {
   CollectionListResponse,
   EntityCapability,
   EntityCard,
+  EntityChildGroup,
   EntityListResponse,
   EntityReference,
   GalleryDetail,
@@ -56,6 +58,7 @@ import type {
   VideoListResponse,
   VideoSeriesDetail,
   VideoSeriesListResponse,
+  VideoSeasonDetail,
 } from "./generated/model";
 import { jellyfinApiPath, v2ApiPath } from "./orval-fetch";
 import type {
@@ -68,19 +71,13 @@ export type V2EntityReference = EntityReference;
 export type V2Rating = Rating;
 export type V2EntityCapability = EntityCapability;
 export type V2EntityCard = EntityCard;
+export type V2EntityChildGroup = EntityChildGroup;
 export type V2EntityListResponse = EntityListResponse;
 export type V2VideoListResponse = VideoListResponse;
 export type V2VideoDetail = VideoDetail;
 export type V2VideoSeriesListResponse = VideoSeriesListResponse;
 export type V2VideoSeriesDetail = VideoSeriesDetail;
-export interface V2VideoSeasonDetail {
-  id: string;
-  kind: string;
-  title: string;
-  capabilities: EntityCapability[];
-  seriesId: string;
-  videos: EntityCard[];
-}
+export type V2VideoSeasonDetail = VideoSeasonDetail;
 export type V2JobRun = JobRun & {
   targetKind?: string | null;
   targetId?: string | null;
@@ -289,19 +286,18 @@ export function fetchV2Series(
   });
 }
 
-export async function fetchV2Season(
+export function fetchV2Season(
   seriesId: string,
   seasonId: string,
   options?: V2RequestOptions,
 ): Promise<V2VideoSeasonDetail> {
-  const response = await fetch(v2ApiPath(`/series/${seriesId}/seasons/${seasonId}`), {
-    signal: options?.signal,
-  });
-  if (!response.ok) {
-    throw new Error(await response.text() || `Season ${response.status}`);
-  }
+  return getSeriesSeason(seriesId, seasonId, { signal: options?.signal }).then((response) => {
+    if (response.status !== 200) {
+      throw new Error(response.data.message);
+    }
 
-  return await response.json() as V2VideoSeasonDetail;
+    return response.data;
+  });
 }
 
 export function fetchV2Images(options?: V2RequestOptions): Promise<V2MediaListResponse> {

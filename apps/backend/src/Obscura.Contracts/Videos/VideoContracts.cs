@@ -17,11 +17,15 @@ public sealed record VideoListResponse(
 /// <param name="Id">Video entity identifier.</param>
 /// <param name="Kind">Entity kind code.</param>
 /// <param name="Title">Video title.</param>
+/// <param name="ParentEntityId">Structural parent entity identifier, when the video is an episode or other child.</param>
 /// <param name="Capabilities">Shared entity capabilities for the video.</param>
+/// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
 /// <param name="SubtitlesExtractedAt">When embedded subtitles were last extracted, when known.</param>
 public sealed record VideoDetail(
     Guid Id,
     string Kind,
     string Title,
+    Guid? ParentEntityId,
     IReadOnlyList<EntityCapability> Capabilities,
+    IReadOnlyList<EntityChildGroup> ChildrenByKind,
     DateTimeOffset? SubtitlesExtractedAt);

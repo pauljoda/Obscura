@@ -9,5 +9,6 @@ import type { EntityReference } from './entityReference';
 export interface EntityCredit {
   person: EntityReference;
   role: string;
-  character: null | string;
+  /** @nullable */
+  character: string | null;
 }

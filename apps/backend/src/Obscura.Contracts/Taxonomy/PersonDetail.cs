@@ -8,7 +8,9 @@ namespace Obscura.Contracts.Taxonomy;
 /// <param name="Id">Person entity identifier.</param>
 /// <param name="Kind">Entity kind code.</param>
 /// <param name="Title">Person display name.</param>
+/// <param name="ParentEntityId">Structural parent entity identifier, when present.</param>
 /// <param name="Capabilities">Shared entity capabilities projected for the person.</param>
+/// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
 /// <param name="Disambiguation">Optional text used to distinguish people with the same name.</param>
 /// <param name="Gender">Optional gender value from imported or edited metadata.</param>
 /// <param name="Birthdate">Optional birthdate value as supplied by metadata.</param>
@@ -27,7 +29,9 @@ public sealed record PersonDetail(
     Guid Id,
     string Kind,
     string Title,
+    Guid? ParentEntityId,
     IReadOnlyList<EntityCapability> Capabilities,
+    IReadOnlyList<EntityChildGroup> ChildrenByKind,
     string? Disambiguation,
     string? Gender,
     string? Birthdate,

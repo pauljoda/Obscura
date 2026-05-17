@@ -5,14 +5,14 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapability } from './entityCapability';
-import type { EntityCard } from './entityCard';
+import type { EntityChildGroup } from './entityChildGroup';
 
 export interface AudioLibraryDetail {
   id: string;
   kind: string;
   title: string;
-  capabilities: EntityCapability[];
-  children: EntityCard[];
   /** @nullable */
-  parentLibraryId: string | null;
+  parentEntityId: string | null;
+  capabilities: EntityCapability[];
+  childrenByKind: EntityChildGroup[];
 }

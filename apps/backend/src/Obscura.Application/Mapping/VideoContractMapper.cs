@@ -19,6 +19,8 @@ public static partial class ContractMapper
             video.Id,
             video.Kind.Code,
             video.Title,
+            video.ParentEntityId,
             ToEntityCapabilities(video.Capabilities),
+            ToEntityChildGroups(video.ChildrenByKind),
             video.SubtitlesExtractedAt);
 }

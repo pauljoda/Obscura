@@ -15,9 +15,11 @@
     withFlagCapability,
     withRatingCapability,
   } from "$lib/api/capabilities";
+  import { getChildren } from "$lib/entities/entity-children";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
+  import { ENTITY_KIND } from "$lib/entities/v2-codes";
   import EntityDetail, { type EntityDetailTab } from "$lib/components/entities/EntityDetail.svelte";
   import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
 
@@ -52,7 +54,8 @@
 
   const episodeCards = $derived.by((): EntityThumbnailCard[] => {
     if (!season) return [];
-    return season.videos.map((video) => entityCardToThumbnailCard(video, `/videos/${video.id}`));
+    return getChildren(season, ENTITY_KIND.video)
+      .map((video) => entityCardToThumbnailCard(video, `/videos/${video.id}`));
   });
 
   const detailTabs = $derived.by((): EntityDetailTab[] => {

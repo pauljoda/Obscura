@@ -13,6 +13,7 @@
     withFlagCapability,
     withRatingCapability,
   } from "$lib/api/capabilities";
+  import { getAllChildren } from "$lib/entities/entity-children";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
@@ -52,7 +53,7 @@
 
   const childCards = $derived.by((): EntityThumbnailCard[] => {
     if (!gallery) return [];
-    return gallery.children.map((child) => {
+    return getAllChildren(gallery).map((child) => {
       const href = child.kind === "gallery"
         ? resolveEntityHref("gallery", child.id)
         : resolveEntityHref(child.kind, child.id);

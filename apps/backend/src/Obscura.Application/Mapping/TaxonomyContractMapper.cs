@@ -20,7 +20,9 @@ public static partial class ContractMapper
             person.Id,
             person.Kind.Code,
             person.Title,
+            person.ParentEntityId,
             ToEntityCapabilities(person.Capabilities),
+            ToEntityChildGroups(person.ChildrenByKind),
             person.Disambiguation,
             person.Gender,
             person.Birthdate,
@@ -46,7 +48,9 @@ public static partial class ContractMapper
             studio.Id,
             studio.Kind.Code,
             studio.Title,
-            ToEntityCapabilities(studio.Capabilities));
+            studio.ParentEntityId,
+            ToEntityCapabilities(studio.Capabilities),
+            ToEntityChildGroups(studio.ChildrenByKind));
 
     /// <summary>
     /// Converts a tag aggregate into its object-specific detail contract.
@@ -58,6 +62,8 @@ public static partial class ContractMapper
             tag.Id,
             tag.Kind.Code,
             tag.Title,
+            tag.ParentEntityId,
             ToEntityCapabilities(tag.Capabilities),
+            ToEntityChildGroups(tag.ChildrenByKind),
             tag.IgnoreAutoTag);
 }

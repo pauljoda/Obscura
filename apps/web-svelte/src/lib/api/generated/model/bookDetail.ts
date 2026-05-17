@@ -5,12 +5,16 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapability } from './entityCapability';
+import type { EntityChildGroup } from './entityChildGroup';
 
 export interface BookDetail {
   id: string;
   kind: string;
   title: string;
+  /** @nullable */
+  parentEntityId: string | null;
   capabilities: EntityCapability[];
+  childrenByKind: EntityChildGroup[];
   bookType: string;
   /** @nullable */
   coverPageId: string | null;

@@ -5,14 +5,16 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapability } from './entityCapability';
-import type { EntityCard } from './entityCard';
+import type { EntityChildGroup } from './entityChildGroup';
 
 export interface GalleryDetail {
   id: string;
   kind: string;
   title: string;
+  /** @nullable */
+  parentEntityId: string | null;
   capabilities: EntityCapability[];
-  children: EntityCard[];
+  childrenByKind: EntityChildGroup[];
   galleryType: string;
   /** @nullable */
   coverImageId: string | null;

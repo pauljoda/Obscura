@@ -5,12 +5,16 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapability } from './entityCapability';
+import type { EntityChildGroup } from './entityChildGroup';
 
 export interface AudioTrackDetail {
   id: string;
   kind: string;
   title: string;
+  /** @nullable */
+  parentEntityId: string | null;
   capabilities: EntityCapability[];
+  childrenByKind: EntityChildGroup[];
   /** @nullable */
   embeddedArtist: string | null;
   /** @nullable */

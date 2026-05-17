@@ -4,13 +4,8 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { JobQueueCountDto } from './jobQueueCountDto';
 import type { JobRun } from './jobRun';
-
-export interface JobQueueCountDto {
-  type: string;
-  status: string;
-  count: number;
-}
 
 export interface JobListResponse {
   items: JobRun[];

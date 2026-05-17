@@ -24,7 +24,9 @@ public static partial class ContractMapper
             image.Id,
             image.Kind.Code,
             image.Title,
-            ToEntityCapabilities(image.Capabilities));
+            image.ParentEntityId,
+            ToEntityCapabilities(image.Capabilities),
+            ToEntityChildGroups(image.ChildrenByKind));
 
     /// <summary>
     /// Converts a gallery aggregate and ordered children into its object-specific detail contract.
@@ -37,8 +39,9 @@ public static partial class ContractMapper
             gallery.Id,
             gallery.Kind.Code,
             gallery.Title,
+            gallery.ParentEntityId,
             ToEntityCapabilities(gallery.Capabilities),
-            ToEntityCards(children),
+            ToEntityChildGroups(children),
             gallery.GalleryType.ToCode(),
             gallery.CoverImageId);
 
@@ -52,7 +55,9 @@ public static partial class ContractMapper
             book.Id,
             book.Kind.Code,
             book.Title,
+            book.ParentEntityId,
             ToEntityCapabilities(book.Capabilities),
+            ToEntityChildGroups(book.ChildrenByKind),
             book.BookType.ToCode(),
             book.CoverPageId);
 
@@ -67,8 +72,9 @@ public static partial class ContractMapper
             library.Id,
             library.Kind.Code,
             library.Title,
+            library.ParentEntityId,
             ToEntityCapabilities(library.Capabilities),
-            ToEntityCards(children));
+            ToEntityChildGroups(children));
 
     /// <summary>
     /// Converts an audio track aggregate into its object-specific detail contract.
@@ -80,7 +86,9 @@ public static partial class ContractMapper
             track.Id,
             track.Kind.Code,
             track.Title,
+            track.ParentEntityId,
             ToEntityCapabilities(track.Capabilities),
+            ToEntityChildGroups(track.ChildrenByKind),
             track.EmbeddedArtist,
             track.EmbeddedAlbum);
 }

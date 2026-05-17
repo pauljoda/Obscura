@@ -4,8 +4,8 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
-import type { LegacyVideoImportResponse } from "./legacyVideoImportResponse";
-import type { LegacyMediaImportResponse } from "./legacyMediaImportResponse";
+import type { LegacyMediaImportResponse } from './legacyMediaImportResponse';
+import type { LegacyVideoImportResponse } from './legacyVideoImportResponse';
 
 export interface V2FreshStartPrepareResponse {
   backupPath: string;
@@ -13,6 +13,6 @@ export interface V2FreshStartPrepareResponse {
   preservedLibraryRoots: number | string;
   preservedSettings: boolean;
   mediaReset: boolean;
-  videoImport: LegacyVideoImportResponse | null;
-  mediaImport: LegacyMediaImportResponse | null;
+  videoImport?: null | LegacyVideoImportResponse;
+  mediaImport?: null | LegacyMediaImportResponse;
 }

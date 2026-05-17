@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Entity detail responses now use the same `parentEntityId` and grouped `childrenByKind` shape as entity cards, so pages can render structural and virtual children through one graph contract.
 - Obscura now uses the generic entity graph as the only v2 relationship model. This is a breaking dev-schema change: reset or re-import v2 data so series, seasons, collections, galleries, audio libraries, and books rebuild through `childrenByKind`.
 - Entity API cards now expose `parentEntityId`, grouped `childrenByKind`, and the new `lifetime` capability so clients can render series, seasons, and future mixed children through one generic shape.
 - Entity graph groundwork now gives every entity typed child groups, structural parent metadata, and storage-shape metadata, preparing series, seasons, collections, galleries, audio, and books to share one relationship model.
@@ -101,6 +102,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Changed
+- Jellyfin-compatible HEAD playback probes are now hidden from the generated OpenAPI client while GET playback routes remain documented, keeping API generation focused on callable client operations.
+- Gallery, audio-library, collection, video, image, book, person, studio, tag, series, and season detail contracts now project generic child groups, and the Svelte detail routes use typed child helpers instead of relationship-specific arrays.
 - Season, audio-library, book, studio, and tag detail rows now use the generic entity parent/child graph instead of keeping duplicate parent columns.
 - V1 import, library scanning, dynamic collections, entity projection, metadata cascade, and collection rules now write and read `entity_child_links` directly instead of the old relationship registry and hierarchy-link table.
 - Series and season detail contracts now read their child cards from grouped entity-kind children instead of separate `children` and `videos` arrays.

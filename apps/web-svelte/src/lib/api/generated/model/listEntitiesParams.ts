@@ -6,7 +6,7 @@
  */
 
 export type ListEntitiesParams = {
-kind?: string;
 query?: string;
 cursor?: string;
+hideNsfw?: boolean;
 };

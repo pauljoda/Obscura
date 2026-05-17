@@ -6,31 +6,57 @@
  */
 import type {
   ApiProblem,
+  ApplyIdentifyProposalRequest,
   AudioLibraryDetail,
   AudioTrackDetail,
   BookDetail,
+  BrowseLibraryPathParams,
+  CancelJobsParams,
+  ClearJobFailuresParams,
   CollectionDetail,
   CollectionListResponse,
   EntityCard,
   EntityFlagsUpdateRequest,
   EntityListResponse,
+  EntityMarkerWriteRequest,
+  EntityMetadataProposal,
   GalleryDetail,
+  GetJellyfinVideoHlsRelativeAssetParams,
+  GetJellyfinVideoHlsSegmentParams,
+  GetJellyfinVideoMasterPlaylistParams,
+  IdentifyBulkSession,
+  IdentifyBulkStartRequest,
+  IdentifyEntityRequest,
   ImageDetail,
   JobListResponse,
   LegacyMediaImportResponse,
   LegacyVideoImportResponse,
+  LibraryBrowseResponse,
+  LibraryConfigResponse,
+  LibraryRoot,
+  LibraryRootCreateRequest,
+  LibraryRootUpdateRequest,
+  LibrarySettings,
+  LibrarySettingsUpdateRequest,
   ListAudioLibrariesParams,
   ListAudioTracksParams,
   ListBooksParams,
   ListCollectionsParams,
   ListEntitiesParams,
   ListGalleriesParams,
+  ListIdentifyProvidersParams,
   ListImagesParams,
   ListPeopleParams,
   ListStudiosParams,
   ListTagsParams,
   MediaListResponse,
   PersonDetail,
+  PlaybackInfoRequest,
+  PlaybackInfoResponse,
+  PlaybackSessionRequest,
+  PlaybackUpdateRequest,
+  PluginAuthUpdateRequest,
+  PluginProvider,
   RatingUpdateRequest,
   SettingsResponse,
   SettingsUpdateRequest,
@@ -41,6 +67,7 @@ import type {
   V2UpgradeGateStatusResponse,
   VideoDetail,
   VideoListResponse,
+  VideoSeasonDetail,
   VideoSeriesDetail,
   VideoSeriesListResponse
 } from './model';
@@ -76,6 +103,881 @@ export const getHealth = async ( options?: RequestInit): Promise<getHealthRespon
   {
     ...options,
     method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getJellyfinPlaybackInfoResponse200 = {
+  data: PlaybackInfoResponse
+  status: 200
+}
+
+export type getJellyfinPlaybackInfoResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getJellyfinPlaybackInfoResponseSuccess = (getJellyfinPlaybackInfoResponse200) & {
+  headers: Headers;
+};
+export type getJellyfinPlaybackInfoResponseError = (getJellyfinPlaybackInfoResponse404) & {
+  headers: Headers;
+};
+
+export type getJellyfinPlaybackInfoResponse = (getJellyfinPlaybackInfoResponseSuccess | getJellyfinPlaybackInfoResponseError)
+
+export const getGetJellyfinPlaybackInfoUrl = (itemId: string,) => {
+
+
+
+
+  return `/Items/${itemId}/PlaybackInfo`
+}
+
+export const getJellyfinPlaybackInfo = async (itemId: string, options?: RequestInit): Promise<getJellyfinPlaybackInfoResponse> => {
+
+  return orvalFetch<getJellyfinPlaybackInfoResponse>(getGetJellyfinPlaybackInfoUrl(itemId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type postJellyfinPlaybackInfoResponse200 = {
+  data: PlaybackInfoResponse
+  status: 200
+}
+
+export type postJellyfinPlaybackInfoResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type postJellyfinPlaybackInfoResponseSuccess = (postJellyfinPlaybackInfoResponse200) & {
+  headers: Headers;
+};
+export type postJellyfinPlaybackInfoResponseError = (postJellyfinPlaybackInfoResponse404) & {
+  headers: Headers;
+};
+
+export type postJellyfinPlaybackInfoResponse = (postJellyfinPlaybackInfoResponseSuccess | postJellyfinPlaybackInfoResponseError)
+
+export const getPostJellyfinPlaybackInfoUrl = (itemId: string,) => {
+
+
+
+
+  return `/Items/${itemId}/PlaybackInfo`
+}
+
+export const postJellyfinPlaybackInfo = async (itemId: string,
+    playbackInfoRequest: PlaybackInfoRequest, options?: RequestInit): Promise<postJellyfinPlaybackInfoResponse> => {
+
+  return orvalFetch<postJellyfinPlaybackInfoResponse>(getPostJellyfinPlaybackInfoUrl(itemId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      playbackInfoRequest,)
+  }
+);}
+
+
+
+export type getJellyfinVideoStreamResponse200 = {
+  data: void
+  status: 200
+}
+
+export type getJellyfinVideoStreamResponse206 = {
+  data: void
+  status: 206
+}
+
+export type getJellyfinVideoStreamResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getJellyfinVideoStreamResponse415 = {
+  data: ApiProblem
+  status: 415
+}
+
+export type getJellyfinVideoStreamResponseSuccess = (getJellyfinVideoStreamResponse200 | getJellyfinVideoStreamResponse206) & {
+  headers: Headers;
+};
+export type getJellyfinVideoStreamResponseError = (getJellyfinVideoStreamResponse404 | getJellyfinVideoStreamResponse415) & {
+  headers: Headers;
+};
+
+export type getJellyfinVideoStreamResponse = (getJellyfinVideoStreamResponseSuccess | getJellyfinVideoStreamResponseError)
+
+export const getGetJellyfinVideoStreamUrl = (itemId: string,) => {
+
+
+
+
+  return `/Videos/${itemId}/stream`
+}
+
+export const getJellyfinVideoStream = async (itemId: string, options?: RequestInit): Promise<getJellyfinVideoStreamResponse> => {
+
+  return orvalFetch<getJellyfinVideoStreamResponse>(getGetJellyfinVideoStreamUrl(itemId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getJellyfinVideoMasterPlaylistResponse200 = {
+  data: void
+  status: 200
+}
+
+export type getJellyfinVideoMasterPlaylistResponseSuccess = (getJellyfinVideoMasterPlaylistResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getJellyfinVideoMasterPlaylistResponse = (getJellyfinVideoMasterPlaylistResponseSuccess)
+
+export const getGetJellyfinVideoMasterPlaylistUrl = (itemId: string,
+    params?: GetJellyfinVideoMasterPlaylistParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/Videos/${itemId}/master.m3u8?${stringifiedParams}` : `/Videos/${itemId}/master.m3u8`
+}
+
+export const getJellyfinVideoMasterPlaylist = async (itemId: string,
+    params?: GetJellyfinVideoMasterPlaylistParams, options?: RequestInit): Promise<getJellyfinVideoMasterPlaylistResponse> => {
+
+  return orvalFetch<getJellyfinVideoMasterPlaylistResponse>(getGetJellyfinVideoMasterPlaylistUrl(itemId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getJellyfinVideoHlsSegmentResponse200 = {
+  data: void
+  status: 200
+}
+
+export type getJellyfinVideoHlsSegmentResponseSuccess = (getJellyfinVideoHlsSegmentResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getJellyfinVideoHlsSegmentResponse = (getJellyfinVideoHlsSegmentResponseSuccess)
+
+export const getGetJellyfinVideoHlsSegmentUrl = (itemId: string,
+    playlistId: string,
+    segmentId: string,
+    container: string,
+    params?: GetJellyfinVideoHlsSegmentParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/Videos/${itemId}/hls/${playlistId}/${segmentId}.${container}?${stringifiedParams}` : `/Videos/${itemId}/hls/${playlistId}/${segmentId}.${container}`
+}
+
+export const getJellyfinVideoHlsSegment = async (itemId: string,
+    playlistId: string,
+    segmentId: string,
+    container: string,
+    params?: GetJellyfinVideoHlsSegmentParams, options?: RequestInit): Promise<getJellyfinVideoHlsSegmentResponse> => {
+
+  return orvalFetch<getJellyfinVideoHlsSegmentResponse>(getGetJellyfinVideoHlsSegmentUrl(itemId,playlistId,segmentId,container,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getJellyfinVideoHlsRelativeAssetResponse200 = {
+  data: void
+  status: 200
+}
+
+export type getJellyfinVideoHlsRelativeAssetResponseSuccess = (getJellyfinVideoHlsRelativeAssetResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getJellyfinVideoHlsRelativeAssetResponse = (getJellyfinVideoHlsRelativeAssetResponseSuccess)
+
+export const getGetJellyfinVideoHlsRelativeAssetUrl = (itemId: string,
+    playlistId: string,
+    segmentId: string,
+    container: string,
+    params?: GetJellyfinVideoHlsRelativeAssetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/Videos/${itemId}/v/${playlistId}/${segmentId}.${container}?${stringifiedParams}` : `/Videos/${itemId}/v/${playlistId}/${segmentId}.${container}`
+}
+
+export const getJellyfinVideoHlsRelativeAsset = async (itemId: string,
+    playlistId: string,
+    segmentId: string,
+    container: string,
+    params?: GetJellyfinVideoHlsRelativeAssetParams, options?: RequestInit): Promise<getJellyfinVideoHlsRelativeAssetResponse> => {
+
+  return orvalFetch<getJellyfinVideoHlsRelativeAssetResponse>(getGetJellyfinVideoHlsRelativeAssetUrl(itemId,playlistId,segmentId,container,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type deleteJellyfinActiveEncodingsResponse200 = {
+  data: void
+  status: 200
+}
+
+export type deleteJellyfinActiveEncodingsResponseSuccess = (deleteJellyfinActiveEncodingsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type deleteJellyfinActiveEncodingsResponse = (deleteJellyfinActiveEncodingsResponseSuccess)
+
+export const getDeleteJellyfinActiveEncodingsUrl = () => {
+
+
+
+
+  return `/Videos/ActiveEncodings`
+}
+
+export const deleteJellyfinActiveEncodings = async ( options?: RequestInit): Promise<deleteJellyfinActiveEncodingsResponse> => {
+
+  return orvalFetch<deleteJellyfinActiveEncodingsResponse>(getDeleteJellyfinActiveEncodingsUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type getJellyfinTrickplayPlaylistResponse200 = {
+  data: void
+  status: 200
+}
+
+export type getJellyfinTrickplayPlaylistResponseSuccess = (getJellyfinTrickplayPlaylistResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getJellyfinTrickplayPlaylistResponse = (getJellyfinTrickplayPlaylistResponseSuccess)
+
+export const getGetJellyfinTrickplayPlaylistUrl = (itemId: string,
+    width: number,) => {
+
+
+
+
+  return `/Videos/${itemId}/Trickplay/${width}/tiles.m3u8`
+}
+
+export const getJellyfinTrickplayPlaylist = async (itemId: string,
+    width: number, options?: RequestInit): Promise<getJellyfinTrickplayPlaylistResponse> => {
+
+  return orvalFetch<getJellyfinTrickplayPlaylistResponse>(getGetJellyfinTrickplayPlaylistUrl(itemId,width),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getJellyfinTrickplayTileResponse200 = {
+  data: void
+  status: 200
+}
+
+export type getJellyfinTrickplayTileResponseSuccess = (getJellyfinTrickplayTileResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getJellyfinTrickplayTileResponse = (getJellyfinTrickplayTileResponseSuccess)
+
+export const getGetJellyfinTrickplayTileUrl = (itemId: string,
+    width: number,
+    index: number,) => {
+
+
+
+
+  return `/Videos/${itemId}/Trickplay/${width}/${index}.jpg`
+}
+
+export const getJellyfinTrickplayTile = async (itemId: string,
+    width: number,
+    index: number, options?: RequestInit): Promise<getJellyfinTrickplayTileResponse> => {
+
+  return orvalFetch<getJellyfinTrickplayTileResponse>(getGetJellyfinTrickplayTileUrl(itemId,width,index),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type postJellyfinSessionPlayingResponse200 = {
+  data: void
+  status: 200
+}
+
+export type postJellyfinSessionPlayingResponseSuccess = (postJellyfinSessionPlayingResponse200) & {
+  headers: Headers;
+};
+;
+
+export type postJellyfinSessionPlayingResponse = (postJellyfinSessionPlayingResponseSuccess)
+
+export const getPostJellyfinSessionPlayingUrl = () => {
+
+
+
+
+  return `/Sessions/Playing`
+}
+
+export const postJellyfinSessionPlaying = async (playbackSessionRequest: PlaybackSessionRequest, options?: RequestInit): Promise<postJellyfinSessionPlayingResponse> => {
+
+  return orvalFetch<postJellyfinSessionPlayingResponse>(getPostJellyfinSessionPlayingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      playbackSessionRequest,)
+  }
+);}
+
+
+
+export type postJellyfinSessionProgressResponse200 = {
+  data: void
+  status: 200
+}
+
+export type postJellyfinSessionProgressResponseSuccess = (postJellyfinSessionProgressResponse200) & {
+  headers: Headers;
+};
+;
+
+export type postJellyfinSessionProgressResponse = (postJellyfinSessionProgressResponseSuccess)
+
+export const getPostJellyfinSessionProgressUrl = () => {
+
+
+
+
+  return `/Sessions/Playing/Progress`
+}
+
+export const postJellyfinSessionProgress = async (playbackSessionRequest: PlaybackSessionRequest, options?: RequestInit): Promise<postJellyfinSessionProgressResponse> => {
+
+  return orvalFetch<postJellyfinSessionProgressResponse>(getPostJellyfinSessionProgressUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      playbackSessionRequest,)
+  }
+);}
+
+
+
+export type postJellyfinSessionPingResponse200 = {
+  data: void
+  status: 200
+}
+
+export type postJellyfinSessionPingResponseSuccess = (postJellyfinSessionPingResponse200) & {
+  headers: Headers;
+};
+;
+
+export type postJellyfinSessionPingResponse = (postJellyfinSessionPingResponseSuccess)
+
+export const getPostJellyfinSessionPingUrl = () => {
+
+
+
+
+  return `/Sessions/Playing/Ping`
+}
+
+export const postJellyfinSessionPing = async (playbackSessionRequest: PlaybackSessionRequest, options?: RequestInit): Promise<postJellyfinSessionPingResponse> => {
+
+  return orvalFetch<postJellyfinSessionPingResponse>(getPostJellyfinSessionPingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      playbackSessionRequest,)
+  }
+);}
+
+
+
+export type postJellyfinSessionStoppedResponse200 = {
+  data: void
+  status: 200
+}
+
+export type postJellyfinSessionStoppedResponseSuccess = (postJellyfinSessionStoppedResponse200) & {
+  headers: Headers;
+};
+;
+
+export type postJellyfinSessionStoppedResponse = (postJellyfinSessionStoppedResponseSuccess)
+
+export const getPostJellyfinSessionStoppedUrl = () => {
+
+
+
+
+  return `/Sessions/Playing/Stopped`
+}
+
+export const postJellyfinSessionStopped = async (playbackSessionRequest: PlaybackSessionRequest, options?: RequestInit): Promise<postJellyfinSessionStoppedResponse> => {
+
+  return orvalFetch<postJellyfinSessionStoppedResponse>(getPostJellyfinSessionStoppedUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      playbackSessionRequest,)
+  }
+);}
+
+
+
+export type postJellyfinUserPlayedItemResponse200 = {
+  data: void
+  status: 200
+}
+
+export type postJellyfinUserPlayedItemResponseSuccess = (postJellyfinUserPlayedItemResponse200) & {
+  headers: Headers;
+};
+;
+
+export type postJellyfinUserPlayedItemResponse = (postJellyfinUserPlayedItemResponseSuccess)
+
+export const getPostJellyfinUserPlayedItemUrl = (itemId: string,) => {
+
+
+
+
+  return `/UserPlayedItems/${itemId}`
+}
+
+export const postJellyfinUserPlayedItem = async (itemId: string, options?: RequestInit): Promise<postJellyfinUserPlayedItemResponse> => {
+
+  return orvalFetch<postJellyfinUserPlayedItemResponse>(getPostJellyfinUserPlayedItemUrl(itemId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type deleteJellyfinUserPlayedItemResponse200 = {
+  data: void
+  status: 200
+}
+
+export type deleteJellyfinUserPlayedItemResponseSuccess = (deleteJellyfinUserPlayedItemResponse200) & {
+  headers: Headers;
+};
+;
+
+export type deleteJellyfinUserPlayedItemResponse = (deleteJellyfinUserPlayedItemResponseSuccess)
+
+export const getDeleteJellyfinUserPlayedItemUrl = (itemId: string,) => {
+
+
+
+
+  return `/UserPlayedItems/${itemId}`
+}
+
+export const deleteJellyfinUserPlayedItem = async (itemId: string, options?: RequestInit): Promise<deleteJellyfinUserPlayedItemResponse> => {
+
+  return orvalFetch<deleteJellyfinUserPlayedItemResponse>(getDeleteJellyfinUserPlayedItemUrl(itemId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type browseLibraryPathResponse200 = {
+  data: LibraryBrowseResponse
+  status: 200
+}
+
+export type browseLibraryPathResponseSuccess = (browseLibraryPathResponse200) & {
+  headers: Headers;
+};
+;
+
+export type browseLibraryPathResponse = (browseLibraryPathResponseSuccess)
+
+export const getBrowseLibraryPathUrl = (params?: BrowseLibraryPathParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/libraries/browse?${stringifiedParams}` : `/api/libraries/browse`
+}
+
+/**
+ * @summary Browses local directories for watched-root selection.
+ */
+export const browseLibraryPath = async (params?: BrowseLibraryPathParams, options?: RequestInit): Promise<browseLibraryPathResponse> => {
+
+  return orvalFetch<browseLibraryPathResponse>(getBrowseLibraryPathUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createLibraryRootResponse200 = {
+  data: LibraryRoot
+  status: 200
+}
+
+export type createLibraryRootResponseSuccess = (createLibraryRootResponse200) & {
+  headers: Headers;
+};
+;
+
+export type createLibraryRootResponse = (createLibraryRootResponseSuccess)
+
+export const getCreateLibraryRootUrl = () => {
+
+
+
+
+  return `/api/libraries`
+}
+
+/**
+ * @summary Adds a watched media root.
+ */
+export const createLibraryRoot = async (libraryRootCreateRequest: LibraryRootCreateRequest, options?: RequestInit): Promise<createLibraryRootResponse> => {
+
+  return orvalFetch<createLibraryRootResponse>(getCreateLibraryRootUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      libraryRootCreateRequest,)
+  }
+);}
+
+
+
+export type updateLibraryRootResponse200 = {
+  data: void
+  status: 200
+}
+
+export type updateLibraryRootResponseSuccess = (updateLibraryRootResponse200) & {
+  headers: Headers;
+};
+;
+
+export type updateLibraryRootResponse = (updateLibraryRootResponseSuccess)
+
+export const getUpdateLibraryRootUrl = (id: string,) => {
+
+
+
+
+  return `/api/libraries/${id}`
+}
+
+/**
+ * @summary Updates a watched media root.
+ */
+export const updateLibraryRoot = async (id: string,
+    libraryRootUpdateRequest: LibraryRootUpdateRequest, options?: RequestInit): Promise<updateLibraryRootResponse> => {
+
+  return orvalFetch<updateLibraryRootResponse>(getUpdateLibraryRootUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      libraryRootUpdateRequest,)
+  }
+);}
+
+
+
+export type deleteLibraryRootResponse200 = {
+  data: void
+  status: 200
+}
+
+export type deleteLibraryRootResponseSuccess = (deleteLibraryRootResponse200) & {
+  headers: Headers;
+};
+;
+
+export type deleteLibraryRootResponse = (deleteLibraryRootResponseSuccess)
+
+export const getDeleteLibraryRootUrl = (id: string,) => {
+
+
+
+
+  return `/api/libraries/${id}`
+}
+
+/**
+ * @summary Deletes a watched media root.
+ */
+export const deleteLibraryRoot = async (id: string, options?: RequestInit): Promise<deleteLibraryRootResponse> => {
+
+  return orvalFetch<deleteLibraryRootResponse>(getDeleteLibraryRootUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type getUpdateCheckResponse200 = {
+  data: void
+  status: 200
+}
+
+export type getUpdateCheckResponseSuccess = (getUpdateCheckResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getUpdateCheckResponse = (getUpdateCheckResponseSuccess)
+
+export const getGetUpdateCheckUrl = () => {
+
+
+
+
+  return `/api/update-check`
+}
+
+/**
+ * @summary Returns a non-blocking update-check status for the Svelte shell.
+ */
+export const getUpdateCheck = async ( options?: RequestInit): Promise<getUpdateCheckResponse> => {
+
+  return orvalFetch<getUpdateCheckResponse>(getGetUpdateCheckUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getPlaylistSessionResponse200 = {
+  data: void
+  status: 200
+}
+
+export type getPlaylistSessionResponseSuccess = (getPlaylistSessionResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getPlaylistSessionResponse = (getPlaylistSessionResponseSuccess)
+
+export const getGetPlaylistSessionUrl = () => {
+
+
+
+
+  return `/api/playlist-session`
+}
+
+/**
+ * @summary Gets the current browser playlist session.
+ */
+export const getPlaylistSession = async ( options?: RequestInit): Promise<getPlaylistSessionResponse> => {
+
+  return orvalFetch<getPlaylistSessionResponse>(getGetPlaylistSessionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type putPlaylistSessionResponse200 = {
+  data: void
+  status: 200
+}
+
+export type putPlaylistSessionResponseSuccess = (putPlaylistSessionResponse200) & {
+  headers: Headers;
+};
+;
+
+export type putPlaylistSessionResponse = (putPlaylistSessionResponseSuccess)
+
+export const getPutPlaylistSessionUrl = () => {
+
+
+
+
+  return `/api/playlist-session`
+}
+
+/**
+ * @summary Stores the current browser playlist session.
+ */
+export const putPlaylistSession = async ( options?: RequestInit): Promise<putPlaylistSessionResponse> => {
+
+  return orvalFetch<putPlaylistSessionResponse>(getPutPlaylistSessionUrl(),
+  {
+    ...options,
+    method: 'PUT'
+
+
+  }
+);}
+
+
+
+export type deletePlaylistSessionResponse200 = {
+  data: void
+  status: 200
+}
+
+export type deletePlaylistSessionResponseSuccess = (deletePlaylistSessionResponse200) & {
+  headers: Headers;
+};
+;
+
+export type deletePlaylistSessionResponse = (deletePlaylistSessionResponseSuccess)
+
+export const getDeletePlaylistSessionUrl = () => {
+
+
+
+
+  return `/api/playlist-session`
+}
+
+/**
+ * @summary Clears the current browser playlist session.
+ */
+export const deletePlaylistSession = async ( options?: RequestInit): Promise<deletePlaylistSessionResponse> => {
+
+  return orvalFetch<deletePlaylistSessionResponse>(getDeletePlaylistSessionUrl(),
+  {
+    ...options,
+    method: 'DELETE'
 
 
   }
@@ -261,6 +1163,188 @@ export const updateEntityFlags = async (id: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       entityFlagsUpdateRequest,)
+  }
+);}
+
+
+
+export type updateEntityPlaybackResponse200 = {
+  data: EntityCard
+  status: 200
+}
+
+export type updateEntityPlaybackResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type updateEntityPlaybackResponseSuccess = (updateEntityPlaybackResponse200) & {
+  headers: Headers;
+};
+export type updateEntityPlaybackResponseError = (updateEntityPlaybackResponse404) & {
+  headers: Headers;
+};
+
+export type updateEntityPlaybackResponse = (updateEntityPlaybackResponseSuccess | updateEntityPlaybackResponseError)
+
+export const getUpdateEntityPlaybackUrl = (id: string,) => {
+
+
+
+
+  return `/api/entities/${id}/playback`
+}
+
+/**
+ * @summary Updates playback state (resume position, duration, completion) for one entity.
+ */
+export const updateEntityPlayback = async (id: string,
+    playbackUpdateRequest: PlaybackUpdateRequest, options?: RequestInit): Promise<updateEntityPlaybackResponse> => {
+
+  return orvalFetch<updateEntityPlaybackResponse>(getUpdateEntityPlaybackUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      playbackUpdateRequest,)
+  }
+);}
+
+
+
+export type createEntityMarkerResponse200 = {
+  data: EntityCard
+  status: 200
+}
+
+export type createEntityMarkerResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type createEntityMarkerResponseSuccess = (createEntityMarkerResponse200) & {
+  headers: Headers;
+};
+export type createEntityMarkerResponseError = (createEntityMarkerResponse404) & {
+  headers: Headers;
+};
+
+export type createEntityMarkerResponse = (createEntityMarkerResponseSuccess | createEntityMarkerResponseError)
+
+export const getCreateEntityMarkerUrl = (id: string,) => {
+
+
+
+
+  return `/api/entities/${id}/markers`
+}
+
+/**
+ * @summary Adds a timeline marker to one entity.
+ */
+export const createEntityMarker = async (id: string,
+    entityMarkerWriteRequest: EntityMarkerWriteRequest, options?: RequestInit): Promise<createEntityMarkerResponse> => {
+
+  return orvalFetch<createEntityMarkerResponse>(getCreateEntityMarkerUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      entityMarkerWriteRequest,)
+  }
+);}
+
+
+
+export type updateEntityMarkerResponse200 = {
+  data: EntityCard
+  status: 200
+}
+
+export type updateEntityMarkerResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type updateEntityMarkerResponseSuccess = (updateEntityMarkerResponse200) & {
+  headers: Headers;
+};
+export type updateEntityMarkerResponseError = (updateEntityMarkerResponse404) & {
+  headers: Headers;
+};
+
+export type updateEntityMarkerResponse = (updateEntityMarkerResponseSuccess | updateEntityMarkerResponseError)
+
+export const getUpdateEntityMarkerUrl = (id: string,
+    markerId: string,) => {
+
+
+
+
+  return `/api/entities/${id}/markers/${markerId}`
+}
+
+/**
+ * @summary Updates a timeline marker for one entity.
+ */
+export const updateEntityMarker = async (id: string,
+    markerId: string,
+    entityMarkerWriteRequest: EntityMarkerWriteRequest, options?: RequestInit): Promise<updateEntityMarkerResponse> => {
+
+  return orvalFetch<updateEntityMarkerResponse>(getUpdateEntityMarkerUrl(id,markerId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      entityMarkerWriteRequest,)
+  }
+);}
+
+
+
+export type deleteEntityMarkerResponse200 = {
+  data: EntityCard
+  status: 200
+}
+
+export type deleteEntityMarkerResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type deleteEntityMarkerResponseSuccess = (deleteEntityMarkerResponse200) & {
+  headers: Headers;
+};
+export type deleteEntityMarkerResponseError = (deleteEntityMarkerResponse404) & {
+  headers: Headers;
+};
+
+export type deleteEntityMarkerResponse = (deleteEntityMarkerResponseSuccess | deleteEntityMarkerResponseError)
+
+export const getDeleteEntityMarkerUrl = (id: string,
+    markerId: string,) => {
+
+
+
+
+  return `/api/entities/${id}/markers/${markerId}`
+}
+
+/**
+ * @summary Deletes a timeline marker from one entity.
+ */
+export const deleteEntityMarker = async (id: string,
+    markerId: string, options?: RequestInit): Promise<deleteEntityMarkerResponse> => {
+
+  return orvalFetch<deleteEntityMarkerResponse>(getDeleteEntityMarkerUrl(id,markerId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
   }
 );}
 
@@ -861,6 +1945,51 @@ export const getSeries = async (id: string, options?: RequestInit): Promise<getS
 
 
 
+export type getSeriesSeasonResponse200 = {
+  data: VideoSeasonDetail
+  status: 200
+}
+
+export type getSeriesSeasonResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getSeriesSeasonResponseSuccess = (getSeriesSeasonResponse200) & {
+  headers: Headers;
+};
+export type getSeriesSeasonResponseError = (getSeriesSeasonResponse404) & {
+  headers: Headers;
+};
+
+export type getSeriesSeasonResponse = (getSeriesSeasonResponseSuccess | getSeriesSeasonResponseError)
+
+export const getGetSeriesSeasonUrl = (id: string,
+    seasonId: string,) => {
+
+
+
+
+  return `/api/series/${id}/seasons/${seasonId}`
+}
+
+/**
+ * @summary Gets one video season detail record with ordered episodes.
+ */
+export const getSeriesSeason = async (id: string,
+    seasonId: string, options?: RequestInit): Promise<getSeriesSeasonResponse> => {
+
+  return orvalFetch<getSeriesSeasonResponse>(getGetSeriesSeasonUrl(id,seasonId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
 export type listVideosResponse200 = {
   data: VideoListResponse
   status: 200
@@ -940,49 +2069,41 @@ export const getVideo = async (id: string, options?: RequestInit): Promise<getVi
 
 
 
-export type streamVideoResponse200 = {
+export type getVideoSubtitleResponse200 = {
   data: void
   status: 200
 }
 
-export type streamVideoResponse206 = {
-  data: void
-  status: 206
-}
-
-export type streamVideoResponse404 = {
+export type getVideoSubtitleResponse404 = {
   data: ApiProblem
   status: 404
 }
 
-export type streamVideoResponse415 = {
-  data: ApiProblem
-  status: 415
-}
-
-export type streamVideoResponseSuccess = (streamVideoResponse200 | streamVideoResponse206) & {
+export type getVideoSubtitleResponseSuccess = (getVideoSubtitleResponse200) & {
   headers: Headers;
 };
-export type streamVideoResponseError = (streamVideoResponse404 | streamVideoResponse415) & {
+export type getVideoSubtitleResponseError = (getVideoSubtitleResponse404) & {
   headers: Headers;
 };
 
-export type streamVideoResponse = (streamVideoResponseSuccess | streamVideoResponseError)
+export type getVideoSubtitleResponse = (getVideoSubtitleResponseSuccess | getVideoSubtitleResponseError)
 
-export const getStreamVideoUrl = (id: string,) => {
+export const getGetVideoSubtitleUrl = (id: string,
+    trackId: string,) => {
 
 
 
 
-  return `/api/videos/${id}/stream`
+  return `/api/videos/${id}/subtitles/${trackId}`
 }
 
 /**
- * @summary Streams the original video source when available.
+ * @summary Gets one normalized WebVTT subtitle track.
  */
-export const streamVideo = async (id: string, options?: RequestInit): Promise<streamVideoResponse> => {
+export const getVideoSubtitle = async (id: string,
+    trackId: string, options?: RequestInit): Promise<getVideoSubtitleResponse> => {
 
-  return orvalFetch<streamVideoResponse>(getStreamVideoUrl(id),
+  return orvalFetch<getVideoSubtitleResponse>(getGetVideoSubtitleUrl(id,trackId),
   {
     ...options,
     method: 'GET'
@@ -993,84 +2114,41 @@ export const streamVideo = async (id: string, options?: RequestInit): Promise<st
 
 
 
-export type getVideoHlsManifestResponse200 = {
+export type getVideoSubtitleSourceResponse200 = {
   data: void
   status: 200
 }
 
-export type getVideoHlsManifestResponse404 = {
+export type getVideoSubtitleSourceResponse404 = {
   data: ApiProblem
   status: 404
 }
 
-export type getVideoHlsManifestResponseSuccess = (getVideoHlsManifestResponse200) & {
+export type getVideoSubtitleSourceResponseSuccess = (getVideoSubtitleSourceResponse200) & {
   headers: Headers;
 };
-export type getVideoHlsManifestResponseError = (getVideoHlsManifestResponse404) & {
+export type getVideoSubtitleSourceResponseError = (getVideoSubtitleSourceResponse404) & {
   headers: Headers;
 };
 
-export type getVideoHlsManifestResponse = (getVideoHlsManifestResponseSuccess | getVideoHlsManifestResponseError)
+export type getVideoSubtitleSourceResponse = (getVideoSubtitleSourceResponseSuccess | getVideoSubtitleSourceResponseError)
 
-export const getGetVideoHlsManifestUrl = (id: string,) => {
+export const getGetVideoSubtitleSourceUrl = (id: string,
+    trackId: string,) => {
 
 
 
 
-  return `/api/videos/${id}/hls/master.m3u8`
+  return `/api/videos/${id}/subtitles/${trackId}/source`
 }
 
 /**
- * @summary Gets the adaptive HLS manifest for one video.
+ * @summary Gets one preserved ASS/SSA subtitle source.
  */
-export const getVideoHlsManifest = async (id: string, options?: RequestInit): Promise<getVideoHlsManifestResponse> => {
+export const getVideoSubtitleSource = async (id: string,
+    trackId: string, options?: RequestInit): Promise<getVideoSubtitleSourceResponse> => {
 
-  return orvalFetch<getVideoHlsManifestResponse>(getGetVideoHlsManifestUrl(id),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-export type getVideoHlsAssetResponse200 = {
-  data: void
-  status: 200
-}
-
-export type getVideoHlsAssetResponse404 = {
-  data: ApiProblem
-  status: 404
-}
-
-export type getVideoHlsAssetResponseSuccess = (getVideoHlsAssetResponse200) & {
-  headers: Headers;
-};
-export type getVideoHlsAssetResponseError = (getVideoHlsAssetResponse404) & {
-  headers: Headers;
-};
-
-export type getVideoHlsAssetResponse = (getVideoHlsAssetResponseSuccess | getVideoHlsAssetResponseError)
-
-export const getGetVideoHlsAssetUrl = (id: string,
-    asset: string,) => {
-
-
-
-
-  return `/api/videos/${id}/hls/${asset}`
-}
-
-/**
- * @summary Gets an adaptive HLS variant playlist or segment for one video.
- */
-export const getVideoHlsAsset = async (id: string,
-    asset: string, options?: RequestInit): Promise<getVideoHlsAssetResponse> => {
-
-  return orvalFetch<getVideoHlsAssetResponse>(getGetVideoHlsAssetUrl(id,asset),
+  return orvalFetch<getVideoSubtitleSourceResponse>(getGetVideoSubtitleSourceUrl(id,trackId),
   {
     ...options,
     method: 'GET'
@@ -1117,6 +2195,49 @@ export const listJobs = async ( options?: RequestInit): Promise<listJobsResponse
 
 
 
+export type cancelJobsResponse200 = {
+  data: void
+  status: 200
+}
+
+export type cancelJobsResponseSuccess = (cancelJobsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type cancelJobsResponse = (cancelJobsResponseSuccess)
+
+export const getCancelJobsUrl = (params?: CancelJobsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/jobs?${stringifiedParams}` : `/api/jobs`
+}
+
+/**
+ * @summary Cancels queued or running job runs.
+ */
+export const cancelJobs = async (params?: CancelJobsParams, options?: RequestInit): Promise<cancelJobsResponse> => {
+
+  return orvalFetch<cancelJobsResponse>(getCancelJobsUrl(params),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
 export type createJobResponse200 = {
   data: void
   status: 200
@@ -1143,6 +2264,157 @@ export const getCreateJobUrl = (type: string,) => {
 export const createJob = async (type: string, options?: RequestInit): Promise<createJobResponse> => {
 
   return orvalFetch<createJobResponse>(getCreateJobUrl(type),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type cancelJobRunResponse200 = {
+  data: void
+  status: 200
+}
+
+export type cancelJobRunResponseSuccess = (cancelJobRunResponse200) & {
+  headers: Headers;
+};
+;
+
+export type cancelJobRunResponse = (cancelJobRunResponseSuccess)
+
+export const getCancelJobRunUrl = (id: string,) => {
+
+
+
+
+  return `/api/jobs/${id}`
+}
+
+/**
+ * @summary Cancels one queued or running job run.
+ */
+export const cancelJobRun = async (id: string, options?: RequestInit): Promise<cancelJobRunResponse> => {
+
+  return orvalFetch<cancelJobRunResponse>(getCancelJobRunUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type clearJobFailuresResponse200 = {
+  data: void
+  status: 200
+}
+
+export type clearJobFailuresResponseSuccess = (clearJobFailuresResponse200) & {
+  headers: Headers;
+};
+;
+
+export type clearJobFailuresResponse = (clearJobFailuresResponseSuccess)
+
+export const getClearJobFailuresUrl = (params?: ClearJobFailuresParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/jobs/failures/clear?${stringifiedParams}` : `/api/jobs/failures/clear`
+}
+
+/**
+ * @summary Clears failed job runs from the operations dashboard.
+ */
+export const clearJobFailures = async (params?: ClearJobFailuresParams, options?: RequestInit): Promise<clearJobFailuresResponse> => {
+
+  return orvalFetch<clearJobFailuresResponse>(getClearJobFailuresUrl(params),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type rebuildPreviewsResponse200 = {
+  data: void
+  status: 200
+}
+
+export type rebuildPreviewsResponseSuccess = (rebuildPreviewsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type rebuildPreviewsResponse = (rebuildPreviewsResponseSuccess)
+
+export const getRebuildPreviewsUrl = () => {
+
+
+
+
+  return `/api/jobs/rebuild-previews`
+}
+
+/**
+ * @summary Queues preview generation for all media entities.
+ */
+export const rebuildPreviews = async ( options?: RequestInit): Promise<rebuildPreviewsResponse> => {
+
+  return orvalFetch<rebuildPreviewsResponse>(getRebuildPreviewsUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type backfillFingerprintsResponse200 = {
+  data: void
+  status: 200
+}
+
+export type backfillFingerprintsResponseSuccess = (backfillFingerprintsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type backfillFingerprintsResponse = (backfillFingerprintsResponseSuccess)
+
+export const getBackfillFingerprintsUrl = () => {
+
+
+
+
+  return `/api/jobs/backfill-fingerprints`
+}
+
+/**
+ * @summary Queues fingerprint generation for entities that lack one.
+ */
+export const backfillFingerprints = async ( options?: RequestInit): Promise<backfillFingerprintsResponse> => {
+
+  return orvalFetch<backfillFingerprintsResponse>(getBackfillFingerprintsUrl(),
   {
     ...options,
     method: 'POST'
@@ -1221,6 +2493,79 @@ export const updateSettings = async (settingsUpdateRequest: SettingsUpdateReques
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       settingsUpdateRequest,)
+  }
+);}
+
+
+
+export type getLibraryConfigResponse200 = {
+  data: LibraryConfigResponse
+  status: 200
+}
+
+export type getLibraryConfigResponseSuccess = (getLibraryConfigResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getLibraryConfigResponse = (getLibraryConfigResponseSuccess)
+
+export const getGetLibraryConfigUrl = () => {
+
+
+
+
+  return `/api/settings/library`
+}
+
+/**
+ * @summary Gets settings and watched roots for the migrated settings page.
+ */
+export const getLibraryConfig = async ( options?: RequestInit): Promise<getLibraryConfigResponse> => {
+
+  return orvalFetch<getLibraryConfigResponse>(getGetLibraryConfigUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type updateLibrarySettingsResponse200 = {
+  data: LibrarySettings
+  status: 200
+}
+
+export type updateLibrarySettingsResponseSuccess = (updateLibrarySettingsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type updateLibrarySettingsResponse = (updateLibrarySettingsResponseSuccess)
+
+export const getUpdateLibrarySettingsUrl = () => {
+
+
+
+
+  return `/api/settings/library`
+}
+
+/**
+ * @summary Updates settings from the migrated settings page.
+ */
+export const updateLibrarySettings = async (librarySettingsUpdateRequest: LibrarySettingsUpdateRequest, options?: RequestInit): Promise<updateLibrarySettingsResponse> => {
+
+  return orvalFetch<updateLibrarySettingsResponse>(getUpdateLibrarySettingsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      librarySettingsUpdateRequest,)
   }
 );}
 
@@ -1319,7 +2664,7 @@ export const getPromptV2UpgradeGateUrl = () => {
 }
 
 /**
- * @summary Re-arms the v2 global entity upgrade gate for local migration testing.
+ * @summary Re-arms the v2 global entity upgrade gate for local migration testing without deleting existing v2 data.
  */
 export const promptV2UpgradeGate = async ( options?: RequestInit): Promise<promptV2UpgradeGateResponse> => {
 
@@ -1700,6 +3045,436 @@ export const getTag = async (id: string, options?: RequestInit): Promise<getTagR
   {
     ...options,
     method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listPluginsResponse200 = {
+  data: PluginProvider[]
+  status: 200
+}
+
+export type listPluginsResponseSuccess = (listPluginsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listPluginsResponse = (listPluginsResponseSuccess)
+
+export const getListPluginsUrl = () => {
+
+
+
+
+  return `/api/plugins`
+}
+
+/**
+ * @summary Lists compatible v2 community plugins discovered from installed and local development sources.
+ */
+export const listPlugins = async ( options?: RequestInit): Promise<listPluginsResponse> => {
+
+  return orvalFetch<listPluginsResponse>(getListPluginsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type installPluginResponse200 = {
+  data: PluginProvider
+  status: 200
+}
+
+export type installPluginResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type installPluginResponseSuccess = (installPluginResponse200) & {
+  headers: Headers;
+};
+export type installPluginResponseError = (installPluginResponse404) & {
+  headers: Headers;
+};
+
+export type installPluginResponse = (installPluginResponseSuccess | installPluginResponseError)
+
+export const getInstallPluginUrl = (provider: string,) => {
+
+
+
+
+  return `/api/plugins/${provider}`
+}
+
+/**
+ * @summary Marks a compatible v2 community plugin as installed and enabled.
+ */
+export const installPlugin = async (provider: string, options?: RequestInit): Promise<installPluginResponse> => {
+
+  return orvalFetch<installPluginResponse>(getInstallPluginUrl(provider),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type removePluginResponse204 = {
+  data: void
+  status: 204
+}
+
+export type removePluginResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type removePluginResponseSuccess = (removePluginResponse204) & {
+  headers: Headers;
+};
+export type removePluginResponseError = (removePluginResponse404) & {
+  headers: Headers;
+};
+
+export type removePluginResponse = (removePluginResponseSuccess | removePluginResponseError)
+
+export const getRemovePluginUrl = (provider: string,) => {
+
+
+
+
+  return `/api/plugins/${provider}`
+}
+
+/**
+ * @summary Removes local installed state for a v2 community plugin.
+ */
+export const removePlugin = async (provider: string, options?: RequestInit): Promise<removePluginResponse> => {
+
+  return orvalFetch<removePluginResponse>(getRemovePluginUrl(provider),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type updatePluginAuthResponse204 = {
+  data: void
+  status: 204
+}
+
+export type updatePluginAuthResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type updatePluginAuthResponseSuccess = (updatePluginAuthResponse204) & {
+  headers: Headers;
+};
+export type updatePluginAuthResponseError = (updatePluginAuthResponse404) & {
+  headers: Headers;
+};
+
+export type updatePluginAuthResponse = (updatePluginAuthResponseSuccess | updatePluginAuthResponseError)
+
+export const getUpdatePluginAuthUrl = (provider: string,) => {
+
+
+
+
+  return `/api/plugins/${provider}/auth`
+}
+
+/**
+ * @summary Stores credential values for a v2 community plugin provider.
+ */
+export const updatePluginAuth = async (provider: string,
+    pluginAuthUpdateRequest: PluginAuthUpdateRequest, options?: RequestInit): Promise<updatePluginAuthResponse> => {
+
+  return orvalFetch<updatePluginAuthResponse>(getUpdatePluginAuthUrl(provider),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      pluginAuthUpdateRequest,)
+  }
+);}
+
+
+
+export type listIdentifyProvidersResponse200 = {
+  data: PluginProvider[]
+  status: 200
+}
+
+export type listIdentifyProvidersResponseSuccess = (listIdentifyProvidersResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listIdentifyProvidersResponse = (listIdentifyProvidersResponseSuccess)
+
+export const getListIdentifyProvidersUrl = (params?: ListIdentifyProvidersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/identify/providers?${stringifiedParams}` : `/api/identify/providers`
+}
+
+/**
+ * @summary Lists compatible v2 providers that can identify the requested entity kind.
+ */
+export const listIdentifyProviders = async (params?: ListIdentifyProvidersParams, options?: RequestInit): Promise<listIdentifyProvidersResponse> => {
+
+  return orvalFetch<listIdentifyProvidersResponse>(getListIdentifyProvidersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type identifyEntityResponse200 = {
+  data: EntityMetadataProposal
+  status: 200
+}
+
+export type identifyEntityResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
+export type identifyEntityResponseSuccess = (identifyEntityResponse200) & {
+  headers: Headers;
+};
+export type identifyEntityResponseError = (identifyEntityResponse400) & {
+  headers: Headers;
+};
+
+export type identifyEntityResponse = (identifyEntityResponseSuccess | identifyEntityResponseError)
+
+export const getIdentifyEntityUrl = (entityId: string,) => {
+
+
+
+
+  return `/api/identify/entities/${entityId}`
+}
+
+/**
+ * @summary Runs one transient v2 metadata identify lookup for an entity.
+ */
+export const identifyEntity = async (entityId: string,
+    identifyEntityRequest: IdentifyEntityRequest, options?: RequestInit): Promise<identifyEntityResponse> => {
+
+  return orvalFetch<identifyEntityResponse>(getIdentifyEntityUrl(entityId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      identifyEntityRequest,)
+  }
+);}
+
+
+
+export type applyIdentifyProposalResponse200 = {
+  data: EntityCard
+  status: 200
+}
+
+export type applyIdentifyProposalResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type applyIdentifyProposalResponseSuccess = (applyIdentifyProposalResponse200) & {
+  headers: Headers;
+};
+export type applyIdentifyProposalResponseError = (applyIdentifyProposalResponse404) & {
+  headers: Headers;
+};
+
+export type applyIdentifyProposalResponse = (applyIdentifyProposalResponseSuccess | applyIdentifyProposalResponseError)
+
+export const getApplyIdentifyProposalUrl = (entityId: string,) => {
+
+
+
+
+  return `/api/identify/entities/${entityId}/apply`
+}
+
+/**
+ * @summary Applies selected fields from a transient identify proposal to the entity.
+ */
+export const applyIdentifyProposal = async (entityId: string,
+    applyIdentifyProposalRequest: ApplyIdentifyProposalRequest, options?: RequestInit): Promise<applyIdentifyProposalResponse> => {
+
+  return orvalFetch<applyIdentifyProposalResponse>(getApplyIdentifyProposalUrl(entityId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      applyIdentifyProposalRequest,)
+  }
+);}
+
+
+
+export type startBulkIdentifyResponse202 = {
+  data: IdentifyBulkSession
+  status: 202
+}
+
+export type startBulkIdentifyResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
+export type startBulkIdentifyResponseSuccess = (startBulkIdentifyResponse202) & {
+  headers: Headers;
+};
+export type startBulkIdentifyResponseError = (startBulkIdentifyResponse400) & {
+  headers: Headers;
+};
+
+export type startBulkIdentifyResponse = (startBulkIdentifyResponseSuccess | startBulkIdentifyResponseError)
+
+export const getStartBulkIdentifyUrl = () => {
+
+
+
+
+  return `/api/identify/bulk`
+}
+
+/**
+ * @summary Starts a transient in-memory bulk identify review session.
+ */
+export const startBulkIdentify = async (identifyBulkStartRequest: IdentifyBulkStartRequest, options?: RequestInit): Promise<startBulkIdentifyResponse> => {
+
+  return orvalFetch<startBulkIdentifyResponse>(getStartBulkIdentifyUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      identifyBulkStartRequest,)
+  }
+);}
+
+
+
+export type getBulkIdentifySessionResponse200 = {
+  data: IdentifyBulkSession
+  status: 200
+}
+
+export type getBulkIdentifySessionResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getBulkIdentifySessionResponseSuccess = (getBulkIdentifySessionResponse200) & {
+  headers: Headers;
+};
+export type getBulkIdentifySessionResponseError = (getBulkIdentifySessionResponse404) & {
+  headers: Headers;
+};
+
+export type getBulkIdentifySessionResponse = (getBulkIdentifySessionResponseSuccess | getBulkIdentifySessionResponseError)
+
+export const getGetBulkIdentifySessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/identify/bulk/${sessionId}`
+}
+
+/**
+ * @summary Gets transient bulk identify session status and results.
+ */
+export const getBulkIdentifySession = async (sessionId: string, options?: RequestInit): Promise<getBulkIdentifySessionResponse> => {
+
+  return orvalFetch<getBulkIdentifySessionResponse>(getGetBulkIdentifySessionUrl(sessionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type closeBulkIdentifySessionResponse204 = {
+  data: void
+  status: 204
+}
+
+export type closeBulkIdentifySessionResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type closeBulkIdentifySessionResponseSuccess = (closeBulkIdentifySessionResponse204) & {
+  headers: Headers;
+};
+export type closeBulkIdentifySessionResponseError = (closeBulkIdentifySessionResponse404) & {
+  headers: Headers;
+};
+
+export type closeBulkIdentifySessionResponse = (closeBulkIdentifySessionResponseSuccess | closeBulkIdentifySessionResponseError)
+
+export const getCloseBulkIdentifySessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/identify/bulk/${sessionId}`
+}
+
+/**
+ * @summary Closes a transient bulk identify review session.
+ */
+export const closeBulkIdentifySession = async (sessionId: string, options?: RequestInit): Promise<closeBulkIdentifySessionResponse> => {
+
+  return orvalFetch<closeBulkIdentifySessionResponse>(getCloseBulkIdentifySessionUrl(sessionId),
+  {
+    ...options,
+    method: 'DELETE'
 
 
   }

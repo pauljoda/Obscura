@@ -21,8 +21,10 @@
   import IdentifyButton from "$lib/components/IdentifyButton.svelte";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { creditSubtitle } from "$lib/entities/entity-credits";
+  import { getChildren } from "$lib/entities/entity-children";
   import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
   import { entityReferenceToThumbnailCard, type EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
+  import { ENTITY_KIND } from "$lib/entities/v2-codes";
   import EntityDetail, {
     type EntityDetailSection,
     type EntityDetailTab,
@@ -87,22 +89,22 @@
   });
 
   const seasonCards = $derived.by((): EntityThumbnailCard[] => {
-    if (!series) return [];
-    return series.children
-      .filter((child) => child.kind === "video-season")
-      .map((child) => entityCardToThumbnailCard(child, `/series/${series!.id}/seasons/${child.id}`));
+    const currentSeries = series;
+    if (!currentSeries) return [];
+    return getChildren(currentSeries, ENTITY_KIND.videoSeason)
+      .map((child) => entityCardToThumbnailCard(child, `/series/${currentSeries.id}/seasons/${child.id}`));
   });
 
   const childSeriesCards = $derived.by((): EntityThumbnailCard[] => {
     if (!series) return [];
-    return series.children
-      .filter((child) => child.kind === "video-series")
+    return getChildren(series, ENTITY_KIND.videoSeries)
       .map((child) => entityCardToThumbnailCard(child, `/series/${child.id}`));
   });
 
   const videoCards = $derived.by((): EntityThumbnailCard[] => {
     if (!series) return [];
-    return series.videos.map((video) => entityCardToThumbnailCard(video, `/videos/${video.id}`));
+    return getChildren(series, ENTITY_KIND.video)
+      .map((video) => entityCardToThumbnailCard(video, `/videos/${video.id}`));
   });
 
   const hasSeasons = $derived(seasonCards.length > 0);
@@ -204,14 +206,17 @@
   }
 
   async function loadSeasonEpisodeCounts(nextSeries: V2VideoSeriesDetail): Promise<Record<string, number>> {
-    const seasons = nextSeries.children.filter((child) => child.kind === "video-season");
+    const seasons = getChildren(nextSeries, ENTITY_KIND.videoSeason);
     if (seasons.length === 0) return {};
 
     const details = await Promise.all(
       seasons.map((season) => fetchV2Season(nextSeries.id, season.id)),
     );
 
-    return Object.fromEntries(details.map((detail: V2VideoSeasonDetail) => [detail.id, detail.videos.length]));
+    return Object.fromEntries(details.map((detail: V2VideoSeasonDetail) => [
+      detail.id,
+      getChildren(detail, ENTITY_KIND.video).length,
+    ]));
   }
 
   function formatDateForHero(value: string): string {

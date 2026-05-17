@@ -102,6 +102,12 @@ public static partial class ContractMapper
     public static IReadOnlyList<EntityCard> ToEntityCards(IReadOnlyList<DomainEntity> entities) =>
         entities.Select(ToEntityCard).ToArray();
 
+    private static IReadOnlyList<EntityChildGroup> ToEntityChildGroups(IReadOnlyList<DomainEntity> children) =>
+        children
+            .GroupBy(child => child.Kind.Code, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new EntityChildGroup(group.Key, ToEntityCards(group.ToArray())))
+            .ToArray();
+
     private static IReadOnlyList<EntityCapability> ToEntityCapabilities(IReadOnlyList<ICapability> capabilities) =>
         capabilities
             .Select(ToEntityCapability)

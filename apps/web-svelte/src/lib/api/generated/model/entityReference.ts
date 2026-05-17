@@ -9,5 +9,6 @@ export interface EntityReference {
   id: string;
   kind: string;
   title: string;
+  /** @nullable */
   thumbnailUrl?: string | null;
 }

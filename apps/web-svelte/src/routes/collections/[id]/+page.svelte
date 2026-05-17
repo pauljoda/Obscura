@@ -13,6 +13,7 @@
     withFlagCapability,
     withRatingCapability,
   } from "$lib/api/capabilities";
+  import { getAllChildren } from "$lib/entities/entity-children";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
@@ -34,7 +35,7 @@
 
   const itemCards = $derived.by((): EntityThumbnailCard[] => {
     if (!collection) return [];
-    return collection.items.map((item) =>
+    return getAllChildren(collection).map((item) =>
       entityCardToThumbnailCard(item, resolveEntityHref(item.kind, item.id)),
     );
   });

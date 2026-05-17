@@ -29,7 +29,7 @@ public static class JellyfinPlaybackEndpoints
             .Produces<PlaybackInfoResponse>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
-        routes.MapMethods("/Videos/{itemId:guid}/stream", [HttpMethods.Get, HttpMethods.Head], StreamVideoAsync)
+        routes.MapGet("/Videos/{itemId:guid}/stream", StreamVideoAsync)
             .WithName("GetJellyfinVideoStream")
             .WithTags("Jellyfin Videos")
             .Produces(StatusCodes.Status200OK)
@@ -37,7 +37,10 @@ public static class JellyfinPlaybackEndpoints
             .Produces<ApiProblem>(StatusCodes.Status404NotFound)
             .Produces<ApiProblem>(StatusCodes.Status415UnsupportedMediaType);
 
-        routes.MapMethods("/Videos/{itemId:guid}/master.m3u8", [HttpMethods.Get, HttpMethods.Head], (
+        routes.MapMethods("/Videos/{itemId:guid}/stream", [HttpMethods.Head], StreamVideoAsync)
+            .ExcludeFromDescription();
+
+        routes.MapGet("/Videos/{itemId:guid}/master.m3u8", (
             Guid itemId,
             int? audioStreamIndex,
             IHlsAssetService hlsAssets,
@@ -47,7 +50,16 @@ public static class JellyfinPlaybackEndpoints
             .WithName("GetJellyfinVideoMasterPlaylist")
             .WithTags("Jellyfin Videos");
 
-        routes.MapMethods("/Videos/{itemId:guid}/hls/{playlistId}/{segmentId}.{container}", [HttpMethods.Get, HttpMethods.Head], (
+        routes.MapMethods("/Videos/{itemId:guid}/master.m3u8", [HttpMethods.Head], (
+            Guid itemId,
+            int? audioStreamIndex,
+            IHlsAssetService hlsAssets,
+            HttpContext httpContext,
+            CancellationToken cancellationToken) =>
+            StreamHlsAssetAsync(itemId, "master.m3u8", audioStreamIndex, hlsAssets, httpContext, cancellationToken))
+            .ExcludeFromDescription();
+
+        routes.MapGet("/Videos/{itemId:guid}/hls/{playlistId}/{segmentId}.{container}", (
             Guid itemId,
             string playlistId,
             string segmentId,
@@ -60,7 +72,19 @@ public static class JellyfinPlaybackEndpoints
             .WithName("GetJellyfinVideoHlsSegment")
             .WithTags("Jellyfin Videos");
 
-        routes.MapMethods("/Videos/{itemId:guid}/v/{playlistId}/{segmentId}.{container}", [HttpMethods.Get, HttpMethods.Head], (
+        routes.MapMethods("/Videos/{itemId:guid}/hls/{playlistId}/{segmentId}.{container}", [HttpMethods.Head], (
+            Guid itemId,
+            string playlistId,
+            string segmentId,
+            string container,
+            int? audioStreamIndex,
+            IHlsAssetService hlsAssets,
+            HttpContext httpContext,
+            CancellationToken cancellationToken) =>
+            StreamHlsAssetAsync(itemId, $"v/{playlistId}/{segmentId}.{container}", audioStreamIndex, hlsAssets, httpContext, cancellationToken))
+            .ExcludeFromDescription();
+
+        routes.MapGet("/Videos/{itemId:guid}/v/{playlistId}/{segmentId}.{container}", (
             Guid itemId,
             string playlistId,
             string segmentId,
@@ -72,6 +96,18 @@ public static class JellyfinPlaybackEndpoints
             StreamHlsAssetAsync(itemId, $"v/{playlistId}/{segmentId}.{container}", audioStreamIndex, hlsAssets, httpContext, cancellationToken))
             .WithName("GetJellyfinVideoHlsRelativeAsset")
             .WithTags("Jellyfin Videos");
+
+        routes.MapMethods("/Videos/{itemId:guid}/v/{playlistId}/{segmentId}.{container}", [HttpMethods.Head], (
+            Guid itemId,
+            string playlistId,
+            string segmentId,
+            string container,
+            int? audioStreamIndex,
+            IHlsAssetService hlsAssets,
+            HttpContext httpContext,
+            CancellationToken cancellationToken) =>
+            StreamHlsAssetAsync(itemId, $"v/{playlistId}/{segmentId}.{container}", audioStreamIndex, hlsAssets, httpContext, cancellationToken))
+            .ExcludeFromDescription();
 
         routes.MapDelete("/Videos/ActiveEncodings", async (
             ITranscodeSessionService transcodes,

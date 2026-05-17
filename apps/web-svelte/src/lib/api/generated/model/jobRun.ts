@@ -13,6 +13,12 @@ export interface JobRun {
   progress: number | string;
   /** @nullable */
   message: string | null;
+  /** @nullable */
+  targetKind: string | null;
+  /** @nullable */
+  targetId: string | null;
+  /** @nullable */
+  targetLabel: string | null;
   createdAt: string;
   /** @nullable */
   startedAt: string | null;

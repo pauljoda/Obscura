@@ -9,6 +9,6 @@ import type { EntityReference } from './entityReference';
 
 export interface EntityCapabilityTagsCapability {
   kind: EntityCapabilityTagsCapabilityKind;
-  items: EntityReference[];
   values: string[];
+  items: EntityReference[];
 }

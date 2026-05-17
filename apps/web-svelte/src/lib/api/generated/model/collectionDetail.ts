@@ -5,14 +5,16 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapability } from './entityCapability';
-import type { EntityCard } from './entityCard';
+import type { EntityChildGroup } from './entityChildGroup';
 
 export interface CollectionDetail {
   id: string;
   kind: string;
   title: string;
+  /** @nullable */
+  parentEntityId: string | null;
   capabilities: EntityCapability[];
-  items: EntityCard[];
+  childrenByKind: EntityChildGroup[];
   /** @nullable */
   mode?: string | null;
   /** @nullable */

@@ -17,8 +17,9 @@ public sealed record CollectionListResponse(
 /// <param name="Id">Collection entity identifier.</param>
 /// <param name="Kind">Entity kind code.</param>
 /// <param name="Title">Collection title.</param>
+/// <param name="ParentEntityId">Structural parent entity identifier; collections usually leave this null.</param>
 /// <param name="Capabilities">Shared entity capabilities for the collection.</param>
-/// <param name="Items">Entity cards linked into the collection.</param>
+/// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
 /// <param name="Mode">Collection membership mode.</param>
 /// <param name="RuleTreeJson">Dynamic collection rule tree JSON, when present.</param>
 /// <param name="CoverMode">Collection cover selection mode.</param>
@@ -30,8 +31,9 @@ public sealed record CollectionDetail(
     Guid Id,
     string Kind,
     string Title,
+    Guid? ParentEntityId,
     IReadOnlyList<EntityCapability> Capabilities,
-    IReadOnlyList<EntityCard> Items,
+    IReadOnlyList<EntityChildGroup> ChildrenByKind,
     string? Mode = null,
     string? RuleTreeJson = null,
     string? CoverMode = null,
