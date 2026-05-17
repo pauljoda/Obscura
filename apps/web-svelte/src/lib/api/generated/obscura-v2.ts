@@ -24,6 +24,7 @@ import type {
   GetJellyfinVideoHlsRelativeAssetParams,
   GetJellyfinVideoHlsSegmentParams,
   GetJellyfinVideoMasterPlaylistParams,
+  GetOrganizePlanParams,
   IdentifyBulkSession,
   IdentifyBulkStartRequest,
   IdentifyEntityRequest,
@@ -50,6 +51,9 @@ import type {
   ListStudiosParams,
   ListTagsParams,
   MediaListResponse,
+  OrganizeApplyResponse,
+  OrganizePlanRequest,
+  OrganizePlanResponse,
   PersonDetail,
   PlaybackInfoRequest,
   PlaybackInfoResponse,
@@ -3477,6 +3481,86 @@ export const closeBulkIdentifySession = async (sessionId: string, options?: Requ
     method: 'DELETE'
 
 
+  }
+);}
+
+
+
+export type getOrganizePlanResponse200 = {
+  data: OrganizePlanResponse
+  status: 200
+}
+
+export type getOrganizePlanResponseSuccess = (getOrganizePlanResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getOrganizePlanResponse = (getOrganizePlanResponseSuccess)
+
+export const getGetOrganizePlanUrl = (params?: GetOrganizePlanParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/organize/plan?${stringifiedParams}` : `/api/organize/plan`
+}
+
+/**
+ * @summary Computes a dry-run entity organization plan from generic storage metadata.
+ */
+export const getOrganizePlan = async (params?: GetOrganizePlanParams, options?: RequestInit): Promise<getOrganizePlanResponse> => {
+
+  return orvalFetch<getOrganizePlanResponse>(getGetOrganizePlanUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type applyOrganizePlanResponse200 = {
+  data: OrganizeApplyResponse
+  status: 200
+}
+
+export type applyOrganizePlanResponseSuccess = (applyOrganizePlanResponse200) & {
+  headers: Headers;
+};
+;
+
+export type applyOrganizePlanResponse = (applyOrganizePlanResponseSuccess)
+
+export const getApplyOrganizePlanUrl = () => {
+
+
+
+
+  return `/api/organize/apply`
+}
+
+/**
+ * @summary Applies an entity organization plan by moving source files or folders.
+ */
+export const applyOrganizePlan = async (organizePlanRequest: OrganizePlanRequest, options?: RequestInit): Promise<applyOrganizePlanResponse> => {
+
+  return orvalFetch<applyOrganizePlanResponse>(getApplyOrganizePlanUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      organizePlanRequest,)
   }
 );}
 
