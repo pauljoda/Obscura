@@ -11,7 +11,6 @@
  * `createServerPresets`, so they follow you across devices and browsers.
  */
 
-import type { FetchVideosParams } from "$lib/v1/api/video-query-v1";
 import { isRecord } from "$lib/list-prefs";
 
 export const VIDEOS_LIST_PREFS_KEY = "videos:listPrefs";
@@ -138,7 +137,28 @@ const DURATION_PRESET_TO_API: Record<
   gte1800: { durationMin: 1800 },
 };
 
-export type VideosFetchParams = Omit<FetchVideosParams, "view">;
+export interface VideosFetchParams {
+  search?: string;
+  sort?: SortOption;
+  order?: SortDir;
+  tag?: string[];
+  performer?: string[];
+  resolution?: string[];
+  studio?: string[];
+  ratingMin?: number;
+  ratingMax?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  durationMin?: number;
+  durationMax?: number;
+  organized?: string;
+  isNsfw?: string;
+  interactive?: string;
+  hasFile?: string;
+  played?: string;
+  codec?: string[];
+  nsfw?: string;
+}
 
 /**
  * Translate the cookie-backed list prefs into the API query shape
