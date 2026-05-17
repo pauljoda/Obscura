@@ -547,13 +547,16 @@ public sealed class EntityMetadataApplyService
                     continue;
 
                 await ApplyPatchToEntityAsync(episodeEntity, episodeProposal.Patch, episodeProposal.Images, now, cancellationToken);
+                if (episodeProposal.Children.Count > 0 && episodeProposal.Patch.Credits.Count > 0)
+                {
+                    await CascadeChildImagesAsync(episodeProposal.Children, now, cancellationToken);
+                }
             }
         }
     }
 
     /// <summary>
-    /// Applies a subset of metadata patch fields to an existing entity (for cascade).
-    /// Updates title, description, dates, positions, counters, and downloads images.
+    /// Applies cascade metadata patch fields to an existing child entity.
     /// </summary>
     private async Task ApplyPatchToEntityAsync(
         EntityRow entity,
@@ -582,6 +585,21 @@ public sealed class EntityMetadataApplyService
             await UpsertUrlsAsync(entity.Id, patch.Urls, now, cancellationToken);
         }
 
+        if (patch.Tags.Count > 0)
+        {
+            await ReplaceTagsAsync(entity.Id, patch.Tags, now, cancellationToken);
+        }
+
+        if (!string.IsNullOrWhiteSpace(patch.Studio))
+        {
+            await SetStudioAsync(entity.Id, patch.Studio, now, cancellationToken);
+        }
+
+        if (patch.Credits.Count > 0)
+        {
+            await ReplaceCreditsAsync(entity.Id, patch.Credits, now, cancellationToken);
+        }
+
         if (patch.Dates.Count > 0)
         {
             await UpsertDatesAsync(entity.Id, patch.Dates, now, cancellationToken);
@@ -592,9 +610,19 @@ public sealed class EntityMetadataApplyService
             await UpsertCountersAsync(entity.Id, patch.Counters, now, cancellationToken);
         }
 
+        if (patch.Stats.Count > 0)
+        {
+            await UpsertStatsAsync(entity.Id, patch.Stats, now, cancellationToken);
+        }
+
         if (patch.Positions.Count > 0)
         {
             await UpsertPositionsAsync(entity.Id, patch.Positions, now, cancellationToken);
+        }
+
+        if (!string.IsNullOrWhiteSpace(patch.Classification))
+        {
+            await UpsertClassificationAsync(entity.Id, patch.Classification, now, cancellationToken);
         }
 
         if (images.Count > 0)

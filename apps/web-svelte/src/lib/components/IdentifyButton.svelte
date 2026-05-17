@@ -91,6 +91,7 @@
   let selectedImages = $state<Record<string, string | null>>({});
   let selectedCredits = $state<Record<string, boolean>>({});
   let selectedTags = $state<Record<string, boolean>>({});
+  let selectedCascade = $state<Record<string, boolean>>({});
   let fetchedExistingTags = $state<string[]>([]);
   let applying = $state(false);
   let error = $state<string | null>(null);
@@ -176,6 +177,7 @@
     selectedImages = {};
     selectedCredits = {};
     selectedTags = {};
+    selectedCascade = {};
     fetchedExistingTags = [];
     error = null;
     if (!providersLoaded) await loadProviders();
@@ -190,6 +192,7 @@
     selectedImages = {};
     selectedCredits = {};
     selectedTags = {};
+    selectedCascade = {};
     error = null;
   }
 
@@ -224,6 +227,7 @@
         nextProposal.patch.credits.map((credit, index) => [creditKey(credit, index), true]),
       );
       selectedTags = Object.fromEntries(nextProposal.patch.tags.map((tag) => [tag, true]));
+      selectedCascade = defaultCascadeSelection(nextProposal);
     } catch (err) {
       error = readError(err);
     } finally {
@@ -246,6 +250,13 @@
 
   function toggleTag(tag: string) {
     selectedTags = { ...selectedTags, [tag]: !selectedTags[tag] };
+  }
+
+  function toggleCascadeNode(node: CascadeNode) {
+    const nextValue = !isCascadeSelected(node);
+    const next = { ...selectedCascade };
+    for (const id of cascadeNodeIds(node)) next[id] = nextValue;
+    selectedCascade = next;
   }
 
   function isNewTag(tag: string): boolean {
@@ -280,42 +291,26 @@
     return proposal.patch.credits.map((c) => creditToCard(c, proposal!.children));
   });
 
-  interface SeasonSection {
-    seasonNumber: number;
+  interface CascadeNode {
+    proposalId: string;
+    kind: string;
     title: string;
     description: string | null;
-    airDate: string | null;
-    episodes: Array<{
-      episodeNumber: number;
-      title: string;
-      description: string | null;
-      airDate: string | null;
-      stillUrl: string | null;
-    }>;
+    date: string | null;
+    positionLabel: string;
+    imageUrl: string | null;
+    creditCount: number;
+    metadataCount: number;
+    children: CascadeNode[];
   }
 
-  const seasonSections = $derived.by((): SeasonSection[] => {
+  const relationshipCascade = $derived.by((): CascadeNode[] => {
     if (!proposal) return [];
-    return proposal.children
-      .filter((c) => c.targetKind === "video-season")
-      .map((season) => ({
-        seasonNumber: season.patch.positions?.seasonNumber ?? 0,
-        title: season.patch.title ?? `Season ${season.patch.positions?.seasonNumber ?? "?"}`,
-        description: season.patch.description ?? null,
-        airDate: season.patch.dates?.air ?? null,
-        episodes: season.children
-          .filter((e) => e.targetKind === "video-episode")
-          .map((ep) => ({
-            episodeNumber: ep.patch.positions?.episodeNumber ?? 0,
-            title: ep.patch.title ?? `Episode ${ep.patch.positions?.episodeNumber ?? "?"}`,
-            description: ep.patch.description ?? null,
-            airDate: ep.patch.dates?.air ?? null,
-            stillUrl: ep.images.find((i) => i.kind === "still")?.url ?? null,
-          }))
-          .sort((a, b) => a.episodeNumber - b.episodeNumber),
-      }))
-      .sort((a, b) => a.seasonNumber - b.seasonNumber);
+    return relationshipChildren(proposal).map(toCascadeNode).sort(compareCascadeNodes);
   });
+
+  const cascadeTotalCount = $derived(relationshipCascade.reduce((sum, node) => sum + cascadeNodeCount(node), 0));
+  const cascadeSelectedCount = $derived(relationshipCascade.reduce((sum, node) => sum + selectedCascadeNodeCount(node), 0));
 
   const studioCard = $derived.by((): EntityThumbnailCard | null => {
     if (!proposal?.patch.studio) return null;
@@ -355,6 +350,7 @@
     selectedTags = {};
     selectedImages = {};
     selectedCredits = {};
+    selectedCascade = {};
     error = null;
     if (selectedProvider) void run(selectedProvider);
   }
@@ -371,6 +367,7 @@
         credits,
         tags,
       },
+      children: filterSelectedCascadeChildren(result.children),
     };
   }
 
@@ -400,6 +397,123 @@
     const groups: Record<string, ImageCandidate[]> = {};
     for (const image of images) groups[image.kind] = [...(groups[image.kind] ?? []), image];
     return Object.entries(groups).map(([kind, rows]) => ({ kind, images: rows }));
+  }
+
+  function relationshipChildren(result: EntityMetadataProposal): EntityMetadataProposal[] {
+    return result.children.filter((child) => isRelationshipKind(child.targetKind));
+  }
+
+  function isRelationshipKind(kind: string): boolean {
+    const normalized = kind.toLowerCase();
+    return normalized !== "person" && normalized !== "studio" && normalized !== "tag";
+  }
+
+  function toCascadeNode(child: EntityMetadataProposal): CascadeNode {
+    const nested = relationshipChildren(child).map(toCascadeNode).sort(compareCascadeNodes);
+    return {
+      proposalId: child.proposalId,
+      kind: child.targetKind,
+      title: child.patch.title ?? fallbackCascadeTitle(child),
+      description: child.patch.description ?? null,
+      date: child.patch.dates.air ?? child.patch.dates.firstAir ?? child.patch.dates.release ?? null,
+      positionLabel: cascadePositionLabel(child),
+      imageUrl: firstImageUrl(child.images, "still") ?? firstImageUrl(child.images, "poster") ?? firstImageUrl(child.images, "backdrop"),
+      creditCount: child.patch.credits.length,
+      metadataCount: cascadeMetadataCount(child),
+      children: nested,
+    };
+  }
+
+  function fallbackCascadeTitle(child: EntityMetadataProposal): string {
+    if (child.targetKind.includes("season")) return `Season ${positionValue(child, ["seasonNumber", "season"]) ?? "?"}`;
+    if (child.targetKind.includes("episode")) return `Episode ${positionValue(child, ["episodeNumber", "episode"]) ?? "?"}`;
+    return child.targetKind;
+  }
+
+  function cascadePositionLabel(child: EntityMetadataProposal): string {
+    const season = positionValue(child, ["seasonNumber", "season"]);
+    const episode = positionValue(child, ["episodeNumber", "episode"]);
+    if (season != null && episode != null) return `S${String(season).padStart(2, "0")}E${String(episode).padStart(2, "0")}`;
+    if (season != null) return `S${String(season).padStart(2, "0")}`;
+    if (episode != null) return `E${String(episode).padStart(2, "0")}`;
+    return child.targetKind;
+  }
+
+  function positionValue(child: EntityMetadataProposal, keys: string[]): number | null {
+    for (const key of keys) {
+      const value = child.patch.positions[key];
+      if (typeof value === "number") return value;
+    }
+    return null;
+  }
+
+  function cascadeMetadataCount(child: EntityMetadataProposal): number {
+    let count = 0;
+    if (child.patch.title) count++;
+    if (child.patch.description) count++;
+    count += Object.keys(child.patch.externalIds).length;
+    count += child.patch.urls.length;
+    count += child.patch.tags.length;
+    if (child.patch.studio) count++;
+    count += child.patch.credits.length;
+    count += Object.keys(child.patch.dates).length;
+    count += Object.keys(child.patch.counters).length;
+    count += Object.keys(child.patch.stats).length;
+    count += Object.keys(child.patch.positions).length;
+    if (child.patch.classification) count++;
+    count += child.images.length;
+    return count;
+  }
+
+  function compareCascadeNodes(a: CascadeNode, b: CascadeNode): number {
+    const aSeason = cascadeLabelNumber(a.positionLabel, "S");
+    const bSeason = cascadeLabelNumber(b.positionLabel, "S");
+    if (aSeason !== bSeason) return aSeason - bSeason;
+    const aEpisode = cascadeLabelNumber(a.positionLabel, "E");
+    const bEpisode = cascadeLabelNumber(b.positionLabel, "E");
+    if (aEpisode !== bEpisode) return aEpisode - bEpisode;
+    return a.title.localeCompare(b.title);
+  }
+
+  function cascadeLabelNumber(label: string, prefix: string): number {
+    const match = new RegExp(`${prefix}(\\d+)`, "i").exec(label);
+    return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
+  }
+
+  function cascadeNodeCount(node: CascadeNode): number {
+    return 1 + node.children.reduce((sum, child) => sum + cascadeNodeCount(child), 0);
+  }
+
+  function selectedCascadeNodeCount(node: CascadeNode): number {
+    return (isCascadeSelected(node) ? 1 : 0) + node.children.reduce((sum, child) => sum + selectedCascadeNodeCount(child), 0);
+  }
+
+  function cascadeNodeIds(node: CascadeNode): string[] {
+    return [node.proposalId, ...node.children.flatMap(cascadeNodeIds)];
+  }
+
+  function isCascadeSelected(node: CascadeNode): boolean {
+    return selectedCascade[node.proposalId] !== false;
+  }
+
+  function defaultCascadeSelection(result: EntityMetadataProposal): Record<string, boolean> {
+    const selected: Record<string, boolean> = {};
+    for (const child of result.children) markCascadeSelected(child, selected);
+    return selected;
+  }
+
+  function markCascadeSelected(child: EntityMetadataProposal, selected: Record<string, boolean>) {
+    selected[child.proposalId] = true;
+    for (const nested of child.children) markCascadeSelected(nested, selected);
+  }
+
+  function filterSelectedCascadeChildren(children: EntityMetadataProposal[]): EntityMetadataProposal[] {
+    return children
+      .filter((child) => selectedCascade[child.proposalId] !== false)
+      .map((child) => ({
+        ...child,
+        children: filterSelectedCascadeChildren(child.children),
+      }));
   }
 
   function defaultImageSelection(images: ImageCandidate[]): Record<string, string | null> {
@@ -712,57 +826,6 @@
               </section>
             {/if}
 
-            <!-- Seasons & Episodes -->
-            {#if seasonSections.length > 0}
-              <section class="section-card">
-                <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('seasons')} onkeydown={(e) => e.key === 'Enter' && toggleSection('seasons')}>
-                  <h4>Seasons & Episodes</h4>
-                  <div class="section-meta">
-                    <span class="count-badge">{seasonSections.length} season{seasonSections.length === 1 ? "" : "s"}</span>
-                    <span class="chevron" class:rotated={!expandedSections.seasons}><ChevronDown class="h-3.5 w-3.5" /></span>
-                  </div>
-                </div>
-                {#if expandedSections.seasons}
-                  <div class="section-body">
-                    <div class="seasons-list">
-                      {#each seasonSections as season (season.seasonNumber)}
-                        <details class="season-group" open>
-                          <summary class="season-summary">
-                            <span class="season-number">S{String(season.seasonNumber).padStart(2, "0")}</span>
-                            <span class="season-title">{season.title}</span>
-                            {#if season.airDate}
-                              <span class="season-date">{season.airDate}</span>
-                            {/if}
-                            <span class="season-ep-count">{season.episodes.length} ep{season.episodes.length === 1 ? "" : "s"}</span>
-                          </summary>
-                          <div class="episode-list">
-                            {#each season.episodes as episode (episode.episodeNumber)}
-                              <div class="episode-row">
-                                {#if episode.stillUrl}
-                                  <img src={episode.stillUrl} alt="" class="episode-still" />
-                                {:else}
-                                  <div class="episode-still-empty">
-                                    <ImageIcon class="h-3 w-3" />
-                                  </div>
-                                {/if}
-                                <div class="episode-info">
-                                  <span class="episode-number">E{String(episode.episodeNumber).padStart(2, "0")}</span>
-                                  <span class="episode-title">{episode.title}</span>
-                                </div>
-                                {#if episode.airDate}
-                                  <span class="episode-date">{episode.airDate}</span>
-                                {/if}
-                              </div>
-                            {/each}
-                          </div>
-                        </details>
-                      {/each}
-                    </div>
-                  </div>
-                {/if}
-              </section>
-            {/if}
-
             <!-- Artwork -->
             {#if reviewableImageGroups.length > 0}
               <section class="section-card" class:muted={!selectedFields.images}>
@@ -812,6 +875,91 @@
                             </div>
                           </button>
                         </div>
+                      {/each}
+                    </div>
+                  </div>
+                {/if}
+              </section>
+            {/if}
+
+            <!-- Relationship Cascade -->
+            {#if relationshipCascade.length > 0}
+              <section class="section-card">
+                <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('seasons')} onkeydown={(e) => e.key === 'Enter' && toggleSection('seasons')}>
+                  <h4>Seasons & Episodes</h4>
+                  <div class="section-meta">
+                    <span class="count-badge">{cascadeSelectedCount} / {cascadeTotalCount}</span>
+                    <span class="chevron" class:rotated={!expandedSections.seasons}><ChevronDown class="h-3.5 w-3.5" /></span>
+                  </div>
+                </div>
+                {#if expandedSections.seasons}
+                  <div class="section-body">
+                    <div class="seasons-list">
+                      {#each relationshipCascade as node (node.proposalId)}
+                        <details class="season-group" open class:muted={!isCascadeSelected(node)}>
+                          <summary class="season-summary">
+                            <button
+                              type="button"
+                              class="field-check cascade-check"
+                              class:active={isCascadeSelected(node)}
+                              onclick={(event) => { event.preventDefault(); event.stopPropagation(); toggleCascadeNode(node); }}
+                              aria-label={`Toggle ${node.title}`}
+                            >
+                              {#if isCascadeSelected(node)}
+                                <Check class="h-3 w-3" />
+                              {/if}
+                            </button>
+                            <span class="season-number">{node.positionLabel}</span>
+                            <span class="season-title">{node.title}</span>
+                            {#if node.date}
+                              <span class="season-date">{node.date}</span>
+                            {/if}
+                            <span class="season-ep-count">{node.children.length} child{node.children.length === 1 ? "" : "ren"}</span>
+                          </summary>
+                          {#if node.description}
+                            <p class="cascade-description">{node.description}</p>
+                          {/if}
+                          <div class="episode-list">
+                            {#each node.children as child (child.proposalId)}
+                              <div class="episode-row" class:muted={!isCascadeSelected(child)}>
+                                <button
+                                  type="button"
+                                  class="field-check cascade-check"
+                                  class:active={isCascadeSelected(child)}
+                                  onclick={() => toggleCascadeNode(child)}
+                                  aria-label={`Toggle ${child.title}`}
+                                >
+                                  {#if isCascadeSelected(child)}
+                                    <Check class="h-3 w-3" />
+                                  {/if}
+                                </button>
+                                {#if child.imageUrl}
+                                  <img src={child.imageUrl} alt="" class="episode-still" />
+                                {:else}
+                                  <div class="episode-still-empty">
+                                    <ImageIcon class="h-3 w-3" />
+                                  </div>
+                                {/if}
+                                <div class="episode-info">
+                                  <span class="episode-number">{child.positionLabel}</span>
+                                  <span class="episode-title">{child.title}</span>
+                                  {#if child.description}
+                                    <span class="episode-description">{child.description}</span>
+                                  {/if}
+                                </div>
+                                <div class="episode-meta">
+                                  {#if child.date}
+                                    <span>{child.date}</span>
+                                  {/if}
+                                  {#if child.creditCount > 0}
+                                    <span>{child.creditCount} credit{child.creditCount === 1 ? "" : "s"}</span>
+                                  {/if}
+                                  <span>{child.metadataCount} fields</span>
+                                </div>
+                              </div>
+                            {/each}
+                          </div>
+                        </details>
                       {/each}
                     </div>
                   </div>
@@ -922,9 +1070,9 @@
 
 <style>
   /* === Base resets === */
-  button, select { border-radius: 0; }
+  button { border-radius: 0; }
   button { cursor: pointer; }
-  button:disabled, select:disabled { cursor: not-allowed; opacity: 0.5; }
+  button:disabled { cursor: not-allowed; opacity: 0.5; }
 
   /* === Trigger button === */
   .identify-button {
@@ -1336,6 +1484,11 @@
     background: linear-gradient(135deg, rgba(196, 154, 90, 0.3), rgba(196, 154, 90, 0.15));
     color: var(--color-text-accent, #c49a5a);
   }
+  .field-check.active {
+    border-color: rgba(196, 154, 90, 0.6);
+    background: linear-gradient(135deg, rgba(196, 154, 90, 0.3), rgba(196, 154, 90, 0.15));
+    color: var(--color-text-accent, #c49a5a);
+  }
 
   .field-label {
     font-size: 0.68rem;
@@ -1494,6 +1647,10 @@
   .season-group {
     border: 1px solid var(--color-border, #1c2235);
     background: var(--color-surface-1, #0c0f15);
+    transition: opacity 0.15s;
+  }
+  .season-group.muted {
+    opacity: 0.45;
   }
 
   .season-summary {
@@ -1551,6 +1708,21 @@
     font-size: 0.52rem;
   }
 
+  .cascade-check {
+    width: 1.05rem;
+    height: 1.05rem;
+    padding: 0;
+  }
+
+  .cascade-description {
+    margin: 0;
+    border-top: 1px solid var(--color-border, #1c2235);
+    padding: 0.55rem 0.65rem;
+    color: var(--color-text-muted, #8a93a6);
+    font-size: 0.64rem;
+    line-height: 1.45;
+  }
+
   .episode-list {
     display: grid;
     gap: 1px;
@@ -1560,11 +1732,15 @@
 
   .episode-row {
     display: grid;
-    grid-template-columns: 4rem minmax(0, 1fr) auto;
+    grid-template-columns: auto 4rem minmax(0, 1fr) auto;
     gap: 0.5rem;
     align-items: center;
     padding: 0.35rem 0.6rem;
     background: var(--color-surface-1, #0c0f15);
+    transition: opacity 0.15s;
+  }
+  .episode-row.muted {
+    opacity: 0.45;
   }
 
   .episode-still {
@@ -1586,8 +1762,9 @@
 
   .episode-info {
     display: flex;
-    align-items: center;
-    gap: 0.4rem;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.2rem 0.4rem;
     min-width: 0;
   }
 
@@ -1607,11 +1784,33 @@
     white-space: nowrap;
   }
 
-  .episode-date {
+  .episode-description {
+    display: -webkit-box;
+    flex-basis: 100%;
+    overflow: hidden;
+    color: var(--color-text-muted, #8a93a6);
+    font-size: 0.58rem;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .episode-meta {
+    display: flex;
     flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    max-width: 12rem;
+  }
+  .episode-meta span {
+    border: 1px solid var(--color-border, #1c2235);
+    background: var(--color-surface-2, #101420);
     color: var(--color-text-disabled, #4a5260);
     font-family: "JetBrains Mono", monospace;
     font-size: 0.52rem;
+    padding: 0.08rem 0.28rem;
   }
 
   /* === Artwork cards === */
@@ -2019,6 +2218,17 @@
     }
     .art-grid {
       grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+    }
+    .season-summary {
+      flex-wrap: wrap;
+    }
+    .episode-row {
+      grid-template-columns: auto 4rem minmax(0, 1fr);
+    }
+    .episode-meta {
+      grid-column: 2 / -1;
+      justify-content: flex-start;
+      max-width: none;
     }
     .lightbox-panel {
       min-height: 100dvh;

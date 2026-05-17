@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The identify review modal now shows individually selectable tags with NEW badges for unrecognized tags, EntityThumbnail-based credit and studio cards, multi-line descriptions, larger artwork previews in a card grid, and a consistent-size lightbox with slide-in animation and a Confirm button.
 - Applying identify results now cascades person profile photos and studio logos from the TMDB proposal into the linked Person and Studio entities, so credited actors and studios show artwork in browse and detail pages.
 - Credit and studio thumbnail cards on video and series detail pages now display the referenced entity's image (profile photo or logo) instead of showing blank cards.
-- Identifying a TV series now fetches full episode metadata from TMDB and displays seasons and episodes in the review modal. Applying writes titles, descriptions, air dates, and still images to each matched season and episode entity.
+- Identifying a TV series now fetches full episode metadata from TMDB and displays seasons and episodes after artwork in the review modal. Applying writes titles, descriptions, air dates, provider IDs, guest credits, and still images to each matched season and episode entity.
 - The Plugins page now manages v2 community plugins directly, including local discovery, install/remove, and editable API-key credentials for TMDB.
 - Saved TMDB API keys from the previous `TMDB_API_KEY` credential shape are now reused by the v2 `apiKey` plugin field.
 - Video and series detail pages now expose the v2 identify review drawer directly from the entity header.
@@ -96,10 +96,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Changed
+- Identify review now renders cascaded child metadata through a reusable relationship tree so future domains can review volume/chapter-style children without a season-only UI path.
 - Identify review modal redesigned with individually selectable tags (NEW badge for unrecognized tags), EntityThumbnail-based credit and studio cards, multi-line description fields, larger artwork card grid, and a same-size slide-in lightbox with a Confirm button replacing the close icon.
 - Identify credit and studio EntityThumbnail cards now show profile photos and logos from TMDB proposal children, and tag NEW badges now check the entity's full tag list (including NSFW tags) so existing tags are never falsely marked as new.
 
 ### Added
+- TMDB series identify now includes episode guest-star and writer/director credits, and cascade apply now persists child tags, studio, credits, stats, classification, and provider links in addition to core title/date fields.
 - Identify apply now cascades person profile photos and studio logos from proposal children into linked Person and Studio entities, giving credited actors and studios artwork without a separate identify pass.
 - V2 plugin credentials now resolve legacy provider key aliases such as `TMDB_API_KEY`, preserving saved API keys while still allowing users to edit the new v2 credential fields.
 - The Plugins page now lists v2 dotnet-process community plugins from local discovery and supports install, remove, and credential configuration through the new .NET plugin endpoints.
