@@ -64,7 +64,7 @@
       "detail": "Runs all .NET backend tests."
     },
     {
-      "label": "Obscura: Full Prebuild",
+      "label": "Obscura: Full Stack Launch",
       "dependsOn": [
         "Obscura: Docker Up",
         "Obscura: Vite Dev",
@@ -73,6 +73,16 @@
       "dependsOrder": "parallel",
       "problemMatcher": [],
       "detail": "Boots Postgres, starts the Vite dev server (HMR), and compiles the .NET backend in parallel."
+    },
+    {
+      "label": "Obscura: Full Prebuild",
+      "dependsOn": [
+        "Obscura: Kill Orphans",
+        "Obscura: Full Stack Launch"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "detail": "Clears stale dev processes, then boots Postgres, starts Vite, and compiles the .NET backend."
     },
     {
       "label": "Obscura Docs: Build",

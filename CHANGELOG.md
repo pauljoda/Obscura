@@ -105,6 +105,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Changed
+- The VS Code Full Stack launch now clears stale Obscura dev processes before starting Postgres, Vite, and the .NET build.
 - Identify positions now normalize provider keys such as `seasonNumber` and `episodeNumber` into the same canonical graph positions used by scanning, and applying them updates structural entity/link sort order.
 - Duplicate graph child sort values now fall back to created-at order, keeping repeated episode numbers deterministic without inventing new position values.
 - Identify review candidate switching now re-runs against the active graph entity, and child proposal review state loads the matching entity card for tag and credit comparisons.
