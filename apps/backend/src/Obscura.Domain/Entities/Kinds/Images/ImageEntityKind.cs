@@ -1,10 +1,11 @@
 namespace Obscura.Domain.Entities;
 
 using Obscura.Domain.Capabilities;
+using Obscura.Domain.Media;
 
 /// <summary>Single image media entity kind.</summary>
 public sealed record ImageEntityKind()
-    : IEntityKind
+    : IEntityKind<Image>
 {
     public string Code => "image";
     public string DisplayName => "Image";

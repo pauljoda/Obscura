@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Entity graph groundwork now gives every entity typed child groups, structural parent metadata, and storage-shape metadata, preparing series, seasons, collections, galleries, audio, and books to share one relationship model.
 - The identify review modal now shows individually selectable tags with NEW badges for unrecognized tags, EntityThumbnail-based credit and studio cards, multi-line descriptions, compact artwork thumbnails, and a consistent-size lightbox with slide-in animation and a Confirm button.
 - Applying identify results now cascades person profile photos and studio logos from the TMDB proposal into the linked Person and Studio entities, so credited actors and studios show artwork in browse and detail pages.
 - Credit and studio thumbnail cards on video and series detail pages now display the referenced entity's image (profile photo or logo) instead of showing blank cards.
@@ -108,6 +109,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Identify credit and studio EntityThumbnail cards now show profile photos and logos from TMDB proposal children, and tag NEW badges now check the entity's full tag list (including NSFW tags) so existing tags are never falsely marked as new.
 
 ### Added
+- Typed entity-child access, semantic lifetime capability metadata, and the `entity_child_links` persistence table were added as the base of the generic entity graph migration.
 - TMDB series identify now includes episode guest-star and writer/director credits, and cascade apply now persists child tags, studio, credits, stats, classification, and provider links in addition to core title/date fields.
 - Identify apply now cascades person profile photos and studio logos from proposal children into linked Person and Studio entities, giving credited actors and studios artwork without a separate identify pass.
 - V2 plugin credentials now resolve legacy provider key aliases such as `TMDB_API_KEY`, preserving saved API keys while still allowing users to edit the new v2 credential fields.

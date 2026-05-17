@@ -4,7 +4,7 @@ using Obscura.Domain.Capabilities;
 
 /// <summary>Generic audio entity kind.</summary>
 public sealed record AudioEntityKind()
-    : IEntityKind
+    : IEntityKind<Entity>
 {
     public string Code => "audio";
     public string DisplayName => "Audio";

@@ -1,10 +1,11 @@
 namespace Obscura.Domain.Entities;
 
 using Obscura.Domain.Capabilities;
+using Obscura.Domain.Taxonomy;
 
 /// <summary>Studio taxonomy entity kind.</summary>
 public sealed record StudioEntityKind()
-    : IEntityKind
+    : IEntityKind<Studio>
 {
     public string Code => "studio";
     public string DisplayName => "Studio";
@@ -20,6 +21,8 @@ public sealed record StudioEntityKind()
         CapabilityRegistry.Tags,
         CapabilityRegistry.Images,
         CapabilityRegistry.Description,
+        CapabilityRegistry.Dates,
+        CapabilityRegistry.Lifetime,
         CapabilityRegistry.Links,
         CapabilityRegistry.Flags,
         CapabilityRegistry.Files

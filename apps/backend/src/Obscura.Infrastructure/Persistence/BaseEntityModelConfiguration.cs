@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Persistence;
@@ -14,11 +16,22 @@ internal static class BaseEntityModelConfiguration
             entity.Property(row => row.Code).HasColumnName("code").HasMaxLength(64);
             entity.Property(row => row.DisplayName).HasColumnName("display_name").HasMaxLength(128).IsRequired();
             entity.Property(row => row.Category).HasColumnName("category").HasMaxLength(64).IsRequired();
-            entity.HasData(Obscura.Domain.Entities.EntityKindRegistry.All.Select(kind => new EntityKindRow
+            entity.Property(row => row.StorageShape).HasColumnName("storage_shape").HasMaxLength(64).IsRequired();
+            entity.Property(row => row.IsLeaf).HasColumnName("is_leaf");
+            entity.Property(row => row.AllowedChildKindCodesJson).HasColumnName("allowed_child_kind_codes").HasColumnType("jsonb").IsRequired();
+            entity.HasData(EntityKindRegistry.All.Select(kind =>
             {
-                Code = kind.Code,
-                DisplayName = kind.DisplayName,
-                Category = kind.Category.ToString()
+                var metadata = EntityKindMetadataRegistry.Require(kind);
+
+                return new EntityKindRow
+                {
+                    Code = kind.Code,
+                    DisplayName = kind.DisplayName,
+                    Category = kind.Category.ToString(),
+                    StorageShape = metadata.StorageShape.ToCode(),
+                    IsLeaf = metadata.IsLeaf,
+                    AllowedChildKindCodesJson = JsonSerializer.Serialize(metadata.AllowedChildKinds.Select(childKind => childKind.Code).ToArray())
+                };
             }));
         });
 
@@ -29,14 +42,21 @@ internal static class BaseEntityModelConfiguration
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
             entity.Property(row => row.KindCode).HasColumnName("kind_code").HasMaxLength(64).IsRequired();
             entity.Property(row => row.Title).HasColumnName("title").HasMaxLength(512).IsRequired();
+            entity.Property(row => row.ParentEntityId).HasColumnName("parent_entity_id");
+            entity.Property(row => row.SortOrder).HasColumnName("sort_order");
             entity.Property(row => row.CreatedAt).HasColumnName("created_at");
             entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
             entity.Property(row => row.DeletedAt).HasColumnName("deleted_at");
             entity.HasIndex(row => new { row.KindCode, row.Title });
+            entity.HasIndex(row => row.ParentEntityId);
             entity.HasOne<EntityKindRow>()
                 .WithMany()
                 .HasForeignKey(row => row.KindCode)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<EntityRow>()
+                .WithMany()
+                .HasForeignKey(row => row.ParentEntityId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<EntityRatingRow>(entity =>

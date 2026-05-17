@@ -1,10 +1,11 @@
 namespace Obscura.Domain.Entities;
 
 using Obscura.Domain.Capabilities;
+using Obscura.Domain.Taxonomy;
 
 /// <summary>Tag taxonomy entity kind.</summary>
 public sealed record TagEntityKind()
-    : IEntityKind
+    : IEntityKind<Tag>
 {
     public string Code => "tag";
     public string DisplayName => "Tag";

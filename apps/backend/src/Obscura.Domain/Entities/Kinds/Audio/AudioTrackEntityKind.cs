@@ -1,10 +1,11 @@
 namespace Obscura.Domain.Entities;
 
 using Obscura.Domain.Capabilities;
+using Obscura.Domain.Media;
 
 /// <summary>Single audio track entity kind.</summary>
 public sealed record AudioTrackEntityKind()
-    : IEntityKind
+    : IEntityKind<AudioTrack>
 {
     public string Code => "audio-track";
     public string DisplayName => "Audio Track";

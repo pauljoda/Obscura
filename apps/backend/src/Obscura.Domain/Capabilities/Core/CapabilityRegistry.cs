@@ -68,6 +68,9 @@ public sealed class CapabilityRegistry : AbstractRegistry<ICapabilityKind, strin
     /// <summary>Known dates capability kind.</summary>
     public static ICapabilityKind<CapabilityDates> Dates => Require<CapabilityDates>("dates");
 
+    /// <summary>Known semantic lifetime capability kind.</summary>
+    public static ICapabilityKind<CapabilityLifetime> Lifetime => Require<CapabilityLifetime>("lifetime");
+
     /// <summary>Known technical capability kind.</summary>
     public static ICapabilityKind<CapabilityTechnical> Technical => Require<CapabilityTechnical>("technical");
 

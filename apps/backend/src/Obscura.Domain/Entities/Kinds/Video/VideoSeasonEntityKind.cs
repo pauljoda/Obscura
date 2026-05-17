@@ -1,10 +1,11 @@
 namespace Obscura.Domain.Entities;
 
 using Obscura.Domain.Capabilities;
+using Obscura.Domain.Media;
 
 /// <summary>Video season structural entity kind.</summary>
 public sealed record VideoSeasonEntityKind()
-    : IEntityKind
+    : IEntityKind<VideoSeason>
 {
     public string Code => "video-season";
     public string DisplayName => "Video Season";

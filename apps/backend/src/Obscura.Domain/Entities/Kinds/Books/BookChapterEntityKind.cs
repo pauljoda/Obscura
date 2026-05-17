@@ -1,10 +1,11 @@
 namespace Obscura.Domain.Entities;
 
 using Obscura.Domain.Capabilities;
+using Obscura.Domain.Media;
 
 /// <summary>Book chapter structural entity kind.</summary>
 public sealed record BookChapterEntityKind()
-    : IEntityKind
+    : IEntityKind<BookChapter>
 {
     public string Code => "book-chapter";
     public string DisplayName => "Book Chapter";

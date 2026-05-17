@@ -15,6 +15,7 @@ public sealed class ObscuraDbContextModelTests
     [Theory]
     [InlineData(typeof(EntityKindRow), "entity_kinds")]
     [InlineData(typeof(EntityRow), "entities")]
+    [InlineData(typeof(EntityChildLinkRow), "entity_child_links")]
     [InlineData(typeof(EntityRatingRow), "entity_ratings")]
     [InlineData(typeof(EntityFlagRow), "entity_flags")]
     [InlineData(typeof(EntityDescriptionRow), "entity_descriptions")]
@@ -97,22 +98,57 @@ public sealed class ObscuraDbContextModelTests
     }
 
     [Fact]
-    public void StructuralHierarchyLinksHaveCanonicalChildIndex()
+    public void EntityChildLinksHaveCanonicalStructuralChildIndex()
     {
         using var db = CreateContext();
-        var modelEntity = db.Model.FindEntityType(typeof(EntityHierarchyLinkRow));
+        var modelEntity = db.Model.FindEntityType(typeof(EntityChildLinkRow));
 
         var index = modelEntity!.GetIndexes().SingleOrDefault(candidate =>
             candidate.IsUnique &&
             candidate.Properties.Select(property => property.Name).SequenceEqual([
-                nameof(EntityHierarchyLinkRow.ChildEntityId),
-                nameof(EntityHierarchyLinkRow.Relationship)
+                nameof(EntityChildLinkRow.ChildEntityId)
             ]));
 
         Assert.NotNull(index);
-        Assert.Contains("relationship IN", index!.GetFilter(), StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(EntityRelationshipRegistry.Chapter.Code, index.GetFilter(), StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(EntityRelationshipRegistry.Page.Code, index.GetFilter(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("is_structural", index!.GetFilter(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void EntityRowsExposeNullableParentAndSortOrder()
+    {
+        using var db = CreateContext();
+        var modelEntity = db.Model.FindEntityType(typeof(EntityRow));
+
+        var parent = modelEntity!.FindProperty(nameof(EntityRow.ParentEntityId));
+        var sortOrder = modelEntity.FindProperty(nameof(EntityRow.SortOrder));
+
+        Assert.NotNull(parent);
+        Assert.True(parent!.IsNullable);
+        Assert.Equal("parent_entity_id", parent.GetColumnName());
+        Assert.NotNull(sortOrder);
+        Assert.True(sortOrder!.IsNullable);
+        Assert.Equal("sort_order", sortOrder.GetColumnName());
+
+        var parentFk = modelEntity.GetForeignKeys().SingleOrDefault(foreignKey =>
+            foreignKey.Properties.Select(property => property.Name).SequenceEqual([nameof(EntityRow.ParentEntityId)]));
+        Assert.NotNull(parentFk);
+        Assert.Equal(typeof(EntityRow), parentFk!.PrincipalEntityType.ClrType);
+    }
+
+    [Fact]
+    public void EntityKindsSeedStorageMetadata()
+    {
+        using var db = CreateContext();
+        var modelEntity = db.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(EntityKindRow));
+
+        var videoSeed = modelEntity!.GetSeedData().Single(seed =>
+            string.Equals((string)seed[nameof(EntityKindRow.Code)]!, EntityKindRegistry.Video.Code, StringComparison.Ordinal));
+        var seriesSeed = modelEntity.GetSeedData().Single(seed =>
+            string.Equals((string)seed[nameof(EntityKindRow.Code)]!, EntityKindRegistry.VideoSeries.Code, StringComparison.Ordinal));
+
+        Assert.Equal(EntityStorageShape.File.ToCode(), videoSeed[nameof(EntityKindRow.StorageShape)]);
+        Assert.Equal(EntityStorageShape.Folder.ToCode(), seriesSeed[nameof(EntityKindRow.StorageShape)]);
+        Assert.Contains(EntityKindRegistry.VideoSeason.Code, (string)seriesSeed[nameof(EntityKindRow.AllowedChildKindCodesJson)]!);
     }
 
     [Fact]

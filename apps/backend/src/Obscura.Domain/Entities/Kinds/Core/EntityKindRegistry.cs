@@ -1,4 +1,6 @@
 using Obscura.Domain.Registries;
+using Obscura.Domain.Media;
+using Obscura.Domain.Taxonomy;
 
 namespace Obscura.Domain.Entities;
 
@@ -19,52 +21,52 @@ public sealed class EntityKindRegistry : AbstractRegistry<IEntityKind, string>
     }
 
     /// <summary>Known video entity kind.</summary>
-    public static IEntityKind Video => Require("video");
+    public static IEntityKind<Video> Video => Require<Video>("video");
 
     /// <summary>Known video series entity kind.</summary>
-    public static IEntityKind VideoSeries => Require("video-series");
+    public static IEntityKind<VideoSeries> VideoSeries => Require<VideoSeries>("video-series");
 
     /// <summary>Known video season structural entity kind.</summary>
-    public static IEntityKind VideoSeason => Require("video-season");
+    public static IEntityKind<VideoSeason> VideoSeason => Require<VideoSeason>("video-season");
 
     /// <summary>Known image entity kind.</summary>
-    public static IEntityKind Image => Require("image");
+    public static IEntityKind<Image> Image => Require<Image>("image");
 
     /// <summary>Known gallery entity kind.</summary>
-    public static IEntityKind Gallery => Require("gallery");
+    public static IEntityKind<Gallery> Gallery => Require<Gallery>("gallery");
 
     /// <summary>Known book entity kind.</summary>
-    public static IEntityKind Book => Require("book");
+    public static IEntityKind<Book> Book => Require<Book>("book");
 
     /// <summary>Known book volume structural entity kind.</summary>
-    public static IEntityKind BookVolume => Require("book-volume");
+    public static IEntityKind<BookVolume> BookVolume => Require<BookVolume>("book-volume");
 
     /// <summary>Known book chapter structural entity kind.</summary>
-    public static IEntityKind BookChapter => Require("book-chapter");
+    public static IEntityKind<BookChapter> BookChapter => Require<BookChapter>("book-chapter");
 
     /// <summary>Known book page structural entity kind.</summary>
-    public static IEntityKind BookPage => Require("book-page");
+    public static IEntityKind<BookPage> BookPage => Require<BookPage>("book-page");
 
     /// <summary>Known generic audio entity kind.</summary>
-    public static IEntityKind Audio => Require("audio");
+    public static IEntityKind<Entity> Audio => Require<Entity>("audio");
 
     /// <summary>Known audio library entity kind.</summary>
-    public static IEntityKind AudioLibrary => Require("audio-library");
+    public static IEntityKind<AudioLibrary> AudioLibrary => Require<AudioLibrary>("audio-library");
 
     /// <summary>Known audio track entity kind.</summary>
-    public static IEntityKind AudioTrack => Require("audio-track");
+    public static IEntityKind<AudioTrack> AudioTrack => Require<AudioTrack>("audio-track");
 
     /// <summary>Known person taxonomy entity kind.</summary>
-    public static IEntityKind Person => Require("person");
+    public static IEntityKind<Person> Person => Require<Person>("person");
 
     /// <summary>Known studio taxonomy entity kind.</summary>
-    public static IEntityKind Studio => Require("studio");
+    public static IEntityKind<Studio> Studio => Require<Studio>("studio");
 
     /// <summary>Known tag taxonomy entity kind.</summary>
-    public static IEntityKind Tag => Require("tag");
+    public static IEntityKind<Tag> Tag => Require<Tag>("tag");
 
     /// <summary>Known collection entity kind.</summary>
-    public static IEntityKind Collection => Require("collection");
+    public static IEntityKind<Collection> Collection => Require<Collection>("collection");
 
     /// <summary>
     /// Gets every known entity kind in deterministic registry order.
@@ -89,4 +91,16 @@ public sealed class EntityKindRegistry : AbstractRegistry<IEntityKind, string>
     public static IEntityKind Require(string code)
         => Registry.RequireKey(code, missingCode =>
             $"Unknown entity kind code '{missingCode}'. Add an {nameof(IEntityKind)} implementation before using it.");
+
+    /// <summary>
+    /// Looks up an entity kind by code and returns a typed view for child and route access.
+    /// </summary>
+    /// <typeparam name="TEntity">Entity shape represented by the kind.</typeparam>
+    /// <param name="code">Kind code from storage.</param>
+    /// <returns>Typed view over the registered entity kind.</returns>
+    public static IEntityKind<TEntity> Require<TEntity>(string code)
+        where TEntity : Entity =>
+        Require(code) is IEntityKind<TEntity> typedKind
+            ? typedKind
+            : throw new InvalidOperationException($"Entity kind code '{code}' is not registered for {typeof(TEntity).Name}.");
 }

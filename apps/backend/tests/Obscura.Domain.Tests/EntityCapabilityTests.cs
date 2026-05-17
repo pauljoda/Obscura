@@ -1,4 +1,5 @@
 using Obscura.Domain.Entities;
+using Obscura.Domain.Media;
 using Obscura.Domain.Capabilities;
 using CapabilityRating = Obscura.Domain.Capabilities.CapabilityRating;
 using CapabilityTags = Obscura.Domain.Capabilities.CapabilityTags;
@@ -96,5 +97,63 @@ public sealed class EntityCapabilityTests
         Assert.Equal(12, Assert.Single(entity.Stats!.Items).Value);
         Assert.Equal(1920, entity.Technical?.Width);
         Assert.Equal("R", entity.Classification?.Value);
+    }
+
+    [Fact]
+    public void EntityChildrenReturnTypedChildrenByKindWithoutStringIndexing()
+    {
+        var season = new VideoSeason(
+            Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
+            "Season 1",
+            Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"));
+        var episode = new Video(
+            Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            "Episode 1",
+            null);
+        var entity = new Entity(
+            Guid.Parse("22222222-2222-2222-2222-222222222222"),
+            EntityKindRegistry.VideoSeries,
+            "Series",
+            [],
+            children: new EntityChildren([
+                new EntityChildSet(EntityKindRegistry.VideoSeason, [season]),
+                new EntityChildSet(EntityKindRegistry.Video, [episode])
+            ]));
+
+        var seasons = entity.ChildrenByKind.Get(EntityKindRegistry.VideoSeason);
+        var episodes = entity.ChildrenByKind.Get(EntityKindRegistry.Video);
+
+        Assert.Same(season, Assert.Single(seasons));
+        Assert.Same(episode, Assert.Single(episodes));
+        Assert.Empty(entity.ChildrenByKind.Get(EntityKindRegistry.Gallery));
+    }
+
+    [Fact]
+    public void EntityChildrenRejectDuplicateKindGroups()
+    {
+        var ex = Assert.Throws<ArgumentException>(() => new EntityChildren([
+            new EntityChildSet(EntityKindRegistry.Video, []),
+            new EntityChildSet(EntityKindRegistry.Video, [])
+        ]));
+
+        Assert.Contains(EntityKindRegistry.Video.Code, ex.Message);
+    }
+
+    [Fact]
+    public void LifetimeCapabilityProvidesTypedSharedDateRange()
+    {
+        var lifetime = new CapabilityLifetime(
+            new EntityDate("first-air", "2020-01-01", new DateOnly(2020, 1, 1), "day"),
+            new EntityDate("end-air", "2024", new DateOnly(2024, 1, 1), "year"),
+            "Aired");
+        var entity = new Entity(
+            Guid.Parse("33333333-3333-3333-3333-333333333333"),
+            EntityKindRegistry.VideoSeries,
+            "Series",
+            [lifetime]);
+
+        Assert.True(entity.HasCapability(CapabilityRegistry.Lifetime));
+        Assert.Same(lifetime, entity.Lifetime);
+        Assert.Equal("Aired", entity.GetCapability(CapabilityRegistry.Lifetime).Label);
     }
 }

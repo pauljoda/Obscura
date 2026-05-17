@@ -34,6 +34,8 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<EntityHierarchyLinkRow> EntityHierarchyLinks => Set<EntityHierarchyLinkRow>();
 
+    public DbSet<EntityChildLinkRow> EntityChildLinks => Set<EntityChildLinkRow>();
+
     public DbSet<EntityStudioLinkRow> EntityStudioLinks => Set<EntityStudioLinkRow>();
 
     public DbSet<EntityCreditLinkRow> EntityCreditLinks => Set<EntityCreditLinkRow>();

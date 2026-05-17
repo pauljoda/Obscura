@@ -1,10 +1,11 @@
 namespace Obscura.Domain.Entities;
 
 using Obscura.Domain.Capabilities;
+using Obscura.Domain.Media;
 
 /// <summary>Audio library grouping entity kind.</summary>
 public sealed record AudioLibraryEntityKind()
-    : IEntityKind
+    : IEntityKind<AudioLibrary>
 {
     public string Code => "audio-library";
     public string DisplayName => "Audio Library";

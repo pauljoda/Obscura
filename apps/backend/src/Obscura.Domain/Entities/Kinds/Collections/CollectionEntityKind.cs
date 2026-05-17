@@ -1,10 +1,11 @@
 namespace Obscura.Domain.Entities;
 
 using Obscura.Domain.Capabilities;
+using Obscura.Domain.Media;
 
 /// <summary>User-curated collection entity kind.</summary>
 public sealed record CollectionEntityKind()
-    : IEntityKind
+    : IEntityKind<Collection>
 {
     public string Code => "collection";
     public string DisplayName => "Collection";

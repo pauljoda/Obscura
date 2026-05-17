@@ -20,12 +20,18 @@ public record Entity
         Guid id,
         IEntityKind kind,
         string title,
-        IReadOnlyList<ICapability> capabilities)
+        IReadOnlyList<ICapability> capabilities,
+        Guid? parentEntityId = null,
+        int? sortOrder = null,
+        EntityChildren? children = null)
     {
         Id = id;
         Kind = kind;
         Title = title;
         Capabilities = NormalizeCapabilities(capabilities);
+        ParentEntityId = parentEntityId;
+        SortOrder = sortOrder;
+        ChildrenByKind = children ?? EntityChildren.Empty;
     }
 
     /// <summary>Stable global entity identifier.</summary>
@@ -39,6 +45,15 @@ public record Entity
 
     /// <summary>Reusable behaviors and projections attached to this entity.</summary>
     public IReadOnlyList<ICapability> Capabilities { get; init; }
+
+    /// <summary>Structural parent entity identifier when this entity is owned by another entity.</summary>
+    public Guid? ParentEntityId { get; init; }
+
+    /// <summary>Optional structural order under the parent entity.</summary>
+    public int? SortOrder { get; init; }
+
+    /// <summary>Grouped child projections keyed by entity kind through typed accessors.</summary>
+    public EntityChildren ChildrenByKind { get; init; }
 
     /// <summary>Description text when supported by this entity.</summary>
     public string? Description => TryGetCapability(CapabilityRegistry.Description, out var capability) ? capability.Value : null;
@@ -54,6 +69,9 @@ public record Entity
 
     /// <summary>Dates capability when supported by this entity.</summary>
     public CapabilityDates? Dates => TryGetCapability(CapabilityRegistry.Dates, out var capability) ? capability : null;
+
+    /// <summary>Lifetime capability when supported by this entity.</summary>
+    public CapabilityLifetime? Lifetime => TryGetCapability(CapabilityRegistry.Lifetime, out var capability) ? capability : null;
 
     /// <summary>Technical metadata capability when supported by this entity.</summary>
     public CapabilityTechnical? Technical => TryGetCapability(CapabilityRegistry.Technical, out var capability) ? capability : null;

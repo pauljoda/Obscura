@@ -1,10 +1,11 @@
 namespace Obscura.Domain.Entities;
 
 using Obscura.Domain.Capabilities;
+using Obscura.Domain.Media;
 
 /// <summary>Book, comic, or manga entity kind.</summary>
 public sealed record BookEntityKind()
-    : IEntityKind
+    : IEntityKind<Book>
 {
     public string Code => "book";
     public string DisplayName => "Book";

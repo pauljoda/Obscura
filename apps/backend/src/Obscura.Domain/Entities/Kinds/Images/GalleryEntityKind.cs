@@ -1,10 +1,11 @@
 namespace Obscura.Domain.Entities;
 
 using Obscura.Domain.Capabilities;
+using Obscura.Domain.Media;
 
 /// <summary>Image gallery entity kind.</summary>
 public sealed record GalleryEntityKind()
-    : IEntityKind
+    : IEntityKind<Gallery>
 {
     public string Code => "gallery";
     public string DisplayName => "Gallery";

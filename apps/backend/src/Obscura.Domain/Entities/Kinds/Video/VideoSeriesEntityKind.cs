@@ -1,10 +1,11 @@
 namespace Obscura.Domain.Entities;
 
 using Obscura.Domain.Capabilities;
+using Obscura.Domain.Media;
 
 /// <summary>Video series entity kind.</summary>
 public sealed record VideoSeriesEntityKind()
-    : IEntityKind
+    : IEntityKind<VideoSeries>
 {
     public string Code => "video-series";
     public string DisplayName => "Video Series";
@@ -30,6 +31,7 @@ public sealed record VideoSeriesEntityKind()
         CapabilityRegistry.Fingerprints,
         CapabilityRegistry.Stats,
         CapabilityRegistry.Dates,
+        CapabilityRegistry.Lifetime,
         CapabilityRegistry.Source,
         CapabilityRegistry.Classification
     ];

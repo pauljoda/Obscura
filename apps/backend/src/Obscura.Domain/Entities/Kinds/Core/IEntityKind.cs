@@ -22,3 +22,10 @@ public interface IEntityKind
     /// <summary>Capability kinds this entity kind intentionally supports.</summary>
     IReadOnlyList<ICapabilityKind> SupportedCapabilities => [];
 }
+
+/// <summary>
+/// Strongly typed entity-kind marker used by code that wants children or routes as concrete entity shapes.
+/// </summary>
+/// <typeparam name="TEntity">Entity shape represented by this kind.</typeparam>
+public interface IEntityKind<out TEntity> : IEntityKind
+    where TEntity : Entity;

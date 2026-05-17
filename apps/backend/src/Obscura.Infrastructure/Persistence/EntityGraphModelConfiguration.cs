@@ -8,6 +8,36 @@ internal static class EntityGraphModelConfiguration
 {
     public static void ConfigureEntityGraphModel(this ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<EntityChildLinkRow>(entity =>
+        {
+            entity.ToTable("entity_child_links");
+            entity.HasKey(row => new { row.ParentEntityId, row.ChildEntityId, row.ChildKindCode });
+            entity.Property(row => row.ParentEntityId).HasColumnName("parent_entity_id");
+            entity.Property(row => row.ChildEntityId).HasColumnName("child_entity_id");
+            entity.Property(row => row.ChildKindCode).HasColumnName("child_kind_code").HasMaxLength(64).IsRequired();
+            entity.Property(row => row.SortOrder).HasColumnName("sort_order");
+            entity.Property(row => row.IsStructural).HasColumnName("is_structural");
+            entity.Property(row => row.Source).HasColumnName("source").HasMaxLength(64);
+            entity.Property(row => row.CreatedAt).HasColumnName("created_at");
+            entity.HasIndex(row => new { row.ParentEntityId, row.ChildKindCode, row.SortOrder });
+            entity.HasIndex(row => row.ChildKindCode);
+            entity.HasIndex(row => row.ChildEntityId)
+                .IsUnique()
+                .HasFilter("is_structural = true");
+            entity.HasOne<EntityRow>()
+                .WithMany()
+                .HasForeignKey(row => row.ParentEntityId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<EntityRow>()
+                .WithMany()
+                .HasForeignKey(row => row.ChildEntityId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<EntityKindRow>()
+                .WithMany()
+                .HasForeignKey(row => row.ChildKindCode)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<EntityHierarchyLinkRow>(entity =>
         {
             var canonicalRelationshipCodes = string.Join(", ", EntityRelationshipRegistry.Structural.Select(relationship => $"'{relationship.Code}'"));

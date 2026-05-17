@@ -58,7 +58,7 @@ public sealed class EntityKindTests
     {
         Assert.DoesNotContain(
             typeof(IEntityKind).Assembly.GetTypes(),
-            type => type.Name is "EntityKind" or "EntityKinds" or "EntityKindCode");
+            type => !type.IsGenericType && type.Name is ("EntityKind" or "EntityKinds" or "EntityKindCode"));
     }
 
     [Fact]
