@@ -107,6 +107,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 - Identify review candidate switching now re-runs against the active graph entity, and child proposal review state loads the matching entity card for tag and credit comparisons.
 - Plugin identify requests now include generic graph context for child entities, and identify proposals can carry the exact target entity ID that receives the reviewed metadata.
+- Contributor instructions now clarify that the canonical dev stack can be refreshed by running the VS Code task commands directly from shell, without driving the VS Code UI.
 - Video list preference, subtitle settings, and edit-form helper types now use v2-owned contract types instead of importing deleted v1 query/settings/entity types.
 - Generated Svelte API contracts now include the backend organize plan and apply endpoints.
 - Shared web fetch, upload, asset URL, and job dashboard helpers now use v2 API utilities and generated contract types instead of deleted v1 frontend modules.
