@@ -94,7 +94,7 @@
   let fetchedExistingTags = $state<string[]>([]);
   let applying = $state(false);
   let error = $state<string | null>(null);
-  let expandedSections = $state<Record<string, boolean>>({ fields: true, tags: true, credits: true, studio: true, artwork: true, candidates: true });
+  let expandedSections = $state<Record<string, boolean>>({ fields: true, tags: true, credits: true, studio: true, seasons: true, artwork: true, candidates: true });
   let lightboxGroup = $state<string | null>(null);
 
   const scalarFieldKeys = ["title", "description", "externalIds", "urls", "dates", "counters", "stats", "positions", "classification"];
@@ -278,6 +278,43 @@
   const creditCards = $derived.by((): EntityThumbnailCard[] => {
     if (!proposal) return [];
     return proposal.patch.credits.map((c) => creditToCard(c, proposal!.children));
+  });
+
+  interface SeasonSection {
+    seasonNumber: number;
+    title: string;
+    description: string | null;
+    airDate: string | null;
+    episodes: Array<{
+      episodeNumber: number;
+      title: string;
+      description: string | null;
+      airDate: string | null;
+      stillUrl: string | null;
+    }>;
+  }
+
+  const seasonSections = $derived.by((): SeasonSection[] => {
+    if (!proposal) return [];
+    return proposal.children
+      .filter((c) => c.targetKind === "video-season")
+      .map((season) => ({
+        seasonNumber: season.patch.positions?.seasonNumber ?? 0,
+        title: season.patch.title ?? `Season ${season.patch.positions?.seasonNumber ?? "?"}`,
+        description: season.patch.description ?? null,
+        airDate: season.patch.dates?.air ?? null,
+        episodes: season.children
+          .filter((e) => e.targetKind === "video-episode")
+          .map((ep) => ({
+            episodeNumber: ep.patch.positions?.episodeNumber ?? 0,
+            title: ep.patch.title ?? `Episode ${ep.patch.positions?.episodeNumber ?? "?"}`,
+            description: ep.patch.description ?? null,
+            airDate: ep.patch.dates?.air ?? null,
+            stillUrl: ep.images.find((i) => i.kind === "still")?.url ?? null,
+          }))
+          .sort((a, b) => a.episodeNumber - b.episodeNumber),
+      }))
+      .sort((a, b) => a.seasonNumber - b.seasonNumber);
   });
 
   const studioCard = $derived.by((): EntityThumbnailCard | null => {
@@ -668,6 +705,57 @@
                             {/snippet}
                           </EntityThumbnail>
                         </div>
+                      {/each}
+                    </div>
+                  </div>
+                {/if}
+              </section>
+            {/if}
+
+            <!-- Seasons & Episodes -->
+            {#if seasonSections.length > 0}
+              <section class="section-card">
+                <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('seasons')} onkeydown={(e) => e.key === 'Enter' && toggleSection('seasons')}>
+                  <h4>Seasons & Episodes</h4>
+                  <div class="section-meta">
+                    <span class="count-badge">{seasonSections.length} season{seasonSections.length === 1 ? "" : "s"}</span>
+                    <span class="chevron" class:rotated={!expandedSections.seasons}><ChevronDown class="h-3.5 w-3.5" /></span>
+                  </div>
+                </div>
+                {#if expandedSections.seasons}
+                  <div class="section-body">
+                    <div class="seasons-list">
+                      {#each seasonSections as season (season.seasonNumber)}
+                        <details class="season-group" open>
+                          <summary class="season-summary">
+                            <span class="season-number">S{String(season.seasonNumber).padStart(2, "0")}</span>
+                            <span class="season-title">{season.title}</span>
+                            {#if season.airDate}
+                              <span class="season-date">{season.airDate}</span>
+                            {/if}
+                            <span class="season-ep-count">{season.episodes.length} ep{season.episodes.length === 1 ? "" : "s"}</span>
+                          </summary>
+                          <div class="episode-list">
+                            {#each season.episodes as episode (episode.episodeNumber)}
+                              <div class="episode-row">
+                                {#if episode.stillUrl}
+                                  <img src={episode.stillUrl} alt="" class="episode-still" />
+                                {:else}
+                                  <div class="episode-still-empty">
+                                    <ImageIcon class="h-3 w-3" />
+                                  </div>
+                                {/if}
+                                <div class="episode-info">
+                                  <span class="episode-number">E{String(episode.episodeNumber).padStart(2, "0")}</span>
+                                  <span class="episode-title">{episode.title}</span>
+                                </div>
+                                {#if episode.airDate}
+                                  <span class="episode-date">{episode.airDate}</span>
+                                {/if}
+                              </div>
+                            {/each}
+                          </div>
+                        </details>
                       {/each}
                     </div>
                   </div>
@@ -1395,6 +1483,135 @@
     font-family: "JetBrains Mono", monospace;
     text-align: center;
     letter-spacing: 0.06em;
+  }
+
+  /* === Seasons & Episodes === */
+  .seasons-list {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .season-group {
+    border: 1px solid var(--color-border, #1c2235);
+    background: var(--color-surface-1, #0c0f15);
+  }
+
+  .season-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.6rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+    list-style: none;
+  }
+  .season-summary::-webkit-details-marker { display: none; }
+  .season-summary::marker { display: none; content: ""; }
+  .season-summary:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .season-number {
+    flex-shrink: 0;
+    padding: 0.12rem 0.35rem;
+    border: 1px solid rgba(196, 154, 90, 0.35);
+    background: rgba(196, 154, 90, 0.08);
+    color: var(--color-text-accent, #c49a5a);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.58rem;
+    font-weight: 600;
+  }
+
+  .season-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--color-text-primary, #f2eed8);
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .season-date {
+    flex-shrink: 0;
+    color: var(--color-text-disabled, #4a5260);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.55rem;
+  }
+
+  .season-ep-count {
+    flex-shrink: 0;
+    padding: 0.1rem 0.3rem;
+    border: 1px solid var(--color-border, #1c2235);
+    background: var(--color-surface-2, #101420);
+    color: var(--color-text-muted, #8a93a6);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.52rem;
+  }
+
+  .episode-list {
+    display: grid;
+    gap: 1px;
+    border-top: 1px solid var(--color-border, #1c2235);
+    background: var(--color-border, #1c2235);
+  }
+
+  .episode-row {
+    display: grid;
+    grid-template-columns: 4rem minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.35rem 0.6rem;
+    background: var(--color-surface-1, #0c0f15);
+  }
+
+  .episode-still {
+    width: 4rem;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border: 1px solid var(--color-border, #1c2235);
+  }
+
+  .episode-still-empty {
+    display: grid;
+    width: 4rem;
+    aspect-ratio: 16 / 9;
+    place-items: center;
+    border: 1px solid var(--color-border, #1c2235);
+    background: var(--color-surface-2, #101420);
+    color: var(--color-text-disabled, #4a5260);
+  }
+
+  .episode-info {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  .episode-number {
+    flex-shrink: 0;
+    color: var(--color-text-muted, #8a93a6);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.58rem;
+    font-weight: 600;
+  }
+
+  .episode-title {
+    overflow: hidden;
+    color: var(--color-text-secondary, #c4c9d4);
+    font-size: 0.66rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .episode-date {
+    flex-shrink: 0;
+    color: var(--color-text-disabled, #4a5260);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.52rem;
   }
 
   /* === Artwork cards === */

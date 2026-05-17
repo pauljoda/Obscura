@@ -138,6 +138,11 @@ public sealed class EntityMetadataApplyService
             await CascadeChildImagesAsync(proposal.Children, now, cancellationToken);
         }
 
+        if (proposal.Children.Any(c => c.TargetKind is "video-season"))
+        {
+            await CascadeSeriesChildrenAsync(entityId, proposal.Children, now, cancellationToken);
+        }
+
         entity.UpdatedAt = now;
         await _db.SaveChangesAsync(cancellationToken);
         return true;
@@ -476,6 +481,161 @@ public sealed class EntityMetadataApplyService
             {
             }
         }
+    }
+
+    /// <summary>
+    /// Cascades season and episode metadata from proposal children into existing
+    /// hierarchy entities matched by season/episode position numbers.
+    /// </summary>
+    private async Task CascadeSeriesChildrenAsync(
+        Guid seriesEntityId,
+        IReadOnlyList<EntityMetadataProposal> children,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var seasonLinks = await _db.EntityHierarchyLinks
+            .Where(link => link.ParentEntityId == seriesEntityId && link.Relationship == "season")
+            .ToArrayAsync(cancellationToken);
+
+        foreach (var seasonProposal in children.Where(c => c.TargetKind is "video-season"))
+        {
+            if (!seasonProposal.Patch.Positions.TryGetValue("seasonNumber", out var seasonNum))
+                continue;
+
+            var seasonDetail = await _db.VideoSeasonDetails
+                .FirstOrDefaultAsync(row => row.SeriesEntityId == seriesEntityId && row.SeasonNumber == seasonNum, cancellationToken);
+            if (seasonDetail is null)
+                continue;
+
+            var seasonEntity = await _db.Entities
+                .FirstOrDefaultAsync(row => row.Id == seasonDetail.EntityId && row.DeletedAt == null, cancellationToken);
+            if (seasonEntity is null)
+                continue;
+
+            await ApplyPatchToEntityAsync(seasonEntity, seasonProposal.Patch, seasonProposal.Images, now, cancellationToken);
+
+            if (seasonProposal.Children.Count == 0)
+                continue;
+
+            var episodeLinks = await _db.EntityHierarchyLinks
+                .Where(link => link.ParentEntityId == seasonEntity.Id && link.Relationship == "episode")
+                .ToArrayAsync(cancellationToken);
+            var episodeEntityIds = episodeLinks.Select(l => l.ChildEntityId).ToArray();
+
+            var episodePositions = await _db.EntityPositions
+                .Where(pos => episodeEntityIds.Contains(pos.EntityId) && pos.Code == "episodeNumber")
+                .ToArrayAsync(cancellationToken);
+            var episodeByNumber = episodePositions
+                .GroupBy(p => p.Value)
+                .ToDictionary(g => g.Key, g => g.First().EntityId);
+
+            foreach (var episodeProposal in seasonProposal.Children.Where(c => c.TargetKind is "video-episode"))
+            {
+                if (!episodeProposal.Patch.Positions.TryGetValue("episodeNumber", out var epNum))
+                    continue;
+
+                if (!episodeByNumber.TryGetValue(epNum, out var episodeEntityId))
+                {
+                    var bySortOrder = episodeLinks.FirstOrDefault(l => l.SortOrder == epNum);
+                    if (bySortOrder is null) continue;
+                    episodeEntityId = bySortOrder.ChildEntityId;
+                }
+
+                var episodeEntity = await _db.Entities
+                    .FirstOrDefaultAsync(row => row.Id == episodeEntityId && row.DeletedAt == null, cancellationToken);
+                if (episodeEntity is null)
+                    continue;
+
+                await ApplyPatchToEntityAsync(episodeEntity, episodeProposal.Patch, episodeProposal.Images, now, cancellationToken);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Applies a subset of metadata patch fields to an existing entity (for cascade).
+    /// Updates title, description, dates, positions, counters, and downloads images.
+    /// </summary>
+    private async Task ApplyPatchToEntityAsync(
+        EntityRow entity,
+        EntityMetadataPatch patch,
+        IReadOnlyList<ImageCandidate> images,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(patch.Title))
+        {
+            entity.Title = patch.Title.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(patch.Description))
+        {
+            await UpsertDescriptionAsync(entity.Id, patch.Description, now, cancellationToken);
+        }
+
+        if (patch.ExternalIds.Count > 0)
+        {
+            await UpsertExternalIdsAsync(entity.Id, patch.ExternalIds, patch.Urls, now, cancellationToken);
+        }
+
+        if (patch.Urls.Count > 0)
+        {
+            await UpsertUrlsAsync(entity.Id, patch.Urls, now, cancellationToken);
+        }
+
+        if (patch.Dates.Count > 0)
+        {
+            await UpsertDatesAsync(entity.Id, patch.Dates, now, cancellationToken);
+        }
+
+        if (patch.Counters.Count > 0)
+        {
+            await UpsertCountersAsync(entity.Id, patch.Counters, now, cancellationToken);
+        }
+
+        if (patch.Positions.Count > 0)
+        {
+            await UpsertPositionsAsync(entity.Id, patch.Positions, now, cancellationToken);
+        }
+
+        if (images.Count > 0)
+        {
+            var image = images.FirstOrDefault(i => i.Kind is "still") ?? images.FirstOrDefault(i => i.Kind is "poster") ?? images[0];
+            var role = image.Kind switch
+            {
+                "still" => EntityFileRole.Thumbnail,
+                "poster" => EntityFileRole.Poster,
+                _ => EntityFileRole.Thumbnail
+            };
+            var hasFile = await _db.EntityFiles.AnyAsync(
+                row => row.EntityId == entity.Id && row.Role == role, cancellationToken);
+            if (!hasFile)
+            {
+                try
+                {
+                    var bytes = await _http.GetByteArrayAsync(image.Url, cancellationToken);
+                    var ext = ExtensionFromUrl(image.Url);
+                    var relativePath = Path.Combine("plugins", "artwork", entity.Id.ToString(), $"{role.ToString().ToLowerInvariant()}-{ShortHash(image.Url)}{ext}");
+                    var physicalPath = Path.Combine(_options.CacheRoot, relativePath);
+                    Directory.CreateDirectory(Path.GetDirectoryName(physicalPath)!);
+                    await File.WriteAllBytesAsync(physicalPath, bytes, cancellationToken);
+
+                    var publicPath = $"/assets/{relativePath.Replace(Path.DirectorySeparatorChar, '/')}";
+                    _db.EntityFiles.Add(new EntityFileRow
+                    {
+                        Id = Guid.NewGuid(),
+                        EntityId = entity.Id,
+                        Role = role,
+                        Path = publicPath,
+                        MimeType = MimeTypeFromExtension(ext),
+                        CreatedAt = now,
+                        UpdatedAt = now
+                    });
+                }
+                catch (HttpRequestException) { }
+            }
+        }
+
+        entity.UpdatedAt = now;
     }
 
     private async Task<EntityRow?> FindEntityByKindAndTitleAsync(string kind, string title, CancellationToken cancellationToken) =>
