@@ -22,7 +22,7 @@
   } from "@lucide/svelte";
   import { Button, cn } from "@obscura/ui-svelte";
   import type { VideoDetailDto } from "@obscura/contracts";
-  import type { TagItem, PerformerItem, StudioItem } from "$lib/v1/api/types-v1";
+  import type { TagListItemDto as TagItem, PerformerListItemDto as PerformerItem, StudioListItemDto as StudioItem } from "@obscura/contracts";
   import {
     fetchVideoDetail,
     updateVideo,

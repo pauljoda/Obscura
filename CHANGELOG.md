@@ -103,7 +103,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Changed
-- Video list preference helpers now own their v2 fetch parameter shape instead of importing deleted v1 query types.
+- Video list preference, subtitle settings, and edit-form helper types now use v2-owned contract types instead of importing deleted v1 query/settings/entity types.
 - Generated Svelte API contracts now include the backend organize plan and apply endpoints.
 - Shared web fetch, upload, asset URL, and job dashboard helpers now use v2 API utilities and generated contract types instead of deleted v1 frontend modules.
 - Web entity thumbnail, identify, lab, and job dashboard helpers now use the generated v2 graph card shape with `parentEntityId`, `childrenByKind`, and top-level generated job queue types.

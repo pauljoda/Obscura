@@ -14,7 +14,7 @@
     X,
   } from "@lucide/svelte";
   import type { ImageDetailDto } from "@obscura/contracts";
-  import type { PerformerItem, StudioItem, TagItem } from "$lib/v1/api/types-v1";
+  import type { PerformerListItemDto as PerformerItem, StudioListItemDto as StudioItem, TagListItemDto as TagItem } from "@obscura/contracts";
   import {
     resetImageThumbnail,
     updateImage,
