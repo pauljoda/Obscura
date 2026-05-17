@@ -12,7 +12,9 @@ const card: EntityThumbnailCard = {
     id: "video-1",
     kind: "video",
     title: "Sample Video",
+    parentEntityId: null,
     capabilities: [],
+    childrenByKind: [],
   },
   aspectRatio: "video",
   cover: {

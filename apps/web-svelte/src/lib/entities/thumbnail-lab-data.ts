@@ -167,11 +167,13 @@ function card(options: {
       id: options.id,
       kind: options.kind,
       title: options.title,
+      parentEntityId: null,
       capabilities: [
         flags(options.flagOptions),
         images(supportedImageKinds, options.cover, hoverAssets, hoverRole),
         ...(options.capabilities ?? []),
       ],
+      childrenByKind: [],
     },
     aspectRatio: options.aspectRatio,
     cover: options.cover,

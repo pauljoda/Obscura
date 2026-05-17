@@ -7,7 +7,7 @@ import {
   type QueueSummaryDto,
 } from "@obscura/contracts";
 import type { V2JobRun } from "$lib/api/v2";
-import type { JobQueueCountDto } from "$lib/api/generated/model/jobListResponse";
+import type { JobQueueCountDto } from "$lib/api/generated/model";
 
 type V2JobDefinition = {
   type: string;
@@ -264,12 +264,14 @@ export function buildV2JobsDashboard(
       if (!def) continue;
       const summary = summaries.get(def.queueName);
       if (!summary) continue;
+      const countValue = Number(count);
+      if (!Number.isFinite(countValue)) continue;
 
       const mapped = mapV2JobStatus(status);
-      if (mapped === "active") summary.active += count;
-      else if (mapped === "waiting") summary.waiting += count;
-      else if (mapped === "completed") summary.completed += count;
-      else if (mapped === "failed") summary.failed += count;
+      if (mapped === "active") summary.active += countValue;
+      else if (mapped === "waiting") summary.waiting += countValue;
+      else if (mapped === "completed") summary.completed += countValue;
+      else if (mapped === "failed") summary.failed += countValue;
     }
   } else {
     for (const job of mappedJobs) {

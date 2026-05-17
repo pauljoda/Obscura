@@ -232,7 +232,9 @@ function detailCard(options: {
     id: options.id,
     kind: options.kind,
     title: options.title,
+    parentEntityId: null,
     capabilities: options.capabilities,
+    childrenByKind: [],
   });
 }
 

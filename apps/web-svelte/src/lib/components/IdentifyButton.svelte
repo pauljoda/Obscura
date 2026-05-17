@@ -293,7 +293,14 @@
   function creditToCard(credit: CreditPatch, children: EntityMetadataProposal[]): EntityThumbnailCard {
     const imageUrl = findChildImage(children, "person", credit.name);
     return {
-      entity: { id: `proposal-${credit.name}`, kind: "person", title: credit.name, capabilities: [] },
+      entity: {
+        id: `proposal-${credit.name}`,
+        kind: "person",
+        title: credit.name,
+        parentEntityId: null,
+        capabilities: [],
+        childrenByKind: [],
+      },
       aspectRatio: { width: 4, height: 5 },
       cover: imageUrl ? { src: imageUrl, alt: credit.name } : null,
       hover: { kind: "none" },
@@ -331,7 +338,14 @@
     if (!activeProposal?.patch.studio) return null;
     const imageUrl = findChildImage(activeProposal.children, "studio", activeProposal.patch.studio);
     return {
-      entity: { id: `proposal-studio`, kind: "studio", title: activeProposal.patch.studio, capabilities: [] },
+      entity: {
+        id: `proposal-studio`,
+        kind: "studio",
+        title: activeProposal.patch.studio,
+        parentEntityId: null,
+        capabilities: [],
+        childrenByKind: [],
+      },
       aspectRatio: "wide",
       cover: imageUrl ? { src: imageUrl, alt: activeProposal.patch.studio } : null,
       hover: { kind: "none" },
