@@ -5,7 +5,11 @@
 - **You MUST ALWAYS commit after every set of changes.** Do not wait for the user to ask — commit immediately when a logical unit of work is complete.
 - Every meaningful implementation iteration must end in a git commit.
 - Use small, reviewable commits with intentional scopes.
-- **With every commit you MUST also** add an entry under `## [Unreleased]` in `CHANGELOG.md`, grouped by the Keep a Changelog sections (`Added` / `Changed` / `Fixed` / `Removed` / `Docs`).
+- **With every release-note-worthy change you MUST also** add an entry under `## [Unreleased]` in `CHANGELOG.md`, grouped by the Keep a Changelog sections (`Added` / `Changed` / `Fixed` / `Removed` / `Docs`).
+- Keep `CHANGELOG.md` short and high level. It is a curated user-facing release summary, not a commit-by-commit development log.
+- Add changelog entries only for important user-visible features, notable behavior changes, meaningful fixes, breaking changes, operational/deployment changes users must know about, and release documentation updates.
+- Do not add changelog entries for minor internal refactors, routine code cleanup, tiny copy/style tweaks, mechanical test updates, or dependency/tooling churn unless users or operators need to act on them.
+- Users who need full implementation detail should read the git history.
 - **Do NOT bump `package.json` versions on regular commits.** The version only changes when a release is cut by the Release workflow. Between releases, the root `package.json` carries a pre-release marker such as `0.14.0-dev`, and all workspace packages mirror it.
 - Follow [Keep a Changelog](https://keepachangelog.com/) and [Semantic Versioning](https://semver.org/).
 - Suggested commit style:
@@ -47,10 +51,10 @@ Releases are cut server-side by the GitHub Actions `Release` workflow. Do not ha
 
 ### Release notes discipline
 
-- **Every release section (including `## [Unreleased]`) MUST begin with a `### What's New` block** before the standard Keep a Changelog groups. This is a plain-language summary of user-visible highlights — written so a non-technical user can scan it and know what changed. Keep each bullet to 1–2 sentences. Only include features, major fixes, or behavioral changes a user would notice; skip internal refactors, code cleanup, and dependency bumps.
-- When adding a changelog entry during development: if the change is a new feature, a significant UI change, or a notable bug fix, **also add or update a bullet in `### What's New`**. Minor internal changes (refactors, code splits, dev tooling) only go in the standard sections below.
+- **Every release section (including `## [Unreleased]`) MUST begin with a `### What's New` block** before the standard Keep a Changelog groups. This is a plain-language summary of user-visible highlights — written so a non-technical user can scan it and know what changed. Keep each bullet to 1–2 sentences. Only include important features, major fixes, breaking changes, or behavioral changes a user would notice; skip internal refactors, code cleanup, dependency bumps, and routine implementation detail.
+- When adding a changelog entry during development: if the change is a new feature, a significant UI change, a notable bug fix, a breaking change, or an operational change users must know about, **also add or update a bullet in `### What's New`**. Minor internal changes should usually have no changelog entry; git history is the exhaustive record.
 - The standard Keep a Changelog sections (`### Added`, `### Changed`, `### Fixed`, `### Removed`, `### Docs`) follow after `### What's New` and contain the full detailed entries as before.
-- Entries should be written for users of the app, not for the diff reader. Explain user-visible behavior and why it changed.
+- Entries should be written for users of the app, not for the diff reader. Explain user-visible behavior and why it changed, then stop.
 - Use past tense and lead with the user-visible change (`"Subtitles now…"`), not the implementation detail.
 
 ## Product
