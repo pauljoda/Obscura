@@ -81,6 +81,7 @@ export interface EntityMetadataProposal {
   images: ImageCandidate[];
   children: EntityMetadataProposal[];
   candidates: EntitySearchCandidate[];
+  targetEntityId?: string | null;
 }
 
 export interface IdentifyBulkResult {
@@ -166,6 +167,10 @@ export function identifyEntity(
   });
 }
 
+export function fetchIdentifyEntity(entityId: string): Promise<V2EntityCard> {
+  return apiJson(`/entities/${entityId}`);
+}
+
 export function applyIdentifyProposal(
   entityId: string,
   proposal: EntityMetadataProposal,
@@ -202,14 +207,4 @@ export function fetchIdentifyEntities(
   search?: string,
 ): Promise<V2EntityListResponse> {
   return apiJson(`/entities${query({ kind, query: search })}`);
-}
-
-export async function fetchEntityTagTitles(entityId: string): Promise<string[]> {
-  const card = await apiJson<V2EntityCard>(`/entities/${entityId}`);
-  const tagsCap = card.capabilities?.find((c) => (c as { kind?: string }).kind === "tags") as
-    | { items?: Array<{ title: string }>; values?: string[] }
-    | undefined;
-  if (!tagsCap) return [];
-  if (tagsCap.items?.length) return tagsCap.items.map((i) => i.title);
-  return tagsCap.values ?? [];
 }

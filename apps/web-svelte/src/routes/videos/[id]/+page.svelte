@@ -712,7 +712,7 @@
 
       {#snippet extraFlags()}
         <IdentifyButton
-          entityKind="video_movie"
+          entityKind="video"
           entityId={videoId}
           title={card.entity.title}
           existingCreditNames={credits.map((credit) => credit.person.title)}

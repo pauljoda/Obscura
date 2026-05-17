@@ -17,7 +17,7 @@
   import { portal } from "$lib/actions/portal";
   import {
     applyIdentifyProposal,
-    fetchEntityTagTitles,
+    fetchIdentifyEntity,
     fetchIdentifyProviders,
     identifyEntity,
     type CreditPatch,
@@ -27,6 +27,7 @@
     type ImageCandidate,
     type PluginProvider,
   } from "$lib/api/identify";
+  import type { V2EntityCard } from "$lib/api/v2";
   import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
 
@@ -82,7 +83,7 @@
   let workflowOpen = $state(false);
   let providers = $state<PluginProvider[]>([]);
   let loadingProviders = $state(false);
-  let providersLoaded = $state(false);
+  let providerKindLoaded = $state<string | null>(null);
   let identifying = $state(false);
   let proposal = $state<EntityMetadataProposal | null>(null);
   let reviewPath = $state<string[]>([]);
@@ -93,7 +94,8 @@
   let selectedCreditsByProposal = $state<Record<string, Record<string, boolean>>>({});
   let selectedTagsByProposal = $state<Record<string, Record<string, boolean>>>({});
   let selectedCascade = $state<Record<string, boolean>>({});
-  let fetchedExistingTags = $state<string[]>([]);
+  let entitiesById = $state<Record<string, V2EntityCard>>({});
+  let loadingViewEntity = $state(false);
   let applying = $state(false);
   let error = $state<string | null>(null);
   let expandedSections = $state<Record<string, boolean>>({ fields: true, tags: true, credits: true, studio: true, seasons: true, artwork: true, candidates: true });
@@ -106,7 +108,6 @@
     const activeId = reviewPath.at(-1) ?? proposal.proposalId;
     return findProposal(proposal, activeId) ?? proposal;
   });
-  const reviewTitle = $derived(activeProposal?.patch.title ?? activeProposal?.targetKind ?? title);
   const selectedFields = $derived(activeProposal ? selectedFieldsByProposal[activeProposal.proposalId] ?? {} : {});
   const selectedImages = $derived(activeProposal ? selectedImagesByProposal[activeProposal.proposalId] ?? {} : {});
   const selectedCredits = $derived(activeProposal ? selectedCreditsByProposal[activeProposal.proposalId] ?? {} : {});
@@ -143,6 +144,10 @@
   });
   const activeTarget = $derived(targets[Math.min(activeIndex, Math.max(0, targets.length - 1))]);
   const v2Kind = $derived(mapKind(activeTarget?.entityKind ?? entityKind));
+  const activeReviewEntityId = $derived(activeProposal?.targetEntityId ?? activeTarget?.entityId ?? entityId);
+  const activeReviewEntity = $derived(activeReviewEntityId ? entitiesById[activeReviewEntityId] ?? null : null);
+  const reviewKind = $derived(mapKind(activeReviewEntity?.kind ?? activeProposal?.targetKind ?? v2Kind));
+  const reviewTitle = $derived(activeProposal?.patch.title ?? activeReviewEntity?.title ?? activeProposal?.targetKind ?? title);
   const installedProviders = $derived(
     providers.filter((provider) => provider.installed && provider.enabled),
   );
@@ -155,7 +160,7 @@
   const hasTargets = $derived(targets.length > 0);
 
   onMount(() => {
-    void loadProviders();
+    void loadProviders(v2Kind);
   });
 
   $effect(() => {
@@ -167,17 +172,22 @@
     };
   });
 
-  async function loadProviders() {
-    if (loadingProviders) return;
+  $effect(() => {
+    if (!workflowOpen) return;
+    void loadProviders(reviewKind);
+  });
+
+  async function loadProviders(kind = v2Kind) {
+    if (loadingProviders || providerKindLoaded === kind) return;
     loadingProviders = true;
     error = null;
     try {
-      providers = await fetchIdentifyProviders(v2Kind);
+      providers = await fetchIdentifyProviders(kind);
+      providerKindLoaded = kind;
     } catch (err) {
       error = readError(err);
     } finally {
       loadingProviders = false;
-      providersLoaded = true;
     }
   }
 
@@ -188,10 +198,9 @@
     selectedProviderId = "";
     resetReviewSelections();
     selectedCascade = {};
-    fetchedExistingTags = [];
     error = null;
-    if (!providersLoaded) await loadProviders();
-    fetchEntityTagTitles(entityId).then((tags) => { fetchedExistingTags = tags; }).catch(() => {});
+    await ensureEntityLoaded(activeTarget?.entityId ?? entityId);
+    await loadProviders(v2Kind);
   }
 
   function closeWorkflow() {
@@ -240,7 +249,31 @@
 
   function rerunCandidate(candidate: EntitySearchCandidate) {
     if (!selectedProvider) return;
-    void run(selectedProvider, candidate);
+    void rerunActiveCandidate(selectedProvider, candidate);
+  }
+
+  async function rerunActiveCandidate(provider: PluginProvider, candidate: EntitySearchCandidate) {
+    if (!activeReviewEntityId || !proposal || !activeProposal) return;
+    identifying = true;
+    error = null;
+    try {
+      const nextProposal = await identifyEntity(activeReviewEntityId, provider.id, { externalIds: candidate.externalIds });
+      const isRoot = activeProposal.proposalId === proposal.proposalId;
+      const nextRoot = isRoot
+        ? nextProposal
+        : replaceProposal(proposal, activeProposal.proposalId, nextProposal);
+      proposal = nextRoot;
+      reviewPath = isRoot
+        ? []
+        : [...reviewPath.slice(0, -1), nextProposal.proposalId];
+      initializeReviewSelections(nextRoot);
+      selectedCascade = defaultCascadeSelection(nextRoot);
+      if (nextProposal.targetEntityId) void ensureEntityLoaded(nextProposal.targetEntityId);
+    } catch (err) {
+      error = readError(err);
+    } finally {
+      identifying = false;
+    }
   }
 
   function toggleField(field: string) {
@@ -275,7 +308,7 @@
   }
 
   function isNewTag(tag: string): boolean {
-    const existing = fetchedExistingTags.length > 0 ? fetchedExistingTags : (activeTarget?.existingTags ?? []);
+    const existing = activeReviewEntity ? tagTitlesFromEntity(activeReviewEntity) : (activeTarget?.existingTags ?? []);
     return !existing.some((t) => t.localeCompare(tag, undefined, { sensitivity: "accent" }) === 0);
   }
 
@@ -324,6 +357,7 @@
     creditCount: number;
     metadataCount: number;
     children: CascadeNode[];
+    targetEntityId: string | null;
   }
 
   const relationshipCascade = $derived.by((): CascadeNode[] => {
@@ -399,6 +433,19 @@
     };
   }
 
+  async function ensureEntityLoaded(id: string) {
+    if (!id || entitiesById[id]) return;
+    loadingViewEntity = true;
+    try {
+      const entity = await fetchIdentifyEntity(id);
+      entitiesById = { ...entitiesById, [id]: entity };
+    } catch {
+      // Keep the review usable from proposal data if the live card cannot load.
+    } finally {
+      loadingViewEntity = false;
+    }
+  }
+
   function fieldValue(result: EntityMetadataProposal, field: string): string {
     const patch = result.patch;
     if (field === "title") return patch.title ?? "";
@@ -445,12 +492,25 @@
     return null;
   }
 
+  function replaceProposal(
+    root: EntityMetadataProposal,
+    proposalId: string,
+    replacement: EntityMetadataProposal,
+  ): EntityMetadataProposal {
+    if (root.proposalId === proposalId) return replacement;
+    return {
+      ...root,
+      children: root.children.map((child) => replaceProposal(child, proposalId, replacement)),
+    };
+  }
+
   function enterReviewScope(node: CascadeNode) {
     if (!proposal) return;
     const parentId = findParentProposalId(proposal, node.proposalId);
     if (!parentId && node.proposalId !== proposal.proposalId) return;
     reviewPath = [...reviewPath.filter((id) => id !== node.proposalId), node.proposalId];
     lightboxGroup = null;
+    if (node.targetEntityId) void ensureEntityLoaded(node.targetEntityId);
     queueMicrotask(scrollReviewToTop);
   }
 
@@ -563,6 +623,7 @@
       creditCount: child.patch.credits.length,
       metadataCount: cascadeMetadataCount(child),
       children: nested,
+      targetEntityId: child.targetEntityId ?? null,
     };
   }
 
@@ -688,7 +749,9 @@
 
   function mapKind(kind: string): string {
     if (kind === "video_series") return "video-series";
-    return "video";
+    if (kind === "video_movie" || kind === "video_episode") return "video";
+    if (kind.includes("_")) return kind.replaceAll("_", "-");
+    return kind;
   }
 
   function creditKey(credit: CreditPatch, index: number): string {
@@ -700,10 +763,26 @@
   }
 
   function creditState(credit: CreditPatch): "merge" | "new" {
-    const names = activeTarget?.existingCreditNames ?? [];
+    const names = activeReviewEntity ? creditNamesFromEntity(activeReviewEntity) : (activeTarget?.existingCreditNames ?? []);
     return names.some((name) => name.localeCompare(credit.name, undefined, { sensitivity: "accent" }) === 0)
       ? "merge"
       : "new";
+  }
+
+  function tagTitlesFromEntity(entity: V2EntityCard): string[] {
+    const tagsCap = entity.capabilities.find((capability) => capability.kind === "tags") as
+      | { items?: Array<{ title: string }>; values?: string[] }
+      | undefined;
+    if (!tagsCap) return [];
+    if (tagsCap.items?.length) return tagsCap.items.map((item) => item.title);
+    return tagsCap.values ?? [];
+  }
+
+  function creditNamesFromEntity(entity: V2EntityCard): string[] {
+    const creditsCap = entity.capabilities.find((capability) => capability.kind === "credits") as
+      | { people?: Array<{ title: string }> }
+      | undefined;
+    return creditsCap?.people?.map((person) => person.title) ?? [];
   }
 
   function firstImageUrl(images: ImageCandidate[], kind: string): string | null {
@@ -841,7 +920,11 @@
                 {activeProposal.matchReason ?? "match"}
               </span>
               <span class="match-provider">{activeProposal.provider}</span>
+              <span class="match-kind">{reviewKind}</span>
               <span class="scope-title">{reviewTitle}</span>
+              {#if loadingViewEntity}
+                <span class="match-alt">Loading entity…</span>
+              {/if}
               {#if activeProposal.candidates.length > 1}
                 <span class="match-sep">·</span>
                 <span class="match-alt">{activeProposal.candidates.length} candidates</span>
@@ -1507,6 +1590,15 @@
     color: var(--color-text-muted, #8a93a6);
     font-family: "JetBrains Mono", monospace;
     font-size: 0.6rem;
+  }
+
+  .match-kind {
+    border: 1px solid var(--color-border, #1c2235);
+    color: var(--color-text-muted, #8a93a6);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.55rem;
+    padding: 0.1rem 0.35rem;
+    text-transform: uppercase;
   }
 
   .match-sep {

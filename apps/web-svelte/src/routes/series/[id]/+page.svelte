@@ -274,7 +274,7 @@
 
       {#snippet extraFlags()}
         <IdentifyButton
-          entityKind="video_series"
+          entityKind="video-series"
           entityId={page.params.id ?? ""}
           title={card.entity.title}
           existingCreditNames={credits.map((credit) => credit.person.title)}
