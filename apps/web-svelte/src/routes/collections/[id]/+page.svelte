@@ -13,10 +13,13 @@
     withFlagCapability,
     withRatingCapability,
   } from "$lib/api/capabilities";
-  import { getAllChildren } from "$lib/entities/entity-children";
+  import { getAllChildIds } from "$lib/entities/entity-children";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
-  import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
+  import {
+    fetchOrderedEntityThumbnails,
+    thumbnailsToCards,
+  } from "$lib/entities/entity-relationship-thumbnails";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
   import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
   import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
@@ -27,17 +30,11 @@
   let collection = $state<V2CollectionDetail | null>(null);
   let errorMessage: string | null = $state(null);
   let ratingBusy = $state(false);
+  let itemCards = $state<EntityThumbnailCard[]>([]);
 
   const card = $derived.by((): EntityDetailCardFull | null => {
     if (!collection) return null;
     return entityCardToDetailCard(collection);
-  });
-
-  const itemCards = $derived.by((): EntityThumbnailCard[] => {
-    if (!collection) return [];
-    return getAllChildren(collection).map((item) =>
-      entityCardToThumbnailCard(item, resolveEntityHref(item.kind, item.id)),
-    );
   });
 
   onMount(() => {
@@ -48,7 +45,11 @@
     loadState = "loading";
     errorMessage = null;
     try {
-      collection = await fetchV2Collection(page.params.id ?? "");
+      const nextCollection = await fetchV2Collection(page.params.id ?? "");
+      collection = nextCollection;
+      itemCards = thumbnailsToCards(await fetchOrderedEntityThumbnails(getAllChildIds(nextCollection)), {
+        hrefFor: (thumbnail) => resolveEntityHref(thumbnail.kind, thumbnail.id),
+      });
       loadState = "ready";
     } catch (err) {
       errorMessage = err instanceof Error ? err.message : String(err);

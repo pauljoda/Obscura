@@ -3,7 +3,7 @@
   import { resolve } from "$app/paths";
   import { page } from "$app/state";
   import { ArrowLeft, Users, Building2, Calendar, Info, SlidersHorizontal } from "@lucide/svelte";
-    import {
+  import {
     fetchV2Season,
     fetchV2Series,
     updateV2EntityRating,
@@ -18,11 +18,17 @@
   } from "$lib/api/capabilities";
   import EntityCastAndCrewSection from "$lib/components/entities/EntityCastAndCrewSection.svelte";
   import IdentifyButton from "$lib/components/IdentifyButton.svelte";
+  import type { EntityDetailTag } from "$lib/entities/entity-detail";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
-  import { creditSubtitle, type EntityCredit } from "$lib/entities/entity-credits";
-  import { getChildren } from "$lib/entities/entity-children";
-  import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
-  import { entityReferenceToThumbnailCard, type EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
+  import { getChildIds } from "$lib/entities/entity-children";
+  import {
+    creditCardsFromThumbnails,
+    fetchOrderedEntityThumbnails,
+    hydrateStandardRelationshipThumbnails,
+    tagsFromThumbnails,
+    thumbnailsToCards,
+  } from "$lib/entities/entity-relationship-thumbnails";
+  import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
   import { ENTITY_KIND } from "$lib/entities/v2-codes";
   import EntityDetail, {
     type EntityDetailSection,
@@ -38,30 +44,20 @@
   let seasonEpisodeCounts = $state<Record<string, number>>({});
   let errorMessage: string | null = $state(null);
   let ratingBusy = $state(false);
+  let seasonCards = $state<EntityThumbnailCard[]>([]);
+  let childSeriesCards = $state<EntityThumbnailCard[]>([]);
+  let videoCards = $state<EntityThumbnailCard[]>([]);
+  let studioCards = $state<EntityThumbnailCard[]>([]);
+  let creditCards = $state<EntityThumbnailCard[]>([]);
+  let relationshipTags = $state<EntityDetailTag[]>([]);
 
   const card = $derived.by((): EntityDetailCardFull | null => {
     if (!series) return null;
-    return entityCardToDetailCard(series);
+    return {
+      ...entityCardToDetailCard(series),
+      tags: relationshipTags,
+    };
   });
-
-  const studio = $derived.by((): { id: string; kind: string; title: string } | null => null);
-
-  const credits = $derived.by((): EntityCredit[] => []);
-
-  const studioCards = $derived.by((): EntityThumbnailCard[] => {
-    if (!studio) return [];
-    return [
-      entityReferenceToThumbnailCard(studio, {
-        aspectRatio: "wide",
-      }),
-    ];
-  });
-
-  const creditCards = $derived.by((): EntityThumbnailCard[] => (
-    credits.map((credit) => entityReferenceToThumbnailCard(credit.person, {
-      subtitle: creditSubtitle(credit),
-    }))
-  ));
 
   const dates = $derived.by(() => {
     if (!series) return [];
@@ -72,25 +68,6 @@
   const dateAired = $derived.by(() => {
     const date = dates.find((item) => item.code === "first-air") ?? dates[0];
     return date ? formatDateForHero(date.value) : null;
-  });
-
-  const seasonCards = $derived.by((): EntityThumbnailCard[] => {
-    const currentSeries = series;
-    if (!currentSeries) return [];
-    return getChildren(currentSeries, ENTITY_KIND.videoSeason)
-      .map((child) => entityCardToThumbnailCard(child, `/series/${currentSeries.id}/seasons/${child.id}`));
-  });
-
-  const childSeriesCards = $derived.by((): EntityThumbnailCard[] => {
-    if (!series) return [];
-    return getChildren(series, ENTITY_KIND.videoSeries)
-      .map((child) => entityCardToThumbnailCard(child, `/series/${child.id}`));
-  });
-
-  const videoCards = $derived.by((): EntityThumbnailCard[] => {
-    if (!series) return [];
-    return getChildren(series, ENTITY_KIND.video)
-      .map((video) => entityCardToThumbnailCard(video, `/videos/${video.id}`));
   });
 
   const hasSeasons = $derived(seasonCards.length > 0);
@@ -142,6 +119,7 @@
     errorMessage = null;
     try {
       const nextSeries = await fetchV2Series(page.params.id ?? "");
+      await hydrateSeriesThumbnails(nextSeries);
       seasonEpisodeCounts = await loadSeasonEpisodeCounts(nextSeries);
       series = nextSeries;
       loadState = "ready";
@@ -192,17 +170,44 @@
   }
 
   async function loadSeasonEpisodeCounts(nextSeries: V2VideoSeriesDetail): Promise<Record<string, number>> {
-    const seasons = getChildren(nextSeries, ENTITY_KIND.videoSeason);
-    if (seasons.length === 0) return {};
+    const seasonIds = getChildIds(nextSeries, ENTITY_KIND.videoSeason);
+    if (seasonIds.length === 0) return {};
 
     const details = await Promise.all(
-      seasons.map((season) => fetchV2Season(nextSeries.id, season.id)),
+      seasonIds.map((id) => fetchV2Season(nextSeries.id, id)),
     );
 
     return Object.fromEntries(details.map((detail: V2VideoSeasonDetail) => [
       detail.id,
-      getChildren(detail, ENTITY_KIND.video).length,
+      getChildIds(detail, ENTITY_KIND.video).length,
     ]));
+  }
+
+  async function hydrateSeriesThumbnails(nextSeries: V2VideoSeriesDetail) {
+    const seasonIds = getChildIds(nextSeries, ENTITY_KIND.videoSeason);
+    const childSeriesIds = getChildIds(nextSeries, ENTITY_KIND.videoSeries);
+    const videoIds = getChildIds(nextSeries, ENTITY_KIND.video);
+
+    const [
+      seasons,
+      childSeries,
+      videos,
+      relationships,
+    ] = await Promise.all([
+      fetchOrderedEntityThumbnails(seasonIds),
+      fetchOrderedEntityThumbnails(childSeriesIds),
+      fetchOrderedEntityThumbnails(videoIds),
+      hydrateStandardRelationshipThumbnails(nextSeries),
+    ]);
+
+    seasonCards = thumbnailsToCards(seasons, {
+      hrefFor: (thumbnail) => `/series/${nextSeries.id}/seasons/${thumbnail.id}`,
+    });
+    childSeriesCards = thumbnailsToCards(childSeries);
+    videoCards = thumbnailsToCards(videos);
+    studioCards = thumbnailsToCards(relationships.studio);
+    creditCards = creditCardsFromThumbnails(relationships.cast, nextSeries.creditMetadata);
+    relationshipTags = tagsFromThumbnails(relationships.tags);
   }
 
   function formatDateForHero(value: string): string {
@@ -263,7 +268,7 @@
           entityKind="video-series"
           entityId={page.params.id ?? ""}
           title={card.entity.title}
-          existingCreditNames={credits.map((credit) => credit.person.title)}
+          existingCreditNames={creditCards.map((credit) => credit.entity.title)}
           label="Identify"
           onApplied={loadSeries}
         />

@@ -13,10 +13,13 @@
     withFlagCapability,
     withRatingCapability,
   } from "$lib/api/capabilities";
-  import { getAllChildren } from "$lib/entities/entity-children";
+  import { getAllChildIds } from "$lib/entities/entity-children";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
-  import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
+  import {
+    fetchOrderedEntityThumbnails,
+    thumbnailsToCards,
+  } from "$lib/entities/entity-relationship-thumbnails";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
   import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
   import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
@@ -27,6 +30,7 @@
   let library = $state<V2AudioLibraryDetail | null>(null);
   let errorMessage: string | null = $state(null);
   let ratingBusy = $state(false);
+  let childCards = $state<EntityThumbnailCard[]>([]);
 
   const card = $derived.by((): EntityDetailCardFull | null => {
     if (!library) return null;
@@ -43,16 +47,6 @@
     return cap?.items ?? [];
   });
 
-  const childCards = $derived.by((): EntityThumbnailCard[] => {
-    if (!library) return [];
-    return getAllChildren(library).map((child) => {
-      const href = child.kind === "audio-library"
-        ? resolveEntityHref("audio-library", child.id)
-        : resolveEntityHref(child.kind, child.id, { kind: "audio-library", id: library!.id });
-      return entityCardToThumbnailCard(child, href);
-    });
-  });
-
   const trackCards = $derived(childCards.filter((c) => c.entity.kind === "audio-track"));
   const subLibraryCards = $derived(childCards.filter((c) => c.entity.kind === "audio-library"));
 
@@ -64,7 +58,13 @@
     loadState = "loading";
     errorMessage = null;
     try {
-      library = await fetchV2AudioLibrary(page.params.id ?? "");
+      const nextLibrary = await fetchV2AudioLibrary(page.params.id ?? "");
+      library = nextLibrary;
+      childCards = thumbnailsToCards(await fetchOrderedEntityThumbnails(getAllChildIds(nextLibrary)), {
+        hrefFor: (thumbnail) => thumbnail.kind === "audio-library"
+          ? resolveEntityHref("audio-library", thumbnail.id)
+          : resolveEntityHref(thumbnail.kind, thumbnail.id, { kind: "audio-library", id: nextLibrary.id }),
+      });
       loadState = "ready";
     } catch (err) {
       errorMessage = err instanceof Error ? err.message : String(err);

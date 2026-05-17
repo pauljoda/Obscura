@@ -12,7 +12,7 @@
     Users,
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-    import type {
+  import type {
     SubtitleAppearance,
     SubtitleDisplayStyle,
   } from "$lib/player/subtitle-types";
@@ -35,12 +35,15 @@
   } from "$lib/api/capabilities";
   import EntityCastAndCrewSection from "$lib/components/entities/EntityCastAndCrewSection.svelte";
   import IdentifyButton from "$lib/components/IdentifyButton.svelte";
+  import type { EntityDetailTag } from "$lib/entities/entity-detail";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
-  import { creditSubtitle, type EntityCredit } from "$lib/entities/entity-credits";
   import {
-    entityReferenceToThumbnailCard,
+    creditCardsFromThumbnails,
+    hydrateStandardRelationshipThumbnails,
+    tagsFromThumbnails,
+    thumbnailsToCards,
     type EntityThumbnailCard,
-  } from "$lib/entities/entity-thumbnail";
+  } from "$lib/entities/entity-relationship-thumbnails";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
   import { extractVideoPlayerProps, getPlaybackState } from "$lib/entities/video-capabilities";
   import { useNsfw } from "$lib/nsfw/store.svelte";
@@ -69,6 +72,9 @@
   let errorMessage: string | null = $state(null);
   let ratingBusy = $state(false);
   let librarySettings = $state<V2LibrarySettings | null>(null);
+  let studioCards = $state<EntityThumbnailCard[]>([]);
+  let creditCards = $state<EntityThumbnailCard[]>([]);
+  let relationshipTags = $state<EntityDetailTag[]>([]);
 
   let playerHandle: VideoPlayerHandle | undefined = $state();
   let currentTime = $state(0);
@@ -92,7 +98,10 @@
 
   const card = $derived.by((): EntityDetailCardFull | null => {
     if (!video) return null;
-    return entityCardToDetailCard(video);
+    return {
+      ...entityCardToDetailCard(video),
+      tags: relationshipTags,
+    };
   });
   const videoId = $derived(video?.id ?? "");
 
@@ -101,26 +110,7 @@
     return extractVideoPlayerProps(video.id, video.capabilities, playbackInfo, selectedAudioStreamIndex);
   });
 
-  const studio = $derived.by((): { id: string; kind: string; title: string } | null => null);
-
-  const credits = $derived.by((): EntityCredit[] => []);
-
-  const studioCards = $derived.by((): EntityThumbnailCard[] => {
-    if (!studio) return [];
-    return [
-      entityReferenceToThumbnailCard(studio, {
-        aspectRatio: "wide",
-      }),
-    ];
-  });
-
-  const creditCards = $derived.by((): EntityThumbnailCard[] => (
-    credits.map((credit) => (
-      entityReferenceToThumbnailCard(credit.person, {
-        subtitle: creditSubtitle(credit),
-      })
-    ))
-  ));
+  const primaryStudio = $derived(studioCards[0]?.entity ?? null);
 
   const hasCastAndCrew = $derived(studioCards.length > 0 || creditCards.length > 0);
   const detailSections = $derived.by((): EntityDetailSection[] => [
@@ -365,8 +355,13 @@
     loadState = "loading";
     errorMessage = null;
     try {
-      video = await fetchV2Video(page.params.id ?? "");
-      playbackInfo = await loadPlaybackInfo(video.id);
+      const nextVideo = await fetchV2Video(page.params.id ?? "");
+      video = nextVideo;
+      const [nextPlaybackInfo] = await Promise.all([
+        loadPlaybackInfo(nextVideo.id),
+        hydrateVideoRelationships(nextVideo),
+      ]);
+      playbackInfo = nextPlaybackInfo;
       loadState = "ready";
     } catch (err) {
       errorMessage = err instanceof Error ? err.message : String(err);
@@ -376,13 +371,25 @@
 
   async function refreshVideo() {
     try {
-      video = await fetchV2Video(video?.id ?? page.params.id ?? "");
-      playbackInfo = video
-        ? await loadPlaybackInfo(video.id, playbackInfo?.PlaySessionId, selectedAudioStreamIndex)
+      const nextVideo = await fetchV2Video(video?.id ?? page.params.id ?? "");
+      video = nextVideo;
+      const [nextPlaybackInfo] = await Promise.all([
+        loadPlaybackInfo(nextVideo.id, playbackInfo?.PlaySessionId, selectedAudioStreamIndex),
+        hydrateVideoRelationships(nextVideo),
+      ]);
+      playbackInfo = nextVideo
+        ? nextPlaybackInfo
         : null;
     } catch {
       // best-effort
     }
+  }
+
+  async function hydrateVideoRelationships(nextVideo: V2VideoDetail) {
+    const relationships = await hydrateStandardRelationshipThumbnails(nextVideo);
+    studioCards = thumbnailsToCards(relationships.studio);
+    creditCards = creditCardsFromThumbnails(relationships.cast, nextVideo.creditMetadata);
+    relationshipTags = tagsFromThumbnails(relationships.tags);
   }
 
   async function loadPlaybackInfo(
@@ -685,11 +692,11 @@
       sections={detailSections}
     >
       {#snippet heroMeta()}
-        {#if studio}
-          <a href={resolveEntityHref("studio", studio.id)} class="meta-item is-studio">{studio.title}</a>
+        {#if primaryStudio}
+          <a href={resolveEntityHref(primaryStudio.kind, primaryStudio.id)} class="meta-item is-studio">{primaryStudio.title}</a>
         {/if}
         {#each dates as date, i (date.code)}
-          {#if studio || i > 0}
+          {#if primaryStudio || i > 0}
             <span class="meta-sep"></span>
           {/if}
           <span class="meta-item">{date.value}</span>
@@ -701,7 +708,7 @@
           entityKind="video"
           entityId={videoId}
           title={card.entity.title}
-          existingCreditNames={credits.map((credit) => credit.person.title)}
+          existingCreditNames={creditCards.map((credit) => credit.entity.title)}
           label="Identify"
           onApplied={refreshVideo}
         />

@@ -15,9 +15,12 @@
     withFlagCapability,
     withRatingCapability,
   } from "$lib/api/capabilities";
-  import { getChildren } from "$lib/entities/entity-children";
+  import { getChildIds } from "$lib/entities/entity-children";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
-  import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
+  import {
+    fetchOrderedEntityThumbnails,
+    thumbnailsToCards,
+  } from "$lib/entities/entity-relationship-thumbnails";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
   import { ENTITY_KIND } from "$lib/entities/v2-codes";
   import EntityDetail, { type EntityDetailTab } from "$lib/components/entities/EntityDetail.svelte";
@@ -30,6 +33,7 @@
   let season = $state<V2VideoSeasonDetail | null>(null);
   let errorMessage: string | null = $state(null);
   let ratingBusy = $state(false);
+  let episodeCards = $state<EntityThumbnailCard[]>([]);
 
   const seriesId = $derived(page.params.id ?? "");
   const seasonId = $derived(page.params.seasonId ?? "");
@@ -50,12 +54,6 @@
     if (!season) return [];
     const cap = getCapability(season.capabilities, "dates");
     return cap?.items ?? [];
-  });
-
-  const episodeCards = $derived.by((): EntityThumbnailCard[] => {
-    if (!season) return [];
-    return getChildren(season, ENTITY_KIND.video)
-      .map((video) => entityCardToThumbnailCard(video, `/videos/${video.id}`));
   });
 
   const detailTabs = $derived.by((): EntityDetailTab[] => {
@@ -96,6 +94,7 @@
       ]);
       parentSeries = seriesDetail;
       season = seasonDetail;
+      await hydrateEpisodeThumbnails(seasonDetail);
       loadState = "ready";
     } catch (err) {
       errorMessage = err instanceof Error ? err.message : String(err);
@@ -141,6 +140,11 @@
     } catch {
       season = previous;
     }
+  }
+
+  async function hydrateEpisodeThumbnails(seasonDetail: V2VideoSeasonDetail) {
+    const episodeIds = getChildIds(seasonDetail, ENTITY_KIND.video);
+    episodeCards = thumbnailsToCards(await fetchOrderedEntityThumbnails(episodeIds));
   }
 </script>
 

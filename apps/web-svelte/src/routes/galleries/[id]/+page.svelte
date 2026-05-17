@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { ArrowLeft, Users, Layers } from "@lucide/svelte";
+  import { ArrowLeft, Layers } from "@lucide/svelte";
   import {
     fetchV2Gallery,
     updateV2EntityRating,
@@ -13,10 +13,18 @@
     withFlagCapability,
     withRatingCapability,
   } from "$lib/api/capabilities";
-  import { getAllChildren } from "$lib/entities/entity-children";
+  import { getAllChildIds } from "$lib/entities/entity-children";
+  import EntityCastAndCrewSection from "$lib/components/entities/EntityCastAndCrewSection.svelte";
+  import type { EntityDetailTag } from "$lib/entities/entity-detail";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
-  import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
+  import {
+    creditCardsFromThumbnails,
+    fetchOrderedEntityThumbnails,
+    hydrateStandardRelationshipThumbnails,
+    tagsFromThumbnails,
+    thumbnailsToCards,
+  } from "$lib/entities/entity-relationship-thumbnails";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
   import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
   import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
@@ -27,30 +35,25 @@
   let gallery = $state<V2GalleryDetail | null>(null);
   let errorMessage: string | null = $state(null);
   let ratingBusy = $state(false);
+  let childCards = $state<EntityThumbnailCard[]>([]);
+  let studioCards = $state<EntityThumbnailCard[]>([]);
+  let creditCards = $state<EntityThumbnailCard[]>([]);
+  let relationshipTags = $state<EntityDetailTag[]>([]);
 
   const card = $derived.by((): EntityDetailCardFull | null => {
     if (!gallery) return null;
-    return entityCardToDetailCard(gallery);
+    return {
+      ...entityCardToDetailCard(gallery),
+      tags: relationshipTags,
+    };
   });
 
-  const studio = $derived.by((): { id: string; title: string } | null => null);
-
-  const credits = $derived.by((): Array<{ id: string; title: string }> => []);
+  const primaryStudio = $derived(studioCards[0]?.entity ?? null);
 
   const dates = $derived.by(() => {
     if (!gallery) return [];
     const cap = getCapability(gallery.capabilities, "dates");
     return cap?.items ?? [];
-  });
-
-  const childCards = $derived.by((): EntityThumbnailCard[] => {
-    if (!gallery) return [];
-    return getAllChildren(gallery).map((child) => {
-      const href = child.kind === "gallery"
-        ? resolveEntityHref("gallery", child.id)
-        : resolveEntityHref(child.kind, child.id);
-      return entityCardToThumbnailCard(child, href);
-    });
   });
 
   const imageChildren = $derived(childCards.filter((c) => c.entity.kind === "image"));
@@ -64,12 +67,27 @@
     loadState = "loading";
     errorMessage = null;
     try {
-      gallery = await fetchV2Gallery(page.params.id ?? "");
+      const nextGallery = await fetchV2Gallery(page.params.id ?? "");
+      gallery = nextGallery;
+      await hydrateGalleryThumbnails(nextGallery);
       loadState = "ready";
     } catch (err) {
       errorMessage = err instanceof Error ? err.message : String(err);
       loadState = "error";
     }
+  }
+
+  async function hydrateGalleryThumbnails(nextGallery: V2GalleryDetail) {
+    const [children, relationships] = await Promise.all([
+      fetchOrderedEntityThumbnails(getAllChildIds(nextGallery)),
+      hydrateStandardRelationshipThumbnails(nextGallery),
+    ]);
+    childCards = thumbnailsToCards(children, {
+      hrefFor: (thumbnail) => resolveEntityHref(thumbnail.kind, thumbnail.id),
+    });
+    studioCards = thumbnailsToCards(relationships.studio);
+    creditCards = creditCardsFromThumbnails(relationships.cast, nextGallery.creditMetadata);
+    relationshipTags = tagsFromThumbnails(relationships.tags);
   }
 
   async function handleRatingChange(value: number | null) {
@@ -140,11 +158,11 @@
       posterSize="large"
     >
       {#snippet heroMeta()}
-        {#if studio}
-          <a href={resolveEntityHref("studio", studio.id)} class="meta-item is-studio">{studio.title}</a>
+        {#if primaryStudio}
+          <a href={resolveEntityHref(primaryStudio.kind, primaryStudio.id)} class="meta-item is-studio">{primaryStudio.title}</a>
         {/if}
         {#if gallery?.galleryType}
-          {#if studio}<span class="meta-sep"></span>{/if}
+          {#if primaryStudio}<span class="meta-sep"></span>{/if}
           <span class="meta-item">{gallery.galleryType}</span>
         {/if}
         {#each dates as date, i (date.code)}
@@ -164,19 +182,9 @@
       {/snippet}
 
       {#snippet afterBody()}
-        {#if credits.length > 0}
+        {#if studioCards.length > 0 || creditCards.length > 0}
           <div class="credits-section">
-            <h2 class="section-label">
-              <Users class="h-4 w-4" />
-              Cast
-            </h2>
-            <div class="credits-grid">
-              {#each credits as person (person.id)}
-                <a href={resolveEntityHref("person", person.id)} class="credit-chip">
-                  {person.title}
-                </a>
-              {/each}
-            </div>
+            <EntityCastAndCrewSection {studioCards} {creditCards} />
           </div>
         {/if}
       {/snippet}
@@ -297,10 +305,6 @@
   }
 
   .credits-section { padding: 1rem 1.5rem; border-top: 1px solid var(--color-border, #1c2235); }
-  .section-label { display: flex; align-items: center; gap: 0.45rem; margin: 0 0 0.75rem; font-family: var(--font-mono, "JetBrains Mono", monospace); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-muted, #8a93a6); }
-  .credits-grid { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-  .credit-chip { padding: 0.22rem 0.55rem; font-size: 0.75rem; color: var(--color-text-secondary, #c4c9d4); border: 1px solid var(--color-border, #1c2235); background: var(--color-surface-3, #151a28); text-decoration: none; transition: border-color 0.15s, color 0.15s; }
-  .credit-chip:hover { color: var(--color-text-accent, #c49a5a); border-color: rgba(196, 154, 90, 0.35); }
 
   .content-section { display: grid; gap: 0.75rem; }
   .content-heading { display: flex; align-items: center; gap: 0.5rem; margin: 0; font-family: var(--font-heading, Geist, sans-serif); font-size: 1.1rem; font-weight: 600; color: var(--color-text-primary, #f2eed8); }

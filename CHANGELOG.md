@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### What's New
 - Obscura v2 rebuilt the app around a .NET API, EF Core persistence, PostgreSQL, and a .NET worker, replacing the legacy server/runtime path with one backend-owned architecture.
 - The media library now uses a shared entity graph for videos, series, seasons, images, galleries, books, audio, people, studios, tags, and collections, giving every browse and detail page a common model.
-- Entity pages now load child and related items through a lighter relationship model, making large series, galleries, and collections faster to browse.
+- Entity pages now load and display child and related items through a lighter relationship model, making large series, galleries, and collections faster to browse.
 - Playback now follows Jellyfin-compatible video routes for playback negotiation, direct streaming, adaptive HLS, trickplay image playlists, playback sessions, and watched-state updates.
 - The Svelte frontend now renders the v2 browse, dashboard, detail, identify, plugins, settings, and playback surfaces through shared Dark Room components instead of the older v1 UI patterns.
 - V2 migration and scanning preserve core metadata where possible, rebuild generated cache assets, and make breaking schema resets explicit while the project remains pre-1.0.
@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Changelog entries are now curated release notes for important user-visible changes instead of an exhaustive development log.
 
 ### Fixed
+- Series, season, video, gallery, collection, and audio detail pages now show their migrated child items and relationships again.
 - Local v2 reset now keeps required entity-kind metadata so legacy migration tests can run cleanly.
 
 ### Removed

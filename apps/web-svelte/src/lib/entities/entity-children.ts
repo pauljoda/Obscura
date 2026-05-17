@@ -1,22 +1,8 @@
-import type { EntityCard, EntityChildGroup, EntityRelationshipGroup } from "$lib/api/generated/model";
+import type { EntityChildGroup, EntityRelationshipGroup } from "$lib/api/generated/model";
 import type { EntityKindCode, RelationshipCode } from "./v2-codes";
 
 export interface EntityChildGroupSource {
   childrenByKind?: EntityChildGroup[] | null;
-}
-
-export function getChildren<T extends EntityCard = EntityCard>(
-  entity: EntityChildGroupSource | null | undefined,
-  kind: EntityKindCode,
-): T[] {
-  const group = entity?.childrenByKind?.find((candidate) => candidate.kind === kind);
-  return [] as T[];
-}
-
-export function getAllChildren<T extends EntityCard = EntityCard>(
-  entity: EntityChildGroupSource | null | undefined,
-): T[] {
-  return [] as T[];
 }
 
 export function getChildIds(
