@@ -97,6 +97,16 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         if (existing is not null)
         {
             existing.UpdatedAt = DateTimeOffset.UtcNow;
+            if (galleryEntityId is not null)
+            {
+                await UpsertStructuralChildLinkAsync(
+                    galleryEntityId.Value,
+                    existing.Id,
+                    sortOrder,
+                    DateTimeOffset.UtcNow,
+                    cancellationToken);
+            }
+
             await db.SaveChangesAsync(cancellationToken);
             return existing.Id;
         }
@@ -104,7 +114,7 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         var now = DateTimeOffset.UtcNow;
         var id = Guid.NewGuid();
 
-        db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.Image.Code, Title = title, CreatedAt = now, UpdatedAt = now });
+        db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.Image.Code, Title = title, ParentEntityId = galleryEntityId, SortOrder = galleryEntityId is null ? null : sortOrder, CreatedAt = now, UpdatedAt = now });
         db.ImageDetails.Add(new ImageDetailRow { EntityId = id });
         db.EntityFiles.Add(new EntityFileRow
         {
@@ -114,11 +124,12 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
 
         if (galleryEntityId is not null)
         {
-            db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
-            {
-                ParentEntityId = galleryEntityId.Value, ChildEntityId = id,
-                Relationship = EntityRelationshipRegistry.Gallery.Code, SortOrder = sortOrder, CreatedAt = now
-            });
+            await UpsertStructuralChildLinkAsync(
+                galleryEntityId.Value,
+                id,
+                sortOrder,
+                now,
+                cancellationToken);
         }
 
         if (isNsfw)
@@ -165,6 +176,12 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         if (existing is not null)
         {
             existing.UpdatedAt = DateTimeOffset.UtcNow;
+            await UpsertStructuralChildLinkAsync(
+                audioLibraryId,
+                existing.Id,
+                sortOrder,
+                DateTimeOffset.UtcNow,
+                cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
             return existing.Id;
         }
@@ -172,18 +189,19 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         var now = DateTimeOffset.UtcNow;
         var id = Guid.NewGuid();
 
-        db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.AudioTrack.Code, Title = title, CreatedAt = now, UpdatedAt = now });
+        db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.AudioTrack.Code, Title = title, ParentEntityId = audioLibraryId, SortOrder = sortOrder, CreatedAt = now, UpdatedAt = now });
         db.AudioTrackDetails.Add(new AudioTrackDetailRow { EntityId = id });
         db.EntityFiles.Add(new EntityFileRow
         {
             Id = Guid.NewGuid(), EntityId = id, Role = EntityFileRole.Source,
             Path = filePath, SizeBytes = TryGetFileSize(filePath), CreatedAt = now, UpdatedAt = now
         });
-        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
-        {
-            ParentEntityId = audioLibraryId, ChildEntityId = id,
-            Relationship = EntityRelationshipRegistry.AudioLibrary.Code, SortOrder = sortOrder, CreatedAt = now
-        });
+        await UpsertStructuralChildLinkAsync(
+            audioLibraryId,
+            id,
+            sortOrder,
+            now,
+            cancellationToken);
         if (isNsfw)
         {
             db.EntityFlags.Add(new EntityFlagRow { EntityId = id, IsNsfw = true, UpdatedAt = now });
@@ -257,6 +275,12 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         if (existing is not null)
         {
             existing.UpdatedAt = DateTimeOffset.UtcNow;
+            await UpsertStructuralChildLinkAsync(
+                bookEntityId,
+                existing.Id,
+                0,
+                DateTimeOffset.UtcNow,
+                cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
             return existing.Id;
         }
@@ -264,18 +288,19 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         var now = DateTimeOffset.UtcNow;
         var id = Guid.NewGuid();
 
-        db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.BookChapter.Code, Title = title, CreatedAt = now, UpdatedAt = now });
+        db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.BookChapter.Code, Title = title, ParentEntityId = bookEntityId, SortOrder = 0, CreatedAt = now, UpdatedAt = now });
         db.BookChapterDetails.Add(new BookChapterDetailRow { EntityId = id, BookEntityId = bookEntityId });
         db.EntityFiles.Add(new EntityFileRow
         {
             Id = Guid.NewGuid(), EntityId = id, Role = EntityFileRole.Source,
             Path = archivePath, CreatedAt = now, UpdatedAt = now
         });
-        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
-        {
-            ParentEntityId = bookEntityId, ChildEntityId = id,
-            Relationship = EntityRelationshipRegistry.Chapter.Code, SortOrder = 0, CreatedAt = now
-        });
+        await UpsertStructuralChildLinkAsync(
+            bookEntityId,
+            id,
+            0,
+            now,
+            cancellationToken);
         db.EntityCounters.Add(new EntityCounterRow
         {
             EntityId = id, Code = "page_count", Value = pageCount, UpdatedAt = now
@@ -295,6 +320,12 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         if (existing is not null)
         {
             existing.UpdatedAt = DateTimeOffset.UtcNow;
+            await UpsertStructuralChildLinkAsync(
+                chapterEntityId,
+                existing.Id,
+                sortOrder,
+                DateTimeOffset.UtcNow,
+                cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
             return existing.Id;
         }
@@ -302,18 +333,19 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         var now = DateTimeOffset.UtcNow;
         var id = Guid.NewGuid();
 
-        db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.BookPage.Code, Title = title, CreatedAt = now, UpdatedAt = now });
+        db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.BookPage.Code, Title = title, ParentEntityId = chapterEntityId, SortOrder = sortOrder, CreatedAt = now, UpdatedAt = now });
         db.BookPageDetails.Add(new BookPageDetailRow { EntityId = id, BookEntityId = bookEntityId, ChapterEntityId = chapterEntityId });
         db.EntityFiles.Add(new EntityFileRow
         {
             Id = Guid.NewGuid(), EntityId = id, Role = EntityFileRole.Source,
             Path = filePath, CreatedAt = now, UpdatedAt = now
         });
-        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
-        {
-            ParentEntityId = chapterEntityId, ChildEntityId = id,
-            Relationship = EntityRelationshipRegistry.Page.Code, SortOrder = sortOrder, CreatedAt = now
-        });
+        await UpsertStructuralChildLinkAsync(
+            chapterEntityId,
+            id,
+            sortOrder,
+            now,
+            cancellationToken);
         if (isNsfw)
         {
             db.EntityFlags.Add(new EntityFlagRow { EntityId = id, IsNsfw = true, UpdatedAt = now });
@@ -337,8 +369,8 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
 
     public async Task<int> RemoveStaleImagesInGalleryAsync(Guid galleryEntityId, IReadOnlySet<string> validPaths, CancellationToken cancellationToken)
     {
-        var childIds = await db.EntityHierarchyLinks.AsNoTracking()
-            .Where(link => link.ParentEntityId == galleryEntityId && link.Relationship == EntityRelationshipRegistry.Gallery.Code)
+        var childIds = await db.EntityChildLinks.AsNoTracking()
+            .Where(link => link.ParentEntityId == galleryEntityId && link.ChildKindCode == EntityKindRegistry.Image.Code)
             .Select(link => link.ChildEntityId)
             .ToListAsync(cancellationToken);
 
@@ -357,8 +389,8 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
 
     public async Task<int> RemoveStaleAudioTracksInLibraryAsync(Guid libraryEntityId, IReadOnlySet<string> validPaths, CancellationToken cancellationToken)
     {
-        var childIds = await db.EntityHierarchyLinks.AsNoTracking()
-            .Where(link => link.ParentEntityId == libraryEntityId && link.Relationship == EntityRelationshipRegistry.AudioLibrary.Code)
+        var childIds = await db.EntityChildLinks.AsNoTracking()
+            .Where(link => link.ParentEntityId == libraryEntityId && link.ChildKindCode == EntityKindRegistry.AudioTrack.Code)
             .Select(link => link.ChildEntityId)
             .ToListAsync(cancellationToken);
 
@@ -500,10 +532,9 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
                 seasonCache,
                 cancellationToken);
             var episodeSortOrder = item.EpisodeNumber ?? item.AbsoluteEpisodeNumber ?? 0;
-            await UpsertExclusiveHierarchyLinkAsync(
+            await UpsertStructuralChildLinkAsync(
                 seasonId,
                 videoId,
-                EntityRelationshipRegistry.Episode.Code,
                 episodeSortOrder,
                 now,
                 cancellationToken);
@@ -511,10 +542,9 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         }
 
         var sortOrder = item.EpisodeNumber ?? item.AbsoluteEpisodeNumber ?? 0;
-        await UpsertExclusiveHierarchyLinkAsync(
+        await UpsertStructuralChildLinkAsync(
             seriesId,
             videoId,
-            EntityRelationshipRegistry.Episode.Code,
             sortOrder,
             now,
             cancellationToken);
@@ -593,6 +623,8 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
                 Id = seasonId,
                 KindCode = EntityKindRegistry.VideoSeason.Code,
                 Title = season.Title,
+                ParentEntityId = seriesId,
+                SortOrder = season.SeasonNumber,
                 CreatedAt = now,
                 UpdatedAt = now
             });
@@ -609,6 +641,8 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
             if (tracked is not null)
             {
                 tracked.Title = season.Title;
+                tracked.ParentEntityId = seriesId;
+                tracked.SortOrder = season.SeasonNumber;
                 tracked.UpdatedAt = now;
             }
         }
@@ -616,10 +650,9 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         await EnsureEntityFileAsync(seasonId, EntityFileRole.Source, season.FolderPath, sizeBytes: null, now, cancellationToken);
         await EnsureEntitySourceAsync(seasonId, "folder", season.FolderPath, now, cancellationToken);
         await UpsertPositionAsync(seasonId, "season", season.SeasonNumber, season.SeasonNumber.ToString(), now, cancellationToken);
-        await UpsertExclusiveHierarchyLinkAsync(
+        await UpsertStructuralChildLinkAsync(
             seriesId,
             seasonId,
-            EntityRelationshipRegistry.Season.Code,
             season.SeasonNumber,
             now,
             cancellationToken);
@@ -684,38 +717,50 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         position.UpdatedAt = now;
     }
 
-    private async Task UpsertExclusiveHierarchyLinkAsync(
+    private async Task UpsertStructuralChildLinkAsync(
         Guid parentId,
         Guid childId,
-        string relationship,
         int sortOrder,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        var localLinks = db.EntityHierarchyLinks.Local
-            .Where(link => link.ChildEntityId == childId && link.Relationship == relationship)
+        var child = db.Entities.Local.FirstOrDefault(row => row.Id == childId)
+            ?? await db.Entities.FirstOrDefaultAsync(row => row.Id == childId, cancellationToken);
+        if (child is null)
+        {
+            return;
+        }
+
+        child.ParentEntityId = parentId;
+        child.SortOrder = sortOrder;
+        child.UpdatedAt = now;
+
+        var localLinks = db.EntityChildLinks.Local
+            .Where(link => link.ChildEntityId == childId && link.IsStructural)
             .ToList();
-        var storedLinks = await db.EntityHierarchyLinks
-            .Where(link => link.ChildEntityId == childId && link.Relationship == relationship)
+        var storedLinks = await db.EntityChildLinks
+            .Where(link => link.ChildEntityId == childId && link.IsStructural)
             .ToListAsync(cancellationToken);
 
-        foreach (var link in localLinks.Concat(storedLinks).DistinctBy(link => new { link.ParentEntityId, link.ChildEntityId, link.Relationship }))
+        foreach (var link in localLinks.Concat(storedLinks).DistinctBy(link => new { link.ParentEntityId, link.ChildEntityId, link.ChildKindCode }))
         {
-            if (link.ParentEntityId == parentId)
+            if (link.ParentEntityId == parentId && string.Equals(link.ChildKindCode, child.KindCode, StringComparison.OrdinalIgnoreCase))
             {
                 link.SortOrder = sortOrder;
                 return;
             }
 
-            db.EntityHierarchyLinks.Remove(link);
+            db.EntityChildLinks.Remove(link);
         }
 
-        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        db.EntityChildLinks.Add(new EntityChildLinkRow
         {
             ParentEntityId = parentId,
             ChildEntityId = childId,
-            Relationship = relationship,
+            ChildKindCode = child.KindCode,
             SortOrder = sortOrder,
+            IsStructural = true,
+            Source = "scan",
             CreatedAt = now
         });
     }

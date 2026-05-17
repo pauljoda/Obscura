@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Obscura.Contracts.Plugins;
+using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
 using Obscura.Infrastructure.Plugins;
@@ -89,21 +90,23 @@ public sealed class EntityMetadataApplyServiceTests
             SeriesEntityId = seriesId,
             SeasonNumber = 1
         });
-        db.EntityHierarchyLinks.AddRange(
-            new EntityHierarchyLinkRow
+        db.EntityChildLinks.AddRange(
+            new EntityChildLinkRow
             {
                 ParentEntityId = seriesId,
                 ChildEntityId = seasonId,
-                Relationship = "season",
+                ChildKindCode = EntityKindRegistry.VideoSeason.Code,
                 SortOrder = 1,
+                IsStructural = true,
                 CreatedAt = DateTimeOffset.UtcNow
             },
-            new EntityHierarchyLinkRow
+            new EntityChildLinkRow
             {
                 ParentEntityId = seasonId,
                 ChildEntityId = episodeId,
-                Relationship = "episode",
+                ChildKindCode = EntityKindRegistry.Video.Code,
                 SortOrder = 1,
+                IsStructural = true,
                 CreatedAt = DateTimeOffset.UtcNow
             });
         db.EntityPositions.Add(new EntityPositionRow

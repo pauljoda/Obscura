@@ -3,7 +3,7 @@ using Obscura.Domain.Entities;
 namespace Obscura.Domain.Interfaces;
 
 /// <summary>
-/// Reads global entities and entity relationships without exposing storage or API contract details.
+/// Reads global entities and generic child links without exposing storage or API contract details.
 /// </summary>
 public interface IEntityCatalog
 {
@@ -32,16 +32,14 @@ public interface IEntityCatalog
     Task<Entity?> GetAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Lists child entities linked from a parent through a named relationship.
+    /// Lists child entities linked from a parent, optionally filtered by child kind.
     /// </summary>
     /// <param name="parentId">Parent entity identifier.</param>
-    /// <param name="relationship">Typed relationship to traverse.</param>
     /// <param name="childKind">Optional typed child kind filter.</param>
     /// <param name="cancellationToken">Token used to cancel the query.</param>
-    /// <returns>Child entities in relationship order.</returns>
+    /// <returns>Child entities in graph order.</returns>
     Task<IReadOnlyList<Entity>> ListChildrenAsync(
         Guid parentId,
-        IEntityRelationship relationship,
         IEntityKind? childKind,
         CancellationToken cancellationToken);
 }

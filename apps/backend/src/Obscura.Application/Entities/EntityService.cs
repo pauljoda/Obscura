@@ -66,20 +66,18 @@ public sealed class EntityService
     }
 
     /// <summary>
-    /// Lists related child entities for use cases that need hierarchy or membership expansion.
+    /// Lists child entities for use cases that need graph or membership expansion.
     /// </summary>
     /// <param name="parentId">Parent entity identifier.</param>
-    /// <param name="relationship">Typed relationship to traverse.</param>
     /// <param name="childKind">Optional typed child kind filter.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>API-ready child entity cards in relationship order.</returns>
     public async Task<IReadOnlyList<EntityCard>> ListChildrenAsync(
         Guid parentId,
-        IEntityRelationship relationship,
         IEntityKind? childKind,
         CancellationToken cancellationToken)
     {
-        var children = await _entities.ListChildrenAsync(parentId, relationship, childKind, cancellationToken);
+        var children = await _entities.ListChildrenAsync(parentId, childKind, cancellationToken);
         return ContractMapper.ToEntityCards(children);
     }
 

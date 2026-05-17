@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Obscura now uses the generic entity graph as the only v2 relationship model. This is a breaking dev-schema change: reset or re-import v2 data so series, seasons, collections, galleries, audio libraries, and books rebuild through `childrenByKind`.
 - Entity API cards now expose `parentEntityId`, grouped `childrenByKind`, and the new `lifetime` capability so clients can render series, seasons, and future mixed children through one generic shape.
 - Entity graph groundwork now gives every entity typed child groups, structural parent metadata, and storage-shape metadata, preparing series, seasons, collections, galleries, audio, and books to share one relationship model.
 - The identify review modal now shows individually selectable tags with NEW badges for unrecognized tags, EntityThumbnail-based credit and studio cards, multi-line descriptions, compact artwork thumbnails, and a consistent-size lightbox with slide-in animation and a Confirm button.
@@ -100,6 +101,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Changed
+- V1 import, library scanning, dynamic collections, entity projection, metadata cascade, and collection rules now write and read `entity_child_links` directly instead of the old relationship registry and hierarchy-link table.
 - Series and season detail contracts now read their child cards from grouped entity-kind children instead of separate `children` and `videos` arrays.
 - Entity detail hero banners now use a shared responsive height cap and overlap value in the base component, keeping series and other entity detail pages more compact.
 - Identify review credit cards now prefer character names in their subtitle and only fall back to normalized credit roles for crew entries, keeping episode guest-star cards from showing provider category labels.
@@ -323,6 +325,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scan now propagates the NSFW flag from the library root to all child entities — images, audio libraries, audio tracks, book chapters, and book pages were previously missing the flag even when their parent library root was marked NSFW.
 
 ### Removed
+- Removed the old v2 relationship registry, hierarchy definitions, `IEntityHierarchy`, `EntityLibrary`, and `entity_hierarchy_links` persistence model in favor of the generic child-link graph.
 - Removed the legacy SvelteKit `/api` route tree, `$lib/v1` server/client helpers, TypeScript worker app, Drizzle database package, and shared `@obscura/app-core` server package.
 - Removed the obsolete `/api/videos/{id}/stream`, `/api/videos/{id}/hls/master.m3u8`, and `/api/videos/{id}/hls/{asset}` playback routes; Jellyfin-compatible `/Videos/...` routes now own playback.
 - Removed the legacy Node worker service from the development Docker Compose stack.

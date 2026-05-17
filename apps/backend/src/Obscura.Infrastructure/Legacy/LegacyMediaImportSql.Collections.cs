@@ -74,13 +74,15 @@ public static partial class LegacyMediaImportSql
 
     private static readonly string CollectionItemsImport = $$"""
             IF to_regclass('public.collection_items') IS NOT NULL THEN
-                INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT item.collection_id, item.entity_id, '{{EntityRelationshipRegistry.CollectionItem.Code}}', item.sort_order, item.added_at
+                INSERT INTO v2.entity_child_links (parent_entity_id, child_entity_id, child_kind_code, sort_order, is_structural, source, created_at)
+                SELECT item.collection_id, item.entity_id, entity.kind_code, item.sort_order, false, 'legacy-import', item.added_at
                 FROM public.collection_items item
+                INNER JOIN v2.entities entity ON entity.id = item.entity_id
                 WHERE EXISTS (SELECT 1 FROM v2.entities collection WHERE collection.id = item.collection_id AND collection.kind_code = '{{EntityKindRegistry.Collection.Code}}')
-                  AND EXISTS (SELECT 1 FROM v2.entities entity WHERE entity.id = item.entity_id)
-                ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
-                    sort_order = EXCLUDED.sort_order;
+                ON CONFLICT (parent_entity_id, child_entity_id, child_kind_code) DO UPDATE SET
+                    sort_order = EXCLUDED.sort_order,
+                    is_structural = EXCLUDED.is_structural,
+                    source = EXCLUDED.source;
             END IF;
         """;
 }

@@ -12,7 +12,8 @@ public sealed class LegacyVideoImportSqlTests
         Assert.Contains("public.video_episodes", LegacyVideoImportSql.Import);
         Assert.Contains("public.performers", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entities", LegacyVideoImportSql.Import);
-        Assert.Contains("v2.entity_hierarchy_links", LegacyVideoImportSql.Import);
+        Assert.Contains("v2.entity_child_links", LegacyVideoImportSql.Import);
+        Assert.DoesNotContain("v2.entity_hierarchy_links", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_credit_links", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_studio_links", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_external_ids", LegacyVideoImportSql.Import);

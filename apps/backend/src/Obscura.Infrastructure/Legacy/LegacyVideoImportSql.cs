@@ -673,7 +673,7 @@ public static class LegacyVideoImportSql
                         WHERE season.season_number IS NOT NULL
                     )
                     INSERT INTO v2.entity_positions (entity_id, code, value, label, updated_at)
-                    SELECT entity_id, '{{EntityRelationshipRegistry.Season.Code}}', season_number, season_number::text, updated_at
+                    SELECT entity_id, 'season', season_number, season_number::text, updated_at
                     FROM legacy_seasons
                     ON CONFLICT (entity_id, code) DO UPDATE SET
                         value = EXCLUDED.value,
@@ -693,11 +693,13 @@ public static class LegacyVideoImportSql
                         WHERE season.series_id IS NOT NULL
                           AND season.season_number IS NOT NULL
                     )
-                    INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                    SELECT series_id, entity_id, '{{EntityRelationshipRegistry.Season.Code}}', season_number, created_at
+                    INSERT INTO v2.entity_child_links (parent_entity_id, child_entity_id, child_kind_code, sort_order, is_structural, source, created_at)
+                    SELECT series_id, entity_id, '{{EntityKindRegistry.VideoSeason.Code}}', season_number, true, 'legacy-import', created_at
                     FROM legacy_seasons
-                    ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
-                        sort_order = EXCLUDED.sort_order;
+                    ON CONFLICT (parent_entity_id, child_entity_id, child_kind_code) DO UPDATE SET
+                        sort_order = EXCLUDED.sort_order,
+                        is_structural = EXCLUDED.is_structural,
+                        source = EXCLUDED.source;
 
                     INSERT INTO v2.video_series_details (entity_id, rendering_mode)
                     SELECT DISTINCT series_id, '{{VideoSeriesRenderingMode.Seasons.ToCode()}}'
@@ -836,8 +838,8 @@ public static class LegacyVideoImportSql
                     label = EXCLUDED.label,
                     updated_at = EXCLUDED.updated_at;
 
-                INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT season.series_entity_id, season.entity_id, '{{EntityRelationshipRegistry.Season.Code}}', season.season_number, NOW()
+                INSERT INTO v2.entity_child_links (parent_entity_id, child_entity_id, child_kind_code, sort_order, is_structural, source, created_at)
+                SELECT season.series_entity_id, season.entity_id, '{{EntityKindRegistry.VideoSeason.Code}}', season.season_number, true, 'legacy-import', NOW()
                 FROM v2.video_season_details season
                 WHERE EXISTS (
                     SELECT 1
@@ -845,8 +847,10 @@ public static class LegacyVideoImportSql
                     WHERE episode.series_id = season.series_entity_id
                       AND episode.season_number = season.season_number
                 )
-                ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
-                    sort_order = EXCLUDED.sort_order;
+                ON CONFLICT (parent_entity_id, child_entity_id, child_kind_code) DO UPDATE SET
+                    sort_order = EXCLUDED.sort_order,
+                    is_structural = EXCLUDED.is_structural,
+                    source = EXCLUDED.source;
 
                 INSERT INTO v2.entity_playback (entity_id, play_count, play_duration_seconds, resume_seconds, last_played_at, completed_at, updated_at)
                 SELECT id, play_count, play_duration, resume_time, last_played_at, NULL, updated_at
@@ -879,34 +883,38 @@ public static class LegacyVideoImportSql
                 ON CONFLICT (entity_id, algorithm) DO UPDATE SET
                     value = EXCLUDED.value;
 
-                DELETE FROM v2.entity_hierarchy_links link
+                DELETE FROM v2.entity_child_links link
                 USING public.video_episodes episode
                 INNER JOIN v2.video_season_details season
                     ON season.series_entity_id = episode.series_id
                    AND season.season_number = episode.season_number
                 WHERE link.child_entity_id = episode.id
-                  AND link.relationship = '{{EntityRelationshipRegistry.Episode.Code}}'
+                  AND link.is_structural = true
                   AND link.parent_entity_id <> season.entity_id;
 
-                INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT season.entity_id, episode.id, '{{EntityRelationshipRegistry.Episode.Code}}', COALESCE(episode.episode_number, episode.absolute_episode_number, 0), episode.created_at
+                INSERT INTO v2.entity_child_links (parent_entity_id, child_entity_id, child_kind_code, sort_order, is_structural, source, created_at)
+                SELECT season.entity_id, episode.id, '{{EntityKindRegistry.Video.Code}}', COALESCE(episode.episode_number, episode.absolute_episode_number, 0), true, 'legacy-import', episode.created_at
                 FROM public.video_episodes episode
                 INNER JOIN v2.video_season_details season
                     ON season.series_entity_id = episode.series_id
                    AND season.season_number = episode.season_number
-                ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
-                    sort_order = EXCLUDED.sort_order;
+                ON CONFLICT (parent_entity_id, child_entity_id, child_kind_code) DO UPDATE SET
+                    sort_order = EXCLUDED.sort_order,
+                    is_structural = EXCLUDED.is_structural,
+                    source = EXCLUDED.source;
 
-                INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT episode.series_id, episode.id, '{{EntityRelationshipRegistry.Episode.Code}}', (COALESCE(episode.season_number, 0) * 10000) + COALESCE(episode.episode_number, episode.absolute_episode_number, 0), episode.created_at
+                INSERT INTO v2.entity_child_links (parent_entity_id, child_entity_id, child_kind_code, sort_order, is_structural, source, created_at)
+                SELECT episode.series_id, episode.id, '{{EntityKindRegistry.Video.Code}}', (COALESCE(episode.season_number, 0) * 10000) + COALESCE(episode.episode_number, episode.absolute_episode_number, 0), true, 'legacy-import', episode.created_at
                 FROM public.video_episodes episode
                 LEFT JOIN v2.video_season_details season
                     ON season.series_entity_id = episode.series_id
                    AND season.season_number = episode.season_number
                 WHERE episode.series_id IS NOT NULL
                   AND season.entity_id IS NULL
-                ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
-                    sort_order = EXCLUDED.sort_order;
+                ON CONFLICT (parent_entity_id, child_entity_id, child_kind_code) DO UPDATE SET
+                    sort_order = EXCLUDED.sort_order,
+                    is_structural = EXCLUDED.is_structural,
+                    source = EXCLUDED.source;
 
                 INSERT INTO v2.entity_urls (id, entity_id, url, label, sort_order, created_at)
                 SELECT gen_random_uuid(), id, url, NULL, 0, created_at
@@ -1033,6 +1041,15 @@ public static class LegacyVideoImportSql
                     character = EXCLUDED.character,
                     sort_order = EXCLUDED.sort_order;
             END IF;
+
+            UPDATE v2.entities child
+            SET
+                parent_entity_id = link.parent_entity_id,
+                sort_order = link.sort_order,
+                updated_at = GREATEST(child.updated_at, link.created_at)
+            FROM v2.entity_child_links link
+            WHERE link.child_entity_id = child.id
+              AND link.is_structural = true;
         END $$;
         """;
 
@@ -1046,7 +1063,7 @@ public static class LegacyVideoImportSql
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKindRegistry.Person.Code}}') AS people_imported,
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKindRegistry.Tag.Code}}') AS tags_imported,
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKindRegistry.Studio.Code}}') AS studios_imported,
-            ((SELECT COUNT(*)::int FROM v2.entity_hierarchy_links) +
+            ((SELECT COUNT(*)::int FROM v2.entity_child_links WHERE is_structural = true) +
              (SELECT COUNT(*)::int FROM v2.entity_credit_links) +
              (SELECT COUNT(*)::int FROM v2.entity_studio_links) +
              (SELECT COUNT(*)::int FROM v2.entity_markers) +

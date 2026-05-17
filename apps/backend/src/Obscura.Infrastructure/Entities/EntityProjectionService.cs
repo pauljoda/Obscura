@@ -15,7 +15,6 @@ namespace Obscura.Infrastructure.Entities;
 public sealed partial class EntityProjectionService :
     IEntityCatalog,
     IEntityDetails,
-    IEntityHierarchy,
     IRatingService,
     IEntityMarkerService,
     IVideoLibrary
@@ -99,38 +98,34 @@ public sealed partial class EntityProjectionService :
     /// <inheritdoc />
     public async Task<IReadOnlyList<Entity>> ListChildrenAsync(
         Guid parentId,
-        IEntityRelationship relationship,
         IEntityKind? childKind,
         CancellationToken cancellationToken)
     {
-        return await LoadLinkedChildrenAsync(parentId, relationship, childKind, cancellationToken);
-    }
-
-    /// <inheritdoc />
-    public bool IsAllowed(IEntityKind parentKind, IEntityKind childKind, IEntityRelationship relationship) =>
-        EntityHierarchyDefinitions.IsAllowed(parentKind, childKind, relationship);
-
-    /// <inheritdoc />
-    public async Task<EntityHierarchyTree?> GetTreeAsync(
-        Guid rootId,
-        HierarchyDefinition definition,
-        CancellationToken cancellationToken)
-    {
-        var root = await GetAsync(rootId, cancellationToken);
-        if (root is null || root.Kind != definition.RootKind)
+        var links = await _db.EntityChildLinks
+            .AsNoTracking()
+            .Where(link => link.ParentEntityId == parentId)
+            .Where(link => childKind == null || link.ChildKindCode == childKind.Code)
+            .OrderBy(link => link.ChildKindCode)
+            .ThenBy(link => link.SortOrder)
+            .ThenBy(link => link.ChildEntityId)
+            .ToListAsync(cancellationToken);
+        if (links.Count == 0)
         {
-            return null;
+            return [];
         }
 
-        var rootNode = await BuildHierarchyNodeAsync(
-            root,
-            definition,
-            null,
-            0,
-            new HashSet<Guid> { root.Id },
-            cancellationToken);
+        var childIds = links.Select(link => link.ChildEntityId).ToArray();
+        var childRows = await _db.Entities
+            .AsNoTracking()
+            .Where(entity => childIds.Contains(entity.Id) && entity.DeletedAt == null)
+            .ToListAsync(cancellationToken);
+        var childCards = (await BuildEntitiesAsync(childRows, cancellationToken))
+            .ToDictionary(entity => entity.Id);
 
-        return new EntityHierarchyTree(definition, rootNode);
+        return links
+            .Where(link => childCards.ContainsKey(link.ChildEntityId))
+            .Select(link => childCards[link.ChildEntityId])
+            .ToArray();
     }
 
     /// <inheritdoc />
@@ -433,16 +428,6 @@ public sealed partial class EntityProjectionService :
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
         var seasons = card.ChildrenByKind.Get(EntityKindRegistry.VideoSeason).Cast<Entity>().ToArray();
         var videos = card.ChildrenByKind.Get(EntityKindRegistry.Video).Cast<Entity>().ToArray();
-        if (seasons.Length == 0)
-        {
-            seasons = (await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.Season, EntityKindRegistry.VideoSeason, cancellationToken)).ToArray();
-        }
-
-        if (videos.Length == 0)
-        {
-            videos = (await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.Episode, EntityKindRegistry.Video, cancellationToken)).ToArray();
-        }
-
         var renderingMode = detail?.RenderingMode ??
             (seasons.Length > 0 ? VideoSeriesRenderingMode.Seasons : VideoSeriesRenderingMode.Flat);
 
@@ -467,25 +452,9 @@ public sealed partial class EntityProjectionService :
         var detail = await _db.VideoSeasonDetails
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-        var seriesId = card.ParentEntityId ?? detail?.SeriesEntityId ?? await ResolveParentSeriesIdAsync(id, cancellationToken);
+        var seriesId = card.ParentEntityId ?? detail?.SeriesEntityId ?? Guid.Empty;
         var videos = card.ChildrenByKind.Get(EntityKindRegistry.Video).Cast<Entity>().ToArray();
-        if (videos.Length == 0)
-        {
-            videos = (await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.Episode, EntityKindRegistry.Video, cancellationToken)).ToArray();
-        }
 
         return new VideoSeason(card, seriesId, videos);
-    }
-
-    private async Task<Guid> ResolveParentSeriesIdAsync(Guid seasonId, CancellationToken cancellationToken)
-    {
-        var link = await _db.EntityHierarchyLinks
-            .AsNoTracking()
-            .Where(row => row.ChildEntityId == seasonId && row.Relationship == EntityRelationshipRegistry.Season.Code)
-            .OrderBy(row => row.SortOrder)
-            .ThenBy(row => row.ParentEntityId)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        return link?.ParentEntityId ?? Guid.Empty;
     }
 }

@@ -102,7 +102,6 @@ public sealed class MediaService
 
         var children = await _entities.ListChildrenAsync(
             id,
-            EntityRelationshipRegistry.Gallery,
             EntityKindRegistry.Image,
             cancellationToken);
         return ContractMapper.ToGalleryDetail(gallery, children);
@@ -136,7 +135,6 @@ public sealed class MediaService
 
         var children = await _entities.ListChildrenAsync(
             id,
-            EntityRelationshipRegistry.AudioLibrary,
             EntityKindRegistry.AudioTrack,
             cancellationToken);
         return ContractMapper.ToAudioLibraryDetail(library, children);

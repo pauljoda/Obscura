@@ -167,7 +167,6 @@ public sealed class EntityVideoEndpointServiceTests
 
         public Task<IReadOnlyList<DomainEntity>> ListChildrenAsync(
             Guid parentId,
-            IEntityRelationship relationship,
             IEntityKind? childKind,
             CancellationToken cancellationToken)
         {

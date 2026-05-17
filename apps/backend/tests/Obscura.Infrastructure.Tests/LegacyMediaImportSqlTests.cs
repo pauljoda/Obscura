@@ -14,7 +14,8 @@ public sealed class LegacyMediaImportSqlTests
         Assert.Contains("public.audio_tracks", LegacyMediaImportSql.Import);
         Assert.Contains("public.collections", LegacyMediaImportSql.Import);
         Assert.Contains("public.collection_items", LegacyMediaImportSql.Import);
-        Assert.Contains("v2.entity_hierarchy_links", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.entity_child_links", LegacyMediaImportSql.Import);
+        Assert.DoesNotContain("v2.entity_hierarchy_links", LegacyMediaImportSql.Import);
         Assert.Contains("v2.entity_credit_links", LegacyMediaImportSql.Import);
         Assert.Contains("v2.entity_studio_links", LegacyMediaImportSql.Import);
         Assert.Contains("v2.entity_external_ids", LegacyMediaImportSql.Import);

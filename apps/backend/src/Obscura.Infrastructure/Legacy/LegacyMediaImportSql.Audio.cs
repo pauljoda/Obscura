@@ -92,12 +92,14 @@ public static partial class LegacyMediaImportSql
                 ON CONFLICT (entity_id) DO UPDATE SET
                     studio_id = EXCLUDED.studio_id;
 
-                INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT parent_id, id, '{{EntityRelationshipRegistry.AudioLibrary.Code}}', 0, created_at
+                INSERT INTO v2.entity_child_links (parent_entity_id, child_entity_id, child_kind_code, sort_order, is_structural, source, created_at)
+                SELECT parent_id, id, '{{EntityKindRegistry.AudioLibrary.Code}}', 0, true, 'legacy-import', created_at
                 FROM public.audio_libraries
                 WHERE parent_id IS NOT NULL
-                ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
-                    sort_order = EXCLUDED.sort_order;
+                ON CONFLICT (parent_entity_id, child_entity_id, child_kind_code) DO UPDATE SET
+                    sort_order = EXCLUDED.sort_order,
+                    is_structural = EXCLUDED.is_structural,
+                    source = EXCLUDED.source;
 
                 INSERT INTO v2.entity_urls (id, entity_id, url, label, sort_order, created_at)
                 SELECT gen_random_uuid(), library.id, link.url, NULL, (link.sort_order - 1)::int, library.created_at
@@ -258,12 +260,14 @@ public static partial class LegacyMediaImportSql
                 ON CONFLICT (entity_id) DO UPDATE SET
                     studio_id = EXCLUDED.studio_id;
 
-                INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT library_id, id, '{{EntityRelationshipRegistry.AudioLibrary.Code}}', sort_order, created_at
+                INSERT INTO v2.entity_child_links (parent_entity_id, child_entity_id, child_kind_code, sort_order, is_structural, source, created_at)
+                SELECT library_id, id, '{{EntityKindRegistry.AudioTrack.Code}}', sort_order, true, 'legacy-import', created_at
                 FROM public.audio_tracks
                 WHERE library_id IS NOT NULL
-                ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
-                    sort_order = EXCLUDED.sort_order;
+                ON CONFLICT (parent_entity_id, child_entity_id, child_kind_code) DO UPDATE SET
+                    sort_order = EXCLUDED.sort_order,
+                    is_structural = EXCLUDED.is_structural,
+                    source = EXCLUDED.source;
 
                 INSERT INTO v2.entity_urls (id, entity_id, url, label, sort_order, created_at)
                 SELECT gen_random_uuid(), track.id, link.url, NULL, (link.sort_order - 1)::int, track.created_at

@@ -10,7 +10,6 @@ public sealed class RegistryInfrastructureTests
     public void DomainRegistriesShareDiscoveryInfrastructure()
     {
         Assert.True(typeof(EntityKindRegistry).IsSubclassOf(typeof(AbstractRegistry<IEntityKind, string>)));
-        Assert.True(typeof(EntityRelationshipRegistry).IsSubclassOf(typeof(AbstractRegistry<IEntityRelationship, string>)));
         Assert.True(typeof(CapabilityRegistry).IsSubclassOf(typeof(AbstractRegistry<ICapabilityKind, string>)));
         Assert.True(typeof(CodecRegistry).IsSubclassOf(typeof(AbstractRegistry<ICodec, Type>)));
         Assert.DoesNotContain(

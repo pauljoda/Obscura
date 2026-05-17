@@ -493,10 +493,6 @@ public sealed class EntityMetadataApplyService
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        var seasonLinks = await _db.EntityHierarchyLinks
-            .Where(link => link.ParentEntityId == seriesEntityId && link.Relationship == "season")
-            .ToArrayAsync(cancellationToken);
-
         foreach (var seasonProposal in children.Where(c => c.TargetKind is "video-season"))
         {
             if (!seasonProposal.Patch.Positions.TryGetValue("seasonNumber", out var seasonNum))
@@ -517,8 +513,8 @@ public sealed class EntityMetadataApplyService
             if (seasonProposal.Children.Count == 0)
                 continue;
 
-            var episodeLinks = await _db.EntityHierarchyLinks
-                .Where(link => link.ParentEntityId == seasonEntity.Id && link.Relationship == "episode")
+            var episodeLinks = await _db.EntityChildLinks
+                .Where(link => link.ParentEntityId == seasonEntity.Id && link.ChildKindCode == EntityKindRegistry.Video.Code)
                 .ToArrayAsync(cancellationToken);
             var episodeEntityIds = episodeLinks.Select(l => l.ChildEntityId).ToArray();
 

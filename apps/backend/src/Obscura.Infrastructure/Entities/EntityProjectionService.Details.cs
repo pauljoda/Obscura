@@ -222,7 +222,7 @@ public sealed partial class EntityProjectionService
         var detail = await _db.CollectionDetails
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-        var items = await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.CollectionItem, null, cancellationToken);
+        var items = await ListChildrenAsync(id, null, cancellationToken);
 
         return new Collection(
             entity,
@@ -254,9 +254,9 @@ public sealed partial class EntityProjectionService
         var detail = await _db.VideoSeasonDetails
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-        var videos = await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.Episode, EntityKindRegistry.Video, cancellationToken);
+        var videos = await ListChildrenAsync(id, EntityKindRegistry.Video, cancellationToken);
 
-        var seriesId = detail?.SeriesEntityId ?? await ResolveParentSeriesIdAsync(id, cancellationToken);
+        var seriesId = entity.ParentEntityId ?? detail?.SeriesEntityId ?? Guid.Empty;
 
         return new VideoSeason(entity, seriesId, videos);
     }

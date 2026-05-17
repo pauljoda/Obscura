@@ -32,6 +32,7 @@ public static partial class LegacyMediaImportSql
         BookPerformersImport,
         AudioLibraryPerformersImport,
         AudioTrackPerformersImport,
+        NormalizeEntityChildLinks,
         ImportFooter);
 
     private const string ImportHeader = """
@@ -41,6 +42,17 @@ public static partial class LegacyMediaImportSql
 
     private const string ImportFooter = """
         END $$;
+        """;
+
+    private static readonly string NormalizeEntityChildLinks = $$"""
+            UPDATE v2.entities child
+            SET
+                parent_entity_id = link.parent_entity_id,
+                sort_order = link.sort_order,
+                updated_at = GREATEST(child.updated_at, link.created_at)
+            FROM v2.entity_child_links link
+            WHERE link.child_entity_id = child.id
+              AND link.is_structural = true;
         """;
 
     /// <summary>
@@ -54,8 +66,8 @@ public static partial class LegacyMediaImportSql
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKindRegistry.AudioLibrary.Code}}') AS audio_libraries_imported,
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKindRegistry.AudioTrack.Code}}') AS audio_tracks_imported,
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKindRegistry.Collection.Code}}') AS collections_imported,
-            ((SELECT COUNT(*)::int FROM v2.entity_hierarchy_links WHERE relationship IN ('{{EntityRelationshipRegistry.Gallery.Code}}', '{{EntityRelationshipRegistry.AudioLibrary.Code}}')) +
-             (SELECT COUNT(*)::int FROM v2.entity_hierarchy_links WHERE relationship = '{{EntityRelationshipRegistry.CollectionItem.Code}}') +
+            ((SELECT COUNT(*)::int FROM v2.entity_child_links WHERE child_kind_code IN ('{{EntityKindRegistry.Gallery.Code}}', '{{EntityKindRegistry.Image.Code}}', '{{EntityKindRegistry.AudioLibrary.Code}}', '{{EntityKindRegistry.AudioTrack.Code}}')) +
+             (SELECT COUNT(*)::int FROM v2.entity_child_links WHERE is_structural = false) +
              (SELECT COUNT(*)::int FROM v2.entity_credit_links) +
              (SELECT COUNT(*)::int FROM v2.entity_studio_links) +
              (SELECT COUNT(*)::int FROM v2.entity_markers)) AS links_imported;

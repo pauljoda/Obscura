@@ -326,7 +326,7 @@ public sealed class CollectionRuleEngine(ObscuraDbContext db) : ICollectionRuleE
         };
     }
 
-    // ── Video series (hierarchy walk: video → season → series) ──
+    // ── Video series (graph walk: video -> season -> series) ──
 
     private string? TranslateVideoSeries(CollectionRuleCondition condition, string kindCode, SqlBuildContext ctx)
     {
@@ -334,8 +334,8 @@ public sealed class CollectionRuleEngine(ObscuraDbContext db) : ICollectionRuleE
 
         var subquery = @"e.id IN (
             SELECT hl_ep.child_entity_id
-            FROM entity_hierarchy_links hl_ep
-            INNER JOIN entity_hierarchy_links hl_season ON hl_season.child_entity_id = hl_ep.parent_entity_id
+            FROM entity_child_links hl_ep
+            INNER JOIN entity_child_links hl_season ON hl_season.child_entity_id = hl_ep.parent_entity_id
             WHERE hl_season.parent_entity_id";
 
         return condition.Operator switch
@@ -358,13 +358,13 @@ public sealed class CollectionRuleEngine(ObscuraDbContext db) : ICollectionRuleE
         return TranslateScalar("gd.gallery_type", condition.Operator, condition.Value, ctx);
     }
 
-    // ── Image count (count children in hierarchy) ──
+    // ── Child count (count generic graph children) ──
 
     private string? TranslateChildCount(CollectionRuleCondition condition, string kindCode, SqlBuildContext ctx)
     {
         if (kindCode is not ("gallery" or "book")) return null;
 
-        var countExpr = "(SELECT COUNT(*) FROM entity_hierarchy_links hl_cnt WHERE hl_cnt.parent_entity_id = e.id)";
+        var countExpr = "(SELECT COUNT(*) FROM entity_child_links hl_cnt WHERE hl_cnt.parent_entity_id = e.id)";
         return TranslateScalar(countExpr, condition.Operator, condition.Value, ctx);
     }
 

@@ -347,14 +347,16 @@ public sealed class EntityProjectionServiceTests
         var seriesId = Guid.Parse("55555555-5555-5555-5555-555555555555");
         var episodeId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         SeedEntity(db, seriesId, "video-series", "Collected Episodes");
-        SeedEntity(db, episodeId, "video", "Pilot");
+        SeedEntity(db, episodeId, "video", "Pilot", parentEntityId: seriesId, sortOrder: 1);
         db.EntityRatings.Add(new EntityRatingRow { EntityId = seriesId, Value = 5 });
-        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        db.EntityChildLinks.Add(new EntityChildLinkRow
         {
             ParentEntityId = seriesId,
             ChildEntityId = episodeId,
-            Relationship = EntityRelationshipRegistry.Episode.Code,
-            SortOrder = 1
+            ChildKindCode = EntityKindRegistry.Video.Code,
+            SortOrder = 1,
+            IsStructural = true,
+            CreatedAt = DateTimeOffset.UtcNow
         });
         await db.SaveChangesAsync();
 
@@ -382,21 +384,25 @@ public sealed class EntityProjectionServiceTests
         var seasonId = Guid.Parse("13131313-1313-1313-1313-131313131313");
         var episodeId = Guid.Parse("14141414-1414-1414-1414-141414141414");
         SeedEntity(db, seriesId, "video-series", "Seasoned Series");
-        SeedEntity(db, seasonId, "video-season", "Season 1");
-        SeedEntity(db, episodeId, "video", "Episode 1");
-        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        SeedEntity(db, seasonId, "video-season", "Season 1", parentEntityId: seriesId, sortOrder: 1);
+        SeedEntity(db, episodeId, "video", "Episode 1", parentEntityId: seasonId, sortOrder: 1);
+        db.EntityChildLinks.Add(new EntityChildLinkRow
         {
             ParentEntityId = seriesId,
             ChildEntityId = seasonId,
-            Relationship = EntityRelationshipRegistry.Season.Code,
-            SortOrder = 1
+            ChildKindCode = EntityKindRegistry.VideoSeason.Code,
+            SortOrder = 1,
+            IsStructural = true,
+            CreatedAt = DateTimeOffset.UtcNow
         });
-        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        db.EntityChildLinks.Add(new EntityChildLinkRow
         {
             ParentEntityId = seasonId,
             ChildEntityId = episodeId,
-            Relationship = EntityRelationshipRegistry.Episode.Code,
-            SortOrder = 1
+            ChildKindCode = EntityKindRegistry.Video.Code,
+            SortOrder = 1,
+            IsStructural = true,
+            CreatedAt = DateTimeOffset.UtcNow
         });
         await db.SaveChangesAsync();
 
@@ -419,35 +425,41 @@ public sealed class EntityProjectionServiceTests
         var episodeTwoId = Guid.Parse("26262626-2626-2626-2626-262626262626");
         var episodeOneId = Guid.Parse("27272727-2727-2727-2727-272727272727");
         SeedEntity(db, seriesId, "video-series", "Ordered Series");
-        SeedEntity(db, seasonId, "video-season", "Season 1");
-        SeedEntity(db, episodeTwoId, "video", "Episode 2");
-        SeedEntity(db, episodeOneId, "video", "Episode 1");
+        SeedEntity(db, seasonId, "video-season", "Season 1", parentEntityId: seriesId, sortOrder: 1);
+        SeedEntity(db, episodeTwoId, "video", "Episode 2", parentEntityId: seasonId, sortOrder: 2);
+        SeedEntity(db, episodeOneId, "video", "Episode 1", parentEntityId: seasonId, sortOrder: 1);
         db.VideoSeasonDetails.Add(new VideoSeasonDetailRow
         {
             EntityId = seasonId,
             SeriesEntityId = seriesId,
             SeasonNumber = 1
         });
-        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        db.EntityChildLinks.Add(new EntityChildLinkRow
         {
             ParentEntityId = seriesId,
             ChildEntityId = seasonId,
-            Relationship = EntityRelationshipRegistry.Season.Code,
-            SortOrder = 1
+            ChildKindCode = EntityKindRegistry.VideoSeason.Code,
+            SortOrder = 1,
+            IsStructural = true,
+            CreatedAt = DateTimeOffset.UtcNow
         });
-        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        db.EntityChildLinks.Add(new EntityChildLinkRow
         {
             ParentEntityId = seasonId,
             ChildEntityId = episodeTwoId,
-            Relationship = EntityRelationshipRegistry.Episode.Code,
-            SortOrder = 2
+            ChildKindCode = EntityKindRegistry.Video.Code,
+            SortOrder = 2,
+            IsStructural = true,
+            CreatedAt = DateTimeOffset.UtcNow
         });
-        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        db.EntityChildLinks.Add(new EntityChildLinkRow
         {
             ParentEntityId = seasonId,
             ChildEntityId = episodeOneId,
-            Relationship = EntityRelationshipRegistry.Episode.Code,
-            SortOrder = 1
+            ChildKindCode = EntityKindRegistry.Video.Code,
+            SortOrder = 1,
+            IsStructural = true,
+            CreatedAt = DateTimeOffset.UtcNow
         });
         SeedPosition(db, episodeTwoId, "episode", 2);
         SeedPosition(db, episodeOneId, "episode", 1);
@@ -510,7 +522,7 @@ public sealed class EntityProjectionServiceTests
     }
 
     [Fact]
-    public async Task HierarchyTreeLoadsOrderedChildrenAndSkipsDeletedEntities()
+    public async Task GenericChildLinksLoadOrderedChildrenAndSkipsDeletedEntities()
     {
         await using var db = CreateContext();
         var bookId = Guid.Parse("15151515-1515-1515-1515-151515151515");
@@ -519,9 +531,9 @@ public sealed class EntityProjectionServiceTests
         var firstPageId = Guid.Parse("18181818-1818-1818-1818-181818181818");
         var deletedPageId = Guid.Parse("19191919-1919-1919-1919-191919191919");
         SeedEntity(db, bookId, "book", "Book Root");
-        SeedEntity(db, volumeId, "book-volume", "Volume 1");
-        SeedEntity(db, chapterId, "book-chapter", "Chapter 1");
-        SeedEntity(db, firstPageId, "book-page", "Page 1");
+        SeedEntity(db, volumeId, "book-volume", "Volume 1", parentEntityId: bookId, sortOrder: 1);
+        SeedEntity(db, chapterId, "book-chapter", "Chapter 1", parentEntityId: volumeId, sortOrder: 1);
+        SeedEntity(db, firstPageId, "book-page", "Page 1", parentEntityId: chapterId, sortOrder: 2);
         db.Entities.Add(new EntityRow
         {
             Id = deletedPageId,
@@ -531,48 +543,55 @@ public sealed class EntityProjectionServiceTests
             UpdatedAt = DateTimeOffset.UtcNow,
             DeletedAt = DateTimeOffset.UtcNow
         });
-        db.EntityHierarchyLinks.AddRange(
-            new EntityHierarchyLinkRow
+        db.EntityChildLinks.AddRange(
+            new EntityChildLinkRow
             {
                 ParentEntityId = bookId,
                 ChildEntityId = volumeId,
-                Relationship = EntityRelationshipRegistry.Volume.Code,
-                SortOrder = 1
+                ChildKindCode = EntityKindRegistry.BookVolume.Code,
+                SortOrder = 1,
+                IsStructural = true,
+                CreatedAt = DateTimeOffset.UtcNow
             },
-            new EntityHierarchyLinkRow
+            new EntityChildLinkRow
             {
                 ParentEntityId = volumeId,
                 ChildEntityId = chapterId,
-                Relationship = EntityRelationshipRegistry.Chapter.Code,
-                SortOrder = 1
+                ChildKindCode = EntityKindRegistry.BookChapter.Code,
+                SortOrder = 1,
+                IsStructural = true,
+                CreatedAt = DateTimeOffset.UtcNow
             },
-            new EntityHierarchyLinkRow
+            new EntityChildLinkRow
             {
                 ParentEntityId = chapterId,
                 ChildEntityId = deletedPageId,
-                Relationship = EntityRelationshipRegistry.Page.Code,
-                SortOrder = 1
+                ChildKindCode = EntityKindRegistry.BookPage.Code,
+                SortOrder = 1,
+                IsStructural = true,
+                CreatedAt = DateTimeOffset.UtcNow
             },
-            new EntityHierarchyLinkRow
+            new EntityChildLinkRow
             {
                 ParentEntityId = chapterId,
                 ChildEntityId = firstPageId,
-                Relationship = EntityRelationshipRegistry.Page.Code,
-                SortOrder = 2
+                ChildKindCode = EntityKindRegistry.BookPage.Code,
+                SortOrder = 2,
+                IsStructural = true,
+                CreatedAt = DateTimeOffset.UtcNow
             });
         await db.SaveChangesAsync();
 
         var service = new EntityProjectionService(db);
-        var tree = await service.GetTreeAsync(bookId, EntityHierarchyDefinitions.Book, CancellationToken.None);
-
-        Assert.NotNull(tree);
-        Assert.Equal(bookId, tree.Root.Entity.Id);
-        var volume = Assert.Single(tree.Root.Children);
-        Assert.Equal(EntityRelationshipRegistry.Volume, volume.RelationshipToParent);
-        var chapter = Assert.Single(volume.Children);
-        Assert.Equal(EntityRelationshipRegistry.Chapter, chapter.RelationshipToParent);
-        var page = Assert.Single(chapter.Children);
-        Assert.Equal(firstPageId, page.Entity.Id);
+        var volumes = await service.ListChildrenAsync(bookId, EntityKindRegistry.BookVolume, CancellationToken.None);
+        var volume = Assert.Single(volumes);
+        Assert.Equal(volumeId, volume.Id);
+        var chapters = await service.ListChildrenAsync(volume.Id, EntityKindRegistry.BookChapter, CancellationToken.None);
+        var chapter = Assert.Single(chapters);
+        Assert.Equal(chapterId, chapter.Id);
+        var pages = await service.ListChildrenAsync(chapter.Id, EntityKindRegistry.BookPage, CancellationToken.None);
+        var page = Assert.Single(pages);
+        Assert.Equal(firstPageId, page.Id);
         Assert.Equal(2, page.SortOrder);
     }
 
@@ -586,20 +605,22 @@ public sealed class EntityProjectionServiceTests
         SeedEntity(db, collectionId, "collection", "Reference Set");
         SeedEntity(db, imageId, "image", "Still");
         SeedEntity(db, audioId, "audio-track", "Cue");
-        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        db.EntityChildLinks.Add(new EntityChildLinkRow
         {
             ParentEntityId = collectionId,
             ChildEntityId = imageId,
-            Relationship = EntityRelationshipRegistry.CollectionItem.Code,
+            ChildKindCode = EntityKindRegistry.Image.Code,
             SortOrder = 2,
+            IsStructural = false,
             CreatedAt = DateTimeOffset.UtcNow
         });
-        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        db.EntityChildLinks.Add(new EntityChildLinkRow
         {
             ParentEntityId = collectionId,
             ChildEntityId = audioId,
-            Relationship = EntityRelationshipRegistry.CollectionItem.Code,
+            ChildKindCode = EntityKindRegistry.AudioTrack.Code,
             SortOrder = 3,
+            IsStructural = false,
             CreatedAt = DateTimeOffset.UtcNow
         });
         db.EntityRatings.Add(new EntityRatingRow { EntityId = imageId, Value = 4 });
@@ -608,7 +629,6 @@ public sealed class EntityProjectionServiceTests
         var service = new EntityProjectionService(db);
         var children = await service.ListChildrenAsync(
             collectionId,
-            EntityRelationshipRegistry.CollectionItem,
             EntityKindRegistry.Image,
             CancellationToken.None);
 

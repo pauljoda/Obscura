@@ -108,20 +108,27 @@ public sealed class LibraryScanPersistenceServiceTests
         Assert.Equal(seriesId, seasonDetail.SeriesEntityId);
         Assert.Equal(1, seasonDetail.SeasonNumber);
 
-        Assert.Contains(db.EntityHierarchyLinks, link =>
+        Assert.DoesNotContain(db.EntityChildLinks, link =>
+            link.ParentEntityId == seriesId &&
+            link.ChildEntityId == videoId &&
+            link.IsStructural);
+        Assert.Equal(seriesId, season.ParentEntityId);
+        Assert.Equal(1, season.SortOrder);
+        var video = Assert.Single(db.Entities.Where(entity => entity.Id == videoId));
+        Assert.Equal(season.Id, video.ParentEntityId);
+        Assert.Equal(1, video.SortOrder);
+        Assert.Contains(db.EntityChildLinks, link =>
             link.ParentEntityId == seriesId &&
             link.ChildEntityId == season.Id &&
-            link.Relationship == EntityRelationshipRegistry.Season.Code &&
+            link.ChildKindCode == EntityKindRegistry.VideoSeason.Code &&
+            link.IsStructural &&
             link.SortOrder == 1);
-        Assert.Contains(db.EntityHierarchyLinks, link =>
+        Assert.Contains(db.EntityChildLinks, link =>
             link.ParentEntityId == season.Id &&
             link.ChildEntityId == videoId &&
-            link.Relationship == EntityRelationshipRegistry.Episode.Code &&
+            link.ChildKindCode == EntityKindRegistry.Video.Code &&
+            link.IsStructural &&
             link.SortOrder == 1);
-        Assert.DoesNotContain(db.EntityHierarchyLinks, link =>
-            link.ParentEntityId == seriesId &&
-            link.ChildEntityId == videoId &&
-            link.Relationship == EntityRelationshipRegistry.Episode.Code);
         Assert.Contains(db.EntityPositions, position =>
             position.EntityId == season.Id &&
             position.Code == "season" &&
