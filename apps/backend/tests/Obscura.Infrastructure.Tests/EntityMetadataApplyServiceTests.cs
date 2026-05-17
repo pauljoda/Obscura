@@ -384,6 +384,68 @@ public sealed class EntityMetadataApplyServiceTests
         Assert.Null(await db.EntityPositions.FindAsync([episodeId, "episodeNumber"]));
     }
 
+    [Fact]
+    public async Task ApplyGraphChildCreditsDeduplicatesRepeatedPeople()
+    {
+        await using var db = CreateContext();
+        var seriesId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var episodeId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var personId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+        SeedEntity(db, seriesId, "video-series", "Series");
+        SeedEntity(db, episodeId, "video", "Episode", parentEntityId: seriesId, sortOrder: 1);
+        SeedEntity(db, personId, "person", "Returning Actor");
+        db.EntityChildLinks.Add(new EntityChildLinkRow
+        {
+            ParentEntityId = seriesId,
+            ChildEntityId = episodeId,
+            ChildKindCode = "video",
+            SortOrder = 1,
+            IsStructural = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var proposal = new EntityMetadataProposal(
+            ProposalId: "provider:series:credits",
+            Provider: "provider",
+            TargetKind: "video-series",
+            TargetEntityId: seriesId,
+            Confidence: 1,
+            MatchReason: "external-id",
+            Patch: EmptyPatch(),
+            Images: [],
+            Children:
+            [
+                new EntityMetadataProposal(
+                    ProposalId: "provider:episode:credits",
+                    Provider: "provider",
+                    TargetKind: "video",
+                    TargetEntityId: episodeId,
+                    Confidence: 1,
+                    MatchReason: "graph-child",
+                    Patch: EmptyPatch() with
+                    {
+                        Credits =
+                        [
+                            new CreditPatch("Returning Actor", "person", "New Character", 0),
+                            new CreditPatch("Returning Actor", "person", "Duplicate Character", 1)
+                        ]
+                    },
+                    Images: [],
+                    Children: [],
+                    Candidates: [])
+            ],
+            Candidates: []);
+
+        var service = new EntityMetadataApplyService(db, new PluginArtworkServiceOptions(Path.GetTempPath()));
+        await service.ApplyAsync(seriesId, proposal, selectedFields: [], selectedImages: null, CancellationToken.None);
+
+        var credit = await db.EntityCreditLinks.SingleAsync(row => row.EntityId == episodeId);
+        Assert.Equal(personId, credit.PersonEntityId);
+        Assert.Equal("New Character", credit.Character);
+        Assert.Equal(0, credit.SortOrder);
+    }
+
     private static ObscuraDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()

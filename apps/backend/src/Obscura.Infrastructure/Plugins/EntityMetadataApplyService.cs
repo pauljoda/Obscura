@@ -269,15 +269,29 @@ public sealed class EntityMetadataApplyService
         _db.EntityCreditLinks.RemoveRange(existing);
 
         var order = 0;
+        var resolvedPeople = new Dictionary<string, EntityRow>(StringComparer.OrdinalIgnoreCase);
+        var linkedCredits = new HashSet<(Guid PersonEntityId, EntityCreditRole Role)>();
         foreach (var credit in credits.Where(credit => !string.IsNullOrWhiteSpace(credit.Name)))
         {
-            var person = await FindEntityByKindAndTitleAsync("person", credit.Name.Trim(), cancellationToken)
-                ?? CreateEntity("person", credit.Name.Trim(), now);
+            var personName = credit.Name.Trim();
+            if (!resolvedPeople.TryGetValue(personName, out var person))
+            {
+                person = await FindEntityByKindAndTitleAsync("person", personName, cancellationToken)
+                    ?? CreateEntity("person", personName, now);
+                resolvedPeople[personName] = person;
+            }
+
+            var role = EntityCreditRole.Person;
+            if (!linkedCredits.Add((person.Id, role)))
+            {
+                continue;
+            }
+
             _db.EntityCreditLinks.Add(new EntityCreditLinkRow
             {
                 EntityId = entityId,
                 PersonEntityId = person.Id,
-                Role = EntityCreditRole.Person,
+                Role = role,
                 Character = string.IsNullOrWhiteSpace(credit.Character) ? null : credit.Character.Trim(),
                 SortOrder = credit.SortOrder ?? order++,
                 CreatedAt = now

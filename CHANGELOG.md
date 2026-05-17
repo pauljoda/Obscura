@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Applying identify results now tolerates duplicate credited people in provider results, so series or episode identification no longer crashes when a plugin repeats the same performer.
 - Identify now follows the generic entity graph when reviewing cascaded metadata: structural children are identified and applied by their own entity IDs instead of relying on series-specific season and episode matching.
 - The identify review modal now changes provider scope as you navigate graph children, so reviewing a season or episode loads metadata options for that child entity kind instead of reusing the root series context.
 - Entity organization now has backend dry-run and apply endpoints that compute target folders and files from generic entity storage-shape metadata, so future UI work can move media without hard-coded series/gallery/book rules.
@@ -240,6 +241,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail page (`/v2/videos/[id]`) rewritten to use `EntityDetail` with video player, hero metadata (studio, dates), cast credits section, and full capability rendering — replacing the earlier prototype.
 
 ### Fixed
+- Identify apply now deduplicates repeated provider credit rows before writing entity credit links, preventing EF tracking conflicts when duplicate people resolve to the same Person entity.
 - The Identify review modal now fills the available viewport height on desktop and mobile while keeping the review body as the scrollable region.
 - The detail-page Identify provider menu now floats above the entity hero and tab chrome instead of being clipped underneath the next section.
 - The Plugins page now loads v2 community providers even when removed v1 scraper routes are unavailable, so TMDB appears in the Obscura Community tab instead of showing a raw `not_found` error.
