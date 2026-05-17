@@ -653,6 +653,48 @@ public sealed class EntityMetadataApplyServiceTests
         Assert.Equal(EntityFileRole.Logo, (await db.EntityFiles.SingleAsync(row => row.EntityId == studioId)).Role);
     }
 
+    [Fact]
+    public async Task ApplyMergesMultipleCreditRolesForSamePersonIntoOneRelationship()
+    {
+        await using var db = CreateContext();
+        var episodeId = Guid.Parse("17171717-1717-1717-1717-171717171717");
+        SeedEntity(db, episodeId, "video", "Old Episode");
+        await db.SaveChangesAsync();
+
+        var proposal = new EntityMetadataProposal(
+            ProposalId: "tmdb:tv:chair:s1:e1",
+            Provider: "tmdb",
+            TargetKind: "video",
+            TargetEntityId: episodeId,
+            Confidence: 1,
+            MatchReason: "external-id",
+            Patch: EmptyPatch() with
+            {
+                Credits =
+                [
+                    new CreditPatch("Tim Robinson", "cast", "Ron Trosper", 0),
+                    new CreditPatch("Tim Robinson", "writer", null, 20),
+                    new CreditPatch("Tim Robinson", "creator", null, 21)
+                ]
+            },
+            Images: [],
+            Children: [],
+            Candidates: []);
+
+        var service = new EntityMetadataApplyService(db, new PluginArtworkServiceOptions(Path.GetTempPath()));
+        await service.ApplyAsync(episodeId, proposal, selectedFields: ["credits"], selectedImages: null, CancellationToken.None);
+
+        var credit = await db.EntityRelationshipLinks.SingleAsync(row => row.EntityId == episodeId && row.RelationshipCode == "cast");
+        Assert.Equal("Tim Robinson", await db.Entities
+            .Where(row => row.Id == credit.TargetEntityId)
+            .Select(row => row.Title)
+            .SingleAsync());
+        Assert.Equal(0, credit.SortOrder);
+        Assert.Contains("\"role\":\"cast\"", credit.MetadataJson ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains("\"roles\":[\"cast\",\"writer\",\"creator\"]", credit.MetadataJson ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains("Ron Trosper", credit.MetadataJson ?? string.Empty, StringComparison.Ordinal);
+    }
+
     private static ObscuraDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()

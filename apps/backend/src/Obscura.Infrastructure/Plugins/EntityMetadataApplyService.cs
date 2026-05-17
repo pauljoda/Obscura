@@ -264,7 +264,7 @@ public sealed class EntityMetadataApplyService
 
         var order = 0;
         var resolvedPeople = new Dictionary<string, EntityRow>(StringComparer.OrdinalIgnoreCase);
-        var linkedCredits = new HashSet<(Guid PersonEntityId, string Role)>();
+        var linkedCredits = new Dictionary<Guid, CreditRelationshipAccumulator>();
         foreach (var credit in credits.Where(credit => !string.IsNullOrWhiteSpace(credit.Name)))
         {
             var personName = credit.Name.Trim();
@@ -276,17 +276,74 @@ public sealed class EntityMetadataApplyService
             }
 
             var role = string.IsNullOrWhiteSpace(credit.Role) ? "person" : credit.Role.Trim();
-            if (!linkedCredits.Add((person.Id, role)))
+            var character = string.IsNullOrWhiteSpace(credit.Character) ? null : credit.Character.Trim();
+            var fallbackSortOrder = order++;
+            var sortOrder = credit.SortOrder ?? fallbackSortOrder;
+            if (!linkedCredits.TryGetValue(person.Id, out var accumulator))
             {
-                continue;
+                accumulator = new CreditRelationshipAccumulator(person, sortOrder);
+                linkedCredits[person.Id] = accumulator;
             }
 
+            accumulator.Add(role, character, sortOrder);
+        }
+
+        foreach (var credit in linkedCredits.Values.OrderBy(credit => credit.SortOrder).ThenBy(credit => credit.Person.Title))
+        {
             var metadata = JsonSerializer.Serialize(new
             {
-                role,
-                character = string.IsNullOrWhiteSpace(credit.Character) ? null : credit.Character.Trim()
+                role = credit.Role,
+                character = credit.Character,
+                roles = credit.Roles,
+                characters = credit.Characters.Count == 0 ? null : credit.Characters
             });
-            AddRelationship(entityId, "cast", "Cast", person.Id, person.KindCode, credit.SortOrder ?? order++, metadata, now);
+            AddRelationship(entityId, "cast", "Cast", credit.Person.Id, credit.Person.KindCode, credit.SortOrder, metadata, now);
+        }
+    }
+
+    private sealed class CreditRelationshipAccumulator
+    {
+        public CreditRelationshipAccumulator(EntityRow person, int sortOrder)
+        {
+            Person = person;
+            SortOrder = sortOrder;
+        }
+
+        public EntityRow Person { get; }
+
+        public int SortOrder { get; private set; }
+
+        public string? Role { get; private set; }
+
+        public string? Character { get; private set; }
+
+        public List<string> Roles { get; } = [];
+
+        public List<string> Characters { get; } = [];
+
+        public void Add(string role, string? character, int sortOrder)
+        {
+            if (sortOrder < SortOrder)
+            {
+                SortOrder = sortOrder;
+            }
+
+            Role ??= role;
+            AddDistinct(Roles, role);
+
+            if (!string.IsNullOrWhiteSpace(character))
+            {
+                Character ??= character;
+                AddDistinct(Characters, character);
+            }
+        }
+
+        private static void AddDistinct(List<string> values, string value)
+        {
+            if (!values.Contains(value, StringComparer.OrdinalIgnoreCase))
+            {
+                values.Add(value);
+            }
         }
     }
 

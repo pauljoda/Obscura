@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The Svelte frontend now renders the v2 browse, dashboard, detail, identify, plugins, settings, and playback surfaces through shared Dark Room components instead of the older v1 UI patterns.
 - V2 migration and scanning preserve core metadata where possible, rebuild generated cache assets, and make breaking schema resets explicit while the project remains pre-1.0.
 - Identify review now separates structural children from related people and studios, so series cascades can carry seasons, episodes, credits, and artwork together.
+- Identify now applies full credit lists even when the same person has multiple roles on a title, preserving the combined credit metadata without crashing.
 
 ### Added
 - High-level v2 implementation summary for the rebuilt Obscura architecture, media model, playback pipeline, and UI surfaces.
@@ -24,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 - Series, season, video, gallery, collection, and audio detail pages now show their migrated child items and relationships again.
 - Identify cascade review now applies nested season and episode selections while preserving credit and studio pictures from related entity proposals.
+- Identify apply no longer fails on titles whose full credits include the same person in multiple roles, such as cast plus writer or creator.
 - Local v2 reset now keeps required entity-kind metadata so legacy migration tests can run cleanly.
 
 ### Removed
