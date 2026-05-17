@@ -22,6 +22,7 @@
     fetchIdentifyProviders,
     identifyEntity,
     type CreditPatch,
+    type EntityMetadataPatch,
     type EntityMetadataProposal,
     type EntitySearchCandidate,
     type ImageCandidate,
@@ -85,12 +86,13 @@
   let providersLoaded = $state(false);
   let identifying = $state(false);
   let proposal = $state<EntityMetadataProposal | null>(null);
+  let reviewPath = $state<string[]>([]);
   let activeIndex = $state(0);
   let selectedProviderId = $state("");
-  let selectedFields = $state<Record<string, boolean>>({});
-  let selectedImages = $state<Record<string, string | null>>({});
-  let selectedCredits = $state<Record<string, boolean>>({});
-  let selectedTags = $state<Record<string, boolean>>({});
+  let selectedFieldsByProposal = $state<Record<string, Record<string, boolean>>>({});
+  let selectedImagesByProposal = $state<Record<string, Record<string, string | null>>>({});
+  let selectedCreditsByProposal = $state<Record<string, Record<string, boolean>>>({});
+  let selectedTagsByProposal = $state<Record<string, Record<string, boolean>>>({});
   let selectedCascade = $state<Record<string, boolean>>({});
   let fetchedExistingTags = $state<string[]>([]);
   let applying = $state(false);
@@ -99,6 +101,16 @@
   let lightboxGroup = $state<string | null>(null);
 
   const scalarFieldKeys = ["title", "description", "externalIds", "urls", "dates", "counters", "stats", "positions", "classification"];
+  const activeProposal = $derived.by(() => {
+    if (!proposal) return null;
+    const activeId = reviewPath.at(-1) ?? proposal.proposalId;
+    return findProposal(proposal, activeId) ?? proposal;
+  });
+  const reviewTitle = $derived(activeProposal?.patch.title ?? activeProposal?.targetKind ?? title);
+  const selectedFields = $derived(activeProposal ? selectedFieldsByProposal[activeProposal.proposalId] ?? {} : {});
+  const selectedImages = $derived(activeProposal ? selectedImagesByProposal[activeProposal.proposalId] ?? {} : {});
+  const selectedCredits = $derived(activeProposal ? selectedCreditsByProposal[activeProposal.proposalId] ?? {} : {});
+  const selectedTags = $derived(activeProposal ? selectedTagsByProposal[activeProposal.proposalId] ?? {} : {});
 
   function toggleSection(section: string) {
     expandedSections = { ...expandedSections, [section]: !expandedSections[section] };
@@ -113,8 +125,8 @@
   }
 
   const reviewableImageGroups = $derived.by(() => {
-    if (!proposal) return [];
-    return imageGroups(proposal.images).filter((g) => imageAspect(g.kind) !== "logo");
+    if (!activeProposal) return [];
+    return imageGroups(activeProposal.images).filter((g) => imageAspect(g.kind) !== "logo");
   });
 
   const lightboxImages = $derived.by(() => {
@@ -172,11 +184,9 @@
   async function openWorkflow() {
     workflowOpen = true;
     proposal = null;
+    reviewPath = [];
     selectedProviderId = "";
-    selectedFields = {};
-    selectedImages = {};
-    selectedCredits = {};
-    selectedTags = {};
+    resetReviewSelections();
     selectedCascade = {};
     fetchedExistingTags = [];
     error = null;
@@ -187,11 +197,9 @@
   function closeWorkflow() {
     workflowOpen = false;
     proposal = null;
+    reviewPath = [];
     selectedProviderId = "";
-    selectedFields = {};
-    selectedImages = {};
-    selectedCredits = {};
-    selectedTags = {};
+    resetReviewSelections();
     selectedCascade = {};
     error = null;
   }
@@ -203,9 +211,8 @@
   async function selectProvider(providerId: string) {
     selectedProviderId = providerId;
     proposal = null;
-    selectedFields = {};
-    selectedImages = {};
-    selectedCredits = {};
+    reviewPath = [];
+    resetReviewSelections();
     error = null;
     const provider = runnableProviders.find((row) => row.id === providerId);
     if (provider) await run(provider);
@@ -221,12 +228,8 @@
         ? { externalIds: candidate.externalIds }
         : undefined);
       proposal = nextProposal;
-      selectedFields = Object.fromEntries(fieldKeys.map((field) => [field, hasField(nextProposal, field)]));
-      selectedImages = defaultImageSelection(nextProposal.images);
-      selectedCredits = Object.fromEntries(
-        nextProposal.patch.credits.map((credit, index) => [creditKey(credit, index), true]),
-      );
-      selectedTags = Object.fromEntries(nextProposal.patch.tags.map((tag) => [tag, true]));
+      reviewPath = [];
+      initializeReviewSelections(nextProposal);
       selectedCascade = defaultCascadeSelection(nextProposal);
     } catch (err) {
       error = readError(err);
@@ -241,15 +244,27 @@
   }
 
   function toggleField(field: string) {
-    selectedFields = { ...selectedFields, [field]: !selectedFields[field] };
+    if (!activeProposal) return;
+    selectedFieldsByProposal = {
+      ...selectedFieldsByProposal,
+      [activeProposal.proposalId]: { ...selectedFields, [field]: !selectedFields[field] },
+    };
   }
 
   function toggleCredit(key: string) {
-    selectedCredits = { ...selectedCredits, [key]: !selectedCredits[key] };
+    if (!activeProposal) return;
+    selectedCreditsByProposal = {
+      ...selectedCreditsByProposal,
+      [activeProposal.proposalId]: { ...selectedCredits, [key]: !selectedCredits[key] },
+    };
   }
 
   function toggleTag(tag: string) {
-    selectedTags = { ...selectedTags, [tag]: !selectedTags[tag] };
+    if (!activeProposal) return;
+    selectedTagsByProposal = {
+      ...selectedTagsByProposal,
+      [activeProposal.proposalId]: { ...selectedTags, [tag]: !selectedTags[tag] },
+    };
   }
 
   function toggleCascadeNode(node: CascadeNode) {
@@ -287,8 +302,8 @@
   }
 
   const creditCards = $derived.by((): EntityThumbnailCard[] => {
-    if (!proposal) return [];
-    return proposal.patch.credits.map((c) => creditToCard(c, proposal!.children));
+    if (!activeProposal) return [];
+    return activeProposal.patch.credits.map((c) => creditToCard(c, activeProposal.children));
   });
 
   interface CascadeNode {
@@ -305,20 +320,20 @@
   }
 
   const relationshipCascade = $derived.by((): CascadeNode[] => {
-    if (!proposal) return [];
-    return relationshipChildren(proposal).map(toCascadeNode).sort(compareCascadeNodes);
+    if (!activeProposal) return [];
+    return relationshipChildren(activeProposal).map(toCascadeNode).sort(compareCascadeNodes);
   });
 
   const cascadeTotalCount = $derived(relationshipCascade.reduce((sum, node) => sum + cascadeNodeCount(node), 0));
   const cascadeSelectedCount = $derived(relationshipCascade.reduce((sum, node) => sum + selectedCascadeNodeCount(node), 0));
 
   const studioCard = $derived.by((): EntityThumbnailCard | null => {
-    if (!proposal?.patch.studio) return null;
-    const imageUrl = findChildImage(proposal.children, "studio", proposal.patch.studio);
+    if (!activeProposal?.patch.studio) return null;
+    const imageUrl = findChildImage(activeProposal.children, "studio", activeProposal.patch.studio);
     return {
-      entity: { id: `proposal-studio`, kind: "studio", title: proposal.patch.studio, capabilities: [] },
+      entity: { id: `proposal-studio`, kind: "studio", title: activeProposal.patch.studio, capabilities: [] },
       aspectRatio: "wide",
-      cover: imageUrl ? { src: imageUrl, alt: proposal.patch.studio } : null,
+      cover: imageUrl ? { src: imageUrl, alt: activeProposal.patch.studio } : null,
       hover: { kind: "none" },
     };
   });
@@ -328,10 +343,11 @@
     applying = true;
     error = null;
     try {
-      const fields = Object.entries(selectedFields)
+      const rootFields = selectedFieldsByProposal[proposal.proposalId] ?? {};
+      const selectedRootFields = Object.entries(rootFields)
         .filter(([, enabled]) => enabled)
         .map(([field]) => field);
-      await applyIdentifyProposal(activeTarget.entityId, proposalForApply(proposal), fields, selectedImages);
+      await applyIdentifyProposal(activeTarget.entityId, proposalForApply(proposal), selectedRootFields, selectedImagesByProposal[proposal.proposalId] ?? {});
       await onApplied?.();
       if (closeAfter || activeIndex >= targets.length - 1) closeWorkflow();
       else moveTo(activeIndex + 1);
@@ -346,27 +362,25 @@
     if (index < 0 || index >= targets.length) return;
     activeIndex = index;
     proposal = null;
-    selectedFields = {};
-    selectedTags = {};
-    selectedImages = {};
-    selectedCredits = {};
+    reviewPath = [];
+    resetReviewSelections();
     selectedCascade = {};
     error = null;
     if (selectedProvider) void run(selectedProvider);
   }
 
   function proposalForApply(result: EntityMetadataProposal): EntityMetadataProposal {
+    const fields = selectedFieldsByProposal[result.proposalId] ?? Object.fromEntries(fieldKeys.map((field) => [field, hasField(result, field)]));
+    const selectedResultCredits = selectedCreditsByProposal[result.proposalId] ?? {};
+    const selectedResultTags = selectedTagsByProposal[result.proposalId] ?? {};
     const credits = result.patch.credits.filter((credit, index) =>
-      selectedCredits[creditKey(credit, index)] !== false,
+      selectedResultCredits[creditKey(credit, index)] !== false,
     );
-    const tags = result.patch.tags.filter((tag) => selectedTags[tag] !== false);
+    const tags = result.patch.tags.filter((tag) => selectedResultTags[tag] !== false);
     return {
       ...result,
-      patch: {
-        ...result.patch,
-        credits,
-        tags,
-      },
+      patch: patchForSelectedFields(result, fields, credits, tags),
+      images: imagesForSelectedProposal(result),
       children: filterSelectedCascadeChildren(result.children),
     };
   }
@@ -397,6 +411,114 @@
     const groups: Record<string, ImageCandidate[]> = {};
     for (const image of images) groups[image.kind] = [...(groups[image.kind] ?? []), image];
     return Object.entries(groups).map(([kind, rows]) => ({ kind, images: rows }));
+  }
+
+  function findProposal(root: EntityMetadataProposal, proposalId: string): EntityMetadataProposal | null {
+    if (root.proposalId === proposalId) return root;
+    for (const child of root.children) {
+      const found = findProposal(child, proposalId);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function findParentProposalId(root: EntityMetadataProposal, proposalId: string): string | null {
+    for (const child of root.children) {
+      if (child.proposalId === proposalId) return root.proposalId;
+      const nested = findParentProposalId(child, proposalId);
+      if (nested) return nested;
+    }
+    return null;
+  }
+
+  function enterReviewScope(node: CascadeNode) {
+    if (!proposal) return;
+    const parentId = findParentProposalId(proposal, node.proposalId);
+    if (!parentId && node.proposalId !== proposal.proposalId) return;
+    reviewPath = [...reviewPath.filter((id) => id !== node.proposalId), node.proposalId];
+    lightboxGroup = null;
+  }
+
+  function leaveReviewScope() {
+    reviewPath = reviewPath.slice(0, -1);
+    lightboxGroup = null;
+  }
+
+  function resetReviewSelections() {
+    selectedFieldsByProposal = {};
+    selectedImagesByProposal = {};
+    selectedCreditsByProposal = {};
+    selectedTagsByProposal = {};
+  }
+
+  function initializeReviewSelections(root: EntityMetadataProposal) {
+    const fields: Record<string, Record<string, boolean>> = {};
+    const images: Record<string, Record<string, string | null>> = {};
+    const credits: Record<string, Record<string, boolean>> = {};
+    const tags: Record<string, Record<string, boolean>> = {};
+
+    visitProposal(root, (item) => {
+      fields[item.proposalId] = Object.fromEntries(fieldKeys.map((field) => [field, hasField(item, field)]));
+      images[item.proposalId] = defaultImageSelection(item.images);
+      credits[item.proposalId] = Object.fromEntries(
+        item.patch.credits.map((credit, index) => [creditKey(credit, index), true]),
+      );
+      tags[item.proposalId] = Object.fromEntries(item.patch.tags.map((tag) => [tag, true]));
+    });
+
+    selectedFieldsByProposal = fields;
+    selectedImagesByProposal = images;
+    selectedCreditsByProposal = credits;
+    selectedTagsByProposal = tags;
+  }
+
+  function visitProposal(root: EntityMetadataProposal, visit: (proposal: EntityMetadataProposal) => void) {
+    visit(root);
+    for (const child of root.children) visitProposal(child, visit);
+  }
+
+  function setImageSelection(kind: string, url: string | null) {
+    if (!activeProposal) return;
+    selectedImagesByProposal = {
+      ...selectedImagesByProposal,
+      [activeProposal.proposalId]: { ...selectedImages, [kind]: url },
+    };
+  }
+
+  function toggleImageSelection(group: { kind: string; images: ImageCandidate[] }) {
+    const current = selectedImages[group.kind];
+    setImageSelection(group.kind, current ? null : group.images[0]?.url ?? null);
+  }
+
+  function patchForSelectedFields(
+    result: EntityMetadataProposal,
+    fields: Record<string, boolean>,
+    credits: CreditPatch[],
+    tags: string[],
+  ): EntityMetadataPatch {
+    const patch = result.patch;
+    return {
+      title: fields.title ? patch.title : null,
+      description: fields.description ? patch.description : null,
+      externalIds: fields.externalIds ? patch.externalIds : {},
+      urls: fields.urls ? patch.urls : [],
+      tags: fields.tags ? tags : [],
+      studio: fields.studio ? patch.studio : null,
+      credits: fields.credits ? credits : [],
+      dates: fields.dates ? patch.dates : {},
+      counters: fields.counters ? patch.counters : {},
+      stats: fields.stats ? patch.stats : {},
+      positions: fields.positions ? patch.positions : {},
+      classification: fields.classification ? patch.classification : null,
+    };
+  }
+
+  function imagesForSelectedProposal(result: EntityMetadataProposal): ImageCandidate[] {
+    const fields = selectedFieldsByProposal[result.proposalId];
+    if (fields?.images === false) return [];
+    const selected = selectedImagesByProposal[result.proposalId];
+    if (!selected) return result.images;
+    return result.images.filter((image) => selected[image.kind] === image.url);
   }
 
   function relationshipChildren(result: EntityMetadataProposal): EntityMetadataProposal[] {
@@ -662,18 +784,25 @@
             <Sparkles class="h-5 w-5" />
             <span>Select a provider to search for metadata.</span>
           </div>
-        {:else if proposal}
+        {:else if proposal && activeProposal}
           <div class="review-sections">
             <!-- Match info bar -->
             <div class="match-bar">
+              {#if reviewPath.length > 0}
+                <button type="button" class="scope-back" onclick={leaveReviewScope}>
+                  <ChevronLeft class="h-3 w-3" />
+                  Back
+                </button>
+              {/if}
               <span class="match-badge">
                 <Eye class="h-3 w-3" />
-                {proposal.matchReason ?? "match"}
+                {activeProposal.matchReason ?? "match"}
               </span>
-              <span class="match-provider">{proposal.provider}</span>
-              {#if proposal.candidates.length > 1}
+              <span class="match-provider">{activeProposal.provider}</span>
+              <span class="scope-title">{reviewTitle}</span>
+              {#if activeProposal.candidates.length > 1}
                 <span class="match-sep">·</span>
-                <span class="match-alt">{proposal.candidates.length} candidates</span>
+                <span class="match-alt">{activeProposal.candidates.length} candidates</span>
               {/if}
             </div>
 
@@ -682,7 +811,7 @@
               <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('fields')} onkeydown={(e) => e.key === 'Enter' && toggleSection('fields')}>
                 <h4>Fields</h4>
                 <div class="section-meta">
-                  <span class="count-badge">{scalarFieldKeys.filter((f) => selectedFields[f]).length} / {scalarFieldKeys.filter((f) => hasField(proposal!, f)).length}</span>
+                  <span class="count-badge">{scalarFieldKeys.filter((f) => selectedFields[f]).length} / {scalarFieldKeys.filter((f) => hasField(activeProposal, f)).length}</span>
                   <span class="chevron" class:rotated={!expandedSections.fields}><ChevronDown class="h-3.5 w-3.5" /></span>
                 </div>
               </div>
@@ -690,7 +819,7 @@
                 <div class="section-body">
                   <div class="field-list">
                     {#each scalarFieldKeys as field (field)}
-                      {#if hasField(proposal, field)}
+                      {#if hasField(activeProposal, field)}
                         <button
                           type="button"
                           class="field-row"
@@ -704,7 +833,7 @@
                           </div>
                           <span class="field-label">{fieldLabels[field]}</span>
                           <span class="field-arrow">→</span>
-                          <span class="field-new-value" class:field-wrap={field === "description"}>{fieldValue(proposal, field)}</span>
+                          <span class="field-new-value" class:field-wrap={field === "description"}>{fieldValue(activeProposal, field)}</span>
                         </button>
                       {/if}
                     {/each}
@@ -714,19 +843,19 @@
             </section>
 
             <!-- Tags — individually selectable -->
-            {#if proposal.patch.tags.length > 0}
+            {#if activeProposal.patch.tags.length > 0}
               <section class="section-card">
                 <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('tags')} onkeydown={(e) => e.key === 'Enter' && toggleSection('tags')}>
                   <h4>Tags</h4>
                   <div class="section-meta">
-                    <span class="count-badge">{selectedTagCount} / {proposal.patch.tags.length}</span>
+                    <span class="count-badge">{selectedTagCount} / {activeProposal.patch.tags.length}</span>
                     <span class="chevron" class:rotated={!expandedSections.tags}><ChevronDown class="h-3.5 w-3.5" /></span>
                   </div>
                 </div>
                 {#if expandedSections.tags}
                   <div class="section-body">
                     <div class="tag-cloud">
-                      {#each proposal.patch.tags as tag (tag)}
+                      {#each activeProposal.patch.tags as tag (tag)}
                         <button
                           type="button"
                           class="tag-select"
@@ -752,7 +881,7 @@
             {/if}
 
             <!-- Studio -->
-            {#if proposal.patch.studio && studioCard}
+            {#if activeProposal.patch.studio && studioCard}
               <section class="section-card" class:muted={!selectedFields.studio}>
                 <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('studio')} onkeydown={(e) => e.key === 'Enter' && toggleSection('studio')}>
                   <h4>Studio</h4>
@@ -779,7 +908,7 @@
             {/if}
 
             <!-- Credits -->
-            {#if proposal.patch.credits.length > 0}
+            {#if activeProposal.patch.credits.length > 0}
               <section class="section-card" class:muted={!selectedFields.credits}>
                 <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('credits')} onkeydown={(e) => e.key === 'Enter' && toggleSection('credits')}>
                   <h4>Cast & Crew</h4>
@@ -792,14 +921,14 @@
                     >
                       {selectedFields.credits ? "Included" : "Excluded"}
                     </button>
-                    <span class="count-badge">{Object.values(selectedCredits).filter(Boolean).length} / {proposal.patch.credits.length}</span>
+                    <span class="count-badge">{Object.values(selectedCredits).filter(Boolean).length} / {activeProposal.patch.credits.length}</span>
                     <span class="chevron" class:rotated={!expandedSections.credits}><ChevronDown class="h-3.5 w-3.5" /></span>
                   </div>
                 </div>
                 {#if expandedSections.credits}
                   <div class="section-body">
                     <div class="credit-scroller">
-                      {#each proposal.patch.credits as credit, index (creditKey(credit, index))}
+                      {#each activeProposal.patch.credits as credit, index (creditKey(credit, index))}
                         {@const key = creditKey(credit, index)}
                         {@const state = creditState(credit)}
                         <div class="credit-thumbnail">
@@ -850,7 +979,7 @@
                         {@const sel = selectedImages[group.kind]}
                         <div class="art-card" class:active={!!sel}>
                           <div class="art-card-header">
-                            <button type="button" class="art-card-check" class:active={!!sel} onclick={() => { if (sel) { selectedImages = { ...selectedImages, [group.kind]: null }; } else { selectedImages = { ...selectedImages, [group.kind]: group.images[0]?.url ?? null }; } }}>
+                            <button type="button" class="art-card-check" class:active={!!sel} onclick={() => toggleImageSelection(group)}>
                               <div class="field-check">
                                 {#if sel}
                                   <Check class="h-3 w-3" />
@@ -915,6 +1044,14 @@
                               <span class="season-date">{node.date}</span>
                             {/if}
                             <span class="season-ep-count">{node.children.length} child{node.children.length === 1 ? "" : "ren"}</span>
+                            <button
+                              type="button"
+                              class="review-node-btn"
+                              onclick={(event) => { event.preventDefault(); event.stopPropagation(); enterReviewScope(node); }}
+                            >
+                              Review
+                              <ChevronRight class="h-3 w-3" />
+                            </button>
                           </summary>
                           {#if node.description}
                             <p class="cascade-description">{node.description}</p>
@@ -956,6 +1093,10 @@
                                   {/if}
                                   <span>{child.metadataCount} fields</span>
                                 </div>
+                                <button type="button" class="review-node-btn" onclick={() => enterReviewScope(child)}>
+                                  Review
+                                  <ChevronRight class="h-3 w-3" />
+                                </button>
                               </div>
                             {/each}
                           </div>
@@ -968,19 +1109,19 @@
             {/if}
 
             <!-- Candidates -->
-            {#if proposal.candidates.length > 1}
+            {#if activeProposal.candidates.length > 1}
               <section class="section-card">
                 <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('candidates')} onkeydown={(e) => e.key === 'Enter' && toggleSection('candidates')}>
                   <h4>Other matches</h4>
                   <div class="section-meta">
-                    <span class="count-badge">{proposal.candidates.length}</span>
+                    <span class="count-badge">{activeProposal.candidates.length}</span>
                     <span class="chevron" class:rotated={!expandedSections.candidates}><ChevronDown class="h-3.5 w-3.5" /></span>
                   </div>
                 </div>
                 {#if expandedSections.candidates}
                   <div class="section-body">
                     <div class="candidate-list">
-                      {#each proposal.candidates as candidate (candidate.externalIds.tmdb ?? candidate.title)}
+                      {#each activeProposal.candidates as candidate (candidate.externalIds.tmdb ?? candidate.title)}
                         <button type="button" class="candidate-card" onclick={() => rerunCandidate(candidate)}>
                           {#if candidate.posterUrl}
                             <img src={candidate.posterUrl} alt="" class="candidate-poster" />
@@ -1029,7 +1170,7 @@
 {/if}
 
 <!-- Lightbox overlay — slides in from right, same size as main modal -->
-{#if lightboxGroup && proposal}
+{#if lightboxGroup && activeProposal}
   <div class="lightbox" use:portal role="dialog" aria-modal="true" aria-label={`Select ${lightboxGroup}`}>
     <div class="lightbox-backdrop" onclick={closeLightbox} aria-hidden="true"></div>
     <div class="lightbox-panel">
@@ -1055,7 +1196,7 @@
             type="button"
             class="lightbox-thumb"
             class:active={selectedImages[lightboxGroup] === image.url}
-            onclick={() => { selectedImages = { ...selectedImages, [lightboxGroup!]: image.url }; }}
+            onclick={() => setImageSelection(lightboxGroup!, image.url)}
           >
             <img src={image.url} alt="" data-aspect={imageAspect(lightboxGroup)} />
             {#if selectedImages[lightboxGroup] === image.url}
@@ -1124,6 +1265,7 @@
     z-index: 1;
     display: flex;
     width: 100%;
+    min-width: 0;
     height: 100dvh;
     max-height: 100dvh;
     flex-direction: column;
@@ -1267,8 +1409,9 @@
   /* === Body === */
   .modal-body {
     min-height: 0;
+    min-width: 0;
     flex: 1;
-    overflow-y: auto;
+    overflow: auto;
     padding: 0.85rem;
     scrollbar-width: thin;
     scrollbar-color: rgba(196, 154, 90, 0.2) transparent;
@@ -1326,6 +1469,7 @@
   .match-bar {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.5rem;
     padding: 0.5rem 0.65rem;
     border: 1px solid var(--color-border, #1c2235);
@@ -1359,6 +1503,24 @@
     color: var(--color-text-disabled, #4a5260);
     font-family: "JetBrains Mono", monospace;
     font-size: 0.58rem;
+  }
+
+  .scope-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    border: 1px solid var(--color-border, #1c2235);
+    background: var(--color-surface-2, #101420);
+    color: var(--color-text-secondary, #c4c9d4);
+    padding: 0.16rem 0.4rem;
+    font-size: 0.58rem;
+  }
+
+  .scope-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: var(--color-text-primary, #f2eed8);
+    font-size: 0.64rem;
   }
 
   /* === Section cards === */
@@ -1400,6 +1562,8 @@
   .section-meta {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 0.4rem;
   }
 
@@ -1449,7 +1613,7 @@
 
   .field-row {
     display: grid;
-    grid-template-columns: auto 1fr auto minmax(0, 2fr);
+    grid-template-columns: auto minmax(6rem, 0.8fr) auto minmax(0, 1.8fr);
     gap: 0.5rem;
     align-items: center;
     width: 100%;
@@ -1506,9 +1670,11 @@
   }
 
   .field-new-value {
+    min-width: 0;
     overflow: hidden;
     color: var(--color-text-muted, #8a93a6);
     font-size: 0.68rem;
+    overflow-wrap: anywhere;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -1593,7 +1759,8 @@
     gap: 0.75rem;
   }
   .studio-row :global(.entity-thumbnail) {
-    flex: 0 0 clamp(8rem, 30vw, 12rem);
+    flex: 0 1 clamp(8rem, 45vw, 12rem);
+    max-width: 100%;
   }
 
   /* === Credits — horizontal EntityThumbnail scroller === */
@@ -1609,7 +1776,7 @@
   }
 
   .credit-thumbnail {
-    flex: 0 0 clamp(6.5rem, 28vw, 8.5rem);
+    flex: 0 0 clamp(6rem, 36vw, 8.5rem);
   }
 
   .credit-role-label {
@@ -1732,7 +1899,7 @@
 
   .episode-row {
     display: grid;
-    grid-template-columns: auto 4rem minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(3rem, 4rem) minmax(0, 1fr) auto auto;
     gap: 0.5rem;
     align-items: center;
     padding: 0.35rem 0.6rem;
@@ -1744,7 +1911,7 @@
   }
 
   .episode-still {
-    width: 4rem;
+    width: clamp(3rem, 12vw, 4rem);
     aspect-ratio: 16 / 9;
     object-fit: cover;
     border: 1px solid var(--color-border, #1c2235);
@@ -1752,7 +1919,7 @@
 
   .episode-still-empty {
     display: grid;
-    width: 4rem;
+    width: clamp(3rem, 12vw, 4rem);
     aspect-ratio: 16 / 9;
     place-items: center;
     border: 1px solid var(--color-border, #1c2235);
@@ -1778,8 +1945,10 @@
 
   .episode-title {
     overflow: hidden;
+    min-width: 0;
     color: var(--color-text-secondary, #c4c9d4);
     font-size: 0.66rem;
+    overflow-wrap: anywhere;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -1813,10 +1982,25 @@
     padding: 0.08rem 0.28rem;
   }
 
+  .review-node-btn {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    border: 1px solid rgba(196, 154, 90, 0.35);
+    background: rgba(196, 154, 90, 0.05);
+    color: var(--color-text-secondary, #c4c9d4);
+    padding: 0.18rem 0.42rem;
+    font-size: 0.56rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
   /* === Artwork cards === */
   .art-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
     gap: 0.5rem;
   }
 
@@ -1924,7 +2108,7 @@
 
   .candidate-card {
     display: grid;
-    grid-template-columns: 2.2rem minmax(0, 1fr) auto;
+    grid-template-columns: minmax(1.8rem, 2.2rem) minmax(0, 1fr) auto;
     gap: 0.5rem;
     align-items: center;
     border: 1px solid var(--color-border, #1c2235);
@@ -2169,17 +2353,19 @@
   /* === Desktop layout === */
   @media (min-width: 900px) {
     .identify-modal {
-      padding: 1.5rem;
+      padding: clamp(0.75rem, 2vw, 1.5rem);
     }
     .modal-panel {
-      max-width: 52rem;
-      height: calc(100dvh - 3rem);
+      width: min(100%, 64rem);
+      max-width: calc(100vw - clamp(1.5rem, 4vw, 3rem));
+      height: calc(100dvh - clamp(1.5rem, 4vw, 3rem));
       margin: auto;
       max-height: none;
     }
     .lightbox-panel {
-      max-width: 52rem;
-      height: calc(100dvh - 3rem);
+      width: min(100%, 64rem);
+      max-width: calc(100vw - clamp(1.5rem, 4vw, 3rem));
+      height: calc(100dvh - clamp(1.5rem, 4vw, 3rem));
       margin: auto;
       max-height: none;
     }
@@ -2214,21 +2400,33 @@
       width: 100%;
     }
     .field-row {
-      grid-template-columns: auto 1fr auto minmax(0, 1.5fr);
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: start;
+    }
+    .field-arrow {
+      display: none;
+    }
+    .field-new-value {
+      grid-column: 2 / -1;
+      white-space: normal;
     }
     .art-grid {
-      grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
     }
     .season-summary {
       flex-wrap: wrap;
     }
     .episode-row {
-      grid-template-columns: auto 4rem minmax(0, 1fr);
+      grid-template-columns: auto minmax(3rem, 4rem) minmax(0, 1fr);
     }
     .episode-meta {
       grid-column: 2 / -1;
       justify-content: flex-start;
       max-width: none;
+    }
+    .review-node-btn {
+      grid-column: 2 / -1;
+      justify-self: start;
     }
     .lightbox-panel {
       min-height: 100dvh;
@@ -2238,7 +2436,41 @@
       padding: 0.5rem;
     }
     .lightbox-thumb {
-      width: 3.5rem;
+      width: clamp(3rem, 16vw, 3.5rem);
+    }
+  }
+
+  @media (max-width: 520px) {
+    .modal-body {
+      padding: 0.55rem;
+    }
+    .section-body {
+      padding-inline: 0.55rem;
+    }
+    .season-summary {
+      align-items: flex-start;
+    }
+    .season-title {
+      flex-basis: calc(100% - 4rem);
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    .episode-row {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+    .episode-still,
+    .episode-still-empty {
+      grid-column: 2 / -1;
+      width: min(100%, 12rem);
+    }
+    .episode-info,
+    .episode-meta,
+    .review-node-btn {
+      grid-column: 2 / -1;
+    }
+    .episode-title {
+      white-space: normal;
     }
   }
 </style>
+    min-width: 0;
