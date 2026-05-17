@@ -8,7 +8,7 @@ namespace Obscura.Contracts.Videos;
 /// <param name="Items">Current page of video cards.</param>
 /// <param name="NextCursor">Cursor for the next page, or null when complete.</param>
 public sealed record VideoListResponse(
-    IReadOnlyList<EntityCard> Items,
+    IReadOnlyList<EntityThumbnail> Items,
     string? NextCursor);
 
 /// <summary>
@@ -18,14 +18,20 @@ public sealed record VideoListResponse(
 /// <param name="Kind">Entity kind code.</param>
 /// <param name="Title">Video title.</param>
 /// <param name="ParentEntityId">Structural parent entity identifier, when the video is an episode or other child.</param>
+/// <param name="SortOrder">Optional structural order under the parent entity.</param>
 /// <param name="Capabilities">Shared entity capabilities for the video.</param>
 /// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
+/// <param name="Relationships">Generic non-structural relationships keyed by code, kind, and label.</param>
+/// <param name="CreditMetadata">Relationship edge metadata for credited people shown on detail pages.</param>
 /// <param name="SubtitlesExtractedAt">When embedded subtitles were last extracted, when known.</param>
 public sealed record VideoDetail(
     Guid Id,
     string Kind,
     string Title,
     Guid? ParentEntityId,
+    int? SortOrder,
     IReadOnlyList<EntityCapability> Capabilities,
     IReadOnlyList<EntityChildGroup> ChildrenByKind,
+    IReadOnlyList<EntityRelationshipGroup> Relationships,
+    IReadOnlyList<EntityCreditMetadata> CreditMetadata,
     DateTimeOffset? SubtitlesExtractedAt);

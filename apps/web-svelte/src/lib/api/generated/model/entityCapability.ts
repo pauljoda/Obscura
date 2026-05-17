@@ -6,7 +6,6 @@
  */
 import type { EntityCapabilityClassificationCapability } from './entityCapabilityClassificationCapability';
 import type { EntityCapabilityCountersCapability } from './entityCapabilityCountersCapability';
-import type { EntityCapabilityCreditsCapability } from './entityCapabilityCreditsCapability';
 import type { EntityCapabilityDatesCapability } from './entityCapabilityDatesCapability';
 import type { EntityCapabilityDescriptionCapability } from './entityCapabilityDescriptionCapability';
 import type { EntityCapabilityFilesCapability } from './entityCapabilityFilesCapability';
@@ -22,9 +21,7 @@ import type { EntityCapabilityProgressCapability } from './entityCapabilityProgr
 import type { EntityCapabilityRatingCapability } from './entityCapabilityRatingCapability';
 import type { EntityCapabilitySourceCapability } from './entityCapabilitySourceCapability';
 import type { EntityCapabilityStatsCapability } from './entityCapabilityStatsCapability';
-import type { EntityCapabilityStudioCapability } from './entityCapabilityStudioCapability';
 import type { EntityCapabilitySubtitlesCapability } from './entityCapabilitySubtitlesCapability';
-import type { EntityCapabilityTagsCapability } from './entityCapabilityTagsCapability';
 import type { EntityCapabilityTechnicalCapability } from './entityCapabilityTechnicalCapability';
 
-export type EntityCapability = EntityCapabilityRatingCapability | EntityCapabilityTagsCapability | EntityCapabilityCreditsCapability | EntityCapabilityStudioCapability | EntityCapabilityImagesCapability | EntityCapabilityDescriptionCapability | EntityCapabilityLinksCapability | EntityCapabilityFlagsCapability | EntityCapabilityFilesCapability | EntityCapabilityCountersCapability | EntityCapabilityFingerprintsCapability | EntityCapabilityMarkersCapability | EntityCapabilitySubtitlesCapability | EntityCapabilityStatsCapability | EntityCapabilityDatesCapability | EntityCapabilityLifetimeCapability | EntityCapabilityTechnicalCapability | EntityCapabilitySourceCapability | EntityCapabilityProgressCapability | EntityCapabilityPositionCapability | EntityCapabilityClassificationCapability | EntityCapabilityPlaybackCapability;
+export type EntityCapability = EntityCapabilityRatingCapability | EntityCapabilityImagesCapability | EntityCapabilityDescriptionCapability | EntityCapabilityLinksCapability | EntityCapabilityFlagsCapability | EntityCapabilityFilesCapability | EntityCapabilityCountersCapability | EntityCapabilityFingerprintsCapability | EntityCapabilityMarkersCapability | EntityCapabilitySubtitlesCapability | EntityCapabilityStatsCapability | EntityCapabilityDatesCapability | EntityCapabilityLifetimeCapability | EntityCapabilityTechnicalCapability | EntityCapabilitySourceCapability | EntityCapabilityProgressCapability | EntityCapabilityPositionCapability | EntityCapabilityClassificationCapability | EntityCapabilityPlaybackCapability;

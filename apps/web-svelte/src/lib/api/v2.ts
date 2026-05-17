@@ -17,6 +17,7 @@ import {
   getStudio,
   getTag,
   getCollection,
+  getEntityThumbnails,
   listPeople,
   listStudios,
   listTags,
@@ -40,7 +41,9 @@ import type {
   EntityCard,
   EntityChildGroup,
   EntityListResponse,
-  EntityReference,
+  EntityRelationshipGroup,
+  EntityThumbnail,
+  EntityThumbnailBatchResponse,
   GalleryDetail,
   ImageDetail,
   JobListResponse,
@@ -67,11 +70,13 @@ import type {
   LibrarySettingsDto,
 } from "@obscura/contracts";
 
-export type V2EntityReference = EntityReference;
 export type V2Rating = Rating;
 export type V2EntityCapability = EntityCapability;
-export type V2EntityCard = EntityCard;
+export type V2EntityCard = EntityThumbnail;
+export type V2EntityDetailCard = EntityCard;
 export type V2EntityChildGroup = EntityChildGroup;
+export type V2EntityRelationshipGroup = EntityRelationshipGroup;
+export type V2EntityThumbnail = EntityThumbnail;
 export type V2EntityListResponse = EntityListResponse;
 export type V2VideoListResponse = VideoListResponse;
 export type V2VideoDetail = VideoDetail;
@@ -112,6 +117,12 @@ export type V2SettingsResponse = SettingsResponse;
 export type V2LegacyVideoImportResponse = LegacyVideoImportResponse;
 export type V2LegacyMediaImportResponse = LegacyMediaImportResponse;
 export type V2MediaListResponse = MediaListResponse;
+export interface V2EntityReference {
+  id: string;
+  kind: string;
+  title: string;
+  thumbnailUrl?: string | null;
+}
 export type V2LibrarySettings = LibrarySettingsDto & {
   audioPreferredLanguages: string;
 };
@@ -199,6 +210,17 @@ export function fetchV2Entities(
 
     return response.data;
   });
+}
+
+export async function fetchV2EntityThumbnails(
+  ids: string[],
+  options?: V2RequestOptions,
+): Promise<EntityThumbnail[]> {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  if (uniqueIds.length === 0) return [];
+
+  const response = await getEntityThumbnails({ ids: uniqueIds }, { signal: options?.signal });
+  return (response.data as EntityThumbnailBatchResponse).items;
 }
 
 export function fetchV2Videos(

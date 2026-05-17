@@ -16,5 +16,7 @@ public sealed record ImageDetail(
     string Kind,
     string Title,
     Guid? ParentEntityId,
+    int? SortOrder,
     IReadOnlyList<EntityCapability> Capabilities,
-    IReadOnlyList<EntityChildGroup> ChildrenByKind);
+    IReadOnlyList<EntityChildGroup> ChildrenByKind,
+    IReadOnlyList<EntityRelationshipGroup> Relationships);

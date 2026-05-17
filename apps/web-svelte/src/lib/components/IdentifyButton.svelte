@@ -331,6 +331,8 @@
         kind: "person",
         title: credit.name,
         parentEntityId: null,
+      sortOrder: null,
+      relationships: [],
         capabilities: [],
         childrenByKind: [],
       },
@@ -377,6 +379,8 @@
         kind: "studio",
         title: activeProposal.patch.studio,
         parentEntityId: null,
+      sortOrder: null,
+      relationships: [],
         capabilities: [],
         childrenByKind: [],
       },
@@ -770,19 +774,11 @@
   }
 
   function tagTitlesFromEntity(entity: V2EntityCard): string[] {
-    const tagsCap = entity.capabilities.find((capability) => capability.kind === "tags") as
-      | { items?: Array<{ title: string }>; values?: string[] }
-      | undefined;
-    if (!tagsCap) return [];
-    if (tagsCap.items?.length) return tagsCap.items.map((item) => item.title);
-    return tagsCap.values ?? [];
+    return [];
   }
 
   function creditNamesFromEntity(entity: V2EntityCard): string[] {
-    const creditsCap = entity.capabilities.find((capability) => capability.kind === "credits") as
-      | { people?: Array<{ title: string }> }
-      | undefined;
-    return creditsCap?.people?.map((person) => person.title) ?? [];
+    return [];
   }
 
   function firstImageUrl(images: ImageCandidate[], kind: string): string | null {

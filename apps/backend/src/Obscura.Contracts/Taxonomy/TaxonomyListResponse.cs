@@ -8,5 +8,5 @@ namespace Obscura.Contracts.Taxonomy;
 /// <param name="Items">Current page of taxonomy cards.</param>
 /// <param name="NextCursor">Cursor for the next page, or null when complete.</param>
 public sealed record TaxonomyListResponse(
-    IReadOnlyList<EntityCard> Items,
+    IReadOnlyList<EntityThumbnail> Items,
     string? NextCursor);

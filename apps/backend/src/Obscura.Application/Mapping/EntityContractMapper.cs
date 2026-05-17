@@ -6,11 +6,11 @@ using Obscura.Contracts.Taxonomy;
 using Obscura.Contracts.Videos;
 using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
+using System.Text.Json;
 using DomainEntity = Obscura.Domain.Entities.Entity;
 using DomainEntityPage = Obscura.Domain.Entities.EntityPage;
 using DomainEntityReference = Obscura.Domain.Entities.EntityReference;
 using ContractEntityCounter = Obscura.Contracts.Entities.EntityCounter;
-using ContractEntityCredit = Obscura.Contracts.Entities.EntityCredit;
 using ContractEntityDate = Obscura.Contracts.Entities.EntityDate;
 using ContractEntityExternalId = Obscura.Contracts.Entities.EntityExternalId;
 using ContractEntityFile = Obscura.Contracts.Entities.EntityFile;
@@ -19,6 +19,7 @@ using ContractEntityImageAsset = Obscura.Contracts.Entities.EntityImageAsset;
 using ContractEntityMarker = Obscura.Contracts.Entities.EntityMarker;
 using ContractEntityPosition = Obscura.Contracts.Entities.EntityPosition;
 using ContractEntityReference = Obscura.Contracts.Entities.EntityReference;
+using ContractEntityRelationshipGroup = Obscura.Contracts.Entities.EntityRelationshipGroup;
 using ContractEntitySource = Obscura.Contracts.Entities.EntitySource;
 using ContractEntityStat = Obscura.Contracts.Entities.EntityStat;
 using ContractEntitySubtitle = Obscura.Contracts.Entities.EntitySubtitle;
@@ -38,7 +39,7 @@ public static partial class ContractMapper
     /// <param name="page">Domain page returned by the entity catalog.</param>
     /// <returns>API contract page with entity cards.</returns>
     public static EntityListResponse ToEntityListResponse(DomainEntityPage page) =>
-        new(page.Items.Select(ToEntityCard).ToArray(), page.NextCursor);
+        new(page.Items.Select(ToEntityThumbnail).ToArray(), page.NextCursor);
 
     /// <summary>
     /// Converts a domain entity page into the video list response contract.
@@ -46,7 +47,7 @@ public static partial class ContractMapper
     /// <param name="page">Domain page containing video entities.</param>
     /// <returns>Video list contract for API callers.</returns>
     public static VideoListResponse ToVideoListResponse(DomainEntityPage page) =>
-        new(page.Items.Select(ToEntityCard).ToArray(), page.NextCursor);
+        new(page.Items.Select(ToEntityThumbnail).ToArray(), page.NextCursor);
 
     /// <summary>
     /// Converts a domain entity page into the video-series list response contract.
@@ -54,7 +55,7 @@ public static partial class ContractMapper
     /// <param name="page">Domain page containing video series entities.</param>
     /// <returns>Video-series list contract for API callers.</returns>
     public static VideoSeriesListResponse ToVideoSeriesListResponse(DomainEntityPage page) =>
-        new(page.Items.Select(ToEntityCard).ToArray(), page.NextCursor);
+        new(page.Items.Select(ToEntityThumbnail).ToArray(), page.NextCursor);
 
     /// <summary>
     /// Converts a domain entity page into the shared media list response contract.
@@ -62,7 +63,7 @@ public static partial class ContractMapper
     /// <param name="page">Domain page containing image, gallery, book, or audio entities.</param>
     /// <returns>Media list contract for API callers.</returns>
     public static MediaListResponse ToMediaListResponse(DomainEntityPage page) =>
-        new(page.Items.Select(ToEntityCard).ToArray(), page.NextCursor);
+        new(page.Items.Select(ToEntityThumbnail).ToArray(), page.NextCursor);
 
     /// <summary>
     /// Converts a domain entity page into the collection list response contract.
@@ -70,7 +71,7 @@ public static partial class ContractMapper
     /// <param name="page">Domain page containing collection entities.</param>
     /// <returns>Collection list contract for API callers.</returns>
     public static CollectionListResponse ToCollectionListResponse(DomainEntityPage page) =>
-        new(page.Items.Select(ToEntityCard).ToArray(), page.NextCursor);
+        new(page.Items.Select(ToEntityThumbnail).ToArray(), page.NextCursor);
 
     /// <summary>
     /// Converts a domain entity page into the taxonomy list response contract.
@@ -78,7 +79,7 @@ public static partial class ContractMapper
     /// <param name="page">Domain page containing person, studio, or tag entities.</param>
     /// <returns>Taxonomy list contract for API callers.</returns>
     public static TaxonomyListResponse ToTaxonomyListResponse(DomainEntityPage page) =>
-        new(page.Items.Select(ToEntityCard).ToArray(), page.NextCursor);
+        new(page.Items.Select(ToEntityThumbnail).ToArray(), page.NextCursor);
 
     /// <summary>
     /// Converts a domain entity root into the normalized card contract used by all list surfaces.
@@ -91,8 +92,41 @@ public static partial class ContractMapper
             entity.Kind.Code,
             entity.Title,
             entity.ParentEntityId,
+            entity.SortOrder,
             ToEntityCapabilities(entity.Capabilities),
-            ToEntityChildGroups(entity.ChildrenByKind));
+            ToEntityChildGroups(entity.ChildrenByKind),
+            ToEntityRelationshipGroups(entity.Relationships));
+
+    public static EntityThumbnail ToEntityThumbnail(DomainEntity entity)
+    {
+        var images = entity.Images;
+        var coverUrl = images?.ThumbnailUrl ??
+            images?.CoverUrl ??
+            images?.Items.FirstOrDefault(item =>
+                item.Kind is EntityFileRole.Cover or EntityFileRole.Poster or EntityFileRole.Thumbnail)?.Path;
+        var hover = images?.Items.FirstOrDefault(item => item.Kind == EntityFileRole.Trickplay);
+        var rating = entity.TryGetCapability(CapabilityRegistry.Rating, out var ratingCapability)
+            ? ratingCapability.Value?.Value
+            : null;
+        var flags = entity.TryGetCapability(CapabilityRegistry.Flags, out var flagCapability)
+            ? flagCapability
+            : CapabilityFlags.Empty;
+
+        return new EntityThumbnail(
+            entity.Id,
+            entity.Kind.Code,
+            entity.Title,
+            entity.ParentEntityId,
+            entity.SortOrder,
+            coverUrl,
+            hover is null ? "none" : "sprite",
+            hover?.Path,
+            BuildThumbnailMeta(entity),
+            rating,
+            flags.IsFavorite ?? false,
+            flags.IsNsfw ?? false,
+            flags.IsOrganized ?? false);
+    }
 
     /// <summary>
     /// Converts a collection of domain entity roots into card contracts.
@@ -105,7 +139,7 @@ public static partial class ContractMapper
     private static IReadOnlyList<EntityChildGroup> ToEntityChildGroups(IReadOnlyList<DomainEntity> children) =>
         children
             .GroupBy(child => child.Kind.Code, StringComparer.OrdinalIgnoreCase)
-            .Select(group => new EntityChildGroup(group.Key, ToEntityCards(group.ToArray())))
+            .Select(group => new EntityChildGroup(group.Key, group.Select(child => child.Id).ToArray()))
             .ToArray();
 
     private static IReadOnlyList<EntityCapability> ToEntityCapabilities(IReadOnlyList<ICapability> capabilities) =>
@@ -117,7 +151,26 @@ public static partial class ContractMapper
 
     private static IReadOnlyList<EntityChildGroup> ToEntityChildGroups(EntityChildren children) =>
         children.Sets
-            .Select(set => new EntityChildGroup(set.Kind.Code, ToEntityCards(set.Items)))
+            .Select(set => new EntityChildGroup(set.Kind.Code, set.Items.Select(child => child.Id).ToArray()))
+            .ToArray();
+
+    public static IReadOnlyList<ContractEntityRelationshipGroup> ToEntityRelationshipGroups(EntityRelationships relationships) =>
+        relationships.Groups
+            .Select(group => new ContractEntityRelationshipGroup(
+                group.Code,
+                group.Kind.Code,
+                group.Label,
+                group.Items.Select(item => item.EntityId).ToArray()))
+            .ToArray();
+
+    public static IReadOnlyList<EntityCreditMetadata> ToCreditMetadata(DomainEntity entity) =>
+        entity.Relationships.Groups
+            .Where(group => string.Equals(group.Code, "cast", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(group.Kind.Code, EntityKindRegistry.Person.Code, StringComparison.OrdinalIgnoreCase))
+            .SelectMany(group => group.Items)
+            .Select(item => ToCreditMetadata(item))
+            .Where(item => item is not null)
+            .Select(item => item!)
             .ToArray();
 
     private static EntityCapability? ToEntityCapability(ICapability capability) =>
@@ -125,14 +178,6 @@ public static partial class ContractMapper
         {
             CapabilityRating rating => new RatingCapability(
                 rating.Value is null ? null : new ContractRating(rating.Value.Value)),
-            CapabilityTags tags => new TagsCapability(tags.Values, tags.Items.Select(item => ToEntityReference(item.Reference)).ToArray()),
-            CapabilityCredits credits => new CreditsCapability(
-                credits.Items.Select(credit => new ContractEntityCredit(
-                    ToEntityReference(credit.Person),
-                    credit.Role.ToCode(),
-                    credit.Character)).ToArray(),
-                credits.People.Select(ToEntityReference).ToArray()),
-            CapabilityStudio studio => new StudioCapability(studio.Value is null ? null : ToEntityReference(studio.Value)),
             CapabilityImages images => new ImagesCapability(
                 images.SupportedKinds.Select(kind => kind.ToCode()).ToArray(),
                 images.Items.Select(asset => new ContractEntityImageAsset(
@@ -233,4 +278,51 @@ public static partial class ContractMapper
 
     private static ContractEntityReference ToEntityReference(DomainEntityReference reference) =>
         new(reference.Id, reference.Kind.Code, reference.Title, reference.ThumbnailUrl);
+
+    private static IReadOnlyList<EntityThumbnailMeta> BuildThumbnailMeta(DomainEntity entity)
+    {
+        var meta = new List<EntityThumbnailMeta>();
+        if (entity.Technical?.Duration is { } duration)
+        {
+            meta.Add(new EntityThumbnailMeta("duration", FormatDuration(duration)));
+        }
+
+        if (entity.Technical is { Width: { } width, Height: { } height })
+        {
+            meta.Add(new EntityThumbnailMeta(entity.Kind.Code == EntityKindRegistry.Video.Code ? "video" : "image", FormatResolution(height, width)));
+        }
+
+        if (entity.Position?.Items.FirstOrDefault() is { } position)
+        {
+            meta.Add(new EntityThumbnailMeta("count", position.Label ?? $"{position.Code} {position.Value}"));
+        }
+
+        return meta.Take(3).ToArray();
+    }
+
+    private static string FormatDuration(TimeSpan duration) =>
+        duration.TotalHours >= 1
+            ? $"{(int)duration.TotalHours}:{duration.Minutes:00}:{duration.Seconds:00}"
+            : $"{duration.Minutes:00}:{duration.Seconds:00}";
+
+    private static string FormatResolution(int height, int width) =>
+        height >= 2160 ? "4K" :
+        height >= 1440 ? "1440p" :
+        height >= 1080 ? "1080p" :
+        height >= 720 ? "720p" :
+        $"{width}x{height}";
+
+    private static EntityCreditMetadata? ToCreditMetadata(EntityRelationshipItem item)
+    {
+        if (string.IsNullOrWhiteSpace(item.MetadataJson))
+        {
+            return new EntityCreditMetadata(item.EntityId, null, null);
+        }
+
+        using var document = JsonDocument.Parse(item.MetadataJson);
+        var root = document.RootElement;
+        var role = root.TryGetProperty("role", out var roleElement) ? roleElement.GetString() : null;
+        var character = root.TryGetProperty("character", out var characterElement) ? characterElement.GetString() : null;
+        return new EntityCreditMetadata(item.EntityId, role, character);
+    }
 }

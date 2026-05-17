@@ -53,114 +53,41 @@ public sealed partial class EntityProjectionService
                     .ToArray());
     }
 
-    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityTag>>> LoadTagReferencesAsync(
+    private async Task<IReadOnlyDictionary<Guid, EntityRelationships>> LoadRelationshipsAsync(
         IReadOnlyList<Guid> entityIds,
         CancellationToken cancellationToken)
     {
-        var tagLinks = await _db.EntityTagLinks
+        var links = await _db.EntityRelationshipLinks
             .AsNoTracking()
-            .Where(link => entityIds.Contains(link.EntityId))
-            .ToListAsync(cancellationToken);
-
-        if (tagLinks.Count == 0)
-        {
-            return new Dictionary<Guid, IReadOnlyList<EntityTag>>();
-        }
-
-        var tagIds = tagLinks.Select(link => link.TagId).Distinct().ToArray();
-        var tagTitles = await _db.Entities
-            .AsNoTracking()
-            .Where(entity => tagIds.Contains(entity.Id) && entity.KindCode == EntityKindRegistry.Tag.Code)
-            .ToDictionaryAsync(entity => entity.Id, entity => entity.Title, cancellationToken);
-
-        return tagLinks
-            .Where(link => tagTitles.ContainsKey(link.TagId))
-            .GroupBy(link => link.EntityId)
-            .ToDictionary(
-                group => group.Key,
-                group => (IReadOnlyList<EntityTag>)group
-                    .Select(link => new EntityTag(new EntityReference(
-                        link.TagId,
-                        EntityKindRegistry.Tag,
-                        tagTitles[link.TagId])))
-                    .OrderBy(tag => tag.Reference.Title, StringComparer.OrdinalIgnoreCase)
-                    .ToArray());
-    }
-
-    private async Task<IReadOnlyDictionary<Guid, EntityReference>> LoadStudioReferencesAsync(
-        IReadOnlyList<Guid> entityIds,
-        CancellationToken cancellationToken)
-    {
-        var links = await _db.EntityStudioLinks
-            .AsNoTracking()
-            .Where(link => entityIds.Contains(link.EntityId))
+            .Where(row => entityIds.Contains(row.EntityId))
+            .OrderBy(row => row.RelationshipCode)
+            .ThenBy(row => row.SortOrder)
+            .ThenBy(row => row.TargetEntityId)
             .ToListAsync(cancellationToken);
 
         if (links.Count == 0)
         {
-            return new Dictionary<Guid, EntityReference>();
+            return new Dictionary<Guid, EntityRelationships>();
         }
 
-        var studioIds = links.Select(link => link.StudioId).Distinct().ToArray();
-        var studios = await _db.Entities
-            .AsNoTracking()
-            .Where(entity => studioIds.Contains(entity.Id) && entity.KindCode == EntityKindRegistry.Studio.Code && entity.DeletedAt == null)
-            .ToDictionaryAsync(entity => entity.Id, cancellationToken);
-
-        var thumbnails = await ResolveReferenceThumbnailsAsync(studioIds, cancellationToken);
-
         return links
-            .Where(link => studios.ContainsKey(link.StudioId))
-            .ToDictionary(
-                link => link.EntityId,
-                link =>
-                {
-                    var studio = studios[link.StudioId];
-                    thumbnails.TryGetValue(studio.Id, out var thumb);
-                    return new EntityReference(studio.Id, ResolveKind(studio.KindCode), studio.Title, thumb);
-                });
-    }
-
-    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityCredit>>> LoadCreditReferencesAsync(
-        IReadOnlyList<Guid> entityIds,
-        CancellationToken cancellationToken)
-    {
-        var links = await _db.EntityCreditLinks
-            .AsNoTracking()
-            .Where(link => entityIds.Contains(link.EntityId))
-            .OrderBy(link => link.SortOrder)
-            .ThenBy(link => link.PersonEntityId)
-            .ToListAsync(cancellationToken);
-
-        if (links.Count == 0)
-        {
-            return new Dictionary<Guid, IReadOnlyList<EntityCredit>>();
-        }
-
-        var personIds = links.Select(link => link.PersonEntityId).Distinct().ToArray();
-        var people = await _db.Entities
-            .AsNoTracking()
-            .Where(entity => personIds.Contains(entity.Id) && entity.KindCode == EntityKindRegistry.Person.Code && entity.DeletedAt == null)
-            .ToDictionaryAsync(entity => entity.Id, cancellationToken);
-
-        var thumbnails = await ResolveReferenceThumbnailsAsync(personIds, cancellationToken);
-
-        return links
-            .Where(link => people.ContainsKey(link.PersonEntityId))
             .GroupBy(link => link.EntityId)
             .ToDictionary(
                 group => group.Key,
-                group => (IReadOnlyList<EntityCredit>)group
-                    .Select(link =>
+                group => new EntityRelationships(group
+                    .GroupBy(link => new { link.RelationshipCode, link.TargetKindCode, link.Label })
+                    .Select(relationshipGroup =>
                     {
-                        var person = people[link.PersonEntityId];
-                        thumbnails.TryGetValue(person.Id, out var thumb);
-                        return new EntityCredit(
-                            new EntityReference(person.Id, ResolveKind(person.KindCode), person.Title, thumb),
-                            link.Role,
-                            link.Character);
+                        var first = relationshipGroup.First();
+                        return new EntityRelationshipGroup(
+                            first.RelationshipCode,
+                            ResolveKind(first.TargetKindCode),
+                            first.Label,
+                            relationshipGroup
+                                .Select(link => new EntityRelationshipItem(link.TargetEntityId, link.MetadataJson))
+                                .ToArray());
                     })
-                    .ToArray());
+                    .ToArray()));
     }
 
     /// <summary>

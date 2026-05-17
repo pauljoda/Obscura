@@ -21,9 +21,11 @@ public static partial class ContractMapper
             series.Kind.Code,
             series.Title,
             series.ParentEntityId,
+            series.SortOrder,
             ToEntityCapabilities(series.Capabilities),
             ToEntityChildGroups(series.ChildrenByKind),
-            series.RenderingMode.ToCode());
+            ToEntityRelationshipGroups(series.Relationships),
+            ToCreditMetadata(series));
 
     /// <summary>
     /// Converts a video-season aggregate into the season detail contract.
@@ -36,6 +38,8 @@ public static partial class ContractMapper
             season.Kind.Code,
             season.Title,
             season.ParentEntityId,
+            season.SortOrder,
             ToEntityCapabilities(season.Capabilities),
-            ToEntityChildGroups(season.ChildrenByKind));
+            ToEntityChildGroups(season.ChildrenByKind),
+            ToEntityRelationshipGroups(season.Relationships));
 }

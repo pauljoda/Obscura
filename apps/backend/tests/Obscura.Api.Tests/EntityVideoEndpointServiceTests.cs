@@ -12,14 +12,11 @@ using Obscura.Contracts.Videos;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Interfaces;
 using ContractRatingCapability = Obscura.Contracts.Entities.RatingCapability;
-using DomainCapabilityCredits = Obscura.Domain.Capabilities.CapabilityCredits;
 using DomainCapabilityFiles = Obscura.Domain.Capabilities.CapabilityFiles;
 using DomainCapabilityFlags = Obscura.Domain.Capabilities.CapabilityFlags;
 using DomainCapabilityImages = Obscura.Domain.Capabilities.CapabilityImages;
 using DomainCapabilityLinks = Obscura.Domain.Capabilities.CapabilityLinks;
 using DomainCapabilityRating = Obscura.Domain.Capabilities.CapabilityRating;
-using DomainCapabilityStudio = Obscura.Domain.Capabilities.CapabilityStudio;
-using DomainCapabilityTags = Obscura.Domain.Capabilities.CapabilityTags;
 using DomainCapabilityDescription = Obscura.Domain.Capabilities.CapabilityDescription;
 using DomainCapabilityTechnical = Obscura.Domain.Capabilities.CapabilityTechnical;
 using DomainEntity = Obscura.Domain.Entities.Entity;
@@ -60,27 +57,25 @@ public sealed class EntityVideoEndpointServiceTests
     }
 
     [Fact]
-    public async Task EntityEndpointSerializesCapabilitiesAsDiscriminatedList()
+    public async Task DetailEndpointSerializesCapabilitiesAsDiscriminatedList()
     {
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
 
-        var json = await client.GetStringAsync("/api/entities?kind=video");
+        var json = await client.GetStringAsync($"/api/videos/{FakeEntityProjectionService.VideoId}");
         using var document = JsonDocument.Parse(json);
 
         var capabilities = document.RootElement
-            .GetProperty("items")[0]
             .GetProperty("capabilities");
         Assert.Equal(JsonValueKind.Array, capabilities.ValueKind);
 
         var rating = capabilities.EnumerateArray().Single(capability =>
             capability.GetProperty("kind").GetString() == "rating");
-        var tags = capabilities.EnumerateArray().Single(capability =>
-            capability.GetProperty("kind").GetString() == "tags");
 
         Assert.True(rating.TryGetProperty("value", out var value));
         Assert.Equal(JsonValueKind.Null, value.ValueKind);
-        Assert.Equal("Demo", tags.GetProperty("values")[0].GetString());
+        Assert.DoesNotContain(capabilities.EnumerateArray(), capability =>
+            capability.GetProperty("kind").GetString() is "tags" or "credits" or "studio");
     }
 
     [Fact]
@@ -163,6 +158,12 @@ public sealed class EntityVideoEndpointServiceTests
         public Task<DomainEntity?> GetAsync(Guid id, CancellationToken cancellationToken)
         {
             return Task.FromResult<DomainEntity?>(id == VideoId ? Card(null) : null);
+        }
+
+        public Task<IReadOnlyList<DomainEntity>> ListByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IReadOnlyList<DomainEntity>>(
+                ids.Contains(VideoId) ? [Card(null)] : []);
         }
 
         public Task<IReadOnlyList<DomainEntity>> ListChildrenAsync(
@@ -322,9 +323,6 @@ public sealed class EntityVideoEndpointServiceTests
                 [
                     new DomainCapabilityRating(
                         rating is null ? null : new DomainRating(rating.Value)),
-                    new DomainCapabilityTags(["Demo"]),
-                    DomainCapabilityCredits.Empty,
-                    new DomainCapabilityStudio(null),
                     DomainCapabilityImages.Empty,
                     DomainCapabilityLinks.Empty,
                     new DomainCapabilityFlags(false, false, true),

@@ -56,12 +56,7 @@
   async function loadRelated(tagId: string, tagTitle: string) {
     try {
       const response = await fetchV2Entities({ query: tagTitle });
-      relatedCards = response.items
-        .filter((item: EntityCard) => {
-          const tagsCap = getCapability(item.capabilities, "tags");
-          return tagsCap?.values.some((t) => t.toLowerCase() === tagTitle.toLowerCase()) ?? false;
-        })
-        .map((item: EntityCard) => entityCardToThumbnailCard(item, resolveEntityHref(item.kind, item.id)));
+      relatedCards = response.items.map((item) => entityCardToThumbnailCard(item, resolveEntityHref(item.kind, item.id)));
     } catch {
       relatedCards = [];
     }

@@ -30,7 +30,6 @@ public sealed record Collection : Entity
             capabilities ??
             [
                 new CapabilityRating(null),
-                CapabilityTags.Empty,
                 CapabilityImages.Empty,
                 CapabilityLinks.Empty,
                 CapabilityFlags.Empty,

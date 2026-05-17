@@ -2,7 +2,6 @@ using Obscura.Domain.Entities;
 using Obscura.Domain.Media;
 using Obscura.Domain.Capabilities;
 using CapabilityRating = Obscura.Domain.Capabilities.CapabilityRating;
-using CapabilityTags = Obscura.Domain.Capabilities.CapabilityTags;
 using Rating = Obscura.Domain.Capabilities.Rating;
 
 namespace Obscura.Domain.Tests;
@@ -12,23 +11,13 @@ public sealed class EntityCapabilityTests
     [Fact]
     public void EntityCapabilityHelpersReturnTypedCapabilitiesByKind()
     {
-        var tagId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
-        var personId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
         var entity = new Entity(
             Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
             EntityKindRegistry.Video,
             "Projected Video",
             [
                 new CapabilityRating(new Rating(4)),
-                new CapabilityTags([
-                    new EntityTag(new EntityReference(tagId, EntityKindRegistry.Tag, "Favorite"))
-                ]),
-                new CapabilityCredits([
-                    new EntityCredit(
-                        new EntityReference(personId, EntityKindRegistry.Person, "Ada Person"),
-                        EntityCreditRole.Person,
-                        "Lead")
-                ])
+                new CapabilityDescription("A typed capability")
             ]);
 
         Assert.True(entity.HasCapability(CapabilityRegistry.Rating));
@@ -36,11 +25,7 @@ public sealed class EntityCapabilityTests
 
         Assert.IsType<CapabilityRating>(rating);
         Assert.Equal(4, rating.Value?.Value);
-        var tag = Assert.Single(entity.GetCapability(CapabilityRegistry.Tags).Items);
-        Assert.Equal(tagId, tag.Reference.Id);
-        var credit = Assert.Single(entity.GetCapability(CapabilityRegistry.Credits).Items);
-        Assert.Equal(EntityCreditRole.Person, credit.Role);
-        Assert.Equal("Lead", credit.Character);
+        Assert.Equal("A typed capability", entity.GetCapability(CapabilityRegistry.Description).Value);
     }
 
     [Fact]
@@ -51,11 +36,11 @@ public sealed class EntityCapabilityTests
             EntityKindRegistry.Video,
             "Projected Video",
             [
-                new CapabilityTags(["One"]),
-                new CapabilityTags(["Two"])
+                new CapabilityRating(new Rating(1)),
+                new CapabilityRating(new Rating(2))
             ]));
 
-        Assert.Contains("tags", ex.Message);
+        Assert.Contains("rating", ex.Message);
     }
 
     [Fact]
@@ -65,12 +50,43 @@ public sealed class EntityCapabilityTests
             Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
             EntityKindRegistry.Video,
             "Projected Video",
-            [CapabilityTags.Empty]);
+            []);
 
         Assert.False(entity.HasCapability(CapabilityRegistry.Rating));
         Assert.False(entity.TryGetCapability(CapabilityRegistry.Rating, out var rating));
         Assert.Null(rating);
         Assert.Throws<InvalidOperationException>(() => entity.GetCapability(CapabilityRegistry.Rating));
+    }
+
+    [Fact]
+    public void EntityRelationshipsExposeReferenceGroupsOutsideCapabilities()
+    {
+        var personId = Guid.Parse("44444444-4444-4444-4444-444444444444");
+        var tagId = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        var relationships = new EntityRelationships([
+            new EntityRelationshipGroup(
+                "cast",
+                EntityKindRegistry.Person,
+                "Cast",
+                [new EntityRelationshipItem(personId, """{"role":"person","character":"Lead"}""")]),
+            new EntityRelationshipGroup(
+                "tags",
+                EntityKindRegistry.Tag,
+                "Tags",
+                [new EntityRelationshipItem(tagId, null)])
+        ]);
+        var entity = new Entity(
+            Guid.Parse("66666666-6666-6666-6666-666666666666"),
+            EntityKindRegistry.Video,
+            "Projected Video",
+            [new CapabilityRating(null)],
+            relationships: relationships);
+
+        Assert.True(entity.HasCapability(CapabilityRegistry.Rating));
+        Assert.DoesNotContain(entity.Capabilities, capability => capability.Kind.Code is "tags" or "credits" or "studio");
+        Assert.Equal("cast", entity.Relationships.Groups[0].Code);
+        Assert.Equal(personId, entity.Relationships.Groups[0].Items[0].EntityId);
+        Assert.Equal(tagId, entity.Relationships.Groups[1].Items[0].EntityId);
     }
 
     [Fact]

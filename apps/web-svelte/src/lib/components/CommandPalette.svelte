@@ -60,10 +60,10 @@
     return {
       href,
       id: entity.id,
-      imagePath: getThumbnailUrl(entity.capabilities) ?? null,
+      imagePath: entity.coverUrl ?? null,
       kind,
       meta: {},
-      rating: getRatingValue(entity.capabilities) || null,
+      rating: typeof entity.rating === "number" ? entity.rating : null,
       score: 1,
       subtitle: labelForEntityKind(entity.kind),
       title: entity.title,

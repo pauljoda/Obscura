@@ -7,9 +7,6 @@ namespace Obscura.Contracts.Entities;
 /// </summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
 [JsonDerivedType(typeof(RatingCapability), "rating")]
-[JsonDerivedType(typeof(TagsCapability), "tags")]
-[JsonDerivedType(typeof(CreditsCapability), "credits")]
-[JsonDerivedType(typeof(StudioCapability), "studio")]
 [JsonDerivedType(typeof(ImagesCapability), "images")]
 [JsonDerivedType(typeof(DescriptionCapability), "description")]
 [JsonDerivedType(typeof(LinksCapability), "links")]

@@ -14,16 +14,17 @@ import type {
   EntityExternalId,
   EntityFingerprint,
   EntityMarker,
-  EntityReference,
   EntitySource,
   EntitySubtitle,
   EntityUrl,
 } from "$lib/api/generated/model";
-import { CAPABILITY_KIND, ENTITY_FILE_ROLE, ENTITY_KIND, resolveEntityHref } from "./v2-codes";
+import { CAPABILITY_KIND, ENTITY_FILE_ROLE } from "./v2-codes";
 import { getEntityKindLabel } from "./entity-grid";
 
 /** Entity payload consumed by the shared detail surface. */
-export interface EntityDetailEntity extends EntityCard {
+export interface EntityDetailEntity extends Omit<EntityCard, "sortOrder" | "relationships"> {
+  sortOrder?: EntityCard["sortOrder"];
+  relationships?: EntityCard["relationships"];
   capabilities: EntityCapability[];
 }
 
@@ -266,26 +267,6 @@ function resolveFlags(capabilities: EntityCapability[]): EntityDetailFlag[] {
   return result;
 }
 
-function resolveTags(capabilities: EntityCapability[]): EntityDetailTag[] {
-  const tagsCap = getCapability(capabilities, CAPABILITY_KIND.tags);
-  if (!tagsCap) return [];
-  if (tagsCap.items.length > 0) {
-    return tagsCap.items.map((tag) => ({
-      id: tag.id,
-      kind: tag.kind,
-      title: tag.title,
-      href: tag.kind === ENTITY_KIND.tag ? resolveEntityHref(ENTITY_KIND.tag, tag.id) ?? null : null,
-    }));
-  }
-
-  return tagsCap.values.map((title) => ({
-    id: title,
-    kind: ENTITY_KIND.tag,
-    title,
-    href: null,
-  }));
-}
-
 function resolveTechnical(capabilities: EntityCapability[]): EntityDetailTechnicalRow[] {
   const tech = getTechnicalCapability(capabilities);
   if (!tech) return [];
@@ -388,8 +369,6 @@ export function entityCardToDetailCard(entity: EntityCard): EntityDetailCardFull
     ...new Set(capabilities.map((c) => c.kind)),
   ] as EntityCapabilityKind[];
 
-  const creditsCap = getCapability(capabilities, CAPABILITY_KIND.credits);
-  const studioCap = getCapability(capabilities, CAPABILITY_KIND.studio);
   const statsCap = getCapability(capabilities, CAPABILITY_KIND.stats);
   const countersCap = getCapability(capabilities, CAPABILITY_KIND.counters);
   const datesCap = getCapability(capabilities, CAPABILITY_KIND.dates);
@@ -409,11 +388,9 @@ export function entityCardToDetailCard(entity: EntityCard): EntityDetailCardFull
       ? { value: ratingValue, max: 5 }
       : null,
     flags: resolveFlags(capabilities),
-    tags: resolveTags(capabilities),
-    studio: studioCap?.value
-      ? { id: studioCap.value.id, kind: studioCap.value.kind, title: studioCap.value.title, thumbnail: null }
-      : null,
-    credits: creditsCap?.people.map((p) => ({ id: p.id, kind: p.kind, title: p.title, thumbnail: null })) ?? [],
+    tags: [],
+    studio: null,
+    credits: [],
     stats: (statsCap?.items ?? []).map((item) => ({
       code: item.code,
       label: formatStatCode(item.code),

@@ -4,11 +4,11 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
-import type { EntityReference } from './entityReference';
 
-export interface EntityCredit {
-  person: EntityReference;
-  role: string;
+export interface EntityCreditMetadata {
+  personId: string;
+  /** @nullable */
+  role: string | null;
   /** @nullable */
   character: string | null;
 }

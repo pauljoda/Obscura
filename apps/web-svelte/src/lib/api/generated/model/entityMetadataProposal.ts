@@ -23,4 +23,6 @@ export interface EntityMetadataProposal {
   images: ImageCandidate[];
   children: EntityMetadataProposal[];
   candidates: EntitySearchCandidate[];
+  /** @nullable */
+  targetEntityId?: string | null;
 }

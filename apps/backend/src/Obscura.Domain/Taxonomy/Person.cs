@@ -31,7 +31,6 @@ public sealed record Person(
         capabilities ??
         [
             new CapabilityRating(null),
-            CapabilityTags.Empty,
             CapabilityImages.Empty,
             CapabilityLinks.Empty,
             CapabilityFlags.Empty,

@@ -20,6 +20,8 @@ import type {
   EntityListResponse,
   EntityMarkerWriteRequest,
   EntityMetadataProposal,
+  EntityThumbnailBatchRequest,
+  EntityThumbnailBatchResponse,
   GalleryDetail,
   GetJellyfinVideoHlsRelativeAssetParams,
   GetJellyfinVideoHlsSegmentParams,
@@ -1077,6 +1079,43 @@ export const getEntity = async (id: string, options?: RequestInit): Promise<getE
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type getEntityThumbnailsResponse200 = {
+  data: EntityThumbnailBatchResponse
+  status: 200
+}
+
+export type getEntityThumbnailsResponseSuccess = (getEntityThumbnailsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getEntityThumbnailsResponse = (getEntityThumbnailsResponseSuccess)
+
+export const getGetEntityThumbnailsUrl = () => {
+
+
+
+
+  return `/api/entities/thumbnails`
+}
+
+/**
+ * @summary Resolves lightweight thumbnails for entity grids and relationship previews.
+ */
+export const getEntityThumbnails = async (entityThumbnailBatchRequest: EntityThumbnailBatchRequest, options?: RequestInit): Promise<getEntityThumbnailsResponse> => {
+
+  return orvalFetch<getEntityThumbnailsResponse>(getGetEntityThumbnailsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      entityThumbnailBatchRequest,)
   }
 );}
 

@@ -24,9 +24,6 @@ public sealed record VideoSeries : Entity
             capabilities ??
             [
                 new CapabilityRating(null),
-                CapabilityTags.Empty,
-                CapabilityCredits.Empty,
-                new CapabilityStudio(null),
                 CapabilityImages.Empty,
                 CapabilityLinks.Empty,
                 CapabilityFlags.Empty,
@@ -61,6 +58,7 @@ public sealed record VideoSeries : Entity
             entity.Capabilities,
             entity.ChildrenByKind.Sets.Count > 0 ? entity.ChildrenByKind : null)
     {
+        Relationships = entity.Relationships;
     }
 
     private static EntityChildren BuildChildrenByKind(IReadOnlyList<Entity> children, IReadOnlyList<Entity> videos)
@@ -94,14 +92,18 @@ public sealed record VideoSeason : Entity
         Guid? ParentEntityId,
         IReadOnlyList<ICapability>? capabilities = null,
         IReadOnlyList<Entity>? videos = null,
-        EntityChildren? childrenByKind = null)
+        EntityChildren? childrenByKind = null,
+        int? sortOrder = null,
+        EntityRelationships? relationships = null)
         : base(
             Id,
             EntityKindRegistry.VideoSeason,
             Title,
             capabilities ?? [CapabilityImages.Empty, CapabilityDescription.Empty, CapabilityDates.Empty, CapabilitySource.Empty, CapabilityPosition.Empty],
             parentEntityId: ParentEntityId,
-            children: childrenByKind ?? BuildChildrenByKind(videos ?? []))
+            sortOrder: sortOrder,
+            children: childrenByKind ?? BuildChildrenByKind(videos ?? []),
+            relationships: relationships)
     {
         Videos = videos ?? [];
     }
@@ -122,7 +124,9 @@ public sealed record VideoSeason : Entity
             ParentEntityId,
             entity.Capabilities,
             videos,
-            entity.ChildrenByKind.Sets.Count > 0 ? entity.ChildrenByKind : null)
+            entity.ChildrenByKind.Sets.Count > 0 ? entity.ChildrenByKind : null,
+            entity.SortOrder,
+            entity.Relationships)
     {
     }
 

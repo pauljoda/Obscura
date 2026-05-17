@@ -37,20 +37,33 @@ public sealed class EntityProjectionServiceTests
             IsNsfw = false,
             IsOrganized = true
         });
-        db.EntityTagLinks.Add(new EntityTagLinkRow { EntityId = videoId, TagId = tagId });
-        db.EntityStudioLinks.Add(new EntityStudioLinkRow
+        db.EntityRelationshipLinks.Add(new EntityRelationshipLinkRow
         {
             EntityId = videoId,
-            StudioId = studioId,
+            RelationshipCode = "tags",
+            Label = "Tags",
+            TargetEntityId = tagId,
+            TargetKindCode = "tag",
             CreatedAt = DateTimeOffset.UtcNow
         });
-        db.EntityCreditLinks.Add(new EntityCreditLinkRow
+        db.EntityRelationshipLinks.Add(new EntityRelationshipLinkRow
         {
             EntityId = videoId,
-            PersonEntityId = personId,
-            Role = EntityCreditRole.Person,
-            Character = "Lead",
+            RelationshipCode = "studio",
+            Label = "Studio",
+            TargetEntityId = studioId,
+            TargetKindCode = "studio",
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        db.EntityRelationshipLinks.Add(new EntityRelationshipLinkRow
+        {
+            EntityId = videoId,
+            RelationshipCode = "cast",
+            Label = "Cast",
+            TargetEntityId = personId,
+            TargetKindCode = "person",
             SortOrder = 1,
+            MetadataJson = """{"role":"person","character":"Lead"}""",
             CreatedAt = DateTimeOffset.UtcNow
         });
         db.EntityPlayback.Add(new EntityPlaybackRow
@@ -146,18 +159,17 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal("video", card.Kind.Code);
         Assert.Equal("Shared description.", card.GetCapability(CapabilityRegistry.Description).Value);
         Assert.Equal(4, card.GetCapability(CapabilityRegistry.Rating).Value?.Value);
-        Assert.Equal(["Favorite"], card.GetCapability(CapabilityRegistry.Tags).Values);
-        var tag = Assert.Single(card.GetCapability(CapabilityRegistry.Tags).Items);
-        Assert.Equal(tagId, tag.Reference.Id);
-        var studio = card.GetCapability(CapabilityRegistry.Studio).Value;
-        Assert.NotNull(studio);
-        Assert.Equal(studioId, studio.Id);
-        Assert.Equal("Obscura Studio", studio.Title);
-        var credit = Assert.Single(card.GetCapability(CapabilityRegistry.Credits).Items);
-        Assert.Equal(personId, credit.Person.Id);
-        Assert.Equal("Ada Person", credit.Person.Title);
-        Assert.Equal(EntityCreditRole.Person, credit.Role);
-        Assert.Equal("Lead", credit.Character);
+        var tagRelationship = Assert.Single(card.Relationships.Groups.Where(group => group.Code == "tags"));
+        Assert.Equal("tag", tagRelationship.Kind.Code);
+        Assert.Equal(tagId, Assert.Single(tagRelationship.Items).EntityId);
+        var studioRelationship = Assert.Single(card.Relationships.Groups.Where(group => group.Code == "studio"));
+        Assert.Equal("studio", studioRelationship.Kind.Code);
+        Assert.Equal(studioId, Assert.Single(studioRelationship.Items).EntityId);
+        var creditRelationship = Assert.Single(card.Relationships.Groups.Where(group => group.Code == "cast"));
+        Assert.Equal("person", creditRelationship.Kind.Code);
+        var credit = Assert.Single(creditRelationship.Items);
+        Assert.Equal(personId, credit.EntityId);
+        Assert.Contains("Lead", credit.MetadataJson ?? string.Empty, StringComparison.Ordinal);
         var links = card.GetCapability(CapabilityRegistry.Links);
         var url = Assert.Single(links.Urls);
         Assert.Equal("https://example.test/videos/a-quiet-scene", url.Url);
@@ -827,8 +839,7 @@ public sealed class EntityProjectionServiceTests
         SeedTechnical(db, videoId, durationSeconds: 1.5, frameRate: 23.976, codec: "h264");
         db.VideoSeriesDetails.Add(new VideoSeriesDetailRow
         {
-            EntityId = seriesId,
-            RenderingMode = VideoSeriesRenderingMode.Flat
+            EntityId = seriesId
         });
         SeedDescription(db, seriesId, "Series overview");
         db.VideoSeasonDetails.Add(new VideoSeasonDetailRow

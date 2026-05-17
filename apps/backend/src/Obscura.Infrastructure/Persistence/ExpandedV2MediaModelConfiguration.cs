@@ -14,10 +14,6 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
             entity.Property(row => row.Status).HasColumnName("status");
-            entity.Property(row => row.RenderingMode)
-                .HasColumnName("rendering_mode")
-                .HasMaxLength(64)
-                .HasConversion(value => value.ToCode(), value => value.DecodeAs<VideoSeriesRenderingMode>());
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<VideoSeriesDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 

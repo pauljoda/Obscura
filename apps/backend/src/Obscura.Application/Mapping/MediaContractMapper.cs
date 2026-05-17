@@ -25,8 +25,10 @@ public static partial class ContractMapper
             image.Kind.Code,
             image.Title,
             image.ParentEntityId,
+            image.SortOrder,
             ToEntityCapabilities(image.Capabilities),
-            ToEntityChildGroups(image.ChildrenByKind));
+            ToEntityChildGroups(image.ChildrenByKind),
+            ToEntityRelationshipGroups(image.Relationships));
 
     /// <summary>
     /// Converts a gallery aggregate and ordered children into its object-specific detail contract.
@@ -40,8 +42,11 @@ public static partial class ContractMapper
             gallery.Kind.Code,
             gallery.Title,
             gallery.ParentEntityId,
+            gallery.SortOrder,
             ToEntityCapabilities(gallery.Capabilities),
             ToEntityChildGroups(children),
+            ToEntityRelationshipGroups(gallery.Relationships),
+            ToCreditMetadata(gallery),
             gallery.GalleryType.ToCode(),
             gallery.CoverImageId);
 
@@ -56,8 +61,10 @@ public static partial class ContractMapper
             book.Kind.Code,
             book.Title,
             book.ParentEntityId,
+            book.SortOrder,
             ToEntityCapabilities(book.Capabilities),
             ToEntityChildGroups(book.ChildrenByKind),
+            ToEntityRelationshipGroups(book.Relationships),
             book.BookType.ToCode(),
             book.CoverPageId);
 
@@ -73,8 +80,10 @@ public static partial class ContractMapper
             library.Kind.Code,
             library.Title,
             library.ParentEntityId,
+            library.SortOrder,
             ToEntityCapabilities(library.Capabilities),
-            ToEntityChildGroups(children));
+            ToEntityChildGroups(children),
+            ToEntityRelationshipGroups(library.Relationships));
 
     /// <summary>
     /// Converts an audio track aggregate into its object-specific detail contract.
@@ -87,8 +96,10 @@ public static partial class ContractMapper
             track.Kind.Code,
             track.Title,
             track.ParentEntityId,
+            track.SortOrder,
             ToEntityCapabilities(track.Capabilities),
             ToEntityChildGroups(track.ChildrenByKind),
+            ToEntityRelationshipGroups(track.Relationships),
             track.EmbeddedArtist,
             track.EmbeddedAlbum);
 }

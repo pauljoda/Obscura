@@ -12,8 +12,7 @@
     Users,
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-  import type { EntityCredit } from "$lib/api/generated/model";
-  import type {
+    import type {
     SubtitleAppearance,
     SubtitleDisplayStyle,
   } from "$lib/player/subtitle-types";
@@ -37,7 +36,7 @@
   import EntityCastAndCrewSection from "$lib/components/entities/EntityCastAndCrewSection.svelte";
   import IdentifyButton from "$lib/components/IdentifyButton.svelte";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
-  import { creditSubtitle } from "$lib/entities/entity-credits";
+  import { creditSubtitle, type EntityCredit } from "$lib/entities/entity-credits";
   import {
     entityReferenceToThumbnailCard,
     type EntityThumbnailCard,
@@ -102,22 +101,9 @@
     return extractVideoPlayerProps(video.id, video.capabilities, playbackInfo, selectedAudioStreamIndex);
   });
 
-  const studio = $derived.by(() => {
-    if (!video) return null;
-    const cap = getCapability(video.capabilities, "studio");
-    return cap?.value ?? null;
-  });
+  const studio = $derived.by((): { id: string; kind: string; title: string } | null => null);
 
-  const credits = $derived.by((): EntityCredit[] => {
-    if (!video) return [];
-    const cap = getCapability(video.capabilities, "credits");
-    if (cap?.items?.length) return cap.items;
-    return (cap?.people ?? []).map((person) => ({
-      character: null,
-      person,
-      role: "person",
-    }));
-  });
+  const credits = $derived.by((): EntityCredit[] => []);
 
   const studioCards = $derived.by((): EntityThumbnailCard[] => {
     if (!studio) return [];

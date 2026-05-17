@@ -18,7 +18,6 @@ public sealed record CollectionEntityKind()
     public IReadOnlyList<ICapabilityKind> SupportedCapabilities =>
     [
         CapabilityRegistry.Rating,
-        CapabilityRegistry.Tags,
         CapabilityRegistry.Images,
         CapabilityRegistry.Description,
         CapabilityRegistry.Links,

@@ -19,7 +19,7 @@ public sealed class ObscuraDbContextModelTests
     [InlineData(typeof(EntityRatingRow), "entity_ratings")]
     [InlineData(typeof(EntityFlagRow), "entity_flags")]
     [InlineData(typeof(EntityDescriptionRow), "entity_descriptions")]
-    [InlineData(typeof(EntityTagLinkRow), "entity_tag_links")]
+    [InlineData(typeof(EntityRelationshipLinkRow), "entity_relationship_links")]
     [InlineData(typeof(EntityAliasRow), "entity_aliases")]
     [InlineData(typeof(EntityPlaybackRow), "entity_playback")]
     [InlineData(typeof(EntityCounterRow), "entity_counters")]
@@ -114,6 +114,21 @@ public sealed class ObscuraDbContextModelTests
     }
 
     [Fact]
+    public void EntityRelationshipLinksUseGenericReferenceShape()
+    {
+        using var db = CreateContext();
+        var modelEntity = db.Model.FindEntityType(typeof(EntityRelationshipLinkRow));
+
+        Assert.NotNull(modelEntity);
+        Assert.Equal("entity_relationship_links", modelEntity!.GetTableName());
+        Assert.Equal("v2", modelEntity.GetSchema());
+        Assert.Contains(modelEntity.GetProperties(), property => property.GetColumnName() == "relationship_code");
+        Assert.Contains(modelEntity.GetProperties(), property => property.GetColumnName() == "target_entity_id");
+        Assert.Contains(modelEntity.GetProperties(), property => property.GetColumnName() == "target_kind_code");
+        Assert.Contains(modelEntity.GetProperties(), property => property.GetColumnName() == "metadata_json");
+    }
+
+    [Fact]
     public void EntityRowsExposeNullableParentAndSortOrder()
     {
         using var db = CreateContext();
@@ -152,6 +167,18 @@ public sealed class ObscuraDbContextModelTests
 
         Assert.NotNull(modelEntity);
         Assert.DoesNotContain(modelEntity!.GetProperties(), property => property.GetColumnName() == columnName);
+    }
+
+    [Fact]
+    public void VideoSeriesDetailsDoNotStoreRenderingMode()
+    {
+        Assert.Null(typeof(VideoSeriesDetailRow).GetProperty("RenderingMode"));
+
+        using var db = CreateContext();
+        var modelEntity = db.Model.FindEntityType(typeof(VideoSeriesDetailRow));
+
+        Assert.NotNull(modelEntity);
+        Assert.DoesNotContain(modelEntity!.GetProperties(), property => property.GetColumnName() == "rendering_mode");
     }
 
     [Fact]
@@ -230,14 +257,12 @@ public sealed class ObscuraDbContextModelTests
     [Theory]
     [InlineData(typeof(BookDetailRow), nameof(BookDetailRow.BookType), typeof(BookType))]
     [InlineData(typeof(GalleryDetailRow), nameof(GalleryDetailRow.GalleryType), typeof(GalleryType))]
-    [InlineData(typeof(VideoSeriesDetailRow), nameof(VideoSeriesDetailRow.RenderingMode), typeof(VideoSeriesRenderingMode))]
     [InlineData(typeof(CollectionDetailRow), nameof(CollectionDetailRow.Mode), typeof(CollectionMode))]
     [InlineData(typeof(CollectionDetailRow), nameof(CollectionDetailRow.CoverMode), typeof(CollectionCoverMode))]
     [InlineData(typeof(CollectionItemDetailRow), nameof(CollectionItemDetailRow.Source), typeof(CollectionItemSource))]
     [InlineData(typeof(ProviderConfigRow), nameof(ProviderConfigRow.ProviderType), typeof(ProviderType))]
     [InlineData(typeof(IdentifyResultRow), nameof(IdentifyResultRow.Status), typeof(IdentifyResultStatus))]
     [InlineData(typeof(FingerprintSubmissionRow), nameof(FingerprintSubmissionRow.Status), typeof(FingerprintSubmissionStatus))]
-    [InlineData(typeof(EntityCreditLinkRow), nameof(EntityCreditLinkRow.Role), typeof(EntityCreditRole))]
     [InlineData(typeof(EntityFileRow), nameof(EntityFileRow.Role), typeof(EntityFileRole))]
     [InlineData(typeof(EntitySubtitleRow), nameof(EntitySubtitleRow.Source), typeof(EntitySubtitleSource))]
     [InlineData(typeof(DatabaseBackupRow), nameof(DatabaseBackupRow.Status), typeof(DatabaseBackupStatus))]

@@ -5,10 +5,9 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface EntityReference {
-  id: string;
+export interface EntityRelationshipGroup {
+  code: string;
   kind: string;
-  title: string;
-  /** @nullable */
-  thumbnailUrl?: string | null;
+  label: string;
+  entityIds: string[];
 }

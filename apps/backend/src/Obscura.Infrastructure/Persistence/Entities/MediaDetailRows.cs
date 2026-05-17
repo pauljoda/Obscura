@@ -6,7 +6,6 @@ public sealed class VideoSeriesDetailRow
 {
     public Guid EntityId { get; set; }
     public string? Status { get; set; }
-    public VideoSeriesRenderingMode RenderingMode { get; set; } = VideoSeriesRenderingMode.Flat;
 }
 
 public sealed class VideoSeasonDetailRow

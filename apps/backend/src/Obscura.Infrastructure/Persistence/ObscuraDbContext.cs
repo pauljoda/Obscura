@@ -28,15 +28,11 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<EntityDescriptionRow> EntityDescriptions => Set<EntityDescriptionRow>();
 
-    public DbSet<EntityTagLinkRow> EntityTagLinks => Set<EntityTagLinkRow>();
+    public DbSet<EntityRelationshipLinkRow> EntityRelationshipLinks => Set<EntityRelationshipLinkRow>();
 
     public DbSet<EntityAliasRow> EntityAliases => Set<EntityAliasRow>();
 
     public DbSet<EntityChildLinkRow> EntityChildLinks => Set<EntityChildLinkRow>();
-
-    public DbSet<EntityStudioLinkRow> EntityStudioLinks => Set<EntityStudioLinkRow>();
-
-    public DbSet<EntityCreditLinkRow> EntityCreditLinks => Set<EntityCreditLinkRow>();
 
     public DbSet<EntityUrlRow> EntityUrls => Set<EntityUrlRow>();
 

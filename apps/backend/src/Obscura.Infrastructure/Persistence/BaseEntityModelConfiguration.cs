@@ -90,21 +90,5 @@ internal static class BaseEntityModelConfiguration
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<EntityTagLinkRow>(entity =>
-        {
-            entity.ToTable("entity_tag_links");
-            entity.HasKey(row => new { row.EntityId, row.TagId });
-            entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.TagId).HasColumnName("tag_id");
-            entity.Property(row => row.CreatedAt).HasColumnName("created_at");
-            entity.HasOne<EntityRow>()
-                .WithMany()
-                .HasForeignKey(row => row.EntityId)
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne<EntityRow>()
-                .WithMany()
-                .HasForeignKey(row => row.TagId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
     }
 }

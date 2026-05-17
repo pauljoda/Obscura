@@ -4,7 +4,6 @@ import type {
   EntityCapabilityFlagsCapability,
   EntityCapabilityImagesCapability,
   EntityCapabilityRatingCapability,
-  EntityCapabilityTagsCapability,
   EntityCapabilityTechnicalCapability,
   Rating,
 } from "$lib/api/generated/model";
@@ -27,12 +26,6 @@ export function getRatingCapability(
   capabilities: EntityCapability[],
 ): EntityCapabilityRatingCapability | undefined {
   return getCapability(capabilities, "rating");
-}
-
-export function getTagsCapability(
-  capabilities: EntityCapability[],
-): EntityCapabilityTagsCapability | undefined {
-  return getCapability(capabilities, "tags");
 }
 
 export function getImagesCapability(
@@ -65,7 +58,7 @@ export function getRatingValue(capabilities: EntityCapability[]): number {
 }
 
 export function getTags(capabilities: EntityCapability[]): string[] {
-  return getTagsCapability(capabilities)?.values ?? [];
+  return [];
 }
 
 export function getThumbnailUrl(capabilities: EntityCapability[]): string | null {

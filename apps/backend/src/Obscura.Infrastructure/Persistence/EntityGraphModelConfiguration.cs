@@ -38,48 +38,32 @@ internal static class EntityGraphModelConfiguration
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        modelBuilder.Entity<EntityStudioLinkRow>(entity =>
+        modelBuilder.Entity<EntityRelationshipLinkRow>(entity =>
         {
-            entity.ToTable("entity_studio_links");
-            entity.HasKey(row => row.EntityId);
+            entity.ToTable("entity_relationship_links");
+            entity.HasKey(row => new { row.EntityId, row.RelationshipCode, row.TargetEntityId });
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.StudioId).HasColumnName("studio_id");
-            entity.Property(row => row.CreatedAt).HasColumnName("created_at");
-            entity.HasIndex(row => row.StudioId);
-            entity.HasOne<EntityRow>()
-                .WithOne()
-                .HasForeignKey<EntityStudioLinkRow>(row => row.EntityId)
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne<EntityRow>()
-                .WithMany()
-                .HasForeignKey(row => row.StudioId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<EntityCreditLinkRow>(entity =>
-        {
-            entity.ToTable("entity_credit_links");
-            entity.HasKey(row => new { row.EntityId, row.PersonEntityId, row.Role });
-            entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.PersonEntityId).HasColumnName("person_entity_id");
-            entity.Property(row => row.Role)
-                .HasColumnName("role")
-                .HasMaxLength(64)
-                .HasConversion(value => value.ToCode(), value => value.DecodeAs<EntityCreditRole>())
-                .IsRequired();
-            entity.Property(row => row.Character).HasColumnName("character");
+            entity.Property(row => row.RelationshipCode).HasColumnName("relationship_code").HasMaxLength(64).IsRequired();
+            entity.Property(row => row.Label).HasColumnName("label").HasMaxLength(128).IsRequired();
+            entity.Property(row => row.TargetEntityId).HasColumnName("target_entity_id");
+            entity.Property(row => row.TargetKindCode).HasColumnName("target_kind_code").HasMaxLength(64).IsRequired();
             entity.Property(row => row.SortOrder).HasColumnName("sort_order");
+            entity.Property(row => row.MetadataJson).HasColumnName("metadata_json").HasColumnType("jsonb");
             entity.Property(row => row.CreatedAt).HasColumnName("created_at");
-            entity.HasIndex(row => new { row.EntityId, row.SortOrder });
-            entity.HasIndex(row => row.PersonEntityId);
+            entity.HasIndex(row => new { row.EntityId, row.RelationshipCode, row.SortOrder });
+            entity.HasIndex(row => new { row.TargetKindCode, row.TargetEntityId });
             entity.HasOne<EntityRow>()
                 .WithMany()
                 .HasForeignKey(row => row.EntityId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<EntityRow>()
                 .WithMany()
-                .HasForeignKey(row => row.PersonEntityId)
+                .HasForeignKey(row => row.TargetEntityId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<EntityKindRow>()
+                .WithMany()
+                .HasForeignKey(row => row.TargetKindCode)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<EntityUrlRow>(entity =>

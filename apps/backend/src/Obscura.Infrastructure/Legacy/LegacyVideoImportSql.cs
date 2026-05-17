@@ -182,12 +182,14 @@ public static class LegacyVideoImportSql
                     system = EXCLUDED.system,
                     updated_at = EXCLUDED.updated_at;
 
-                INSERT INTO v2.entity_studio_links (entity_id, studio_id, created_at)
-                SELECT id, studio_id, updated_at
+                INSERT INTO v2.entity_relationship_links (entity_id, relationship_code, label, target_entity_id, target_kind_code, sort_order, created_at)
+                SELECT id, 'studio', 'Studio', studio_id, '{{EntityKindRegistry.Studio.Code}}', 0, updated_at
                 FROM public.video_series
                 WHERE studio_id IS NOT NULL
-                ON CONFLICT (entity_id) DO UPDATE SET
-                    studio_id = EXCLUDED.studio_id;
+                ON CONFLICT (entity_id, relationship_code, target_entity_id) DO UPDATE SET
+                    label = EXCLUDED.label,
+                    target_kind_code = EXCLUDED.target_kind_code,
+                    sort_order = EXCLUDED.sort_order;
 
                 INSERT INTO v2.entity_external_ids (id, entity_id, provider, value, url, created_at, updated_at)
                 SELECT gen_random_uuid(), series.id, external.key, external.value, NULL, series.created_at, series.updated_at
@@ -348,12 +350,14 @@ public static class LegacyVideoImportSql
                 ON CONFLICT (entity_id, algorithm) DO UPDATE SET
                     value = EXCLUDED.value;
 
-                INSERT INTO v2.entity_studio_links (entity_id, studio_id, created_at)
-                SELECT id, studio_id, updated_at
+                INSERT INTO v2.entity_relationship_links (entity_id, relationship_code, label, target_entity_id, target_kind_code, sort_order, created_at)
+                SELECT id, 'studio', 'Studio', studio_id, '{{EntityKindRegistry.Studio.Code}}', 0, updated_at
                 FROM public.video_movies
                 WHERE studio_id IS NOT NULL
-                ON CONFLICT (entity_id) DO UPDATE SET
-                    studio_id = EXCLUDED.studio_id;
+                ON CONFLICT (entity_id, relationship_code, target_entity_id) DO UPDATE SET
+                    label = EXCLUDED.label,
+                    target_kind_code = EXCLUDED.target_kind_code,
+                    sort_order = EXCLUDED.sort_order;
 
                 INSERT INTO v2.entity_urls (id, entity_id, url, label, sort_order, created_at)
                 SELECT gen_random_uuid(), id, url, NULL, 0, created_at
@@ -740,12 +744,11 @@ public static class LegacyVideoImportSql
                         is_structural = EXCLUDED.is_structural,
                         source = EXCLUDED.source;
 
-                    INSERT INTO v2.video_series_details (entity_id, rendering_mode)
-                    SELECT DISTINCT series_id, '{{VideoSeriesRenderingMode.Seasons.ToCode()}}'
+                    INSERT INTO v2.video_series_details (entity_id)
+                    SELECT DISTINCT series_id
                     FROM public.video_seasons
                     WHERE series_id IS NOT NULL
-                    ON CONFLICT (entity_id) DO UPDATE SET
-                        rendering_mode = EXCLUDED.rendering_mode;
+                    ON CONFLICT (entity_id) DO NOTHING;
                 END IF;
 
                 WITH legacy_seasons AS (
@@ -876,13 +879,12 @@ public static class LegacyVideoImportSql
                     path = EXCLUDED.path,
                     updated_at = EXCLUDED.updated_at;
 
-                INSERT INTO v2.video_series_details (entity_id, rendering_mode)
-                SELECT DISTINCT series_id, '{{VideoSeriesRenderingMode.Seasons.ToCode()}}'
+                INSERT INTO v2.video_series_details (entity_id)
+                SELECT DISTINCT series_id
                 FROM public.video_episodes
                 WHERE series_id IS NOT NULL
                   AND season_number IS NOT NULL
-                ON CONFLICT (entity_id) DO UPDATE SET
-                    rendering_mode = EXCLUDED.rendering_mode;
+                ON CONFLICT (entity_id) DO NOTHING;
 
                 INSERT INTO v2.entity_positions (entity_id, code, value, label, updated_at)
                 SELECT season.entity_id, 'season', season.season_number, season.season_number::text, NOW()
@@ -1075,50 +1077,50 @@ public static class LegacyVideoImportSql
             END IF;
 
             IF to_regclass('public.video_series_tags') IS NOT NULL THEN
-                INSERT INTO v2.entity_tag_links (entity_id, tag_id, created_at)
-                SELECT series_id, tag_id, now()
+                INSERT INTO v2.entity_relationship_links (entity_id, relationship_code, label, target_entity_id, target_kind_code, sort_order, created_at)
+                SELECT series_id, 'tags', 'Tags', tag_id, '{{EntityKindRegistry.Tag.Code}}', 0, now()
                 FROM public.video_series_tags
-                ON CONFLICT (entity_id, tag_id) DO NOTHING;
+                ON CONFLICT (entity_id, relationship_code, target_entity_id) DO NOTHING;
             END IF;
 
             IF to_regclass('public.video_movie_tags') IS NOT NULL THEN
-                INSERT INTO v2.entity_tag_links (entity_id, tag_id, created_at)
-                SELECT movie_id, tag_id, now()
+                INSERT INTO v2.entity_relationship_links (entity_id, relationship_code, label, target_entity_id, target_kind_code, sort_order, created_at)
+                SELECT movie_id, 'tags', 'Tags', tag_id, '{{EntityKindRegistry.Tag.Code}}', 0, now()
                 FROM public.video_movie_tags
-                ON CONFLICT (entity_id, tag_id) DO NOTHING;
+                ON CONFLICT (entity_id, relationship_code, target_entity_id) DO NOTHING;
             END IF;
 
             IF to_regclass('public.video_episode_tags') IS NOT NULL THEN
-                INSERT INTO v2.entity_tag_links (entity_id, tag_id, created_at)
-                SELECT episode_id, tag_id, now()
+                INSERT INTO v2.entity_relationship_links (entity_id, relationship_code, label, target_entity_id, target_kind_code, sort_order, created_at)
+                SELECT episode_id, 'tags', 'Tags', tag_id, '{{EntityKindRegistry.Tag.Code}}', 0, now()
                 FROM public.video_episode_tags
-                ON CONFLICT (entity_id, tag_id) DO NOTHING;
+                ON CONFLICT (entity_id, relationship_code, target_entity_id) DO NOTHING;
             END IF;
 
             IF to_regclass('public.video_series_performers') IS NOT NULL THEN
-                INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT series_id, performer_id, '{{EntityKindRegistry.Person.Code}}', character, COALESCE("order", 0), now()
+                INSERT INTO v2.entity_relationship_links (entity_id, relationship_code, label, target_entity_id, target_kind_code, sort_order, metadata_json, created_at)
+                SELECT series_id, 'cast', 'Cast', performer_id, '{{EntityKindRegistry.Person.Code}}', COALESCE("order", 0), jsonb_build_object('role', '{{EntityKindRegistry.Person.Code}}', 'character', character), now()
                 FROM public.video_series_performers
-                ON CONFLICT (entity_id, person_entity_id, role) DO UPDATE SET
-                    character = EXCLUDED.character,
+                ON CONFLICT (entity_id, relationship_code, target_entity_id) DO UPDATE SET
+                    metadata_json = EXCLUDED.metadata_json,
                     sort_order = EXCLUDED.sort_order;
             END IF;
 
             IF to_regclass('public.video_movie_performers') IS NOT NULL THEN
-                INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT movie_id, performer_id, '{{EntityKindRegistry.Person.Code}}', character, COALESCE("order", 0), now()
+                INSERT INTO v2.entity_relationship_links (entity_id, relationship_code, label, target_entity_id, target_kind_code, sort_order, metadata_json, created_at)
+                SELECT movie_id, 'cast', 'Cast', performer_id, '{{EntityKindRegistry.Person.Code}}', COALESCE("order", 0), jsonb_build_object('role', '{{EntityKindRegistry.Person.Code}}', 'character', character), now()
                 FROM public.video_movie_performers
-                ON CONFLICT (entity_id, person_entity_id, role) DO UPDATE SET
-                    character = EXCLUDED.character,
+                ON CONFLICT (entity_id, relationship_code, target_entity_id) DO UPDATE SET
+                    metadata_json = EXCLUDED.metadata_json,
                     sort_order = EXCLUDED.sort_order;
             END IF;
 
             IF to_regclass('public.video_episode_performers') IS NOT NULL THEN
-                INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT episode_id, performer_id, '{{EntityKindRegistry.Person.Code}}', character, COALESCE("order", 0), now()
+                INSERT INTO v2.entity_relationship_links (entity_id, relationship_code, label, target_entity_id, target_kind_code, sort_order, metadata_json, created_at)
+                SELECT episode_id, 'cast', 'Cast', performer_id, '{{EntityKindRegistry.Person.Code}}', COALESCE("order", 0), jsonb_build_object('role', '{{EntityKindRegistry.Person.Code}}', 'character', character), now()
                 FROM public.video_episode_performers
-                ON CONFLICT (entity_id, person_entity_id, role) DO UPDATE SET
-                    character = EXCLUDED.character,
+                ON CONFLICT (entity_id, relationship_code, target_entity_id) DO UPDATE SET
+                    metadata_json = EXCLUDED.metadata_json,
                     sort_order = EXCLUDED.sort_order;
             END IF;
 
@@ -1144,8 +1146,7 @@ public static class LegacyVideoImportSql
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKindRegistry.Tag.Code}}') AS tags_imported,
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKindRegistry.Studio.Code}}') AS studios_imported,
             ((SELECT COUNT(*)::int FROM v2.entity_child_links WHERE is_structural = true) +
-             (SELECT COUNT(*)::int FROM v2.entity_credit_links) +
-             (SELECT COUNT(*)::int FROM v2.entity_studio_links) +
+             (SELECT COUNT(*)::int FROM v2.entity_relationship_links) +
              (SELECT COUNT(*)::int FROM v2.entity_markers) +
              (SELECT COUNT(*)::int FROM v2.entity_subtitles)) AS links_imported;
         """;

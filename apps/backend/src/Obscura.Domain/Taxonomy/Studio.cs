@@ -22,7 +22,6 @@ public sealed record Studio : Entity
             capabilities ??
             [
                 new CapabilityRating(null),
-                CapabilityTags.Empty,
                 CapabilityImages.Empty,
                 CapabilityLinks.Empty,
                 CapabilityFlags.Empty,

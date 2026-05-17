@@ -13,6 +13,8 @@ const card: EntityThumbnailCard = {
     kind: "video",
     title: "Sample Video",
     parentEntityId: null,
+      sortOrder: null,
+      relationships: [],
     capabilities: [],
     childrenByKind: [],
   },

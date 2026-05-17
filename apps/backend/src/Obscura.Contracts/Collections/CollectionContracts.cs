@@ -8,7 +8,7 @@ namespace Obscura.Contracts.Collections;
 /// <param name="Items">Current page of collection cards.</param>
 /// <param name="NextCursor">Cursor for the next page, or null when complete.</param>
 public sealed record CollectionListResponse(
-    IReadOnlyList<EntityCard> Items,
+    IReadOnlyList<EntityThumbnail> Items,
     string? NextCursor);
 
 /// <summary>
@@ -18,8 +18,10 @@ public sealed record CollectionListResponse(
 /// <param name="Kind">Entity kind code.</param>
 /// <param name="Title">Collection title.</param>
 /// <param name="ParentEntityId">Structural parent entity identifier; collections usually leave this null.</param>
+/// <param name="SortOrder">Optional structural order under the parent entity.</param>
 /// <param name="Capabilities">Shared entity capabilities for the collection.</param>
 /// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
+/// <param name="Relationships">Generic non-structural relationships keyed by code, kind, and label.</param>
 /// <param name="Mode">Collection membership mode.</param>
 /// <param name="RuleTreeJson">Dynamic collection rule tree JSON, when present.</param>
 /// <param name="CoverMode">Collection cover selection mode.</param>
@@ -32,8 +34,10 @@ public sealed record CollectionDetail(
     string Kind,
     string Title,
     Guid? ParentEntityId,
+    int? SortOrder,
     IReadOnlyList<EntityCapability> Capabilities,
     IReadOnlyList<EntityChildGroup> ChildrenByKind,
+    IReadOnlyList<EntityRelationshipGroup> Relationships,
     string? Mode = null,
     string? RuleTreeJson = null,
     string? CoverMode = null,

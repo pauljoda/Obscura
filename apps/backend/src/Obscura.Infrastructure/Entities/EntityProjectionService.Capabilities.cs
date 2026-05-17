@@ -36,7 +36,6 @@ public sealed partial class EntityProjectionService
             .AsNoTracking()
             .Where(row => ids.Contains(row.EntityId))
             .ToDictionaryAsync(row => row.EntityId, cancellationToken);
-        var tags = await LoadTagReferencesAsync(ids, cancellationToken);
         var files = await LoadFilesAsync(ids, cancellationToken);
         var fingerprints = await LoadFingerprintsAsync(ids, cancellationToken);
         var playback = await LoadPlaybackAsync(ids, cancellationToken);
@@ -50,8 +49,7 @@ public sealed partial class EntityProjectionService
         var classifications = await LoadClassificationsAsync(ids, cancellationToken);
         var markers = await LoadMarkersAsync(ids, cancellationToken);
         var subtitles = await LoadSubtitlesAsync(ids, cancellationToken);
-        var studios = await LoadStudioReferencesAsync(ids, cancellationToken);
-        var credits = await LoadCreditReferencesAsync(ids, cancellationToken);
+        var relationships = await LoadRelationshipsAsync(ids, cancellationToken);
         var urls = await LoadUrlsAsync(ids, cancellationToken);
         var externalIds = await LoadExternalIdsAsync(ids, cancellationToken);
         var childrenByParent = includeChildren
@@ -65,7 +63,6 @@ public sealed partial class EntityProjectionService
                 descriptions.TryGetValue(row.Id, out var description);
                 ratings.TryGetValue(row.Id, out var rating);
                 flags.TryGetValue(row.Id, out var flag);
-                tags.TryGetValue(row.Id, out var tagRefs);
                 files.TryGetValue(row.Id, out var fileRefs);
                 fingerprints.TryGetValue(row.Id, out var fingerprintRefs);
                 playback.TryGetValue(row.Id, out var playbackState);
@@ -79,8 +76,7 @@ public sealed partial class EntityProjectionService
                 classifications.TryGetValue(row.Id, out var classification);
                 markers.TryGetValue(row.Id, out var markerRefs);
                 subtitles.TryGetValue(row.Id, out var subtitleRefs);
-                studios.TryGetValue(row.Id, out var studio);
-                credits.TryGetValue(row.Id, out var creditRefs);
+                relationships.TryGetValue(row.Id, out var relationshipGroups);
                 urls.TryGetValue(row.Id, out var urlRefs);
                 externalIds.TryGetValue(row.Id, out var externalIdRefs);
                 childrenByParent.TryGetValue(row.Id, out var childrenByKind);
@@ -93,9 +89,6 @@ public sealed partial class EntityProjectionService
                         kind,
                         description,
                         ratings.ContainsKey(row.Id) ? Rating.FromNullable(rating) : null,
-                        tagRefs ?? [],
-                        creditRefs ?? [],
-                        studio,
                         fileRefs ?? [],
                         fingerprintRefs ?? [],
                         playbackState,
@@ -114,7 +107,8 @@ public sealed partial class EntityProjectionService
                         flag),
                     row.ParentEntityId,
                     row.SortOrder,
-                    childrenByKind);
+                    childrenByKind,
+                    relationshipGroups);
                 return MaterializeKnownEntity(entity);
             })
             .ToArray();
@@ -179,9 +173,6 @@ public sealed partial class EntityProjectionService
         IEntityKind kind,
         string? description,
         Rating? rating,
-        IReadOnlyList<EntityTag> tags,
-        IReadOnlyList<EntityCredit> credits,
-        EntityReference? studio,
         IReadOnlyList<EntityFile> files,
         IReadOnlyList<EntityFingerprint> fingerprints,
         Playback? playback,
@@ -213,9 +204,6 @@ public sealed partial class EntityProjectionService
 
         var capabilities = new List<ICapability>();
         AddIfSupported(capabilities, kind, new CapabilityRating(rating));
-        AddIfSupported(capabilities, kind, new CapabilityTags(tags));
-        AddIfSupported(capabilities, kind, new CapabilityCredits(credits));
-        AddIfSupported(capabilities, kind, new CapabilityStudio(studio));
 
         // Only emit the images capability when there are actual image assets or a
         // resolved thumbnail/cover URL. Emitting an empty images capability with

@@ -38,17 +38,9 @@
     return full?.path ?? images.coverUrl ?? images.thumbnailUrl ?? null;
   });
 
-  const studio = $derived.by(() => {
-    if (!image) return null;
-    const cap = getCapability(image.capabilities, "studio");
-    return cap?.value ?? null;
-  });
+  const studio = $derived.by((): { id: string; title: string } | null => null);
 
-  const credits = $derived.by(() => {
-    if (!image) return [];
-    const cap = getCapability(image.capabilities, "credits");
-    return cap?.people ?? [];
-  });
+  const credits = $derived.by((): Array<{ id: string; title: string }> => []);
 
   const dates = $derived.by(() => {
     if (!image) return [];

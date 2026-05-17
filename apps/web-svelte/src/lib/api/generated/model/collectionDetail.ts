@@ -6,6 +6,7 @@
  */
 import type { EntityCapability } from './entityCapability';
 import type { EntityChildGroup } from './entityChildGroup';
+import type { EntityRelationshipGroup } from './entityRelationshipGroup';
 
 export interface CollectionDetail {
   id: string;
@@ -13,8 +14,14 @@ export interface CollectionDetail {
   title: string;
   /** @nullable */
   parentEntityId: string | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  sortOrder: number | string | null;
   capabilities: EntityCapability[];
   childrenByKind: EntityChildGroup[];
+  relationships: EntityRelationshipGroup[];
   /** @nullable */
   mode?: string | null;
   /** @nullable */

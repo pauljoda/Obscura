@@ -29,15 +29,9 @@
     return entityCardToDetailCard(track);
   });
 
-  const studio = $derived.by(() => {
-    if (!track) return null;
-    return getCapability(track.capabilities, "studio")?.value ?? null;
-  });
+  const studio = $derived.by((): { id: string; title: string } | null => null);
 
-  const credits = $derived.by(() => {
-    if (!track) return [];
-    return getCapability(track.capabilities, "credits")?.people ?? [];
-  });
+  const credits = $derived.by((): Array<{ id: string; title: string }> => []);
 
   const dates = $derived.by(() => {
     if (!track) return [];

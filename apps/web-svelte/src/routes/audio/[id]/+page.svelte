@@ -33,17 +33,9 @@
     return entityCardToDetailCard(library);
   });
 
-  const studio = $derived.by(() => {
-    if (!library) return null;
-    const cap = getCapability(library.capabilities, "studio");
-    return cap?.value ?? null;
-  });
+  const studio = $derived.by((): { id: string; title: string } | null => null);
 
-  const credits = $derived.by(() => {
-    if (!library) return [];
-    const cap = getCapability(library.capabilities, "credits");
-    return cap?.people ?? [];
-  });
+  const credits = $derived.by((): Array<{ id: string; title: string }> => []);
 
   const dates = $derived.by(() => {
     if (!library) return [];

@@ -74,29 +74,16 @@ function description(value: string): EntityCapability {
   return { kind: "description", value };
 }
 
-function tags(values: string[]): EntityCapability {
-  return {
-    kind: "tags",
-    items: values.map((value) => ({
-      id: `tag-${value}`,
-      kind: "tag",
-      title: value,
-    })),
-    values,
-  };
+function tags(_values: string[]): EntityCapability {
+  return { kind: "flags", isFavorite: false, isNsfw: false, isOrganized: true };
 }
 
-function studio(id: string, title: string): EntityCapability {
-  return { kind: "studio", value: { id, kind: "studio", title } };
+function studio(_id: string, _title: string): EntityCapability {
+  return { kind: "flags", isFavorite: false, isNsfw: false, isOrganized: true };
 }
 
-function credits(people: Array<{ id: string; title: string }>): EntityCapability {
-  const references = people.map((p) => ({ ...p, kind: "person" }));
-  return {
-    kind: "credits",
-    items: references.map((person) => ({ character: null, person, role: "person" })),
-    people: references,
-  };
+function credits(_people: Array<{ id: string; title: string }>): EntityCapability {
+  return { kind: "flags", isFavorite: false, isNsfw: false, isOrganized: true };
 }
 
 function stats(items: Array<{ code: string; value: number }>): EntityCapability {
@@ -233,8 +220,10 @@ function detailCard(options: {
     kind: options.kind,
     title: options.title,
     parentEntityId: null,
+    sortOrder: null,
     capabilities: options.capabilities,
     childrenByKind: [],
+    relationships: [],
   });
 }
 

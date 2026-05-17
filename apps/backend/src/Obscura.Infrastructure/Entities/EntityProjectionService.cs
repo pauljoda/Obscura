@@ -96,6 +96,23 @@ public sealed partial class EntityProjectionService :
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<Entity>> ListByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken)
+    {
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        var distinctIds = ids.Distinct().ToArray();
+        var rows = await _db.Entities
+            .AsNoTracking()
+            .Where(entity => distinctIds.Contains(entity.Id) && entity.DeletedAt == null)
+            .ToListAsync(cancellationToken);
+
+        return await BuildEntitiesAsync(rows, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Entity>> ListChildrenAsync(
         Guid parentId,
         IEntityKind? childKind,
@@ -430,8 +447,7 @@ public sealed partial class EntityProjectionService :
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
         var seasons = card.ChildrenByKind.Get(EntityKindRegistry.VideoSeason).Cast<Entity>().ToArray();
         var videos = card.ChildrenByKind.Get(EntityKindRegistry.Video).Cast<Entity>().ToArray();
-        var renderingMode = detail?.RenderingMode ??
-            (seasons.Length > 0 ? VideoSeriesRenderingMode.Seasons : VideoSeriesRenderingMode.Flat);
+        var renderingMode = seasons.Length > 0 ? VideoSeriesRenderingMode.Seasons : VideoSeriesRenderingMode.Flat;
 
         return new VideoSeries(card, detail?.Status, renderingMode, seasons, videos);
     }

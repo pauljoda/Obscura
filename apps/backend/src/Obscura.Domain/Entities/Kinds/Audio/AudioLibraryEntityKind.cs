@@ -14,9 +14,6 @@ public sealed record AudioLibraryEntityKind()
     public IReadOnlyList<ICapabilityKind> SupportedCapabilities =>
     [
         CapabilityRegistry.Rating,
-        CapabilityRegistry.Tags,
-        CapabilityRegistry.Credits,
-        CapabilityRegistry.Studio,
         CapabilityRegistry.Images,
         CapabilityRegistry.Description,
         CapabilityRegistry.Links,

@@ -11,9 +11,7 @@ public static class FreshStartSql
     public const string PreserveConfiguration = """
         TRUNCATE TABLE
             v2.entity_child_links,
-            v2.entity_credit_links,
-            v2.entity_studio_links,
-            v2.entity_tag_links,
+            v2.entity_relationship_links,
             v2.entity_external_ids,
             v2.entity_urls,
             v2.entity_subtitles,
@@ -138,9 +136,7 @@ public static class FreshStartSql
     public const string ResetAllV2Data = """
         TRUNCATE TABLE
             v2.entity_child_links,
-            v2.entity_credit_links,
-            v2.entity_studio_links,
-            v2.entity_tag_links,
+            v2.entity_relationship_links,
             v2.entity_external_ids,
             v2.entity_urls,
             v2.entity_subtitles,

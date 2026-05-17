@@ -93,22 +93,17 @@ function formatResolution(width: number | string | null, height: number | string
 }
 
 export function entityCardToVideoCardData(item: V2EntityCard): VideoCardData {
-  const tech = getTechnicalCapability(item.capabilities);
-  const flags = getFlagsCapability(item.capabilities);
-  const ratingValue = getRatingValue(item.capabilities);
-  const tags = getTags(item.capabilities);
-
   return {
     id: item.id,
     href: `/videos/${item.id}`,
     title: item.title,
-    thumbnail: getThumbnailUrl(item.capabilities) ?? undefined,
-    duration: tech?.duration ? formatTimeSpan(tech.duration) : undefined,
-    resolution: tech ? formatResolution(tech.width, tech.height) : undefined,
-    codec: tech?.codec ?? undefined,
-    tags: tags.map((name) => ({ name, isNsfw: false })),
-    rating: ratingValue > 0 ? ratingValue * 20 : undefined,
-    isNsfw: flags?.isNsfw === true,
+    thumbnail: item.coverUrl ?? undefined,
+    duration: item.meta.find((meta) => meta.icon === "duration")?.label,
+    resolution: item.meta.find((meta) => meta.icon === "video" || meta.icon === "image")?.label,
+    codec: undefined,
+    tags: [],
+    rating: typeof item.rating === "number" && item.rating > 0 ? item.rating * 20 : undefined,
+    isNsfw: item.isNsfw,
   };
 }
 

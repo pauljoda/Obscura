@@ -8,6 +8,7 @@ import {
   type EntityCapabilityKind,
 } from "$lib/api/capabilities";
 import type { EntityCard, EntityCapability } from "$lib/api/generated/model";
+import type { EntityThumbnail } from "$lib/api/generated/model";
 import {
   CAPABILITY_KIND,
   ENTITY_FILE_ROLE,
@@ -17,6 +18,7 @@ import {
 import {
   aspectRatioForKind,
   iconForKind,
+  thumbnailToEntityShell,
   type EntityThumbnailAsset,
   type EntityThumbnailCard,
   type EntityThumbnailMetaIcon,
@@ -138,8 +140,18 @@ function formatResolutionLabel(width: number, height: number): string {
   return `${width}×${height}`;
 }
 
-function aspectRatioForEntity(entity: EntityCard): EntityThumbnailCard["aspectRatio"] {
-  const technical = getTechnicalCapability(entity.capabilities);
+type EntityGridSourceEntity = EntityCard | EntityThumbnail;
+
+function isFullEntityCard(entity: EntityGridSourceEntity): entity is EntityCard {
+  return "capabilities" in entity;
+}
+
+function capabilitiesForEntity(entity: EntityGridSourceEntity): EntityCapability[] {
+  return isFullEntityCard(entity) ? entity.capabilities : [];
+}
+
+function aspectRatioForEntity(entity: EntityGridSourceEntity): EntityThumbnailCard["aspectRatio"] {
+  const technical = getTechnicalCapability(capabilitiesForEntity(entity));
   const width = numberValue(technical?.width);
   const height = numberValue(technical?.height);
 
@@ -155,8 +167,8 @@ function assetFromPath(path: string, title: string, role?: string): EntityThumbn
   };
 }
 
-function previewAssets(entity: EntityCard, roles: string[]): EntityThumbnailAsset[] {
-  const images = getImagesCapability(entity.capabilities);
+function previewAssets(entity: EntityGridSourceEntity, roles: string[]): EntityThumbnailAsset[] {
+  const images = getImagesCapability(capabilitiesForEntity(entity));
   if (!images) return [];
 
   const results: EntityThumbnailAsset[] = [];
@@ -169,8 +181,12 @@ function previewAssets(entity: EntityCard, roles: string[]): EntityThumbnailAsse
 }
 
 /** Finds a legacy VTT sprite map or Jellyfin image playlist from entity image assets. */
-function findSpriteHover(entity: EntityCard): { spriteUrl?: string; vttUrl: string } | null {
-  const images = getImagesCapability(entity.capabilities);
+function findSpriteHover(entity: EntityGridSourceEntity): { spriteUrl?: string; vttUrl: string } | null {
+  if (!isFullEntityCard(entity) && entity.hoverKind === "sprite" && entity.hoverUrl) {
+    return { vttUrl: entity.hoverUrl };
+  }
+
+  const images = getImagesCapability(capabilitiesForEntity(entity));
   if (!images) return null;
 
   const playlistItem = images.items.find((item) => item.kind === ENTITY_FILE_ROLE.trickplay && item.path.endsWith(".m3u8"));
@@ -187,7 +203,14 @@ function findSpriteHover(entity: EntityCard): { spriteUrl?: string; vttUrl: stri
   return { spriteUrl, vttUrl: vttItem.path };
 }
 
-function metaForEntity(entity: EntityCard): EntityThumbnailCard["meta"] {
+function metaForEntity(entity: EntityGridSourceEntity): EntityThumbnailCard["meta"] {
+  if (!isFullEntityCard(entity)) {
+    return entity.meta.map((item) => ({
+      icon: (item.icon as EntityThumbnailMetaIcon) ?? iconForKind(entity.kind),
+      label: item.label,
+    })).slice(0, 3);
+  }
+
   const meta: EntityThumbnailCard["meta"] = [];
   const technical = getTechnicalCapability(entity.capabilities);
   const duration = formatDuration(technical?.duration);
@@ -211,12 +234,12 @@ function metaForEntity(entity: EntityCard): EntityThumbnailCard["meta"] {
   return meta.slice(0, 3);
 }
 
-function positionValue(entity: EntityCard, code: string): number | null {
-  const value = getCapability(entity.capabilities, CAPABILITY_KIND.position)?.items.find((item) => item.code === code)?.value;
+function positionValue(entity: EntityGridSourceEntity, code: string): number | null {
+  const value = getCapability(capabilitiesForEntity(entity), CAPABILITY_KIND.position)?.items.find((item) => item.code === code)?.value;
   return numberValue(value);
 }
 
-function primaryPositionValue(entity: EntityCard): number | null {
+function primaryPositionValue(entity: EntityGridSourceEntity): number | null {
   return positionValue(entity, "episode") ??
     positionValue(entity, "absolute-episode") ??
     positionValue(entity, "season") ??
@@ -225,7 +248,7 @@ function primaryPositionValue(entity: EntityCard): number | null {
     positionValue(entity, "volume");
 }
 
-function customOverlayForEntity(entity: EntityCard): EntityThumbnailCard["custom"] {
+function customOverlayForEntity(entity: EntityGridSourceEntity): EntityThumbnailCard["custom"] {
   const season = positionValue(entity, "season");
   const episode = positionValue(entity, "episode") ?? positionValue(entity, "absolute-episode");
 
@@ -265,16 +288,18 @@ function customOverlayForEntity(entity: EntityCard): EntityThumbnailCard["custom
  * through one thumbnail component.
  */
 export function entityCardToThumbnailCard(
-  entity: EntityCard,
+  entity: EntityGridSourceEntity,
   href?: string,
 ): EntityThumbnailCard {
-  const images = getImagesCapability(entity.capabilities);
+  const capabilities = capabilitiesForEntity(entity);
+  const images = getImagesCapability(capabilities);
   // Use only explicit thumbnail/cover URLs from the backend. The items[0]
   // fallback is intentionally restricted to cover/poster/thumbnail roles —
   // generated assets like trickplay VTTs or previews should never be used as
   // a static cover image, and source files are not displayable thumbnails.
   const coverPath =
-    getThumbnailUrl(entity.capabilities) ??
+    (!isFullEntityCard(entity) ? entity.coverUrl : null) ??
+    getThumbnailUrl(capabilities) ??
     images?.coverUrl ??
     images?.items.find((item) => item.kind === ENTITY_FILE_ROLE.cover || item.kind === ENTITY_FILE_ROLE.poster || item.kind === ENTITY_FILE_ROLE.thumbnail)?.path ??
     null;
@@ -292,8 +317,8 @@ export function entityCardToThumbnailCard(
     cover: coverPath ? assetFromPath(coverPath, entity.title, ENTITY_FILE_ROLE.cover) : null,
     custom: customOverlayForEntity(entity),
     entity: {
-      ...entity,
-      capabilities: entity.capabilities,
+      ...(isFullEntityCard(entity) ? entity : thumbnailToEntityShell(entity)),
+      capabilities,
     },
     fit: "cover",
     hover,
@@ -451,21 +476,6 @@ export function buildCapabilityFilterOptions(cards: EntityThumbnailCard[]): Enti
             });
           }
           break;
-        case CAPABILITY_KIND.tags:
-          for (const tag of capability.values.slice(0, 24)) {
-            addOption(options, { id: `tags:${tag}`, label: `Tag: ${tag}`, capabilityKind: CAPABILITY_KIND.tags, value: tag });
-          }
-          break;
-        case CAPABILITY_KIND.credits:
-          for (const person of capability.people) {
-            addOption(options, { id: `credits:${person.id}`, label: person.title, capabilityKind: CAPABILITY_KIND.credits, value: person.id });
-          }
-          break;
-        case CAPABILITY_KIND.studio:
-          if (capability.value) {
-            addOption(options, { id: `studio:${capability.value.id}`, label: capability.value.title, capabilityKind: CAPABILITY_KIND.studio, value: capability.value.id });
-          }
-          break;
         case CAPABILITY_KIND.stats:
           for (const stat of capability.items) {
             addOption(options, {
@@ -601,12 +611,6 @@ function entityMatchesFilter(capabilities: EntityCapability[], filter: EntityGri
       const images = getImagesCapability(capabilities);
       return Boolean(images && (!filter.value || images.items.some((item) => item.kind === filter.value)));
     }
-    case CAPABILITY_KIND.tags:
-      return getCapability(capabilities, CAPABILITY_KIND.tags)?.values.includes(filter.value ?? "") === true;
-    case CAPABILITY_KIND.credits:
-      return getCapability(capabilities, CAPABILITY_KIND.credits)?.people.some((person) => person.id === filter.value) === true;
-    case CAPABILITY_KIND.studio:
-      return getCapability(capabilities, CAPABILITY_KIND.studio)?.value?.id === filter.value;
     case CAPABILITY_KIND.stats:
       return getCapability(capabilities, CAPABILITY_KIND.stats)?.items.some((item) => item.code === filter.value) === true;
     case CAPABILITY_KIND.technical: {

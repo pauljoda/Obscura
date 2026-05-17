@@ -3,8 +3,7 @@
   import { resolve } from "$app/paths";
   import { page } from "$app/state";
   import { ArrowLeft, Users, Building2, Calendar, Info, SlidersHorizontal } from "@lucide/svelte";
-  import type { EntityCredit } from "$lib/api/generated/model";
-  import {
+    import {
     fetchV2Season,
     fetchV2Series,
     updateV2EntityRating,
@@ -20,7 +19,7 @@
   import EntityCastAndCrewSection from "$lib/components/entities/EntityCastAndCrewSection.svelte";
   import IdentifyButton from "$lib/components/IdentifyButton.svelte";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
-  import { creditSubtitle } from "$lib/entities/entity-credits";
+  import { creditSubtitle, type EntityCredit } from "$lib/entities/entity-credits";
   import { getChildren } from "$lib/entities/entity-children";
   import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
   import { entityReferenceToThumbnailCard, type EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
@@ -45,22 +44,9 @@
     return entityCardToDetailCard(series);
   });
 
-  const studio = $derived.by(() => {
-    if (!series) return null;
-    const cap = getCapability(series.capabilities, "studio");
-    return cap?.value ?? null;
-  });
+  const studio = $derived.by((): { id: string; kind: string; title: string } | null => null);
 
-  const credits = $derived.by((): EntityCredit[] => {
-    if (!series) return [];
-    const cap = getCapability(series.capabilities, "credits");
-    if (cap?.items?.length) return cap.items;
-    return (cap?.people ?? []).map((person) => ({
-      character: null,
-      person,
-      role: "person",
-    }));
-  });
+  const credits = $derived.by((): EntityCredit[] => []);
 
   const studioCards = $derived.by((): EntityThumbnailCard[] => {
     if (!studio) return [];

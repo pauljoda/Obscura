@@ -4,10 +4,10 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
-import type { EntityCard } from './entityCard';
+import type { EntityThumbnail } from './entityThumbnail';
 
 export interface EntityListResponse {
-  items: EntityCard[];
+  items: EntityThumbnail[];
   /** @nullable */
   nextCursor: string | null;
 }

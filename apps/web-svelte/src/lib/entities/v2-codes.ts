@@ -28,7 +28,6 @@ export const ENTITY_KINDS = Object.values(ENTITY_KIND) as EntityKindCode[];
 export const CAPABILITY_KIND = {
   classification: "classification",
   counters: "counters",
-  credits: "credits",
   dates: "dates",
   description: "description",
   files: "files",
@@ -44,13 +43,19 @@ export const CAPABILITY_KIND = {
   rating: "rating",
   source: "source",
   stats: "stats",
-  studio: "studio",
   subtitles: "subtitles",
-  tags: "tags",
   technical: "technical",
 } as const satisfies Record<string, EntityCapability["kind"]>;
 
 export type CapabilityKindCode = (typeof CAPABILITY_KIND)[keyof typeof CAPABILITY_KIND];
+
+export const RELATIONSHIP_CODE = {
+  cast: "cast",
+  studio: "studio",
+  tags: "tags",
+} as const;
+
+export type RelationshipCode = (typeof RELATIONSHIP_CODE)[keyof typeof RELATIONSHIP_CODE];
 
 /** V2 entity file/image role codes used by shared thumbnail and detail surfaces. */
 export const ENTITY_FILE_ROLE = {

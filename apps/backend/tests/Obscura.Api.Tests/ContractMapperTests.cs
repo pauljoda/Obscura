@@ -39,7 +39,7 @@ public sealed class ContractMapperTests
     }
 
     [Fact]
-    public void EntityCardSerializesTagCapabilityWithReferences()
+    public void EntityCardSerializesChildAndRelationshipIds()
     {
         var tagId = Guid.Parse("12121212-1212-1212-1212-121212121212");
         var episodeId = Guid.Parse("23232323-2323-2323-2323-232323232323");
@@ -47,33 +47,31 @@ public sealed class ContractMapperTests
             Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
             EntityKindRegistry.Video,
             "Mapped Video",
-            [
-                new CapabilityTags([
-                    new EntityTag(new Obscura.Domain.Entities.EntityReference(tagId, EntityKindRegistry.Tag, "Comedy"))
-                ])
-            ],
+            [],
             parentEntityId: Guid.Parse("34343434-3434-3434-3434-343434343434"),
             children: new EntityChildren([
                 new EntityChildSet(EntityKindRegistry.Video, [
                     new Entity(episodeId, EntityKindRegistry.Video, "Episode", [])
                 ])
+            ]),
+            relationships: new EntityRelationships([
+                new Obscura.Domain.Entities.EntityRelationshipGroup(
+                    "tags",
+                    EntityKindRegistry.Tag,
+                    "Tags",
+                    [new EntityRelationshipItem(tagId, null)])
             ]));
 
         using var document = JsonDocument.Parse(JsonSerializer.Serialize(ContractMapper.ToEntityCard(video), JsonOptions));
         Assert.Equal("34343434-3434-3434-3434-343434343434", document.RootElement.GetProperty("parentEntityId").GetGuid().ToString());
         var childGroup = document.RootElement.GetProperty("childrenByKind").EnumerateArray().Single();
         Assert.Equal("video", childGroup.GetProperty("kind").GetString());
-        Assert.Equal(episodeId, childGroup.GetProperty("items").EnumerateArray().Single().GetProperty("id").GetGuid());
-        var tags = document.RootElement
-            .GetProperty("capabilities")
-            .EnumerateArray()
-            .Single(capability => capability.GetProperty("kind").GetString() == "tags");
-
-        Assert.Equal("Comedy", tags.GetProperty("values").EnumerateArray().Single().GetString());
-        var item = tags.GetProperty("items").EnumerateArray().Single();
-        Assert.Equal(tagId, item.GetProperty("id").GetGuid());
-        Assert.Equal("tag", item.GetProperty("kind").GetString());
-        Assert.Equal("Comedy", item.GetProperty("title").GetString());
+        Assert.Equal(episodeId, childGroup.GetProperty("entityIds").EnumerateArray().Single().GetGuid());
+        var tags = document.RootElement.GetProperty("relationships").EnumerateArray().Single();
+        Assert.Equal("tags", tags.GetProperty("code").GetString());
+        Assert.Equal("tag", tags.GetProperty("kind").GetString());
+        Assert.Equal("Tags", tags.GetProperty("label").GetString());
+        Assert.Equal(tagId, tags.GetProperty("entityIds").EnumerateArray().Single().GetGuid());
     }
 
     [Fact]

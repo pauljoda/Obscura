@@ -69,7 +69,7 @@ function position(items: { code: string; value: number; label?: string | null }[
 }
 
 function card(id: string, kind: string, title: string, capabilities: EntityCapability[]): EntityCard {
-  return { id, kind, title, parentEntityId: null, capabilities, childrenByKind: [] };
+  return { id, kind, title, parentEntityId: null, sortOrder: null, capabilities, childrenByKind: [], relationships: [] };
 }
 
 describe("entity grid helpers", () => {

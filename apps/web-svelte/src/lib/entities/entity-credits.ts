@@ -1,4 +1,13 @@
-import type { EntityCredit } from "$lib/api/generated/model";
+export interface EntityCredit {
+  character: string | null;
+  person: {
+    id: string;
+    kind: string;
+    title: string;
+    thumbnailUrl?: string | null;
+  };
+  role: string | null;
+}
 
 /** Returns the user-facing subtitle for an entity credit thumbnail. */
 export function creditSubtitle(credit: EntityCredit): string | undefined {

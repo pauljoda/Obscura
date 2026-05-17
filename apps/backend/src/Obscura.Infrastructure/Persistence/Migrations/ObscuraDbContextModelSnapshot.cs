@@ -360,42 +360,6 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Obscura.Infrastructure.Persistence.Entities.EntityCreditLinkRow", b =>
-                {
-                    b.Property<Guid>("EntityId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("entity_id");
-
-                    b.Property<Guid>("PersonEntityId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("person_entity_id");
-
-                    b.Property<string>("Role")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("role");
-
-                    b.Property<string>("Character")
-                        .HasColumnType("text")
-                        .HasColumnName("character");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer")
-                        .HasColumnName("sort_order");
-
-                    b.HasKey("EntityId", "PersonEntityId", "Role");
-
-                    b.HasIndex("PersonEntityId");
-
-                    b.HasIndex("EntityId", "SortOrder");
-
-                    b.ToTable("entity_credit_links", "v2");
-                });
-
             modelBuilder.Entity("Obscura.Infrastructure.Persistence.Entities.EntityDateRow", b =>
                 {
                     b.Property<Guid>("EntityId")
@@ -970,6 +934,56 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Obscura.Infrastructure.Persistence.Entities.EntityRelationshipLinkRow", b =>
+                {
+                    b.Property<Guid>("EntityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("entity_id");
+
+                    b.Property<string>("RelationshipCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("relationship_code");
+
+                    b.Property<Guid>("TargetEntityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_entity_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("label");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("metadata_json");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("TargetKindCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("target_kind_code");
+
+                    b.HasKey("EntityId", "RelationshipCode", "TargetEntityId");
+
+                    b.HasIndex("TargetEntityId");
+
+                    b.HasIndex("TargetKindCode", "TargetEntityId");
+
+                    b.HasIndex("EntityId", "RelationshipCode", "SortOrder");
+
+                    b.ToTable("entity_relationship_links", "v2");
+                });
+
             modelBuilder.Entity("Obscura.Infrastructure.Persistence.Entities.EntityRow", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1069,27 +1083,6 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Obscura.Infrastructure.Persistence.Entities.EntityStudioLinkRow", b =>
-                {
-                    b.Property<Guid>("EntityId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("entity_id");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("StudioId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("studio_id");
-
-                    b.HasKey("EntityId");
-
-                    b.HasIndex("StudioId");
-
-                    b.ToTable("entity_studio_links", "v2");
-                });
-
             modelBuilder.Entity("Obscura.Infrastructure.Persistence.Entities.EntitySubtitleRow", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1151,27 +1144,6 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("entity_subtitles", "v2");
-                });
-
-            modelBuilder.Entity("Obscura.Infrastructure.Persistence.Entities.EntityTagLinkRow", b =>
-                {
-                    b.Property<Guid>("EntityId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("entity_id");
-
-                    b.Property<Guid>("TagId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tag_id");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.HasKey("EntityId", "TagId");
-
-                    b.HasIndex("TagId");
-
-                    b.ToTable("entity_tag_links", "v2");
                 });
 
             modelBuilder.Entity("Obscura.Infrastructure.Persistence.Entities.EntityTechnicalRow", b =>
@@ -2205,12 +2177,6 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("entity_id");
 
-                    b.Property<string>("RenderingMode")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("rendering_mode");
-
                     b.Property<string>("Status")
                         .HasColumnType("text")
                         .HasColumnName("status");
@@ -2346,21 +2312,6 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Obscura.Infrastructure.Persistence.Entities.EntityCreditLinkRow", b =>
-                {
-                    b.HasOne("Obscura.Infrastructure.Persistence.Entities.EntityRow", null)
-                        .WithMany()
-                        .HasForeignKey("EntityId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Obscura.Infrastructure.Persistence.Entities.EntityRow", null)
-                        .WithMany()
-                        .HasForeignKey("PersonEntityId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("Obscura.Infrastructure.Persistence.Entities.EntityDateRow", b =>
                 {
                     b.HasOne("Obscura.Infrastructure.Persistence.Entities.EntityRow", null)
@@ -2470,6 +2421,27 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Obscura.Infrastructure.Persistence.Entities.EntityRelationshipLinkRow", b =>
+                {
+                    b.HasOne("Obscura.Infrastructure.Persistence.Entities.EntityRow", null)
+                        .WithMany()
+                        .HasForeignKey("EntityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Obscura.Infrastructure.Persistence.Entities.EntityRow", null)
+                        .WithMany()
+                        .HasForeignKey("TargetEntityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Obscura.Infrastructure.Persistence.Entities.EntityKindRow", null)
+                        .WithMany()
+                        .HasForeignKey("TargetKindCode")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Obscura.Infrastructure.Persistence.Entities.EntityRow", b =>
                 {
                     b.HasOne("Obscura.Infrastructure.Persistence.Entities.EntityKindRow", null)
@@ -2502,41 +2474,11 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Obscura.Infrastructure.Persistence.Entities.EntityStudioLinkRow", b =>
-                {
-                    b.HasOne("Obscura.Infrastructure.Persistence.Entities.EntityRow", null)
-                        .WithOne()
-                        .HasForeignKey("Obscura.Infrastructure.Persistence.Entities.EntityStudioLinkRow", "EntityId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Obscura.Infrastructure.Persistence.Entities.EntityRow", null)
-                        .WithMany()
-                        .HasForeignKey("StudioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("Obscura.Infrastructure.Persistence.Entities.EntitySubtitleRow", b =>
                 {
                     b.HasOne("Obscura.Infrastructure.Persistence.Entities.EntityRow", null)
                         .WithMany()
                         .HasForeignKey("EntityId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Obscura.Infrastructure.Persistence.Entities.EntityTagLinkRow", b =>
-                {
-                    b.HasOne("Obscura.Infrastructure.Persistence.Entities.EntityRow", null)
-                        .WithMany()
-                        .HasForeignKey("EntityId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Obscura.Infrastructure.Persistence.Entities.EntityRow", null)
-                        .WithMany()
-                        .HasForeignKey("TagId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

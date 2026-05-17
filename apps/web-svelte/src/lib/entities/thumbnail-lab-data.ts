@@ -168,6 +168,8 @@ function card(options: {
       kind: options.kind,
       title: options.title,
       parentEntityId: null,
+      sortOrder: null,
+      relationships: [],
       capabilities: [
         flags(options.flagOptions),
         images(supportedImageKinds, options.cover, hoverAssets, hoverRole),

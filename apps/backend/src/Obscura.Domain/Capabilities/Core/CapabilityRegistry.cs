@@ -23,15 +23,6 @@ public sealed class CapabilityRegistry : AbstractRegistry<ICapabilityKind, strin
     /// <summary>Known rating capability kind.</summary>
     public static ICapabilityKind<CapabilityRating> Rating => Require<CapabilityRating>("rating");
 
-    /// <summary>Known tags capability kind.</summary>
-    public static ICapabilityKind<CapabilityTags> Tags => Require<CapabilityTags>("tags");
-
-    /// <summary>Known credits capability kind.</summary>
-    public static ICapabilityKind<CapabilityCredits> Credits => Require<CapabilityCredits>("credits");
-
-    /// <summary>Known studio capability kind.</summary>
-    public static ICapabilityKind<CapabilityStudio> Studio => Require<CapabilityStudio>("studio");
-
     /// <summary>Known images capability kind.</summary>
     public static ICapabilityKind<CapabilityImages> Images => Require<CapabilityImages>("images");
 

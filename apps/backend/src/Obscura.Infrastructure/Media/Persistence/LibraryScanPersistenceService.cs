@@ -515,7 +515,6 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
 
         var seriesId = await UpsertVideoSeriesFromScanAsync(
             item.Series,
-            item.Season is not null,
             item.IsNsfw,
             now,
             seriesCache,
@@ -552,7 +551,6 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
 
     private async Task<Guid> UpsertVideoSeriesFromScanAsync(
         VideoSeriesScanInfo series,
-        bool hasSeasons,
         bool isNsfw,
         DateTimeOffset now,
         Dictionary<string, Guid> seriesCache,
@@ -586,7 +584,7 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
 
         await EnsureEntityFileAsync(seriesId, EntityFileRole.Source, series.FolderPath, sizeBytes: null, now, cancellationToken);
         await EnsureEntitySourceAsync(seriesId, "folder", series.FolderPath, now, cancellationToken);
-        await EnsureVideoSeriesDetailAsync(seriesId, hasSeasons, now, cancellationToken);
+        await EnsureVideoSeriesDetailAsync(seriesId, cancellationToken);
         if (isNsfw)
         {
             await EnsureEntityFlagAsync(seriesId, now, cancellationToken);
@@ -682,25 +680,13 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
 
     private async Task EnsureVideoSeriesDetailAsync(
         Guid seriesId,
-        bool hasSeasons,
-        DateTimeOffset now,
         CancellationToken cancellationToken)
     {
         var detail = db.VideoSeriesDetails.Local.FirstOrDefault(row => row.EntityId == seriesId)
             ?? await db.VideoSeriesDetails.FindAsync([seriesId], cancellationToken);
         if (detail is null)
         {
-            db.VideoSeriesDetails.Add(new VideoSeriesDetailRow
-            {
-                EntityId = seriesId,
-                RenderingMode = hasSeasons ? VideoSeriesRenderingMode.Seasons : VideoSeriesRenderingMode.Flat
-            });
-            return;
-        }
-
-        if (hasSeasons)
-        {
-            detail.RenderingMode = VideoSeriesRenderingMode.Seasons;
+            db.VideoSeriesDetails.Add(new VideoSeriesDetailRow { EntityId = seriesId });
         }
     }
 

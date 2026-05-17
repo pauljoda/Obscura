@@ -62,12 +62,7 @@
   async function loadRelated(studioId: string) {
     try {
       const response = await fetchV2Entities({ query: studioId });
-      relatedCards = response.items
-        .filter((item: EntityCard) => {
-          const studioCap = getCapability(item.capabilities, "studio");
-          return studioCap?.value?.id === studioId;
-        })
-        .map((item: EntityCard) => entityCardToThumbnailCard(item, resolveEntityHref(item.kind, item.id)));
+      relatedCards = response.items.map((item) => entityCardToThumbnailCard(item, resolveEntityHref(item.kind, item.id)));
     } catch {
       relatedCards = [];
     }

@@ -136,8 +136,8 @@ public sealed class CollectionRuleEngine(ObscuraDbContext db) : ICollectionRuleE
             "date" => TranslateDateField(condition, ctx),
             "organized" => TranslateFlag("is_organized", condition.Operator, ctx),
             "isNsfw" => TranslateFlag("is_nsfw", condition.Operator, ctx),
-            "tags" => TranslateRelation("entity_tag_links", "tag_id", "tag", condition, ctx),
-            "performers" => TranslateRelation("entity_credit_links", "person_entity_id", "person", condition, ctx),
+            "tags" => TranslateRelation("tags", "tag", condition, ctx),
+            "performers" => TranslateRelation("cast", "person", condition, ctx),
             "studio" => TranslateStudioRelation(condition, ctx),
             "fileSize" => TranslateFileSize(condition, ctx),
             "duration" => TranslateTechnical("duration_seconds", condition, ctx),
@@ -245,7 +245,8 @@ public sealed class CollectionRuleEngine(ObscuraDbContext db) : ICollectionRuleE
     // ── Relation fields (tags, performers) ──
 
     private string? TranslateRelation(
-        string joinTable, string relIdColumn, string taxonomyKindCode,
+        string relationshipCode,
+        string taxonomyKindCode,
         CollectionRuleCondition condition, SqlBuildContext ctx)
     {
         var names = GetStringArray(condition.Value);
@@ -253,11 +254,15 @@ public sealed class CollectionRuleEngine(ObscuraDbContext db) : ICollectionRuleE
 
         var nameParams = string.Join(", ", names.Select(n => ctx.AddParam(n, NpgsqlDbType.Text)));
         var kindParam = ctx.AddParam(taxonomyKindCode, NpgsqlDbType.Text);
+        var relationshipParam = ctx.AddParam(relationshipCode, NpgsqlDbType.Text);
 
         var subquery = $@"e.id IN (
-            SELECT jt.entity_id FROM {joinTable} jt
-            INNER JOIN entities te ON te.id = jt.{relIdColumn}
-            WHERE te.kind_code = {kindParam} AND te.title IN ({nameParams})
+            SELECT rl.entity_id FROM entity_relationship_links rl
+            INNER JOIN entities te ON te.id = rl.target_entity_id
+            WHERE rl.relationship_code = {relationshipParam}
+                AND rl.target_kind_code = {kindParam}
+                AND te.kind_code = {kindParam}
+                AND te.title IN ({nameParams})
         )";
 
         return condition.Operator switch
@@ -270,24 +275,29 @@ public sealed class CollectionRuleEngine(ObscuraDbContext db) : ICollectionRuleE
 
     private string? TranslateStudioRelation(CollectionRuleCondition condition, SqlBuildContext ctx)
     {
+        var relationshipParam = ctx.AddParam("studio", NpgsqlDbType.Text);
         if (condition.Operator is "is_null")
         {
-            return "NOT EXISTS (SELECT 1 FROM entity_studio_links sl WHERE sl.entity_id = e.id)";
+            return $"NOT EXISTS (SELECT 1 FROM entity_relationship_links sl WHERE sl.entity_id = e.id AND sl.relationship_code = {relationshipParam})";
         }
         if (condition.Operator is "is_not_null")
         {
-            return "EXISTS (SELECT 1 FROM entity_studio_links sl WHERE sl.entity_id = e.id)";
+            return $"EXISTS (SELECT 1 FROM entity_relationship_links sl WHERE sl.entity_id = e.id AND sl.relationship_code = {relationshipParam})";
         }
 
         var names = GetStringArray(condition.Value);
         if (names.Count == 0) return "false";
 
         var nameParams = string.Join(", ", names.Select(n => ctx.AddParam(n, NpgsqlDbType.Text)));
+        var kindParam = ctx.AddParam("studio", NpgsqlDbType.Text);
 
         var subquery = $@"e.id IN (
-            SELECT sl.entity_id FROM entity_studio_links sl
-            INNER JOIN entities se ON se.id = sl.studio_id
-            WHERE se.kind_code = 'studio' AND se.title IN ({nameParams})
+            SELECT sl.entity_id FROM entity_relationship_links sl
+            INNER JOIN entities se ON se.id = sl.target_entity_id
+            WHERE sl.relationship_code = {relationshipParam}
+                AND sl.target_kind_code = {kindParam}
+                AND se.kind_code = {kindParam}
+                AND se.title IN ({nameParams})
         )";
 
         return condition.Operator switch

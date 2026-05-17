@@ -23,7 +23,8 @@ public record Entity
         IReadOnlyList<ICapability> capabilities,
         Guid? parentEntityId = null,
         int? sortOrder = null,
-        EntityChildren? children = null)
+        EntityChildren? children = null,
+        EntityRelationships? relationships = null)
     {
         Id = id;
         Kind = kind;
@@ -32,6 +33,7 @@ public record Entity
         ParentEntityId = parentEntityId;
         SortOrder = sortOrder;
         ChildrenByKind = children ?? EntityChildren.Empty;
+        Relationships = relationships ?? EntityRelationships.Empty;
     }
 
     /// <summary>Stable global entity identifier.</summary>
@@ -54,6 +56,9 @@ public record Entity
 
     /// <summary>Grouped child projections keyed by entity kind through typed accessors.</summary>
     public EntityChildren ChildrenByKind { get; init; }
+
+    /// <summary>Grouped non-structural references such as tags, cast, studios, artists, or publishers.</summary>
+    public EntityRelationships Relationships { get; init; }
 
     /// <summary>Description text when supported by this entity.</summary>
     public string? Description => TryGetCapability(CapabilityRegistry.Description, out var capability) ? capability.Value : null;

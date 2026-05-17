@@ -124,13 +124,15 @@ public static partial class LegacyMediaImportSql
                 FROM public.images
                 ON CONFLICT (entity_id) DO NOTHING;
 
-                INSERT INTO v2.entity_studio_links (entity_id, studio_id, created_at)
-                SELECT id, studio_id, updated_at
+                INSERT INTO v2.entity_relationship_links (entity_id, relationship_code, label, target_entity_id, target_kind_code, sort_order, created_at)
+                SELECT id, 'studio', 'Studio', studio_id, '{{EntityKindRegistry.Studio.Code}}', 0, updated_at
                 FROM public.images
                 WHERE studio_id IS NOT NULL
                   AND EXISTS (SELECT 1 FROM v2.entities studio WHERE studio.id = studio_id AND studio.kind_code = '{{EntityKindRegistry.Studio.Code}}')
-                ON CONFLICT (entity_id) DO UPDATE SET
-                    studio_id = EXCLUDED.studio_id;
+                ON CONFLICT (entity_id, relationship_code, target_entity_id) DO UPDATE SET
+                    label = EXCLUDED.label,
+                    target_kind_code = EXCLUDED.target_kind_code,
+                    sort_order = EXCLUDED.sort_order;
 
                 INSERT INTO v2.entity_child_links (parent_entity_id, child_entity_id, child_kind_code, sort_order, is_structural, source, created_at)
                 SELECT gallery_id, id, '{{EntityKindRegistry.Image.Code}}', sort_order, true, 'legacy-import', created_at
@@ -153,21 +155,21 @@ public static partial class LegacyMediaImportSql
 
     private static readonly string ImageTagsImport = $$"""
             IF to_regclass('public.image_tags') IS NOT NULL THEN
-                INSERT INTO v2.entity_tag_links (entity_id, tag_id, created_at)
-                SELECT image_id, tag_id, now()
+                INSERT INTO v2.entity_relationship_links (entity_id, relationship_code, label, target_entity_id, target_kind_code, sort_order, created_at)
+                SELECT image_id, 'tags', 'Tags', tag_id, '{{EntityKindRegistry.Tag.Code}}', 0, now()
                 FROM public.image_tags
                 WHERE EXISTS (SELECT 1 FROM v2.entities tag WHERE tag.id = tag_id AND tag.kind_code = '{{EntityKindRegistry.Tag.Code}}')
-                ON CONFLICT (entity_id, tag_id) DO NOTHING;
+                ON CONFLICT (entity_id, relationship_code, target_entity_id) DO NOTHING;
             END IF;
         """;
 
     private static readonly string ImagePerformersImport = $$"""
             IF to_regclass('public.image_performers') IS NOT NULL THEN
-                INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
-                SELECT image_id, performer_id, '{{EntityKindRegistry.Person.Code}}', NULL, 0, now()
+                INSERT INTO v2.entity_relationship_links (entity_id, relationship_code, label, target_entity_id, target_kind_code, sort_order, metadata_json, created_at)
+                SELECT image_id, 'cast', 'Cast', performer_id, '{{EntityKindRegistry.Person.Code}}', 0, jsonb_build_object('role', '{{EntityKindRegistry.Person.Code}}'), now()
                 FROM public.image_performers
                 WHERE EXISTS (SELECT 1 FROM v2.entities person WHERE person.id = performer_id AND person.kind_code = '{{EntityKindRegistry.Person.Code}}')
-                ON CONFLICT (entity_id, person_entity_id, role) DO NOTHING;
+                ON CONFLICT (entity_id, relationship_code, target_entity_id) DO NOTHING;
             END IF;
         """;
 }

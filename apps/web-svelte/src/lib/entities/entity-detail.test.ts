@@ -9,6 +9,7 @@ describe("entity detail view model", () => {
       kind: "video-series",
       title: "The Chair Company",
       parentEntityId: null,
+      sortOrder: null,
       capabilities: [
         {
           kind: "images",
@@ -23,6 +24,7 @@ describe("entity detail view model", () => {
         },
       ],
       childrenByKind: [],
+      relationships: [],
     } satisfies EntityCard);
 
     expect(detail.hero?.src).toBe("/assets/series/series-1/backdrop.jpg");
@@ -35,6 +37,7 @@ describe("entity detail view model", () => {
       kind: "video-season",
       title: "Season 1",
       parentEntityId: "series-1",
+      sortOrder: null,
       capabilities: [
         {
           kind: "images",
@@ -47,6 +50,7 @@ describe("entity detail view model", () => {
         },
       ],
       childrenByKind: [],
+      relationships: [],
     } satisfies EntityCard);
 
     expect(detail.hero).toBeNull();
@@ -59,6 +63,7 @@ describe("entity detail view model", () => {
       kind: "book",
       title: "Book",
       parentEntityId: null,
+      sortOrder: null,
       capabilities: [
         {
           kind: "images",
@@ -69,6 +74,7 @@ describe("entity detail view model", () => {
         },
       ],
       childrenByKind: [],
+      relationships: [],
     } satisfies EntityCard);
 
     expect(detail.hero).toBeNull();

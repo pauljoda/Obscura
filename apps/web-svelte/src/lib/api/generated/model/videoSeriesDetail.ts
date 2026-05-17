@@ -6,6 +6,8 @@
  */
 import type { EntityCapability } from './entityCapability';
 import type { EntityChildGroup } from './entityChildGroup';
+import type { EntityCreditMetadata } from './entityCreditMetadata';
+import type { EntityRelationshipGroup } from './entityRelationshipGroup';
 
 export interface VideoSeriesDetail {
   id: string;
@@ -13,7 +15,13 @@ export interface VideoSeriesDetail {
   title: string;
   /** @nullable */
   parentEntityId: string | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  sortOrder: number | string | null;
   capabilities: EntityCapability[];
   childrenByKind: EntityChildGroup[];
-  renderingMode: string;
+  relationships: EntityRelationshipGroup[];
+  creditMetadata: EntityCreditMetadata[];
 }

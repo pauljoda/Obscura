@@ -32,6 +32,14 @@ public interface IEntityCatalog
     Task<Entity?> GetAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Gets visible entities by identifiers, omitting missing or deleted rows.
+    /// </summary>
+    /// <param name="ids">Entity identifiers to resolve.</param>
+    /// <param name="cancellationToken">Token used to cancel the query.</param>
+    /// <returns>Projected entities in arbitrary storage order.</returns>
+    Task<IReadOnlyList<Entity>> ListByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Lists child entities linked from a parent, optionally filtered by child kind.
     /// </summary>
     /// <param name="parentId">Parent entity identifier.</param>

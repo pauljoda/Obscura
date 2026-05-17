@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Obscura.Contracts.Plugins;
 using Obscura.Domain.Entities;
@@ -237,14 +238,14 @@ public sealed class EntityMetadataApplyService
 
     private async Task ReplaceTagsAsync(Guid entityId, IReadOnlyList<string> tags, DateTimeOffset now, CancellationToken cancellationToken)
     {
-        var existingLinks = await _db.EntityTagLinks.Where(row => row.EntityId == entityId).ToArrayAsync(cancellationToken);
-        _db.EntityTagLinks.RemoveRange(existingLinks);
+        await RemoveRelationshipAsync(entityId, "tags", cancellationToken);
 
+        var order = 0;
         foreach (var name in tags.Where(value => !string.IsNullOrWhiteSpace(value)).Select(value => value.Trim()).Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var tag = await FindEntityByKindAndTitleAsync("tag", name, cancellationToken)
                 ?? CreateEntity("tag", name, now);
-            _db.EntityTagLinks.Add(new EntityTagLinkRow { EntityId = entityId, TagId = tag.Id, CreatedAt = now });
+            AddRelationship(entityId, "tags", "Tags", tag.Id, tag.KindCode, order++, null, now);
         }
     }
 
@@ -252,25 +253,17 @@ public sealed class EntityMetadataApplyService
     {
         var studio = await FindEntityByKindAndTitleAsync("studio", studioName.Trim(), cancellationToken)
             ?? CreateEntity("studio", studioName.Trim(), now);
-        var existing = await _db.EntityStudioLinks.FindAsync([entityId], cancellationToken);
-        if (existing is null)
-        {
-            _db.EntityStudioLinks.Add(new EntityStudioLinkRow { EntityId = entityId, StudioId = studio.Id, CreatedAt = now });
-        }
-        else
-        {
-            existing.StudioId = studio.Id;
-        }
+        await RemoveRelationshipAsync(entityId, "studio", cancellationToken);
+        AddRelationship(entityId, "studio", "Studio", studio.Id, studio.KindCode, 0, null, now);
     }
 
     private async Task ReplaceCreditsAsync(Guid entityId, IReadOnlyList<CreditPatch> credits, DateTimeOffset now, CancellationToken cancellationToken)
     {
-        var existing = await _db.EntityCreditLinks.Where(row => row.EntityId == entityId).ToArrayAsync(cancellationToken);
-        _db.EntityCreditLinks.RemoveRange(existing);
+        await RemoveRelationshipAsync(entityId, "cast", cancellationToken);
 
         var order = 0;
         var resolvedPeople = new Dictionary<string, EntityRow>(StringComparer.OrdinalIgnoreCase);
-        var linkedCredits = new HashSet<(Guid PersonEntityId, EntityCreditRole Role)>();
+        var linkedCredits = new HashSet<(Guid PersonEntityId, string Role)>();
         foreach (var credit in credits.Where(credit => !string.IsNullOrWhiteSpace(credit.Name)))
         {
             var personName = credit.Name.Trim();
@@ -281,22 +274,50 @@ public sealed class EntityMetadataApplyService
                 resolvedPeople[personName] = person;
             }
 
-            var role = EntityCreditRole.Person;
+            var role = string.IsNullOrWhiteSpace(credit.Role) ? "person" : credit.Role.Trim();
             if (!linkedCredits.Add((person.Id, role)))
             {
                 continue;
             }
 
-            _db.EntityCreditLinks.Add(new EntityCreditLinkRow
+            var metadata = JsonSerializer.Serialize(new
             {
-                EntityId = entityId,
-                PersonEntityId = person.Id,
-                Role = role,
-                Character = string.IsNullOrWhiteSpace(credit.Character) ? null : credit.Character.Trim(),
-                SortOrder = credit.SortOrder ?? order++,
-                CreatedAt = now
+                role,
+                character = string.IsNullOrWhiteSpace(credit.Character) ? null : credit.Character.Trim()
             });
+            AddRelationship(entityId, "cast", "Cast", person.Id, person.KindCode, credit.SortOrder ?? order++, metadata, now);
         }
+    }
+
+    private async Task RemoveRelationshipAsync(Guid entityId, string code, CancellationToken cancellationToken)
+    {
+        var existing = await _db.EntityRelationshipLinks
+            .Where(row => row.EntityId == entityId && row.RelationshipCode == code)
+            .ToArrayAsync(cancellationToken);
+        _db.EntityRelationshipLinks.RemoveRange(existing);
+    }
+
+    private void AddRelationship(
+        Guid entityId,
+        string code,
+        string label,
+        Guid targetEntityId,
+        string targetKindCode,
+        int sortOrder,
+        string? metadataJson,
+        DateTimeOffset now)
+    {
+        _db.EntityRelationshipLinks.Add(new EntityRelationshipLinkRow
+        {
+            EntityId = entityId,
+            RelationshipCode = code,
+            Label = label,
+            TargetEntityId = targetEntityId,
+            TargetKindCode = targetKindCode,
+            SortOrder = sortOrder,
+            MetadataJson = metadataJson,
+            CreatedAt = now
+        });
     }
 
     private async Task UpsertDatesAsync(Guid entityId, IReadOnlyDictionary<string, string> dates, DateTimeOffset now, CancellationToken cancellationToken)

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Building2, CalendarRange, Search, Tag, Users, X } from "@lucide/svelte";
+  import { CalendarRange } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import { CAPABILITY_KIND } from "$lib/entities/v2-codes";
   import type { EntityGridFilterOption } from "$lib/entities/entity-grid";
@@ -11,9 +11,6 @@
   }
 
   let { activeFilterIds, filterOptions, onActiveFilterIdsChange }: Props = $props();
-  let peopleSearch = $state("");
-  let studioSearch = $state("");
-  let tagSearch = $state("");
 
   const activeSet = $derived(new Set(activeFilterIds));
   const optionMap = $derived(new Map(filterOptions.map((option) => [option.id, option])));
@@ -33,35 +30,6 @@
   const hasFlagFilters = $derived(
     filterOptions.some((option) => option.capabilityKind === CAPABILITY_KIND.flags),
   );
-
-  const tagOptions = $derived(filterOptions.filter((option) => option.capabilityKind === CAPABILITY_KIND.tags));
-  const peopleOptions = $derived(filterOptions.filter((option) => option.capabilityKind === CAPABILITY_KIND.credits));
-  const studioOptions = $derived(filterOptions.filter((option) => option.capabilityKind === CAPABILITY_KIND.studio));
-  const filteredPeopleOptions = $derived.by(() => {
-    const query = peopleSearch.trim().toLowerCase();
-    if (!query) return peopleOptions;
-    return peopleOptions.filter((option) => option.label.toLowerCase().includes(query));
-  });
-  const filteredStudioOptions = $derived.by(() => {
-    const query = studioSearch.trim().toLowerCase();
-    if (!query) return studioOptions;
-    return studioOptions.filter((option) => option.label.toLowerCase().includes(query));
-  });
-  const filteredTagOptions = $derived.by(() => {
-    const query = tagSearch.trim().toLowerCase();
-    if (!query) return tagOptions;
-    return tagOptions.filter((option) => option.label.toLowerCase().includes(query));
-  });
-  const groupedTags = $derived.by(() => {
-    if (filteredTagOptions.length <= 24) return null;
-    const groups: Record<string, EntityGridFilterOption[]> = {};
-    for (const option of filteredTagOptions) {
-      const label = option.label.replace(/^Tag:\s*/i, "");
-      const letter = label[0]?.toUpperCase() ?? "#";
-      (groups[letter] ??= []).push(option);
-    }
-    return Object.entries(groups).sort(([left], [right]) => left.localeCompare(right));
-  });
 
   const resolutions = ["4K", "1080p", "720p", "480p"];
   const durationChoices = [
@@ -249,182 +217,6 @@
               {#if countFor(id) != null}<span class="ml-1 text-text-disabled">{countFor(id)}</span>{/if}
             </button>
           {/each}
-        </div>
-      </section>
-    {/if}
-
-    {#if tagOptions.length > 0}
-      <section class="md:col-span-2 xl:col-span-3">
-        <div class="mb-2 flex items-center justify-between">
-          <div class="flex items-center gap-1.5 text-kicker">
-            <Tag class="h-3 w-3 text-text-disabled" />
-            Tags
-          </div>
-          <span class="font-mono text-[0.6rem] tabular-nums text-text-disabled">
-            {filteredTagOptions.length !== tagOptions.length
-              ? `${filteredTagOptions.length} / ${tagOptions.length}`
-              : tagOptions.length}
-          </span>
-        </div>
-
-        {#if tagOptions.length > 12}
-          <div class="relative mb-2">
-            <Search
-              class="pointer-events-none absolute left-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-text-disabled"
-            />
-            <input
-              type="text"
-              placeholder="Filter tags..."
-              bind:value={tagSearch}
-              class={cn(
-                "w-full border border-border-subtle bg-surface-1 py-1 pl-6 pr-7 text-[0.7rem] text-text-primary",
-                "placeholder:text-text-disabled focus:border-border-accent focus:outline-none",
-                "transition-colors duration-fast",
-              )}
-            />
-            {#if tagSearch}
-              <button
-                type="button"
-                class="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-muted"
-                aria-label="Clear tag search"
-                onclick={() => (tagSearch = "")}
-              >
-                <X class="h-3 w-3" />
-              </button>
-            {/if}
-          </div>
-        {/if}
-
-        <div class="tag-scroll-area max-h-48 overflow-y-auto">
-          {#if filteredTagOptions.length === 0}
-            <div class="flex items-center justify-center py-4 text-[0.68rem] text-text-disabled">
-              <Tag class="mr-1.5 h-3 w-3 opacity-50" />
-              No matching tags
-            </div>
-          {:else if groupedTags}
-            <div class="space-y-2">
-              {#each groupedTags as [letter, letterOptions] (letter)}
-                <div>
-                  <div
-                    class="sticky top-0 z-10 mb-1 border-b border-border-subtle bg-surface-2/90 px-0.5 py-0.5 font-mono text-[0.55rem] font-semibold uppercase tracking-widest text-text-disabled backdrop-blur-sm"
-                  >
-                    {letter}
-                  </div>
-                  <div class="flex flex-wrap gap-1">
-                    {#each letterOptions as option (option.id)}
-                      <button
-                        type="button"
-                        class={chipClass(option.id, "info")}
-                        aria-pressed={isActive(option.id)}
-                        onclick={() => toggleFilter(option.id)}
-                      >
-                        {option.label.replace(/^Tag:\s*/i, "")}
-                        <span class="ml-1 text-text-disabled">{option.count}</span>
-                      </button>
-                    {/each}
-                  </div>
-                </div>
-              {/each}
-            </div>
-          {:else}
-            <div class="flex flex-wrap gap-1">
-              {#each filteredTagOptions as option (option.id)}
-                <button
-                  type="button"
-                  class={chipClass(option.id, "info")}
-                  aria-pressed={isActive(option.id)}
-                  onclick={() => toggleFilter(option.id)}
-                >
-                  {option.label.replace(/^Tag:\s*/i, "")}
-                  <span class="ml-1 text-text-disabled">{option.count}</span>
-                </button>
-              {/each}
-            </div>
-          {/if}
-        </div>
-      </section>
-    {/if}
-
-    {#if peopleOptions.length > 0}
-      <section class="md:col-span-2 xl:col-span-3">
-        <div class="mb-2 flex items-center justify-between">
-          <div class="flex items-center gap-1.5 text-kicker">
-            <Users class="h-3 w-3 text-text-disabled" />
-            Performers
-          </div>
-          <span class="font-mono text-[0.6rem] tabular-nums text-text-disabled">
-            {filteredPeopleOptions.length !== peopleOptions.length
-              ? `${filteredPeopleOptions.length} / ${peopleOptions.length}`
-              : peopleOptions.length}
-          </span>
-        </div>
-        {#if peopleOptions.length > 12}
-          <div class="relative mb-2">
-            <Search class="pointer-events-none absolute left-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-text-disabled" />
-            <input
-              type="text"
-              placeholder="Filter performers..."
-              bind:value={peopleSearch}
-              class={cn("w-full border border-border-subtle bg-surface-1 py-1 pl-6 pr-7 text-[0.7rem] text-text-primary", "placeholder:text-text-disabled focus:border-border-accent focus:outline-none", "transition-colors duration-fast")}
-            />
-            {#if peopleSearch}
-              <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-muted" aria-label="Clear performer search" onclick={() => (peopleSearch = "")}>
-                <X class="h-3 w-3" />
-              </button>
-            {/if}
-          </div>
-        {/if}
-        <div class="tag-scroll-area max-h-48 overflow-y-auto">
-          <div class="flex flex-wrap gap-1">
-            {#each filteredPeopleOptions as option (option.id)}
-              <button type="button" class={chipClass(option.id, "info")} onclick={() => toggleFilter(option.id)}>
-                {option.label}
-                <span class="ml-1 text-text-disabled">{option.count}</span>
-              </button>
-            {/each}
-          </div>
-        </div>
-      </section>
-    {/if}
-
-    {#if studioOptions.length > 0}
-      <section class="md:col-span-2 xl:col-span-3">
-        <div class="mb-2 flex items-center justify-between">
-          <div class="flex items-center gap-1.5 text-kicker">
-            <Building2 class="h-3 w-3 text-text-disabled" />
-            Studios
-          </div>
-          <span class="font-mono text-[0.6rem] tabular-nums text-text-disabled">
-            {filteredStudioOptions.length !== studioOptions.length
-              ? `${filteredStudioOptions.length} / ${studioOptions.length}`
-              : studioOptions.length}
-          </span>
-        </div>
-        {#if studioOptions.length > 12}
-          <div class="relative mb-2">
-            <Search class="pointer-events-none absolute left-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-text-disabled" />
-            <input
-              type="text"
-              placeholder="Filter studios..."
-              bind:value={studioSearch}
-              class={cn("w-full border border-border-subtle bg-surface-1 py-1 pl-6 pr-7 text-[0.7rem] text-text-primary", "placeholder:text-text-disabled focus:border-border-accent focus:outline-none", "transition-colors duration-fast")}
-            />
-            {#if studioSearch}
-              <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-muted" aria-label="Clear studio search" onclick={() => (studioSearch = "")}>
-                <X class="h-3 w-3" />
-              </button>
-            {/if}
-          </div>
-        {/if}
-        <div class="tag-scroll-area max-h-48 overflow-y-auto">
-          <div class="flex flex-wrap gap-1">
-            {#each filteredStudioOptions as option (option.id)}
-              <button type="button" class={chipClass(option.id)} onclick={() => toggleFilter(option.id)}>
-                {option.label}
-                <span class="ml-1 text-text-disabled">{option.count}</span>
-              </button>
-            {/each}
-          </div>
         </div>
       </section>
     {/if}

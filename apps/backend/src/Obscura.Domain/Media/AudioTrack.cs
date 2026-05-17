@@ -24,9 +24,6 @@ public sealed record AudioTrack : Entity
             capabilities ??
             [
                 new CapabilityRating(null),
-                CapabilityTags.Empty,
-                CapabilityCredits.Empty,
-                new CapabilityStudio(null),
                 CapabilityImages.Empty,
                 CapabilityLinks.Empty,
                 CapabilityFlags.Empty,

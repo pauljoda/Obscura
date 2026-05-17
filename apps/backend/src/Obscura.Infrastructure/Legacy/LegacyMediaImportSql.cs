@@ -68,8 +68,7 @@ public static partial class LegacyMediaImportSql
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKindRegistry.Collection.Code}}') AS collections_imported,
             ((SELECT COUNT(*)::int FROM v2.entity_child_links WHERE child_kind_code IN ('{{EntityKindRegistry.Gallery.Code}}', '{{EntityKindRegistry.Image.Code}}', '{{EntityKindRegistry.AudioLibrary.Code}}', '{{EntityKindRegistry.AudioTrack.Code}}')) +
              (SELECT COUNT(*)::int FROM v2.entity_child_links WHERE is_structural = false) +
-             (SELECT COUNT(*)::int FROM v2.entity_credit_links) +
-             (SELECT COUNT(*)::int FROM v2.entity_studio_links) +
+             (SELECT COUNT(*)::int FROM v2.entity_relationship_links) +
              (SELECT COUNT(*)::int FROM v2.entity_markers)) AS links_imported;
         """;
 }

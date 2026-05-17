@@ -191,10 +191,10 @@ public sealed class EntityMetadataApplyServiceTests
             .Where(row => row.KindCode == "person")
             .Select(row => row.Title)
             .SingleAsync());
-        Assert.Equal("Visitor", await db.EntityCreditLinks
-            .Where(row => row.EntityId == episodeId)
-            .Select(row => row.Character)
-            .SingleAsync());
+        Assert.Contains("Visitor", (await db.EntityRelationshipLinks
+            .Where(row => row.EntityId == episodeId && row.RelationshipCode == "cast")
+            .Select(row => row.MetadataJson)
+            .SingleAsync()) ?? string.Empty);
         Assert.Equal("2026-05-16", (await db.EntityDates.FindAsync([episodeId, "air"]))?.Value);
         Assert.Equal(33, (await db.EntityCounters.FindAsync([episodeId, "runtimeMinutes"]))?.Value);
         Assert.Equal(8, (await db.EntityStats.FindAsync([episodeId, "voteAverage"]))?.Value);
@@ -440,9 +440,9 @@ public sealed class EntityMetadataApplyServiceTests
         var service = new EntityMetadataApplyService(db, new PluginArtworkServiceOptions(Path.GetTempPath()));
         await service.ApplyAsync(seriesId, proposal, selectedFields: [], selectedImages: null, CancellationToken.None);
 
-        var credit = await db.EntityCreditLinks.SingleAsync(row => row.EntityId == episodeId);
-        Assert.Equal(personId, credit.PersonEntityId);
-        Assert.Equal("New Character", credit.Character);
+        var credit = await db.EntityRelationshipLinks.SingleAsync(row => row.EntityId == episodeId && row.RelationshipCode == "cast");
+        Assert.Equal(personId, credit.TargetEntityId);
+        Assert.Contains("New Character", credit.MetadataJson ?? string.Empty, StringComparison.Ordinal);
         Assert.Equal(0, credit.SortOrder);
     }
 

@@ -241,6 +241,11 @@ public sealed class ApiSurfaceTests
             return Task.FromResult<DomainEntity?>(null);
         }
 
+        public Task<IReadOnlyList<DomainEntity>> ListByIdsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IReadOnlyList<DomainEntity>>([]);
+        }
+
         public Task<IReadOnlyList<DomainEntity>> ListChildrenAsync(
             Guid parentId,
             IEntityKind? childKind,

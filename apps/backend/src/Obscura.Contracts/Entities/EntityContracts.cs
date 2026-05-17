@@ -30,10 +30,56 @@ public sealed record EntityUrl(string Url, string? Label);
 /// <param name="Url">Optional provider URL for direct navigation.</param>
 public sealed record EntityExternalId(string Provider, string Value, string? Url);
 
-/// <summary>API-facing grouped children for one entity kind.</summary>
+/// <summary>API-facing grouped child identifiers for one entity kind.</summary>
 /// <param name="Kind">Child entity kind code represented by the group.</param>
-/// <param name="Items">Child cards in deterministic display order.</param>
-public sealed record EntityChildGroup(string Kind, IReadOnlyList<EntityCard> Items);
+/// <param name="EntityIds">Child entity identifiers in deterministic display order.</param>
+public sealed record EntityChildGroup(string Kind, IReadOnlyList<Guid> EntityIds);
+
+/// <summary>API-facing grouped non-structural references for one relationship label.</summary>
+/// <param name="Code">Stable relationship code such as tags, studio, cast, or artists.</param>
+/// <param name="Kind">Target entity kind code represented by the group.</param>
+/// <param name="Label">Human-readable label for the relationship group.</param>
+/// <param name="EntityIds">Referenced entity identifiers in deterministic display order.</param>
+public sealed record EntityRelationshipGroup(
+    string Code,
+    string Kind,
+    string Label,
+    IReadOnlyList<Guid> EntityIds);
+
+/// <summary>Credit metadata exposed by detail routes that need character or role labels.</summary>
+/// <param name="PersonId">Referenced person entity identifier.</param>
+/// <param name="Role">Provider or domain role code, when known.</param>
+/// <param name="Character">Character, credit subtitle, or contribution label, when known.</param>
+public sealed record EntityCreditMetadata(Guid PersonId, string? Role, string? Character);
+
+/// <summary>Compact metadata chip displayed by generic entity thumbnails.</summary>
+/// <param name="Icon">Icon code from the shared thumbnail vocabulary.</param>
+/// <param name="Label">Short display label.</param>
+public sealed record EntityThumbnailMeta(string Icon, string Label);
+
+/// <summary>Lightweight entity shape for grids, thumbnail strips, and relationship previews.</summary>
+public sealed record EntityThumbnail(
+    Guid Id,
+    string Kind,
+    string Title,
+    Guid? ParentEntityId,
+    int? SortOrder,
+    string? CoverUrl,
+    string HoverKind,
+    string? HoverUrl,
+    IReadOnlyList<EntityThumbnailMeta> Meta,
+    int? Rating,
+    bool IsFavorite,
+    bool IsNsfw,
+    bool IsOrganized);
+
+/// <summary>Batch thumbnail request body.</summary>
+/// <param name="Ids">Entity identifiers to resolve.</param>
+public sealed record EntityThumbnailBatchRequest(IReadOnlyList<Guid> Ids);
+
+/// <summary>Batch thumbnail response body.</summary>
+/// <param name="Items">Resolved thumbnails in requested order where possible.</param>
+public sealed record EntityThumbnailBatchResponse(IReadOnlyList<EntityThumbnail> Items);
 
 /// <summary>
 /// Normalized card/detail shape used across media, taxonomy, and collection routes.
@@ -42,15 +88,19 @@ public sealed record EntityChildGroup(string Kind, IReadOnlyList<EntityCard> Ite
 /// <param name="Kind">Entity kind code.</param>
 /// <param name="Title">Primary display title.</param>
 /// <param name="ParentEntityId">Structural parent entity identifier, or null for root and virtual collection children.</param>
+/// <param name="SortOrder">Optional structural order under the parent entity.</param>
 /// <param name="Capabilities">Shared capabilities already projected for the card.</param>
 /// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
+/// <param name="Relationships">Generic non-structural relationships keyed by code, kind, and label.</param>
 public sealed record EntityCard(
     Guid Id,
     string Kind,
     string Title,
     Guid? ParentEntityId,
+    int? SortOrder,
     IReadOnlyList<EntityCapability> Capabilities,
-    IReadOnlyList<EntityChildGroup> ChildrenByKind);
+    IReadOnlyList<EntityChildGroup> ChildrenByKind,
+    IReadOnlyList<EntityRelationshipGroup> Relationships);
 
 /// <summary>
 /// Cursor-paged entity list response.
@@ -58,7 +108,7 @@ public sealed record EntityCard(
 /// <param name="Items">Current page of entity cards.</param>
 /// <param name="NextCursor">Cursor for the next page, or null when complete.</param>
 public sealed record EntityListResponse(
-    IReadOnlyList<EntityCard> Items,
+    IReadOnlyList<EntityThumbnail> Items,
     string? NextCursor);
 
 /// <summary>

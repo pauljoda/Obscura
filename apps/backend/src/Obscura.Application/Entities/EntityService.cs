@@ -66,6 +66,27 @@ public sealed class EntityService
     }
 
     /// <summary>
+    /// Resolves lightweight thumbnails for a batch of entity identifiers.
+    /// </summary>
+    /// <param name="ids">Entity identifiers to resolve.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>Resolved thumbnails in requested order where possible.</returns>
+    public async Task<EntityThumbnailBatchResponse> GetThumbnailsAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken cancellationToken)
+    {
+        var distinctIds = ids.Distinct().ToArray();
+        var entities = await _entities.ListByIdsAsync(distinctIds, cancellationToken);
+        var thumbnailsById = entities.ToDictionary(entity => entity.Id, ContractMapper.ToEntityThumbnail);
+        var ordered = ids
+            .Where(thumbnailsById.ContainsKey)
+            .Distinct()
+            .Select(id => thumbnailsById[id])
+            .ToArray();
+        return new EntityThumbnailBatchResponse(ordered);
+    }
+
+    /// <summary>
     /// Lists child entities for use cases that need graph or membership expansion.
     /// </summary>
     /// <param name="parentId">Parent entity identifier.</param>

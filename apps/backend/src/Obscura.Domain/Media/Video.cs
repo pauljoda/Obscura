@@ -23,9 +23,6 @@ public sealed record Video : Entity
             capabilities ??
             [
                 new CapabilityRating(null),
-                CapabilityTags.Empty,
-                CapabilityCredits.Empty,
-                new CapabilityStudio(null),
                 CapabilityImages.Empty,
                 CapabilityLinks.Empty,
                 CapabilityFlags.Empty,
@@ -46,7 +43,16 @@ public sealed record Video : Entity
     /// Creates a video from an already hydrated entity root.
     /// </summary>
     public Video(Entity entity, DateTimeOffset? SubtitlesExtractedAt)
-        : this(entity.Id, entity.Title, SubtitlesExtractedAt, entity.Capabilities)
+        : base(
+            entity.Id,
+            EntityKindRegistry.Video,
+            entity.Title,
+            entity.Capabilities,
+            entity.ParentEntityId,
+            entity.SortOrder,
+            entity.ChildrenByKind,
+            entity.Relationships)
     {
+        this.SubtitlesExtractedAt = SubtitlesExtractedAt;
     }
 }

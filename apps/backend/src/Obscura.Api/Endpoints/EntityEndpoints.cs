@@ -50,6 +50,15 @@ public static class EntityEndpoints
             .Produces<EntityCard>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
+        group.MapPost("/thumbnails", async (
+            EntityThumbnailBatchRequest request,
+            EntityService entities,
+            CancellationToken cancellationToken) =>
+            Results.Ok(await entities.GetThumbnailsAsync(request.Ids, cancellationToken)))
+            .WithName("GetEntityThumbnails")
+            .WithSummary("Resolves lightweight thumbnails for entity grids and relationship previews.")
+            .Produces<EntityThumbnailBatchResponse>();
+
         group.MapPatch("/{id:guid}/rating", async (
             Guid id,
             RatingUpdateRequest request,

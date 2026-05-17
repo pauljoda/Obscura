@@ -1,4 +1,4 @@
-import type { EntityCapability, EntityCard } from "$lib/api/generated/model";
+import type { EntityCapability, EntityCard, EntityThumbnail } from "$lib/api/generated/model";
 import { ENTITY_KIND, resolveEntityHref, type EntityRouteContext } from "./v2-codes";
 
 /** Standard thumbnail shapes used by global entity cards before route-specific layout chooses a size. */
@@ -66,8 +66,15 @@ export interface EntityThumbnailCustomOverlay {
 }
 
 /** Entity payload consumed by the shared thumbnail surface. */
-export interface EntityThumbnailEntity extends EntityCard {
+export interface EntityThumbnailEntity {
+  id: string;
+  kind: string;
+  title: string;
+  parentEntityId: string | null;
+  sortOrder: number | string | null;
   capabilities: EntityCapability[];
+  childrenByKind: EntityCard["childrenByKind"];
+  relationships: EntityCard["relationships"];
 }
 
 /** Complete view model for one global entity thumbnail. */
@@ -151,8 +158,10 @@ export function entityReferenceToThumbnailCard(
       kind: entity.kind,
       title: entity.title,
       parentEntityId: null,
+      sortOrder: null,
       capabilities: [],
       childrenByKind: [],
+      relationships: [],
     },
     fit: options.fit ?? "cover",
     hover: options.hover ?? { kind: "none" },
@@ -160,6 +169,19 @@ export function entityReferenceToThumbnailCard(
     meta: options.meta,
     routeContext: options.routeContext,
     subtitle: options.subtitle,
+  };
+}
+
+export function thumbnailToEntityShell(entity: EntityThumbnail): EntityThumbnailEntity {
+  return {
+    id: entity.id,
+    kind: entity.kind,
+    title: entity.title,
+    parentEntityId: entity.parentEntityId,
+    sortOrder: entity.sortOrder,
+    capabilities: [],
+    childrenByKind: [],
+    relationships: [],
   };
 }
 

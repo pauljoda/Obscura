@@ -14,7 +14,6 @@ public sealed record PersonEntityKind()
     public IReadOnlyList<ICapabilityKind> SupportedCapabilities =>
     [
         CapabilityRegistry.Rating,
-        CapabilityRegistry.Tags,
         CapabilityRegistry.Images,
         CapabilityRegistry.Description,
         CapabilityRegistry.Dates,

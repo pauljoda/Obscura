@@ -18,7 +18,6 @@ public sealed record StudioEntityKind()
     public IReadOnlyList<ICapabilityKind> SupportedCapabilities =>
     [
         CapabilityRegistry.Rating,
-        CapabilityRegistry.Tags,
         CapabilityRegistry.Images,
         CapabilityRegistry.Description,
         CapabilityRegistry.Dates,

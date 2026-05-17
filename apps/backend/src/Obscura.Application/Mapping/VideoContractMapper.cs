@@ -20,7 +20,10 @@ public static partial class ContractMapper
             video.Kind.Code,
             video.Title,
             video.ParentEntityId,
+            video.SortOrder,
             ToEntityCapabilities(video.Capabilities),
             ToEntityChildGroups(video.ChildrenByKind),
+            ToEntityRelationshipGroups(video.Relationships),
+            ToCreditMetadata(video),
             video.SubtitlesExtractedAt);
 }
