@@ -297,7 +297,7 @@
       aspectRatio: { width: 4, height: 5 },
       cover: imageUrl ? { src: imageUrl, alt: credit.name } : null,
       hover: { kind: "none" },
-      subtitle: credit.character ? `${credit.role} · ${credit.character}` : credit.role,
+      subtitle: creditSubtitle(credit),
     };
   }
 
@@ -681,6 +681,10 @@
     return `${credit.role}:${credit.name}:${credit.character ?? ""}:${index}`;
   }
 
+  function creditSubtitle(credit: CreditPatch): string {
+    return credit.character?.trim() || credit.role;
+  }
+
   function creditState(credit: CreditPatch): "merge" | "new" {
     const names = activeTarget?.existingCreditNames ?? [];
     return names.some((name) => name.localeCompare(credit.name, undefined, { sensitivity: "accent" }) === 0)
@@ -965,7 +969,7 @@
                             onSelectedChange={() => toggleCredit(key)}
                           >
                             {#snippet subtitleContent()}
-                              <span class="credit-role-label">{credit.character ? `${credit.role} · ${credit.character}` : credit.role}</span>
+                              <span class="credit-role-label">{creditSubtitle(credit)}</span>
                               {#if state === "new"}
                                 <span class="credit-new-label">NEW</span>
                               {/if}

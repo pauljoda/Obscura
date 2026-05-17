@@ -97,6 +97,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Changed
+- Identify review credit cards now prefer character names in their subtitle and only fall back to normalized credit roles for crew entries, keeping episode guest-star cards from showing provider category labels.
 - Identify review children now render as generic thumbnail cards with title, description, and child-count previews, so series seasons, episodes, and future volume/chapter-style cascades use the same responsive review surface.
 - Identify review artwork previews and credit rows are now constrained to compact, scrollable thumbnail layouts so they no longer stretch the modal or dominate the review flow.
 - Identify review now renders cascaded child metadata through a reusable relationship tree so future domains can review volume/chapter-style children without a season-only UI path.
