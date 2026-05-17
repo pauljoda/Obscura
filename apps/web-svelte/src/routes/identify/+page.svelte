@@ -30,6 +30,7 @@
     type IdentifyBulkSession,
     type PluginProvider,
   } from "$lib/api/identify";
+  import { structuralChildProposals } from "$lib/components/identify-review";
   import type { V2EntityCard } from "$lib/api/v2";
 
   type IdentifyKind = "video" | "video-series";
@@ -102,6 +103,7 @@
   );
   const canIdentify = $derived(Boolean(selectedProvider && activeEntity && !selectedProvider.missingAuthKeys.length));
   const bulkResults = $derived(bulkSession?.results ?? []);
+  const proposalStructuralChildren = $derived(proposal ? structuralChildProposals(proposal) : []);
 
   onMount(() => {
     void load();
@@ -304,7 +306,7 @@
     if (field === "stats") return entries(patch.stats).join(", ");
     if (field === "positions") return entries(patch.positions).join(", ");
     if (field === "classification") return patch.classification ?? "";
-    if (field === "images") return `${result.images.length} candidate${result.images.length === 1 ? "" : "s"}`;
+    if (field === "images") return result.images.length > 0 ? `${result.images.length} candidate${result.images.length === 1 ? "" : "s"}` : "";
     return "";
   }
 
@@ -609,11 +611,11 @@
       </section>
     {/if}
 
-    {#if proposal.children.length > 0}
+    {#if proposalStructuralChildren.length > 0}
       <section class="drawer-section">
         <h3>Children</h3>
         <div class="children-list">
-          {#each proposal.children as child (child.proposalId)}
+          {#each proposalStructuralChildren as child (child.proposalId)}
             <div>
               <span>{child.patch.title}</span>
               <small>{child.targetKind}</small>

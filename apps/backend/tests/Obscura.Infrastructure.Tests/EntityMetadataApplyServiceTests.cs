@@ -523,6 +523,136 @@ public sealed class EntityMetadataApplyServiceTests
         Assert.Equal("/assets/plugins/artwork/12121212-1212-1212-1212-121212121212/poster-bcec36434214.jpg", file.Path);
     }
 
+    [Fact]
+    public async Task ApplyDownloadsRelationshipArtworkFromSeparatedRelationshipProposals()
+    {
+        await using var db = CreateContext();
+        var seriesId = Guid.Parse("13131313-1313-1313-1313-131313131313");
+        var episodeId = Guid.Parse("14141414-1414-1414-1414-141414141414");
+        SeedEntity(db, seriesId, "video-series", "The Chair Company");
+        SeedEntity(db, episodeId, "video", "Old Episode", parentEntityId: seriesId, sortOrder: 1);
+        db.EntityChildLinks.Add(new EntityChildLinkRow
+        {
+            ParentEntityId = seriesId,
+            ChildEntityId = episodeId,
+            ChildKindCode = "video",
+            SortOrder = 1,
+            IsStructural = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var personRelationship = new EntityMetadataProposal(
+            ProposalId: "tmdb:person:guest",
+            Provider: "tmdb",
+            TargetKind: "person",
+            Confidence: 1,
+            MatchReason: "credit",
+            Patch: EmptyPatch() with { Title = "Guest Actor" },
+            Images: [new ImageCandidate("poster", "https://example.test/guest.jpg", "tmdb", null, null, null, null)],
+            Children: [],
+            Candidates: []);
+        var proposal = new EntityMetadataProposal(
+            ProposalId: "tmdb:tv:the-chair-company",
+            Provider: "tmdb",
+            TargetKind: "video-series",
+            TargetEntityId: seriesId,
+            Confidence: 1,
+            MatchReason: "external-id",
+            Patch: EmptyPatch(),
+            Images: [],
+            Children:
+            [
+                new EntityMetadataProposal(
+                    ProposalId: "tmdb:tv:the-chair-company:s1:e1",
+                    Provider: "tmdb",
+                    TargetKind: "video",
+                    TargetEntityId: episodeId,
+                    Confidence: 1,
+                    MatchReason: "graph-child",
+                    Patch: EmptyPatch() with
+                    {
+                        Title = "Episode One",
+                        Credits = [new CreditPatch("Guest Actor", "guest", "Company Man", 0)]
+                    },
+                    Images: [],
+                    Children: [],
+                    Candidates: [],
+                    Relationships: [personRelationship])
+            ],
+            Candidates: []);
+
+        var service = new EntityMetadataApplyService(
+            db,
+            new PluginArtworkServiceOptions(Path.GetTempPath()),
+            new HttpClient(new FixedImageHandler()));
+        await service.ApplyAsync(seriesId, proposal, selectedFields: [], selectedImages: null, CancellationToken.None);
+
+        var personId = await db.Entities
+            .Where(row => row.KindCode == "person" && row.Title == "Guest Actor")
+            .Select(row => row.Id)
+            .SingleAsync();
+        Assert.Equal("Episode One", (await db.Entities.FindAsync([episodeId]))?.Title);
+        Assert.Equal(personId, (await db.EntityRelationshipLinks.SingleAsync(row => row.EntityId == episodeId)).TargetEntityId);
+        Assert.Equal("/assets/plugins/artwork/" + personId + "/poster-af1fa5679394.jpg", (await db.EntityFiles.SingleAsync(row => row.EntityId == personId)).Path);
+    }
+
+    [Fact]
+    public async Task ApplyRootCreditsAndStudioUseSeparatedRelationshipArtwork()
+    {
+        await using var db = CreateContext();
+        var movieId = Guid.Parse("15151515-1515-1515-1515-151515151515");
+        SeedEntity(db, movieId, "video", "Old Movie");
+        await db.SaveChangesAsync();
+
+        var actorRelationship = new EntityMetadataProposal(
+            ProposalId: "tmdb:person:lead",
+            Provider: "tmdb",
+            TargetKind: "person",
+            Confidence: 1,
+            MatchReason: "credit",
+            Patch: EmptyPatch() with { Title = "Lead Actor" },
+            Images: [new ImageCandidate("poster", "https://example.test/lead.jpg", "tmdb", null, null, null, null)],
+            Children: [],
+            Candidates: []);
+        var studioRelationship = new EntityMetadataProposal(
+            ProposalId: "tmdb:studio:chair-pictures",
+            Provider: "tmdb",
+            TargetKind: "studio",
+            Confidence: 1,
+            MatchReason: "studio",
+            Patch: EmptyPatch() with { Title = "Chair Pictures" },
+            Images: [new ImageCandidate("logo", "https://example.test/studio.png", "tmdb", null, null, null, null)],
+            Children: [],
+            Candidates: []);
+        var proposal = new EntityMetadataProposal(
+            ProposalId: "tmdb:movie:chair",
+            Provider: "tmdb",
+            TargetKind: "video",
+            Confidence: 1,
+            MatchReason: "external-id",
+            Patch: EmptyPatch() with
+            {
+                Studio = "Chair Pictures",
+                Credits = [new CreditPatch("Lead Actor", "cast", "Lead", 0)]
+            },
+            Images: [],
+            Children: [],
+            Candidates: [],
+            Relationships: [actorRelationship, studioRelationship]);
+
+        var service = new EntityMetadataApplyService(
+            db,
+            new PluginArtworkServiceOptions(Path.GetTempPath()),
+            new HttpClient(new FixedImageHandler()));
+        await service.ApplyAsync(movieId, proposal, selectedFields: ["credits", "studio"], selectedImages: null, CancellationToken.None);
+
+        var actorId = await db.Entities.Where(row => row.KindCode == "person" && row.Title == "Lead Actor").Select(row => row.Id).SingleAsync();
+        var studioId = await db.Entities.Where(row => row.KindCode == "studio" && row.Title == "Chair Pictures").Select(row => row.Id).SingleAsync();
+        Assert.Equal(EntityFileRole.Poster, (await db.EntityFiles.SingleAsync(row => row.EntityId == actorId)).Role);
+        Assert.Equal(EntityFileRole.Logo, (await db.EntityFiles.SingleAsync(row => row.EntityId == studioId)).Role);
+    }
+
     private static ObscuraDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()

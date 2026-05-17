@@ -135,12 +135,13 @@ public sealed class EntityMetadataApplyService
             await DownloadSelectedImagesAsync(entityId, selectedImages, now, cancellationToken);
         }
 
-        if (proposal.Children.Count > 0 && (selected.Contains("credits") || selected.Contains("studio")))
+        var relationshipProposals = RelationshipProposals(proposal);
+        if (relationshipProposals.Count > 0 && (selected.Contains("credits") || selected.Contains("studio")))
         {
-            await CascadeChildImagesAsync(proposal.Children, now, cancellationToken);
+            await CascadeRelationshipImagesAsync(relationshipProposals, now, cancellationToken);
         }
 
-        await ApplyGraphChildrenAsync(proposal.Children, now, cancellationToken);
+        await ApplyGraphChildrenAsync(StructuralChildProposals(proposal), now, cancellationToken);
 
         entity.UpdatedAt = now;
         await _db.SaveChangesAsync(cancellationToken);
@@ -544,15 +545,15 @@ public sealed class EntityMetadataApplyService
     }
 
     /// <summary>
-    /// Downloads images from proposal children into linked Person and Studio entities
+    /// Downloads images from relationship proposals into linked Person and Studio entities
     /// that were created or resolved during credits/studio apply.
     /// </summary>
-    private async Task CascadeChildImagesAsync(
-        IReadOnlyList<EntityMetadataProposal> children,
+    private async Task CascadeRelationshipImagesAsync(
+        IReadOnlyList<EntityMetadataProposal> relationships,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        foreach (var child in children)
+        foreach (var child in relationships)
         {
             if (child.Images.Count == 0 || string.IsNullOrWhiteSpace(child.Patch.Title))
             {
@@ -635,12 +636,13 @@ public sealed class EntityMetadataApplyService
             }
 
             await ApplyPatchToEntityAsync(childEntity, child.Patch, child.Images, now, cancellationToken);
-            if (child.Children.Count > 0 && (child.Patch.Credits.Count > 0 || !string.IsNullOrWhiteSpace(child.Patch.Studio)))
+            var relationshipProposals = RelationshipProposals(child);
+            if (relationshipProposals.Count > 0 && (child.Patch.Credits.Count > 0 || !string.IsNullOrWhiteSpace(child.Patch.Studio)))
             {
-                await CascadeChildImagesAsync(child.Children, now, cancellationToken);
+                await CascadeRelationshipImagesAsync(relationshipProposals, now, cancellationToken);
             }
 
-            await ApplyGraphChildrenAsync(child.Children, now, cancellationToken);
+            await ApplyGraphChildrenAsync(StructuralChildProposals(child), now, cancellationToken);
         }
     }
 
@@ -756,6 +758,30 @@ public sealed class EntityMetadataApplyService
         _db.EntityFiles.Local.FirstOrDefault(row => row.EntityId == entityId && row.Role == role)
         ?? await _db.EntityFiles.FirstOrDefaultAsync(row => row.EntityId == entityId && row.Role == role, cancellationToken);
 
+    private static IReadOnlyList<EntityMetadataProposal> StructuralChildProposals(EntityMetadataProposal proposal) =>
+        proposal.Children
+            .Where(child => !IsRelationshipMetadataKind(child.TargetKind))
+            .ToArray();
+
+    private static IReadOnlyList<EntityMetadataProposal> RelationshipProposals(EntityMetadataProposal proposal)
+    {
+        var relationships = new List<EntityMetadataProposal>();
+        if (proposal.Relationships is { Count: > 0 })
+        {
+            relationships.AddRange(proposal.Relationships);
+        }
+
+        relationships.AddRange(proposal.Children.Where(child => IsRelationshipMetadataKind(child.TargetKind)));
+
+        return relationships
+            .GroupBy(child => child.ProposalId, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToArray();
+    }
+
+    private static bool IsRelationshipMetadataKind(string kind) =>
+        kind is "person" or "studio" or "tag";
+
     private async Task<bool> HasEntityFileWithAnyRoleAsync(
         Guid entityId,
         CancellationToken cancellationToken,
@@ -764,7 +790,9 @@ public sealed class EntityMetadataApplyService
         || await _db.EntityFiles.AnyAsync(row => row.EntityId == entityId && roles.Contains(row.Role), cancellationToken);
 
     private async Task<EntityRow?> FindEntityByKindAndTitleAsync(string kind, string title, CancellationToken cancellationToken) =>
-        await _db.Entities.FirstOrDefaultAsync(
+        _db.Entities.Local.FirstOrDefault(
+            row => row.KindCode == kind && row.Title.Equals(title, StringComparison.OrdinalIgnoreCase) && row.DeletedAt == null)
+        ?? await _db.Entities.FirstOrDefaultAsync(
             row => row.KindCode == kind && row.Title.ToLower() == title.ToLower() && row.DeletedAt == null,
             cancellationToken);
 

@@ -80,6 +80,7 @@ export interface EntityMetadataProposal {
   patch: EntityMetadataPatch;
   images: ImageCandidate[];
   children: EntityMetadataProposal[];
+  relationships: EntityMetadataProposal[];
   candidates: EntitySearchCandidate[];
   targetEntityId?: string | null;
 }

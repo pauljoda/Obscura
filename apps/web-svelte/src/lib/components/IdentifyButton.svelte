@@ -16,12 +16,16 @@
   } from "@lucide/svelte";
   import { portal } from "$lib/actions/portal";
   import {
+    buildProposalForApply,
+    findRelationshipImage,
+    structuralChildProposals,
+  } from "$lib/components/identify-review";
+  import {
     applyIdentifyProposal,
     fetchIdentifyEntity,
     fetchIdentifyProviders,
     identifyEntity,
     type CreditPatch,
-    type EntityMetadataPatch,
     type EntityMetadataProposal,
     type EntitySearchCandidate,
     type ImageCandidate,
@@ -314,17 +318,8 @@
 
   const selectedTagCount = $derived(Object.values(selectedTags).filter(Boolean).length);
 
-  function findChildImage(children: EntityMetadataProposal[], targetKind: string, name: string): string | null {
-    const child = children.find(
-      (c) => c.targetKind === targetKind && (c.patch.title ?? "").localeCompare(name, undefined, { sensitivity: "accent" }) === 0,
-    );
-    if (!child?.images.length) return null;
-    const poster = child.images.find((img) => img.kind === "poster") ?? child.images[0];
-    return poster?.url ?? null;
-  }
-
-  function creditToCard(credit: CreditPatch, children: EntityMetadataProposal[]): EntityThumbnailCard {
-    const imageUrl = findChildImage(children, "person", credit.name);
+  function creditToCard(credit: CreditPatch, result: EntityMetadataProposal): EntityThumbnailCard {
+    const imageUrl = findRelationshipImage(result, "person", credit.name);
     return {
       entity: {
         id: `proposal-${credit.name}`,
@@ -345,7 +340,7 @@
 
   const creditCards = $derived.by((): EntityThumbnailCard[] => {
     if (!activeProposal) return [];
-    return activeProposal.patch.credits.map((c) => creditToCard(c, activeProposal.children));
+    return activeProposal.patch.credits.map((c) => creditToCard(c, activeProposal));
   });
 
   interface CascadeNode {
@@ -372,7 +367,7 @@
 
   const studioCard = $derived.by((): EntityThumbnailCard | null => {
     if (!activeProposal?.patch.studio) return null;
-    const imageUrl = findChildImage(activeProposal.children, "studio", activeProposal.patch.studio);
+    const imageUrl = findRelationshipImage(activeProposal, "studio", activeProposal.patch.studio);
     return {
       entity: {
         id: `proposal-studio`,
@@ -422,19 +417,13 @@
   }
 
   function proposalForApply(result: EntityMetadataProposal): EntityMetadataProposal {
-    const fields = selectedFieldsByProposal[result.proposalId] ?? Object.fromEntries(fieldKeys.map((field) => [field, hasField(result, field)]));
-    const selectedResultCredits = selectedCreditsByProposal[result.proposalId] ?? {};
-    const selectedResultTags = selectedTagsByProposal[result.proposalId] ?? {};
-    const credits = result.patch.credits.filter((credit, index) =>
-      selectedResultCredits[creditKey(credit, index)] !== false,
-    );
-    const tags = result.patch.tags.filter((tag) => selectedResultTags[tag] !== false);
-    return {
-      ...result,
-      patch: patchForSelectedFields(result, fields, credits, tags),
-      images: imagesForSelectedProposal(result),
-      children: filterSelectedCascadeChildren(result.children),
-    };
+    return buildProposalForApply(result, {
+      selectedFieldsByProposal,
+      selectedImagesByProposal,
+      selectedCreditsByProposal,
+      selectedTagsByProposal,
+      selectedCascade,
+    });
   }
 
   async function ensureEntityLoaded(id: string) {
@@ -458,13 +447,13 @@
     if (field === "urls") return patch.urls.join(", ");
     if (field === "tags") return patch.tags.join(", ");
     if (field === "studio") return patch.studio ?? "";
-    if (field === "credits") return `${patch.credits.length} credit${patch.credits.length === 1 ? "" : "s"}`;
+    if (field === "credits") return patch.credits.length > 0 ? `${patch.credits.length} credit${patch.credits.length === 1 ? "" : "s"}` : "";
     if (field === "dates") return entries(patch.dates).join(", ");
     if (field === "counters") return entries(patch.counters).join(", ");
     if (field === "stats") return entries(patch.stats).join(", ");
     if (field === "positions") return entries(patch.positions).join(", ");
     if (field === "classification") return patch.classification ?? "";
-    if (field === "images") return `${result.images.length} candidate${result.images.length === 1 ? "" : "s"}`;
+    if (field === "images") return result.images.length > 0 ? `${result.images.length} candidate${result.images.length === 1 ? "" : "s"}` : "";
     return "";
   }
 
@@ -574,44 +563,8 @@
     setImageSelection(group.kind, current ? null : group.images[0]?.url ?? null);
   }
 
-  function patchForSelectedFields(
-    result: EntityMetadataProposal,
-    fields: Record<string, boolean>,
-    credits: CreditPatch[],
-    tags: string[],
-  ): EntityMetadataPatch {
-    const patch = result.patch;
-    return {
-      title: fields.title ? patch.title : null,
-      description: fields.description ? patch.description : null,
-      externalIds: fields.externalIds ? patch.externalIds : {},
-      urls: fields.urls ? patch.urls : [],
-      tags: fields.tags ? tags : [],
-      studio: fields.studio ? patch.studio : null,
-      credits: fields.credits ? credits : [],
-      dates: fields.dates ? patch.dates : {},
-      counters: fields.counters ? patch.counters : {},
-      stats: fields.stats ? patch.stats : {},
-      positions: fields.positions ? patch.positions : {},
-      classification: fields.classification ? patch.classification : null,
-    };
-  }
-
-  function imagesForSelectedProposal(result: EntityMetadataProposal): ImageCandidate[] {
-    const fields = selectedFieldsByProposal[result.proposalId];
-    if (fields?.images === false) return [];
-    const selected = selectedImagesByProposal[result.proposalId];
-    if (!selected) return result.images;
-    return result.images.filter((image) => selected[image.kind] === image.url);
-  }
-
   function relationshipChildren(result: EntityMetadataProposal): EntityMetadataProposal[] {
-    return result.children.filter((child) => isRelationshipKind(child.targetKind));
-  }
-
-  function isRelationshipKind(kind: string): boolean {
-    const normalized = kind.toLowerCase();
-    return normalized !== "person" && normalized !== "studio" && normalized !== "tag";
+    return structuralChildProposals(result);
   }
 
   function toCascadeNode(child: EntityMetadataProposal): CascadeNode {
@@ -723,22 +676,13 @@
 
   function defaultCascadeSelection(result: EntityMetadataProposal): Record<string, boolean> {
     const selected: Record<string, boolean> = {};
-    for (const child of result.children) markCascadeSelected(child, selected);
+    for (const child of structuralChildProposals(result)) markCascadeSelected(child, selected);
     return selected;
   }
 
   function markCascadeSelected(child: EntityMetadataProposal, selected: Record<string, boolean>) {
     selected[child.proposalId] = true;
-    for (const nested of child.children) markCascadeSelected(nested, selected);
-  }
-
-  function filterSelectedCascadeChildren(children: EntityMetadataProposal[]): EntityMetadataProposal[] {
-    return children
-      .filter((child) => selectedCascade[child.proposalId] !== false)
-      .map((child) => ({
-        ...child,
-        children: filterSelectedCascadeChildren(child.children),
-      }));
+    for (const nested of structuralChildProposals(child)) markCascadeSelected(nested, selected);
   }
 
   function defaultImageSelection(images: ImageCandidate[]): Record<string, string | null> {

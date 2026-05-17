@@ -679,16 +679,22 @@ public sealed class IdentifyPluginService
         var existingChildren = await LoadGraphChildrenAsync(entity.Id, cancellationToken);
         if (existingChildren.Count == 0)
         {
-            return providerProposal with { TargetKind = entity.KindCode, TargetEntityId = entity.Id };
+            return providerProposal with
+            {
+                TargetKind = entity.KindCode,
+                TargetEntityId = entity.Id,
+                Children = StructuralChildProposals(providerProposal),
+                Relationships = RelationshipProposals(providerProposal)
+            };
         }
 
         var structuralChildren = new List<EntityMetadataProposal>();
         var usedProviderChildren = new HashSet<string>(StringComparer.Ordinal);
+        var providerStructuralChildren = StructuralChildProposals(providerProposal);
         foreach (var child in existingChildren)
         {
             var positions = await ResolveGraphPositionsAsync(child.Entity.Id, child.Link, cancellationToken);
-            var providerChild = providerProposal.Children
-                .Where(candidate => IsRelationshipProposal(candidate))
+            var providerChild = providerStructuralChildren
                 .Where(candidate => IsKindCompatible(child.Entity.KindCode, candidate.TargetKind))
                 .Select(candidate => new
                 {
@@ -733,15 +739,12 @@ public sealed class IdentifyPluginService
             }
         }
 
-        var nonStructuralChildren = providerProposal.Children
-            .Where(child => !IsRelationshipProposal(child))
-            .ToArray();
-
         return providerProposal with
         {
             TargetKind = entity.KindCode,
             TargetEntityId = entity.Id,
-            Children = [.. structuralChildren, .. nonStructuralChildren]
+            Children = structuralChildren,
+            Relationships = RelationshipProposals(providerProposal)
         };
     }
 
@@ -807,8 +810,29 @@ public sealed class IdentifyPluginService
     private static bool SupportsKind(PluginManifestV2 manifest, string kind) =>
         manifest.Supports.Any(support => support.EntityKind.Equals(kind, StringComparison.OrdinalIgnoreCase));
 
-    private static bool IsRelationshipProposal(EntityMetadataProposal proposal) =>
-        proposal.TargetKind is not ("person" or "studio" or "tag");
+    private static IReadOnlyList<EntityMetadataProposal> StructuralChildProposals(EntityMetadataProposal proposal) =>
+        proposal.Children
+            .Where(child => !IsRelationshipMetadataKind(child.TargetKind))
+            .ToArray();
+
+    private static IReadOnlyList<EntityMetadataProposal> RelationshipProposals(EntityMetadataProposal proposal)
+    {
+        var relationships = new List<EntityMetadataProposal>();
+        if (proposal.Relationships is { Count: > 0 })
+        {
+            relationships.AddRange(proposal.Relationships);
+        }
+
+        relationships.AddRange(proposal.Children.Where(child => IsRelationshipMetadataKind(child.TargetKind)));
+
+        return relationships
+            .GroupBy(child => child.ProposalId, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToArray();
+    }
+
+    private static bool IsRelationshipMetadataKind(string kind) =>
+        kind is "person" or "studio" or "tag";
 
     private static bool IsKindCompatible(string entityKind, string proposalKind) =>
         entityKind.Equals(proposalKind, StringComparison.OrdinalIgnoreCase) ||

@@ -196,6 +196,8 @@ public sealed record CreditPatch(string Name, string Role, string? Character, in
 /// <summary>
 /// Metadata proposal returned by a plugin process.
 /// </summary>
+/// <param name="Children">Structural child entity proposals such as seasons and episodes.</param>
+/// <param name="Relationships">Non-structural related entity proposals such as people, studios, and tags.</param>
 public sealed record EntityMetadataProposal(
     string ProposalId,
     string Provider,
@@ -206,7 +208,8 @@ public sealed record EntityMetadataProposal(
     IReadOnlyList<ImageCandidate> Images,
     IReadOnlyList<EntityMetadataProposal> Children,
     IReadOnlyList<EntitySearchCandidate> Candidates,
-    Guid? TargetEntityId = null);
+    Guid? TargetEntityId = null,
+    IReadOnlyList<EntityMetadataProposal> Relationships = null!);
 
 /// <summary>
 /// Response envelope written by v2 plugin processes.
