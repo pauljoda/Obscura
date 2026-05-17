@@ -84,7 +84,7 @@ public sealed class VideoService
     public async Task<VideoSeasonDetail?> GetSeasonAsync(Guid seriesId, Guid seasonId, CancellationToken cancellationToken)
     {
         var season = await _videos.GetSeasonAsync(seasonId, cancellationToken);
-        if (season is null || season.SeriesId != seriesId)
+        if (season is null || season.ParentEntityId != seriesId)
         {
             return null;
         }

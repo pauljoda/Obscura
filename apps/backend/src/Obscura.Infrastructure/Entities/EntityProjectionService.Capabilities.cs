@@ -124,7 +124,7 @@ public sealed partial class EntityProjectionService
         entity.Kind.Code switch
         {
             "video" => new Video(entity, null),
-            "video-season" when entity.ParentEntityId.HasValue => new VideoSeason(entity, entity.ParentEntityId.Value),
+            "video-season" => new VideoSeason(entity, entity.ParentEntityId),
             "image" => new Image(entity),
             _ => entity
         };

@@ -46,8 +46,7 @@ public static partial class ContractMapper
             studio.Id,
             studio.Kind.Code,
             studio.Title,
-            ToEntityCapabilities(studio.Capabilities),
-            studio.ParentStudioId);
+            ToEntityCapabilities(studio.Capabilities));
 
     /// <summary>
     /// Converts a tag aggregate into its object-specific detail contract.
@@ -60,6 +59,5 @@ public static partial class ContractMapper
             tag.Kind.Code,
             tag.Title,
             ToEntityCapabilities(tag.Capabilities),
-            tag.ParentTagId,
             tag.IgnoreAutoTag);
 }

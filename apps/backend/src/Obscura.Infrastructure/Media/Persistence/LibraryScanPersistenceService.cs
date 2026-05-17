@@ -289,7 +289,7 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         var id = Guid.NewGuid();
 
         db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.BookChapter.Code, Title = title, ParentEntityId = bookEntityId, SortOrder = 0, CreatedAt = now, UpdatedAt = now });
-        db.BookChapterDetails.Add(new BookChapterDetailRow { EntityId = id, BookEntityId = bookEntityId });
+        db.BookChapterDetails.Add(new BookChapterDetailRow { EntityId = id });
         db.EntityFiles.Add(new EntityFileRow
         {
             Id = Guid.NewGuid(), EntityId = id, Role = EntityFileRole.Source,
@@ -334,7 +334,7 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         var id = Guid.NewGuid();
 
         db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.BookPage.Code, Title = title, ParentEntityId = chapterEntityId, SortOrder = sortOrder, CreatedAt = now, UpdatedAt = now });
-        db.BookPageDetails.Add(new BookPageDetailRow { EntityId = id, BookEntityId = bookEntityId, ChapterEntityId = chapterEntityId });
+        db.BookPageDetails.Add(new BookPageDetailRow { EntityId = id });
         db.EntityFiles.Add(new EntityFileRow
         {
             Id = Guid.NewGuid(), EntityId = id, Role = EntityFileRole.Source,
@@ -409,9 +409,9 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
 
     public async Task<int> RemoveStaleBookChaptersAsync(Guid bookEntityId, IReadOnlySet<string> validArchivePaths, CancellationToken cancellationToken)
     {
-        var chapterIds = await db.BookChapterDetails.AsNoTracking()
-            .Where(c => c.BookEntityId == bookEntityId)
-            .Select(c => c.EntityId)
+        var chapterIds = await db.EntityChildLinks.AsNoTracking()
+            .Where(link => link.ParentEntityId == bookEntityId && link.ChildKindCode == EntityKindRegistry.BookChapter.Code)
+            .Select(link => link.ChildEntityId)
             .ToListAsync(cancellationToken);
 
         return await RemoveStaleEntitiesBySourcePath(chapterIds, validArchivePaths, cancellationToken);
@@ -610,10 +610,26 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
             return cachedSeasonId;
         }
 
-        var existingDetail = db.VideoSeasonDetails.Local.FirstOrDefault(row =>
-                row.SeriesEntityId == seriesId && row.SeasonNumber == season.SeasonNumber)
-            ?? await db.VideoSeasonDetails.FirstOrDefaultAsync(row =>
-                row.SeriesEntityId == seriesId && row.SeasonNumber == season.SeasonNumber, cancellationToken);
+        var localSeasonId = (
+            from link in db.EntityChildLinks.Local
+            join detail in db.VideoSeasonDetails.Local on link.ChildEntityId equals detail.EntityId
+            where link.ParentEntityId == seriesId
+                  && link.ChildKindCode == EntityKindRegistry.VideoSeason.Code
+                  && detail.SeasonNumber == season.SeasonNumber
+            select detail.EntityId).FirstOrDefault();
+        var storedSeasonId = localSeasonId == Guid.Empty
+            ? await (
+                from link in db.EntityChildLinks
+                join detail in db.VideoSeasonDetails on link.ChildEntityId equals detail.EntityId
+                where link.ParentEntityId == seriesId
+                      && link.ChildKindCode == EntityKindRegistry.VideoSeason.Code
+                      && detail.SeasonNumber == season.SeasonNumber
+                select detail.EntityId).FirstOrDefaultAsync(cancellationToken)
+            : localSeasonId;
+        var existingDetail = storedSeasonId == Guid.Empty
+            ? null
+            : db.VideoSeasonDetails.Local.FirstOrDefault(row => row.EntityId == storedSeasonId)
+              ?? await db.VideoSeasonDetails.FirstOrDefaultAsync(row => row.EntityId == storedSeasonId, cancellationToken);
         var seasonId = existingDetail?.EntityId ?? Guid.NewGuid();
 
         if (existingDetail is null)
@@ -631,7 +647,6 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
             db.VideoSeasonDetails.Add(new VideoSeasonDetailRow
             {
                 EntityId = seasonId,
-                SeriesEntityId = seriesId,
                 SeasonNumber = season.SeasonNumber
             });
         }

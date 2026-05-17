@@ -68,8 +68,7 @@ public static partial class ContractMapper
             library.Kind.Code,
             library.Title,
             ToEntityCapabilities(library.Capabilities),
-            ToEntityCards(children),
-            library.ParentLibraryId);
+            ToEntityCards(children));
 
     /// <summary>
     /// Converts an audio track aggregate into its object-specific detail contract.

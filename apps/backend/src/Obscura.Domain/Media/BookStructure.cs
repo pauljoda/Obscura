@@ -11,7 +11,6 @@ public sealed record BookVolume : Entity
     public BookVolume(
         Guid Id,
         string Title,
-        Guid BookId,
         IReadOnlyList<ICapability>? capabilities = null)
         : base(
             Id,
@@ -19,13 +18,10 @@ public sealed record BookVolume : Entity
             Title,
             capabilities ?? [CapabilityImages.Empty, CapabilityFiles.Empty, CapabilityStats.Empty, CapabilitySource.Empty, CapabilityPosition.Empty])
     {
-        this.BookId = BookId;
     }
 
-    public Guid BookId { get; init; }
-
-    public BookVolume(Entity entity, Guid BookId)
-        : this(entity.Id, entity.Title, BookId, entity.Capabilities)
+    public BookVolume(Entity entity)
+        : this(entity.Id, entity.Title, entity.Capabilities)
     {
     }
 }
@@ -38,8 +34,6 @@ public sealed record BookChapter : Entity
     public BookChapter(
         Guid Id,
         string Title,
-        Guid BookId,
-        Guid? VolumeId,
         Guid? CoverPageId,
         IReadOnlyList<ICapability>? capabilities = null)
         : base(
@@ -48,17 +42,13 @@ public sealed record BookChapter : Entity
             Title,
             capabilities ?? [CapabilityImages.Empty, CapabilityFiles.Empty, CapabilityFingerprints.Empty, CapabilityStats.Empty, CapabilitySource.Empty, CapabilityPosition.Empty])
     {
-        this.BookId = BookId;
-        this.VolumeId = VolumeId;
         this.CoverPageId = CoverPageId;
     }
 
-    public Guid BookId { get; init; }
-    public Guid? VolumeId { get; init; }
     public Guid? CoverPageId { get; init; }
 
-    public BookChapter(Entity entity, Guid BookId, Guid? VolumeId, Guid? CoverPageId)
-        : this(entity.Id, entity.Title, BookId, VolumeId, CoverPageId, entity.Capabilities)
+    public BookChapter(Entity entity, Guid? CoverPageId)
+        : this(entity.Id, entity.Title, CoverPageId, entity.Capabilities)
     {
     }
 }
@@ -71,8 +61,6 @@ public sealed record BookPage : Entity
     public BookPage(
         Guid Id,
         string Title,
-        Guid BookId,
-        Guid ChapterId,
         IReadOnlyList<ICapability>? capabilities = null)
         : base(
             Id,
@@ -80,15 +68,10 @@ public sealed record BookPage : Entity
             Title,
             capabilities ?? [CapabilityImages.Empty, CapabilityFiles.Empty, CapabilityFingerprints.Empty, CapabilityTechnical.Empty, CapabilitySource.Empty, CapabilityPosition.Empty])
     {
-        this.BookId = BookId;
-        this.ChapterId = ChapterId;
     }
 
-    public Guid BookId { get; init; }
-    public Guid ChapterId { get; init; }
-
-    public BookPage(Entity entity, Guid BookId, Guid ChapterId)
-        : this(entity.Id, entity.Title, BookId, ChapterId, entity.Capabilities)
+    public BookPage(Entity entity)
+        : this(entity.Id, entity.Title, entity.Capabilities)
     {
     }
 }

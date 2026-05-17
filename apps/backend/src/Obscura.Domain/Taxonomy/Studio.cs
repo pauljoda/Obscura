@@ -14,7 +14,6 @@ public sealed record Studio : Entity
     public Studio(
         Guid Id,
         string Title,
-        Guid? ParentStudioId,
         IReadOnlyList<ICapability>? capabilities = null)
         : base(
             Id,
@@ -30,17 +29,13 @@ public sealed record Studio : Entity
                 CapabilityFiles.Empty
             ])
     {
-        this.ParentStudioId = ParentStudioId;
     }
-
-    /// <summary>Optional parent studio entity identifier for hierarchical studios.</summary>
-    public Guid? ParentStudioId { get; init; }
 
     /// <summary>
     /// Creates a studio from an already hydrated entity root.
     /// </summary>
-    public Studio(Entity entity, Guid? ParentStudioId)
-        : this(entity.Id, entity.Title, ParentStudioId, entity.Capabilities)
+    public Studio(Entity entity)
+        : this(entity.Id, entity.Title, entity.Capabilities)
     {
     }
 }

@@ -12,7 +12,6 @@ public sealed class VideoSeriesDetailRow
 public sealed class VideoSeasonDetailRow
 {
     public Guid EntityId { get; set; }
-    public Guid SeriesEntityId { get; set; }
     public int SeasonNumber { get; set; }
 }
 
@@ -38,28 +37,22 @@ public sealed class BookDetailRow
 public sealed class BookVolumeDetailRow
 {
     public Guid EntityId { get; set; }
-    public Guid BookEntityId { get; set; }
 }
 
 public sealed class BookChapterDetailRow
 {
     public Guid EntityId { get; set; }
-    public Guid BookEntityId { get; set; }
-    public Guid? VolumeEntityId { get; set; }
     public Guid? CoverPageEntityId { get; set; }
 }
 
 public sealed class BookPageDetailRow
 {
     public Guid EntityId { get; set; }
-    public Guid BookEntityId { get; set; }
-    public Guid ChapterEntityId { get; set; }
 }
 
 public sealed class AudioLibraryDetailRow
 {
     public Guid EntityId { get; set; }
-    public Guid? ParentLibraryEntityId { get; set; }
 }
 
 public sealed class AudioTrackDetailRow

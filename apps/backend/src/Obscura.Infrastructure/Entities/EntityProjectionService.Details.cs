@@ -89,11 +89,7 @@ public sealed partial class EntityProjectionService
             return null;
         }
 
-        var detail = await _db.AudioLibraryDetails
-            .AsNoTracking()
-            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-
-        return new AudioLibrary(entity, detail?.ParentLibraryEntityId);
+        return new AudioLibrary(entity);
     }
 
     /// <inheritdoc />
@@ -170,13 +166,7 @@ public sealed partial class EntityProjectionService
             return null;
         }
 
-        var detail = await _db.StudioDetails
-            .AsNoTracking()
-            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-
-        return new Studio(
-            entity,
-            detail?.ParentStudioEntityId);
+        return new Studio(entity);
     }
 
     /// <inheritdoc />
@@ -198,10 +188,7 @@ public sealed partial class EntityProjectionService
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new Tag(
-            entity,
-            detail?.ParentTagEntityId,
-            detail?.IgnoreAutoTag ?? false);
+        return new Tag(entity, detail?.IgnoreAutoTag ?? false);
     }
 
     /// <inheritdoc />
@@ -251,14 +238,9 @@ public sealed partial class EntityProjectionService
             return null;
         }
 
-        var detail = await _db.VideoSeasonDetails
-            .AsNoTracking()
-            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
         var videos = await ListChildrenAsync(id, EntityKindRegistry.Video, cancellationToken);
 
-        var seriesId = entity.ParentEntityId ?? detail?.SeriesEntityId ?? Guid.Empty;
-
-        return new VideoSeason(entity, seriesId, videos);
+        return new VideoSeason(entity, entity.ParentEntityId, videos);
     }
 
     /// <summary>
@@ -272,11 +254,7 @@ public sealed partial class EntityProjectionService
             return null;
         }
 
-        var detail = await _db.BookVolumeDetails
-            .AsNoTracking()
-            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-
-        return new BookVolume(entity, detail?.BookEntityId ?? Guid.Empty);
+        return new BookVolume(entity);
     }
 
     /// <summary>
@@ -296,8 +274,6 @@ public sealed partial class EntityProjectionService
 
         return new BookChapter(
             entity,
-            detail?.BookEntityId ?? Guid.Empty,
-            detail?.VolumeEntityId,
             detail?.CoverPageEntityId);
     }
 
@@ -312,10 +288,6 @@ public sealed partial class EntityProjectionService
             return null;
         }
 
-        var detail = await _db.BookPageDetails
-            .AsNoTracking()
-            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-
-        return new BookPage(entity, detail?.BookEntityId ?? Guid.Empty, detail?.ChapterEntityId ?? Guid.Empty);
+        return new BookPage(entity);
     }
 }

@@ -135,6 +135,25 @@ public sealed class ObscuraDbContextModelTests
         Assert.Equal(typeof(EntityRow), parentFk!.PrincipalEntityType.ClrType);
     }
 
+    [Theory]
+    [InlineData(typeof(VideoSeasonDetailRow), "series_entity_id")]
+    [InlineData(typeof(AudioLibraryDetailRow), "parent_library_entity_id")]
+    [InlineData(typeof(BookVolumeDetailRow), "book_entity_id")]
+    [InlineData(typeof(BookChapterDetailRow), "book_entity_id")]
+    [InlineData(typeof(BookChapterDetailRow), "volume_entity_id")]
+    [InlineData(typeof(BookPageDetailRow), "book_entity_id")]
+    [InlineData(typeof(BookPageDetailRow), "chapter_entity_id")]
+    [InlineData(typeof(StudioDetailRow), "parent_studio_entity_id")]
+    [InlineData(typeof(TagDetailRow), "parent_tag_entity_id")]
+    public void DetailRowsDoNotKeepParentSpecificRelationshipColumns(Type entityType, string columnName)
+    {
+        using var db = CreateContext();
+        var modelEntity = db.Model.FindEntityType(entityType);
+
+        Assert.NotNull(modelEntity);
+        Assert.DoesNotContain(modelEntity!.GetProperties(), property => property.GetColumnName() == columnName);
+    }
+
     [Fact]
     public void EntityKindsSeedStorageMetadata()
     {

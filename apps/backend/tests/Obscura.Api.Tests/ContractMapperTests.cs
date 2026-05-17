@@ -159,14 +159,14 @@ public sealed class ContractMapperTests
                 Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
                 EntityKindRegistry.Tag,
                 "Mapped Tag",
-                []),
-            Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
+                [],
+                parentEntityId: Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff")),
             IgnoreAutoTag: true);
 
         using var document = JsonDocument.Parse(JsonSerializer.Serialize(ContractMapper.ToTagDetail(tag), JsonOptions));
 
-        Assert.Equal("ffffffff-ffff-ffff-ffff-ffffffffffff", document.RootElement.GetProperty("parentTagId").GetGuid().ToString());
         Assert.True(document.RootElement.GetProperty("ignoreAutoTag").GetBoolean());
+        Assert.False(document.RootElement.TryGetProperty("parentTagId", out _));
         Assert.False(document.RootElement.TryGetProperty("gender", out _));
         Assert.False(document.RootElement.TryGetProperty("parentStudioId", out _));
     }

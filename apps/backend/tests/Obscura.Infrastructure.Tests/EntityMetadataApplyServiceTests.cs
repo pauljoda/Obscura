@@ -87,7 +87,6 @@ public sealed class EntityMetadataApplyServiceTests
         db.VideoSeasonDetails.Add(new VideoSeasonDetailRow
         {
             EntityId = seasonId,
-            SeriesEntityId = seriesId,
             SeasonNumber = 1
         });
         db.EntityChildLinks.AddRange(

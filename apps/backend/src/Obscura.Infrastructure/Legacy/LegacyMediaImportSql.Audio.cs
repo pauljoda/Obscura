@@ -75,14 +75,10 @@ public static partial class LegacyMediaImportSql
                     value = EXCLUDED.value,
                     updated_at = EXCLUDED.updated_at;
 
-                INSERT INTO v2.audio_library_details (
-                    entity_id,
-                    parent_library_entity_id
-                )
-                SELECT id, parent_id
+                INSERT INTO v2.audio_library_details (entity_id)
+                SELECT id
                 FROM public.audio_libraries
-                ON CONFLICT (entity_id) DO UPDATE SET
-                    parent_library_entity_id = EXCLUDED.parent_library_entity_id;
+                ON CONFLICT (entity_id) DO NOTHING;
 
                 INSERT INTO v2.entity_studio_links (entity_id, studio_id, created_at)
                 SELECT id, studio_id, updated_at

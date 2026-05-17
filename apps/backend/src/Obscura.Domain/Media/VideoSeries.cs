@@ -85,13 +85,13 @@ public sealed record VideoSeason : Entity
     /// </summary>
     /// <param name="Id">Season entity identifier.</param>
     /// <param name="Title">Season display title.</param>
-    /// <param name="SeriesId">Parent video-series entity identifier.</param>
+    /// <param name="ParentEntityId">Parent video-series entity identifier.</param>
     /// <param name="capabilities">Shared entity capabilities projected for the season.</param>
     /// <param name="videos">Episode videos linked to this season in hierarchy order.</param>
     public VideoSeason(
         Guid Id,
         string Title,
-        Guid SeriesId,
+        Guid? ParentEntityId,
         IReadOnlyList<ICapability>? capabilities = null,
         IReadOnlyList<Entity>? videos = null,
         EntityChildren? childrenByKind = null)
@@ -100,15 +100,11 @@ public sealed record VideoSeason : Entity
             EntityKindRegistry.VideoSeason,
             Title,
             capabilities ?? [CapabilityImages.Empty, CapabilityDescription.Empty, CapabilityDates.Empty, CapabilitySource.Empty, CapabilityPosition.Empty],
-            parentEntityId: SeriesId,
+            parentEntityId: ParentEntityId,
             children: childrenByKind ?? BuildChildrenByKind(videos ?? []))
     {
-        this.SeriesId = SeriesId;
         Videos = videos ?? [];
     }
-
-    /// <summary>Parent video-series entity identifier.</summary>
-    public Guid SeriesId { get; init; }
 
     /// <summary>Episode video cards linked to this season in hierarchy order.</summary>
     public IReadOnlyList<Entity> Videos { get; init; }
@@ -117,13 +113,13 @@ public sealed record VideoSeason : Entity
     /// Creates a season from an already hydrated entity root.
     /// </summary>
     /// <param name="entity">Hydrated season entity root.</param>
-    /// <param name="SeriesId">Parent video-series entity identifier.</param>
+    /// <param name="ParentEntityId">Parent video-series entity identifier.</param>
     /// <param name="videos">Episode videos linked to this season in hierarchy order.</param>
-    public VideoSeason(Entity entity, Guid SeriesId, IReadOnlyList<Entity>? videos = null)
+    public VideoSeason(Entity entity, Guid? ParentEntityId, IReadOnlyList<Entity>? videos = null)
         : this(
             entity.Id,
             entity.Title,
-            SeriesId,
+            ParentEntityId,
             entity.Capabilities,
             videos,
             entity.ChildrenByKind.Sets.Count > 0 ? entity.ChildrenByKind : null)

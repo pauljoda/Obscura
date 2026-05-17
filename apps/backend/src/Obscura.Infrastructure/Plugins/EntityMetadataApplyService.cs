@@ -498,8 +498,13 @@ public sealed class EntityMetadataApplyService
             if (!seasonProposal.Patch.Positions.TryGetValue("seasonNumber", out var seasonNum))
                 continue;
 
-            var seasonDetail = await _db.VideoSeasonDetails
-                .FirstOrDefaultAsync(row => row.SeriesEntityId == seriesEntityId && row.SeasonNumber == seasonNum, cancellationToken);
+            var seasonDetail = await (
+                from link in _db.EntityChildLinks
+                join detail in _db.VideoSeasonDetails on link.ChildEntityId equals detail.EntityId
+                where link.ParentEntityId == seriesEntityId
+                      && link.ChildKindCode == EntityKindRegistry.VideoSeason.Code
+                      && detail.SeasonNumber == seasonNum
+                select detail).FirstOrDefaultAsync(cancellationToken);
             if (seasonDetail is null)
                 continue;
 

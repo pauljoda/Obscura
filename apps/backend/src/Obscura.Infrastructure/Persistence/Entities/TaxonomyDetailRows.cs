@@ -19,12 +19,10 @@ public sealed class PersonDetailRow
 public sealed class StudioDetailRow
 {
     public Guid EntityId { get; set; }
-    public Guid? ParentStudioEntityId { get; set; }
 }
 
 public sealed class TagDetailRow
 {
     public Guid EntityId { get; set; }
-    public Guid? ParentTagEntityId { get; set; }
     public bool IgnoreAutoTag { get; set; }
 }

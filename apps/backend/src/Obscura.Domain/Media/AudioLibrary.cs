@@ -14,7 +14,6 @@ public sealed record AudioLibrary : Entity
     public AudioLibrary(
         Guid Id,
         string Title,
-        Guid? ParentLibraryId,
         IReadOnlyList<ICapability>? capabilities = null)
         : base(
             Id,
@@ -32,17 +31,13 @@ public sealed record AudioLibrary : Entity
                 CapabilityFiles.Empty
             ])
     {
-        this.ParentLibraryId = ParentLibraryId;
     }
-
-    /// <summary>Optional parent audio library entity identifier for nested album/library structures.</summary>
-    public Guid? ParentLibraryId { get; init; }
 
     /// <summary>
     /// Creates an audio library from an already hydrated entity root.
     /// </summary>
-    public AudioLibrary(Entity entity, Guid? ParentLibraryId)
-        : this(entity.Id, entity.Title, ParentLibraryId, entity.Capabilities)
+    public AudioLibrary(Entity entity)
+        : this(entity.Id, entity.Title, entity.Capabilities)
     {
     }
 }

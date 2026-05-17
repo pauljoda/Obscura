@@ -449,12 +449,8 @@ public sealed partial class EntityProjectionService :
         }
 
         var card = (await BuildEntitiesAsync([entity], cancellationToken, includeChildren: true)).Single();
-        var detail = await _db.VideoSeasonDetails
-            .AsNoTracking()
-            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-        var seriesId = card.ParentEntityId ?? detail?.SeriesEntityId ?? Guid.Empty;
         var videos = card.ChildrenByKind.Get(EntityKindRegistry.Video).Cast<Entity>().ToArray();
 
-        return new VideoSeason(card, seriesId, videos);
+        return new VideoSeason(card, card.ParentEntityId, videos);
     }
 }

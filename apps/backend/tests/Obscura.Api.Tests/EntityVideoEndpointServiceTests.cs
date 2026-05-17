@@ -291,7 +291,6 @@ public sealed class EntityVideoEndpointServiceTests
 
             return Task.FromResult<DomainTag?>(new DomainTag(
                 TagCard(),
-                ParentTagId: null,
                 IgnoreAutoTag: true));
         }
 

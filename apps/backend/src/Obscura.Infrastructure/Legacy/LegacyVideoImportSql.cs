@@ -512,8 +512,12 @@ public static class LegacyVideoImportSql
                             season.created_at,
                             season.updated_at
                         FROM public.video_seasons season
+                        LEFT JOIN v2.entity_child_links existing_link
+                            ON existing_link.parent_entity_id = season.series_id
+                           AND existing_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                           AND existing_link.is_structural = true
                         LEFT JOIN v2.video_season_details existing
-                            ON existing.series_entity_id = season.series_id
+                            ON existing.entity_id = existing_link.child_entity_id
                            AND existing.season_number = season.season_number
                         WHERE season.series_id IS NOT NULL
                           AND season.season_number IS NOT NULL
@@ -532,17 +536,20 @@ public static class LegacyVideoImportSql
                             season.series_id,
                             season.season_number
                         FROM public.video_seasons season
+                        LEFT JOIN v2.entity_child_links existing_link
+                            ON existing_link.parent_entity_id = season.series_id
+                           AND existing_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                           AND existing_link.is_structural = true
                         LEFT JOIN v2.video_season_details existing
-                            ON existing.series_entity_id = season.series_id
+                            ON existing.entity_id = existing_link.child_entity_id
                            AND existing.season_number = season.season_number
                         WHERE season.series_id IS NOT NULL
                           AND season.season_number IS NOT NULL
                     )
-                    INSERT INTO v2.video_season_details (entity_id, series_entity_id, season_number)
-                    SELECT entity_id, series_id, season_number
+                    INSERT INTO v2.video_season_details (entity_id, season_number)
+                    SELECT entity_id, season_number
                     FROM legacy_seasons
                     ON CONFLICT (entity_id) DO UPDATE SET
-                        series_entity_id = EXCLUDED.series_entity_id,
                         season_number = EXCLUDED.season_number;
 
                     WITH legacy_seasons AS (
@@ -551,8 +558,12 @@ public static class LegacyVideoImportSql
                             season.overview,
                             season.updated_at
                         FROM public.video_seasons season
+                        LEFT JOIN v2.entity_child_links existing_link
+                            ON existing_link.parent_entity_id = season.series_id
+                           AND existing_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                           AND existing_link.is_structural = true
                         LEFT JOIN v2.video_season_details existing
-                            ON existing.series_entity_id = season.series_id
+                            ON existing.entity_id = existing_link.child_entity_id
                            AND existing.season_number = season.season_number
                         WHERE season.overview IS NOT NULL
                     )
@@ -569,8 +580,12 @@ public static class LegacyVideoImportSql
                             season.air_date,
                             season.updated_at
                         FROM public.video_seasons season
+                        LEFT JOIN v2.entity_child_links existing_link
+                            ON existing_link.parent_entity_id = season.series_id
+                           AND existing_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                           AND existing_link.is_structural = true
                         LEFT JOIN v2.video_season_details existing
-                            ON existing.series_entity_id = season.series_id
+                            ON existing.entity_id = existing_link.child_entity_id
                            AND existing.season_number = season.season_number
                         WHERE season.air_date IS NOT NULL
                     )
@@ -589,8 +604,12 @@ public static class LegacyVideoImportSql
                             season.folder_path,
                             season.updated_at
                         FROM public.video_seasons season
+                        LEFT JOIN v2.entity_child_links existing_link
+                            ON existing_link.parent_entity_id = season.series_id
+                           AND existing_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                           AND existing_link.is_structural = true
                         LEFT JOIN v2.video_season_details existing
-                            ON existing.series_entity_id = season.series_id
+                            ON existing.entity_id = existing_link.child_entity_id
                            AND existing.season_number = season.season_number
                         WHERE season.folder_path IS NOT NULL
                     )
@@ -608,8 +627,12 @@ public static class LegacyVideoImportSql
                             season.created_at,
                             season.updated_at
                         FROM public.video_seasons season
+                        LEFT JOIN v2.entity_child_links existing_link
+                            ON existing_link.parent_entity_id = season.series_id
+                           AND existing_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                           AND existing_link.is_structural = true
                         LEFT JOIN v2.video_season_details existing
-                            ON existing.series_entity_id = season.series_id
+                            ON existing.entity_id = existing_link.child_entity_id
                            AND existing.season_number = season.season_number
                         WHERE season.folder_path IS NOT NULL
                     )
@@ -627,8 +650,12 @@ public static class LegacyVideoImportSql
                             season.created_at,
                             season.updated_at
                         FROM public.video_seasons season
+                        LEFT JOIN v2.entity_child_links existing_link
+                            ON existing_link.parent_entity_id = season.series_id
+                           AND existing_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                           AND existing_link.is_structural = true
                         LEFT JOIN v2.video_season_details existing
-                            ON existing.series_entity_id = season.series_id
+                            ON existing.entity_id = existing_link.child_entity_id
                            AND existing.season_number = season.season_number
                         WHERE season.poster_path IS NOT NULL
                     )
@@ -648,8 +675,12 @@ public static class LegacyVideoImportSql
                             season.created_at,
                             season.updated_at
                         FROM public.video_seasons season
+                        LEFT JOIN v2.entity_child_links existing_link
+                            ON existing_link.parent_entity_id = season.series_id
+                           AND existing_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                           AND existing_link.is_structural = true
                         LEFT JOIN v2.video_season_details existing
-                            ON existing.series_entity_id = season.series_id
+                            ON existing.entity_id = existing_link.child_entity_id
                            AND existing.season_number = season.season_number
                     )
                     INSERT INTO v2.entity_external_ids (id, entity_id, provider, value, url, created_at, updated_at)
@@ -667,8 +698,12 @@ public static class LegacyVideoImportSql
                             season.season_number,
                             season.updated_at
                         FROM public.video_seasons season
+                        LEFT JOIN v2.entity_child_links existing_link
+                            ON existing_link.parent_entity_id = season.series_id
+                           AND existing_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                           AND existing_link.is_structural = true
                         LEFT JOIN v2.video_season_details existing
-                            ON existing.series_entity_id = season.series_id
+                            ON existing.entity_id = existing_link.child_entity_id
                            AND existing.season_number = season.season_number
                         WHERE season.season_number IS NOT NULL
                     )
@@ -687,8 +722,12 @@ public static class LegacyVideoImportSql
                             season.season_number,
                             season.created_at
                         FROM public.video_seasons season
+                        LEFT JOIN v2.entity_child_links existing_link
+                            ON existing_link.parent_entity_id = season.series_id
+                           AND existing_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                           AND existing_link.is_structural = true
                         LEFT JOIN v2.video_season_details existing
-                            ON existing.series_entity_id = season.series_id
+                            ON existing.entity_id = existing_link.child_entity_id
                            AND existing.season_number = season.season_number
                         WHERE season.series_id IS NOT NULL
                           AND season.season_number IS NOT NULL
@@ -732,8 +771,12 @@ public static class LegacyVideoImportSql
                         legacy.created_at,
                         legacy.updated_at
                     FROM legacy_seasons legacy
+                    INNER JOIN v2.entity_child_links season_link
+                        ON season_link.parent_entity_id = legacy.series_id
+                       AND season_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                       AND season_link.is_structural = true
                     INNER JOIN v2.video_season_details season
-                        ON season.series_entity_id = legacy.series_id
+                        ON season.entity_id = season_link.child_entity_id
                        AND season.season_number = legacy.season_number
                 ),
                 new_seasons AS (
@@ -767,13 +810,22 @@ public static class LegacyVideoImportSql
                     SELECT * FROM existing_seasons
                     UNION ALL
                     SELECT * FROM new_seasons
+                ),
+                upsert_details AS (
+                    INSERT INTO v2.video_season_details (entity_id, season_number)
+                    SELECT entity_id, season_number
+                    FROM season_entities
+                    ON CONFLICT (entity_id) DO UPDATE SET
+                        season_number = EXCLUDED.season_number
+                    RETURNING entity_id
                 )
-                INSERT INTO v2.video_season_details (entity_id, series_entity_id, season_number)
-                SELECT entity_id, series_id, season_number
+                INSERT INTO v2.entity_child_links (parent_entity_id, child_entity_id, child_kind_code, sort_order, is_structural, source, created_at)
+                SELECT series_id, entity_id, '{{EntityKindRegistry.VideoSeason.Code}}', season_number, true, 'legacy-import', created_at
                 FROM season_entities
-                ON CONFLICT (entity_id) DO UPDATE SET
-                    series_entity_id = EXCLUDED.series_entity_id,
-                    season_number = EXCLUDED.season_number;
+                ON CONFLICT (parent_entity_id, child_entity_id, child_kind_code) DO UPDATE SET
+                    sort_order = EXCLUDED.sort_order,
+                    is_structural = EXCLUDED.is_structural,
+                    source = EXCLUDED.source;
 
                 WITH season_folder_paths AS (
                     SELECT
@@ -781,8 +833,12 @@ public static class LegacyVideoImportSql
                         regexp_replace(MIN(episode.file_path), '/[^/]*$', '') AS season_folder_path,
                         MAX(episode.updated_at) AS updated_at
                     FROM public.video_episodes episode
+                    INNER JOIN v2.entity_child_links season_link
+                        ON season_link.parent_entity_id = episode.series_id
+                       AND season_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                       AND season_link.is_structural = true
                     INNER JOIN v2.video_season_details season
-                        ON season.series_entity_id = episode.series_id
+                        ON season.entity_id = season_link.child_entity_id
                        AND season.season_number = episode.season_number
                     WHERE episode.file_path IS NOT NULL
                     GROUP BY season.entity_id
@@ -802,8 +858,12 @@ public static class LegacyVideoImportSql
                         MIN(episode.created_at) AS created_at,
                         MAX(episode.updated_at) AS updated_at
                     FROM public.video_episodes episode
+                    INNER JOIN v2.entity_child_links season_link
+                        ON season_link.parent_entity_id = episode.series_id
+                       AND season_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                       AND season_link.is_structural = true
                     INNER JOIN v2.video_season_details season
-                        ON season.series_entity_id = episode.series_id
+                        ON season.entity_id = season_link.child_entity_id
                        AND season.season_number = episode.season_number
                     WHERE episode.file_path IS NOT NULL
                     GROUP BY season.entity_id
@@ -827,10 +887,14 @@ public static class LegacyVideoImportSql
                 INSERT INTO v2.entity_positions (entity_id, code, value, label, updated_at)
                 SELECT season.entity_id, 'season', season.season_number, season.season_number::text, NOW()
                 FROM v2.video_season_details season
+                INNER JOIN v2.entity_child_links season_link
+                    ON season_link.child_entity_id = season.entity_id
+                   AND season_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                   AND season_link.is_structural = true
                 WHERE EXISTS (
                     SELECT 1
                     FROM public.video_episodes episode
-                    WHERE episode.series_id = season.series_entity_id
+                    WHERE episode.series_id = season_link.parent_entity_id
                       AND episode.season_number = season.season_number
                 )
                 ON CONFLICT (entity_id, code) DO UPDATE SET
@@ -839,12 +903,16 @@ public static class LegacyVideoImportSql
                     updated_at = EXCLUDED.updated_at;
 
                 INSERT INTO v2.entity_child_links (parent_entity_id, child_entity_id, child_kind_code, sort_order, is_structural, source, created_at)
-                SELECT season.series_entity_id, season.entity_id, '{{EntityKindRegistry.VideoSeason.Code}}', season.season_number, true, 'legacy-import', NOW()
+                SELECT season_link.parent_entity_id, season.entity_id, '{{EntityKindRegistry.VideoSeason.Code}}', season.season_number, true, 'legacy-import', NOW()
                 FROM v2.video_season_details season
+                INNER JOIN v2.entity_child_links season_link
+                    ON season_link.child_entity_id = season.entity_id
+                   AND season_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                   AND season_link.is_structural = true
                 WHERE EXISTS (
                     SELECT 1
                     FROM public.video_episodes episode
-                    WHERE episode.series_id = season.series_entity_id
+                    WHERE episode.series_id = season_link.parent_entity_id
                       AND episode.season_number = season.season_number
                 )
                 ON CONFLICT (parent_entity_id, child_entity_id, child_kind_code) DO UPDATE SET
@@ -885,8 +953,12 @@ public static class LegacyVideoImportSql
 
                 DELETE FROM v2.entity_child_links link
                 USING public.video_episodes episode
+                INNER JOIN v2.entity_child_links season_link
+                    ON season_link.parent_entity_id = episode.series_id
+                   AND season_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                   AND season_link.is_structural = true
                 INNER JOIN v2.video_season_details season
-                    ON season.series_entity_id = episode.series_id
+                    ON season.entity_id = season_link.child_entity_id
                    AND season.season_number = episode.season_number
                 WHERE link.child_entity_id = episode.id
                   AND link.is_structural = true
@@ -895,8 +967,12 @@ public static class LegacyVideoImportSql
                 INSERT INTO v2.entity_child_links (parent_entity_id, child_entity_id, child_kind_code, sort_order, is_structural, source, created_at)
                 SELECT season.entity_id, episode.id, '{{EntityKindRegistry.Video.Code}}', COALESCE(episode.episode_number, episode.absolute_episode_number, 0), true, 'legacy-import', episode.created_at
                 FROM public.video_episodes episode
+                INNER JOIN v2.entity_child_links season_link
+                    ON season_link.parent_entity_id = episode.series_id
+                   AND season_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                   AND season_link.is_structural = true
                 INNER JOIN v2.video_season_details season
-                    ON season.series_entity_id = episode.series_id
+                    ON season.entity_id = season_link.child_entity_id
                    AND season.season_number = episode.season_number
                 ON CONFLICT (parent_entity_id, child_entity_id, child_kind_code) DO UPDATE SET
                     sort_order = EXCLUDED.sort_order,
@@ -906,8 +982,12 @@ public static class LegacyVideoImportSql
                 INSERT INTO v2.entity_child_links (parent_entity_id, child_entity_id, child_kind_code, sort_order, is_structural, source, created_at)
                 SELECT episode.series_id, episode.id, '{{EntityKindRegistry.Video.Code}}', (COALESCE(episode.season_number, 0) * 10000) + COALESCE(episode.episode_number, episode.absolute_episode_number, 0), true, 'legacy-import', episode.created_at
                 FROM public.video_episodes episode
+                LEFT JOIN v2.entity_child_links season_link
+                    ON season_link.parent_entity_id = episode.series_id
+                   AND season_link.child_kind_code = '{{EntityKindRegistry.VideoSeason.Code}}'
+                   AND season_link.is_structural = true
                 LEFT JOIN v2.video_season_details season
-                    ON season.series_entity_id = episode.series_id
+                    ON season.entity_id = season_link.child_entity_id
                    AND season.season_number = episode.season_number
                 WHERE episode.series_id IS NOT NULL
                   AND season.entity_id IS NULL

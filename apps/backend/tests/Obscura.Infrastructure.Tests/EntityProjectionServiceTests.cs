@@ -431,7 +431,6 @@ public sealed class EntityProjectionServiceTests
         db.VideoSeasonDetails.Add(new VideoSeasonDetailRow
         {
             EntityId = seasonId,
-            SeriesEntityId = seriesId,
             SeasonNumber = 1
         });
         db.EntityChildLinks.Add(new EntityChildLinkRow
@@ -469,7 +468,7 @@ public sealed class EntityProjectionServiceTests
         var detail = await service.GetSeasonAsync(seasonId, CancellationToken.None);
 
         Assert.NotNull(detail);
-        Assert.Equal(seriesId, detail.SeriesId);
+        Assert.Equal(seriesId, detail.ParentEntityId);
         Assert.Equal([episodeOneId, episodeTwoId], detail.Videos.Select(video => video.Id).ToArray());
     }
 
@@ -796,7 +795,6 @@ public sealed class EntityProjectionServiceTests
         db.VideoSeasonDetails.Add(new VideoSeasonDetailRow
         {
             EntityId = seasonId,
-            SeriesEntityId = seriesId,
             SeasonNumber = 1
         });
         SeedDescription(db, seasonId, "Season overview");
@@ -804,25 +802,20 @@ public sealed class EntityProjectionServiceTests
         SeedPosition(db, seasonId, "season", 1);
         db.BookVolumeDetails.Add(new BookVolumeDetailRow
         {
-            EntityId = volumeId,
-            BookEntityId = bookId
+            EntityId = volumeId
         });
         SeedSource(db, volumeId, "relative", "books/book/volume-1");
         SeedPosition(db, volumeId, "volume", 1);
         db.BookChapterDetails.Add(new BookChapterDetailRow
         {
             EntityId = chapterId,
-            BookEntityId = bookId,
-            VolumeEntityId = volumeId
         });
         SeedSource(db, chapterId, "archive", "/media/book/chapter.cbz");
         SeedStat(db, chapterId, "pages", 30);
         SeedPosition(db, chapterId, "chapter", 2);
         db.BookPageDetails.Add(new BookPageDetailRow
         {
-            EntityId = pageId,
-            BookEntityId = bookId,
-            ChapterEntityId = chapterId
+            EntityId = pageId
         });
         SeedSource(db, pageId, "file", "/media/book/page-001.jpg");
         SeedTechnical(db, pageId, width: 1200, height: 1800);

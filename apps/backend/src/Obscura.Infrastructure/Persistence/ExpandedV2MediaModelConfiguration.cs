@@ -26,11 +26,8 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.ToTable("video_season_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.SeriesEntityId).HasColumnName("series_entity_id");
             entity.Property(row => row.SeasonNumber).HasColumnName("season_number");
-            entity.HasIndex(row => new { row.SeriesEntityId, row.SeasonNumber }).IsUnique();
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<VideoSeasonDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne<EntityRow>().WithMany().HasForeignKey(row => row.SeriesEntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<GalleryDetailRow>(entity =>
@@ -78,9 +75,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.ToTable("book_volume_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.BookEntityId).HasColumnName("book_entity_id");
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<BookVolumeDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne<EntityRow>().WithMany().HasForeignKey(row => row.BookEntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<BookChapterDetailRow>(entity =>
@@ -88,11 +83,8 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.ToTable("book_chapter_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.BookEntityId).HasColumnName("book_entity_id");
-            entity.Property(row => row.VolumeEntityId).HasColumnName("volume_entity_id");
             entity.Property(row => row.CoverPageEntityId).HasColumnName("cover_page_entity_id");
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<BookChapterDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne<EntityRow>().WithMany().HasForeignKey(row => row.BookEntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<BookPageDetailRow>(entity =>
@@ -100,11 +92,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.ToTable("book_page_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.BookEntityId).HasColumnName("book_entity_id");
-            entity.Property(row => row.ChapterEntityId).HasColumnName("chapter_entity_id");
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<BookPageDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne<EntityRow>().WithMany().HasForeignKey(row => row.BookEntityId).OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne<EntityRow>().WithMany().HasForeignKey(row => row.ChapterEntityId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 
@@ -115,7 +103,6 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.ToTable("audio_library_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.ParentLibraryEntityId).HasColumnName("parent_library_entity_id");
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<AudioLibraryDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
