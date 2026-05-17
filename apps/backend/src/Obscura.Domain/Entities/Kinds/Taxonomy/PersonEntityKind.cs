@@ -9,7 +9,7 @@ public sealed record PersonEntityKind()
     public string Code => "person";
     public string DisplayName => "Person";
     public EntityKindCategory Category => EntityKindCategory.Taxonomy;
-    public IReadOnlyList<EntityFileRole> ImageAssetRoles => [EntityFileRole.Thumbnail];
+    public IReadOnlyList<EntityFileRole> ImageAssetRoles => [EntityFileRole.Thumbnail, EntityFileRole.Poster];
     public IReadOnlyList<ICapabilityKind> SupportedCapabilities =>
     [
         CapabilityRegistry.Rating,
