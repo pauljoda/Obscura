@@ -1,5 +1,5 @@
 import { v2ApiPath } from "$lib/api/orval-fetch";
-import type { V2EntityCard, V2EntityListResponse } from "$lib/api/v2";
+import type { V2EntityCard, V2EntityDetailCard, V2EntityListResponse } from "$lib/api/v2";
 
 export interface PluginEntitySupport {
   entityKind: string;
@@ -168,7 +168,7 @@ export function identifyEntity(
   });
 }
 
-export function fetchIdentifyEntity(entityId: string): Promise<V2EntityCard> {
+export function fetchIdentifyEntity(entityId: string): Promise<V2EntityDetailCard> {
   return apiJson(`/entities/${entityId}`);
 }
 

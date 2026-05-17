@@ -1,4 +1,8 @@
 import type {
+  EntityCard,
+  EntityThumbnail,
+} from "$lib/api/generated/model";
+import type {
   CreditPatch,
   EntityMetadataPatch,
   EntityMetadataProposal,
@@ -27,6 +31,11 @@ export interface IdentifyReviewSelectionState {
   selectedCreditsByProposal: Record<string, Record<string, boolean>>;
   selectedTagsByProposal: Record<string, Record<string, boolean>>;
   selectedCascade: Record<string, boolean>;
+}
+
+export interface IdentifyRelationshipTitles {
+  tags: string[];
+  credits: string[];
 }
 
 export function structuralChildProposals(result: EntityMetadataProposal): EntityMetadataProposal[] {
@@ -61,6 +70,21 @@ export function findRelationshipImage(
     child.images.find((img) => img.kind === "logo") ??
     child.images[0];
   return preferred?.url ?? null;
+}
+
+export function relationshipTitlesFromEntityThumbnails(
+  entity: Pick<EntityCard, "relationships">,
+  thumbnails: EntityThumbnail[],
+): IdentifyRelationshipTitles {
+  const byId = new Map(thumbnails.map((thumbnail) => [thumbnail.id, thumbnail.title]));
+  return {
+    tags: titlesForRelationship(entity, byId, "tags", "tag"),
+    credits: titlesForRelationship(entity, byId, "cast", "person"),
+  };
+}
+
+export function isNewRelationshipTitle(title: string, existingTitles: string[]): boolean {
+  return !existingTitles.some((existing) => existing.localeCompare(title, undefined, { sensitivity: "accent" }) === 0);
 }
 
 export function buildProposalForApply(
@@ -169,6 +193,19 @@ function fieldValue(result: EntityMetadataProposal, field: string): string {
 
 function entries(record: Record<string, string | number>): string[] {
   return Object.entries(record).map(([key, value]) => `${key}: ${value}`);
+}
+
+function titlesForRelationship(
+  entity: Pick<EntityCard, "relationships">,
+  byId: Map<string, string>,
+  code: string,
+  kind: string,
+): string[] {
+  return (entity.relationships ?? [])
+    .filter((group) => group.code === code && group.kind === kind)
+    .flatMap((group) => group.entityIds)
+    .map((id) => byId.get(id))
+    .filter((title): title is string => Boolean(title));
 }
 
 function isRelationshipKind(kind: string): boolean {

@@ -40,6 +40,7 @@
   interface Props {
     card: EntityThumbnailCard;
     layout?: "grid" | "list";
+    linkable?: boolean;
     onSelectedChange?: (selected: boolean) => void;
     selectable?: boolean;
     selected?: boolean;
@@ -51,6 +52,7 @@
   let {
     card,
     layout = "grid",
+    linkable = true,
     onSelectedChange,
     selectable = false,
     selected = false,
@@ -115,7 +117,9 @@
   const rating = $derived(getRatingValue(card.entity.capabilities));
   const imageOnly = $derived(card.entity.kind === ENTITY_KIND.bookPage);
   const bottomLeft = $derived(card.custom?.bottomLeft);
-  const href = $derived(resolveEntityThumbnailHref(card));
+  const href = $derived(linkable ? resolveEntityThumbnailHref(card) : undefined);
+  const selectionRole = $derived(!href && selectable ? "checkbox" : href ? undefined : "group");
+  const selectionTabIndex = $derived(href ? undefined : 0);
 
   function updatePointerRatio(event: PointerEvent) {
     if (!hoverable) return;
@@ -146,6 +150,17 @@
     onSelectedChange?.(input.checked);
   }
 
+  function toggleSurfaceSelection() {
+    if (!selectable || href) return;
+    onSelectedChange?.(!selected);
+  }
+
+  function handleSurfaceKeydown(event: KeyboardEvent) {
+    if (!selectable || href || (event.key !== "Enter" && event.key !== " ")) return;
+    event.preventDefault();
+    toggleSurfaceSelection();
+  }
+
   function stopSelectionActivation(event: Event) {
     event.stopPropagation();
   }
@@ -159,16 +174,19 @@
 <svelte:element
   this={href ? "a" : "article"}
   href={href || undefined}
-  role={href ? undefined : "group"}
-  tabindex={href ? undefined : 0}
+  role={selectionRole}
+  tabindex={selectionTabIndex}
   class="entity-thumbnail"
   class:is-hovering={pointerRatio !== null}
   class:is-image-only={imageOnly}
   class:is-list={layout === "list"}
   class:is-selected={selected}
   aria-label={card.entity.title}
+  aria-checked={!href && selectable ? selected : undefined}
   onblur={clearHover}
+  onclick={toggleSurfaceSelection}
   onfocus={handleFocus}
+  onkeydown={handleSurfaceKeydown}
 >
   <div
     class="media"

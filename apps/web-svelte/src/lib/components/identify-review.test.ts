@@ -3,7 +3,9 @@ import type { EntityMetadataProposal } from "$lib/api/identify";
 import {
   buildProposalForApply,
   findRelationshipImage,
+  isNewRelationshipTitle,
   relationshipProposals,
+  relationshipTitlesFromEntityThumbnails,
   structuralChildProposals,
 } from "./identify-review";
 
@@ -69,6 +71,27 @@ describe("identify review helpers", () => {
     expect(payloadEpisode.patch.credits).toEqual([{ name: "Guest Actor", role: "guest", character: "Visitor", sortOrder: 0 }]);
     expect(expectSingle(payloadEpisode.relationships).patch.title).toBe("Guest Actor");
   });
+
+  it("resolves existing tag and credit titles from v2 relationship ids", () => {
+    const titles = relationshipTitlesFromEntityThumbnails(
+      {
+        relationships: [
+          { code: "tags", kind: "tag", label: "Tags", entityIds: ["tag-comedy", "tag-drama"] },
+          { code: "cast", kind: "person", label: "Cast", entityIds: ["person-tim"] },
+        ],
+      },
+      [
+        thumbnail("tag-comedy", "tag", "COMEDY"),
+        thumbnail("tag-drama", "tag", "Drama"),
+        thumbnail("person-tim", "person", "Tim Robinson"),
+      ],
+    );
+
+    expect(titles.tags).toEqual(["COMEDY", "Drama"]);
+    expect(titles.credits).toEqual(["Tim Robinson"]);
+    expect(isNewRelationshipTitle("Comedy", titles.tags)).toBe(false);
+    expect(isNewRelationshipTitle("Mystery", titles.tags)).toBe(true);
+  });
 });
 
 function proposal(
@@ -114,4 +137,22 @@ function proposal(
 function expectSingle<T>(items: T[]): T {
   expect(items).toHaveLength(1);
   return items[0];
+}
+
+function thumbnail(id: string, kind: string, title: string) {
+  return {
+    id,
+    kind,
+    title,
+    parentEntityId: null,
+    sortOrder: null,
+    coverUrl: null,
+    hoverKind: "none",
+    hoverUrl: null,
+    meta: [],
+    rating: null,
+    isFavorite: false,
+    isNsfw: false,
+    isOrganized: false,
+  };
 }

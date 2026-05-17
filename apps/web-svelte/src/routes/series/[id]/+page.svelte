@@ -269,6 +269,7 @@
           entityId={page.params.id ?? ""}
           title={card.entity.title}
           existingCreditNames={creditCards.map((credit) => credit.entity.title)}
+          existingTags={relationshipTags.map((tag) => tag.title)}
           label="Identify"
           onApplied={loadSeries}
         />

@@ -18,7 +18,10 @@
   import {
     buildProposalForApply,
     findRelationshipImage,
+    isNewRelationshipTitle,
+    relationshipTitlesFromEntityThumbnails,
     structuralChildProposals,
+    type IdentifyRelationshipTitles,
   } from "$lib/components/identify-review";
   import {
     applyIdentifyProposal,
@@ -31,7 +34,7 @@
     type ImageCandidate,
     type PluginProvider,
   } from "$lib/api/identify";
-  import type { V2EntityCard } from "$lib/api/v2";
+  import { fetchV2EntityThumbnails, type V2EntityDetailCard } from "$lib/api/v2";
   import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
 
@@ -53,6 +56,7 @@
     class?: string;
     entities?: IdentifyTarget[];
     existingCreditNames?: string[];
+    existingTags?: string[];
     onApplied?: () => void | Promise<void>;
   }
 
@@ -64,6 +68,7 @@
     class: className,
     entities,
     existingCreditNames = [],
+    existingTags = [],
     onApplied,
   }: Props = $props();
 
@@ -98,7 +103,8 @@
   let selectedCreditsByProposal = $state<Record<string, Record<string, boolean>>>({});
   let selectedTagsByProposal = $state<Record<string, Record<string, boolean>>>({});
   let selectedCascade = $state<Record<string, boolean>>({});
-  let entitiesById = $state<Record<string, V2EntityCard>>({});
+  let entitiesById = $state<Record<string, V2EntityDetailCard>>({});
+  let relationshipTitlesByEntityId = $state<Record<string, IdentifyRelationshipTitles>>({});
   let loadingViewEntity = $state(false);
   let applying = $state(false);
   let error = $state<string | null>(null);
@@ -144,7 +150,7 @@
 
   const targets = $derived.by((): IdentifyTarget[] => {
     if (entities?.length) return entities;
-    return [{ entityKind, entityId, title, existingCreditNames }];
+    return [{ entityKind, entityId, title, existingCreditNames, existingTags }];
   });
   const activeTarget = $derived(targets[Math.min(activeIndex, Math.max(0, targets.length - 1))]);
   const v2Kind = $derived(mapKind(activeTarget?.entityKind ?? entityKind));
@@ -312,8 +318,9 @@
   }
 
   function isNewTag(tag: string): boolean {
-    const existing = activeReviewEntity ? tagTitlesFromEntity(activeReviewEntity) : (activeTarget?.existingTags ?? []);
-    return !existing.some((t) => t.localeCompare(tag, undefined, { sensitivity: "accent" }) === 0);
+    const hydrated = activeReviewEntity ? tagTitlesFromEntity(activeReviewEntity) : [];
+    const existing = hydrated.length > 0 ? hydrated : (activeTarget?.existingTags ?? []);
+    return isNewRelationshipTitle(tag, existing);
   }
 
   const selectedTagCount = $derived(Object.values(selectedTags).filter(Boolean).length);
@@ -432,10 +439,36 @@
     try {
       const entity = await fetchIdentifyEntity(id);
       entitiesById = { ...entitiesById, [id]: entity };
+      await hydrateRelationshipTitles(entity);
     } catch {
       // Keep the review usable from proposal data if the live card cannot load.
     } finally {
       loadingViewEntity = false;
+    }
+  }
+
+  async function hydrateRelationshipTitles(entity: V2EntityDetailCard) {
+    if (relationshipTitlesByEntityId[entity.id]) return;
+    const ids = entity.relationships.flatMap((group) => group.entityIds);
+    if (ids.length === 0) {
+      relationshipTitlesByEntityId = {
+        ...relationshipTitlesByEntityId,
+        [entity.id]: { tags: [], credits: [] },
+      };
+      return;
+    }
+
+    try {
+      const thumbnails = await fetchV2EntityThumbnails(ids);
+      relationshipTitlesByEntityId = {
+        ...relationshipTitlesByEntityId,
+        [entity.id]: relationshipTitlesFromEntityThumbnails(entity, thumbnails),
+      };
+    } catch {
+      relationshipTitlesByEntityId = {
+        ...relationshipTitlesByEntityId,
+        [entity.id]: { tags: [], credits: [] },
+      };
     }
   }
 
@@ -711,18 +744,19 @@
   }
 
   function creditState(credit: CreditPatch): "merge" | "new" {
-    const names = activeReviewEntity ? creditNamesFromEntity(activeReviewEntity) : (activeTarget?.existingCreditNames ?? []);
-    return names.some((name) => name.localeCompare(credit.name, undefined, { sensitivity: "accent" }) === 0)
-      ? "merge"
-      : "new";
+    const hydrated = activeReviewEntity ? creditNamesFromEntity(activeReviewEntity) : [];
+    const names = hydrated.length > 0 ? hydrated : (activeTarget?.existingCreditNames ?? []);
+    return isNewRelationshipTitle(credit.name, names)
+      ? "new"
+      : "merge";
   }
 
-  function tagTitlesFromEntity(entity: V2EntityCard): string[] {
-    return [];
+  function tagTitlesFromEntity(entity: V2EntityDetailCard): string[] {
+    return relationshipTitlesByEntityId[entity.id]?.tags ?? [];
   }
 
-  function creditNamesFromEntity(entity: V2EntityCard): string[] {
-    return [];
+  function creditNamesFromEntity(entity: V2EntityDetailCard): string[] {
+    return relationshipTitlesByEntityId[entity.id]?.credits ?? [];
   }
 
   function firstImageUrl(images: ImageCandidate[], kind: string): string | null {
@@ -965,7 +999,7 @@
                 {#if expandedSections.studio}
                   <div class="section-body">
                     <div class="studio-row">
-                      <EntityThumbnail card={studioCard} titleAlign="center" titleSize="compact" />
+                      <EntityThumbnail card={studioCard} titleAlign="center" titleSize="compact" linkable={false} />
                     </div>
                   </div>
                 {/if}
@@ -1001,6 +1035,7 @@
                             card={creditCards[index]}
                             titleAlign="center"
                             titleSize="compact"
+                            linkable={false}
                             selectable
                             selected={selectedCredits[key] !== false}
                             onSelectedChange={() => toggleCredit(key)}

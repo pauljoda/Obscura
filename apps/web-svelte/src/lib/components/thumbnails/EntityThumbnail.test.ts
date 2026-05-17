@@ -61,6 +61,28 @@ describe("EntityThumbnail", () => {
     expect(link?.getAttribute("href")).toBe("/performers/person-1");
   });
 
+  it("can disable the default link and toggle selection from the card surface", async () => {
+    const onSelectedChange = vi.fn();
+    const { container } = render(EntityThumbnail, {
+      props: {
+        card: personCard(),
+        linkable: false,
+        selectable: true,
+        selected: true,
+        onSelectedChange,
+      },
+    });
+
+    const surface = container.querySelector<HTMLElement>(".entity-thumbnail");
+    expect(container.querySelector("a.entity-thumbnail")).toBeNull();
+    expect(surface?.getAttribute("role")).toBe("checkbox");
+    expect(surface?.getAttribute("aria-checked")).toBe("true");
+
+    await fireEvent.click(surface!);
+
+    expect(onSelectedChange).toHaveBeenCalledWith(false);
+  });
+
   it("renders credit subtitles when present", () => {
     const { container } = render(EntityThumbnail, {
       props: {

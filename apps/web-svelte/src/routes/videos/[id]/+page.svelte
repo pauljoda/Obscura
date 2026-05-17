@@ -709,6 +709,7 @@
           entityId={videoId}
           title={card.entity.title}
           existingCreditNames={creditCards.map((credit) => credit.entity.title)}
+          existingTags={relationshipTags.map((tag) => tag.title)}
           label="Identify"
           onApplied={refreshVideo}
         />

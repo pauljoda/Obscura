@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - V2 migration and scanning preserve core metadata where possible, rebuild generated cache assets, and make breaking schema resets explicit while the project remains pre-1.0.
 - Identify review now separates structural children from related people and studios, so series cascades can carry seasons, episodes, credits, and artwork together.
 - Identify now applies full credit lists even when the same person has multiple roles on a title, preserving the combined credit metadata without crashing.
+- Identify review now recognizes existing tags and credits in the v2 relationship model and lets review thumbnails be selected without navigating away.
 
 ### Added
 - High-level v2 implementation summary for the rebuilt Obscura architecture, media model, playback pipeline, and UI surfaces.
@@ -26,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Series, season, video, gallery, collection, and audio detail pages now show their migrated child items and relationships again.
 - Identify cascade review now applies nested season and episode selections while preserving credit and studio pictures from related entity proposals.
 - Identify apply no longer fails on titles whose full credits include the same person in multiple roles, such as cast plus writer or creator.
+- Identify review no longer marks existing relationship tags as new or navigates away when clicking selectable cast thumbnails.
 - Local v2 reset now keeps required entity-kind metadata so legacy migration tests can run cleanly.
 
 ### Removed
