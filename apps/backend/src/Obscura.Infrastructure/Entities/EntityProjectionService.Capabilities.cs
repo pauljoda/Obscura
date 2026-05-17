@@ -136,10 +136,6 @@ public sealed partial class EntityProjectionService
         var links = await _db.EntityChildLinks
             .AsNoTracking()
             .Where(link => parentIds.Contains(link.ParentEntityId))
-            .OrderBy(link => link.ParentEntityId)
-            .ThenBy(link => link.ChildKindCode)
-            .ThenBy(link => link.SortOrder)
-            .ThenBy(link => link.ChildEntityId)
             .ToListAsync(cancellationToken);
         if (links.Count == 0)
         {
@@ -151,11 +147,17 @@ public sealed partial class EntityProjectionService
             .AsNoTracking()
             .Where(entity => childIds.Contains(entity.Id) && entity.DeletedAt == null)
             .ToListAsync(cancellationToken);
+        var childRowsById = childRows.ToDictionary(entity => entity.Id);
         var childrenById = (await BuildEntitiesAsync(childRows, cancellationToken))
             .ToDictionary(entity => entity.Id);
 
         return links
             .Where(link => childrenById.ContainsKey(link.ChildEntityId))
+            .OrderBy(link => link.ParentEntityId)
+            .ThenBy(link => link.ChildKindCode)
+            .ThenBy(link => link.SortOrder)
+            .ThenBy(link => childRowsById[link.ChildEntityId].CreatedAt)
+            .ThenBy(link => link.ChildEntityId)
             .GroupBy(link => link.ParentEntityId)
             .ToDictionary(
                 group => group.Key,

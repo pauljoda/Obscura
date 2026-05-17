@@ -287,7 +287,101 @@ public sealed class EntityMetadataApplyServiceTests
         Assert.Equal("2026-01-01", (await db.EntityDates.FindAsync([childId, "air"]))?.Value);
         Assert.Equal("New Episode", (await db.Entities.FindAsync([grandchildId]))?.Title);
         Assert.Equal("Episode metadata from its own proposal.", (await db.EntityDescriptions.FindAsync([grandchildId]))?.Value);
-        Assert.Equal(1, (await db.EntityPositions.FindAsync([grandchildId, "episodeNumber"]))?.Value);
+        Assert.Equal(1, (await db.EntityPositions.FindAsync([grandchildId, "episode"]))?.Value);
+    }
+
+    [Fact]
+    public async Task ApplyCascadePositionsUpdatesCanonicalPositionsAndStructuralSortOrder()
+    {
+        await using var db = CreateContext();
+        var seriesId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        var seasonId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+        var episodeId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        SeedEntity(db, seriesId, "video-series", "Series");
+        SeedEntity(db, seasonId, "video-season", "Season", parentEntityId: seriesId, sortOrder: 1);
+        SeedEntity(db, episodeId, "video", "Episode", parentEntityId: seasonId, sortOrder: 1);
+        db.VideoSeasonDetails.Add(new VideoSeasonDetailRow
+        {
+            EntityId = seasonId,
+            SeasonNumber = 1
+        });
+        db.EntityChildLinks.AddRange(
+            new EntityChildLinkRow
+            {
+                ParentEntityId = seriesId,
+                ChildEntityId = seasonId,
+                ChildKindCode = "video-season",
+                SortOrder = 1,
+                IsStructural = true,
+                CreatedAt = DateTimeOffset.UtcNow
+            },
+            new EntityChildLinkRow
+            {
+                ParentEntityId = seasonId,
+                ChildEntityId = episodeId,
+                ChildKindCode = "video",
+                SortOrder = 1,
+                IsStructural = true,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+        await db.SaveChangesAsync();
+
+        var proposal = new EntityMetadataProposal(
+            ProposalId: "provider:series:positions",
+            Provider: "provider",
+            TargetKind: "video-series",
+            TargetEntityId: seriesId,
+            Confidence: 1,
+            MatchReason: "external-id",
+            Patch: EmptyPatch(),
+            Images: [],
+            Children:
+            [
+                new EntityMetadataProposal(
+                    ProposalId: "provider:season:3",
+                    Provider: "provider",
+                    TargetKind: "video-season",
+                    TargetEntityId: seasonId,
+                    Confidence: 1,
+                    MatchReason: "graph-child",
+                    Patch: EmptyPatch() with
+                    {
+                        Positions = new Dictionary<string, int> { ["seasonNumber"] = 3 }
+                    },
+                    Images: [],
+                    Children:
+                    [
+                        new EntityMetadataProposal(
+                            ProposalId: "provider:episode:2",
+                            Provider: "provider",
+                            TargetKind: "video",
+                            TargetEntityId: episodeId,
+                            Confidence: 1,
+                            MatchReason: "graph-child",
+                            Patch: EmptyPatch() with
+                            {
+                                Positions = new Dictionary<string, int> { ["episodeNumber"] = 2 }
+                            },
+                            Images: [],
+                            Children: [],
+                            Candidates: [])
+                    ],
+                    Candidates: [])
+            ],
+            Candidates: []);
+
+        var service = new EntityMetadataApplyService(db, new PluginArtworkServiceOptions(Path.GetTempPath()));
+        await service.ApplyAsync(seriesId, proposal, selectedFields: [], selectedImages: null, CancellationToken.None);
+
+        Assert.Equal(3, (await db.Entities.FindAsync([seasonId]))?.SortOrder);
+        Assert.Equal(2, (await db.Entities.FindAsync([episodeId]))?.SortOrder);
+        Assert.Equal(3, (await db.VideoSeasonDetails.FindAsync([seasonId]))?.SeasonNumber);
+        Assert.Equal(3, (await db.EntityChildLinks.FindAsync([seriesId, seasonId, "video-season"]))?.SortOrder);
+        Assert.Equal(2, (await db.EntityChildLinks.FindAsync([seasonId, episodeId, "video"]))?.SortOrder);
+        Assert.Equal(3, (await db.EntityPositions.FindAsync([seasonId, "season"]))?.Value);
+        Assert.Equal(2, (await db.EntityPositions.FindAsync([episodeId, "episode"]))?.Value);
+        Assert.Null(await db.EntityPositions.FindAsync([seasonId, "seasonNumber"]));
+        Assert.Null(await db.EntityPositions.FindAsync([episodeId, "episodeNumber"]));
     }
 
     private static ObscuraDbContext CreateContext()
@@ -299,13 +393,21 @@ public sealed class EntityMetadataApplyServiceTests
         return new ObscuraDbContext(options);
     }
 
-    private static void SeedEntity(ObscuraDbContext db, Guid id, string kind, string title)
+    private static void SeedEntity(
+        ObscuraDbContext db,
+        Guid id,
+        string kind,
+        string title,
+        Guid? parentEntityId = null,
+        int? sortOrder = null)
     {
         db.Entities.Add(new EntityRow
         {
             Id = id,
             KindCode = kind,
             Title = title,
+            ParentEntityId = parentEntityId,
+            SortOrder = sortOrder,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         });

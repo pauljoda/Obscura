@@ -595,6 +595,45 @@ public sealed class EntityProjectionServiceTests
     }
 
     [Fact]
+    public async Task GenericChildLinksUseCreatedAtWhenSortOrderConflicts()
+    {
+        await using var db = CreateContext();
+        var seasonId = Guid.Parse("8a8a8a8a-8a8a-8a8a-8a8a-8a8a8a8a8a8a");
+        var olderEpisodeId = Guid.Parse("8b8b8b8b-8b8b-8b8b-8b8b-8b8b8b8b8b8b");
+        var newerEpisodeId = Guid.Parse("8c8c8c8c-8c8c-8c8c-8c8c-8c8c8c8c8c8c");
+        var older = new DateTimeOffset(2026, 5, 17, 1, 0, 0, TimeSpan.Zero);
+        var newer = older.AddMinutes(5);
+        SeedEntity(db, seasonId, "video-season", "Season");
+        SeedEntity(db, newerEpisodeId, "video", "Episode 2 Duplicate B", parentEntityId: seasonId, sortOrder: 2, createdAt: newer);
+        SeedEntity(db, olderEpisodeId, "video", "Episode 2 Duplicate A", parentEntityId: seasonId, sortOrder: 2, createdAt: older);
+        db.EntityChildLinks.AddRange(
+            new EntityChildLinkRow
+            {
+                ParentEntityId = seasonId,
+                ChildEntityId = newerEpisodeId,
+                ChildKindCode = EntityKindRegistry.Video.Code,
+                SortOrder = 2,
+                IsStructural = true,
+                CreatedAt = newer
+            },
+            new EntityChildLinkRow
+            {
+                ParentEntityId = seasonId,
+                ChildEntityId = olderEpisodeId,
+                ChildKindCode = EntityKindRegistry.Video.Code,
+                SortOrder = 2,
+                IsStructural = true,
+                CreatedAt = older
+            });
+        await db.SaveChangesAsync();
+
+        var service = new EntityProjectionService(db);
+        var children = await service.ListChildrenAsync(seasonId, EntityKindRegistry.Video, CancellationToken.None);
+
+        Assert.Equal([olderEpisodeId, newerEpisodeId], children.Select(child => child.Id).ToArray());
+    }
+
+    [Fact]
     public async Task CollectionChildrenUseSharedEntityProjections()
     {
         await using var db = CreateContext();
@@ -855,8 +894,10 @@ public sealed class EntityProjectionServiceTests
         string kind,
         string title,
         Guid? parentEntityId = null,
-        int? sortOrder = null)
+        int? sortOrder = null,
+        DateTimeOffset? createdAt = null)
     {
+        var timestamp = createdAt ?? DateTimeOffset.UtcNow;
         db.Entities.Add(new EntityRow
         {
             Id = id,
@@ -864,8 +905,8 @@ public sealed class EntityProjectionServiceTests
             Title = title,
             ParentEntityId = parentEntityId,
             SortOrder = sortOrder,
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
+            CreatedAt = timestamp,
+            UpdatedAt = timestamp
         });
     }
 

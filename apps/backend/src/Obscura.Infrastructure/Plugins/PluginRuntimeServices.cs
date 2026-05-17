@@ -750,8 +750,6 @@ public sealed class IdentifyPluginService
         var links = await _db.EntityChildLinks
             .AsNoTracking()
             .Where(link => link.ParentEntityId == parentEntityId)
-            .OrderBy(link => link.SortOrder)
-            .ThenBy(link => link.ChildEntityId)
             .ToArrayAsync(cancellationToken);
         if (links.Length == 0)
         {
@@ -766,6 +764,9 @@ public sealed class IdentifyPluginService
 
         return links
             .Where(link => entities.ContainsKey(link.ChildEntityId))
+            .OrderBy(link => link.SortOrder)
+            .ThenBy(link => entities[link.ChildEntityId].CreatedAt)
+            .ThenBy(link => link.ChildEntityId)
             .Select(link => new GraphChild(link, entities[link.ChildEntityId]))
             .ToArray();
     }

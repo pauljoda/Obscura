@@ -700,6 +700,7 @@ export function applyEntityGridState(
       if (leftPosition != null && rightPosition != null && leftPosition !== rightPosition) {
         return (leftPosition - rightPosition) * direction;
       }
+      if (leftPosition != null && rightPosition != null) return 0;
       if (leftPosition != null && rightPosition == null) return -1;
       if (leftPosition == null && rightPosition != null) return 1;
       return left.entity.title.localeCompare(right.entity.title);

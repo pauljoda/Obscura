@@ -105,9 +105,6 @@ public sealed partial class EntityProjectionService :
             .AsNoTracking()
             .Where(link => link.ParentEntityId == parentId)
             .Where(link => childKind == null || link.ChildKindCode == childKind.Code)
-            .OrderBy(link => link.ChildKindCode)
-            .ThenBy(link => link.SortOrder)
-            .ThenBy(link => link.ChildEntityId)
             .ToListAsync(cancellationToken);
         if (links.Count == 0)
         {
@@ -119,11 +116,16 @@ public sealed partial class EntityProjectionService :
             .AsNoTracking()
             .Where(entity => childIds.Contains(entity.Id) && entity.DeletedAt == null)
             .ToListAsync(cancellationToken);
+        var childRowsById = childRows.ToDictionary(entity => entity.Id);
         var childCards = (await BuildEntitiesAsync(childRows, cancellationToken))
             .ToDictionary(entity => entity.Id);
 
         return links
             .Where(link => childCards.ContainsKey(link.ChildEntityId))
+            .OrderBy(link => link.ChildKindCode)
+            .ThenBy(link => link.SortOrder)
+            .ThenBy(link => childRowsById[link.ChildEntityId].CreatedAt)
+            .ThenBy(link => link.ChildEntityId)
             .Select(link => childCards[link.ChildEntityId])
             .ToArray();
     }
