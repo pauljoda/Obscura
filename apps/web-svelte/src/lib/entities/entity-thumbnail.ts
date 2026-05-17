@@ -138,12 +138,14 @@ export function resolveEntityThumbnailHref(card: EntityThumbnailCard): string | 
 
 /** Builds a lightweight thumbnail card from a referenced entity. */
 export function entityReferenceToThumbnailCard(
-  entity: Pick<EntityCard, "id" | "kind" | "title">,
+  entity: Pick<EntityCard, "id" | "kind" | "title"> & { thumbnailUrl?: string | null },
   options: EntityReferenceThumbnailOptions = {},
 ): EntityThumbnailCard {
+  const thumbUrl = entity.thumbnailUrl;
+  const cover = options.cover ?? (thumbUrl ? { src: thumbUrl, alt: entity.title } : null);
   return {
     aspectRatio: options.aspectRatio ?? aspectRatioForKind(entity.kind),
-    cover: options.cover ?? null,
+    cover,
     entity: {
       id: entity.id,
       kind: entity.kind,

@@ -107,6 +107,8 @@ public sealed partial class EntityProjectionService
             .Where(entity => studioIds.Contains(entity.Id) && entity.KindCode == EntityKindRegistry.Studio.Code && entity.DeletedAt == null)
             .ToDictionaryAsync(entity => entity.Id, cancellationToken);
 
+        var thumbnails = await ResolveReferenceThumbnailsAsync(studioIds, cancellationToken);
+
         return links
             .Where(link => studios.ContainsKey(link.StudioId))
             .ToDictionary(
@@ -114,7 +116,8 @@ public sealed partial class EntityProjectionService
                 link =>
                 {
                     var studio = studios[link.StudioId];
-                    return new EntityReference(studio.Id, ResolveKind(studio.KindCode), studio.Title);
+                    thumbnails.TryGetValue(studio.Id, out var thumb);
+                    return new EntityReference(studio.Id, ResolveKind(studio.KindCode), studio.Title, thumb);
                 });
     }
 
@@ -140,6 +143,8 @@ public sealed partial class EntityProjectionService
             .Where(entity => personIds.Contains(entity.Id) && entity.KindCode == EntityKindRegistry.Person.Code && entity.DeletedAt == null)
             .ToDictionaryAsync(entity => entity.Id, cancellationToken);
 
+        var thumbnails = await ResolveReferenceThumbnailsAsync(personIds, cancellationToken);
+
         return links
             .Where(link => people.ContainsKey(link.PersonEntityId))
             .GroupBy(link => link.EntityId)
@@ -149,11 +154,45 @@ public sealed partial class EntityProjectionService
                     .Select(link =>
                     {
                         var person = people[link.PersonEntityId];
+                        thumbnails.TryGetValue(person.Id, out var thumb);
                         return new EntityCredit(
-                            new EntityReference(person.Id, ResolveKind(person.KindCode), person.Title),
+                            new EntityReference(person.Id, ResolveKind(person.KindCode), person.Title, thumb),
                             link.Role,
                             link.Character);
                     })
                     .ToArray());
+    }
+
+    /// <summary>
+    /// Resolves a single best thumbnail URL for each referenced entity by checking
+    /// files with roles Thumbnail, Poster, Cover, and Logo (in priority order).
+    /// </summary>
+    private async Task<IReadOnlyDictionary<Guid, string>> ResolveReferenceThumbnailsAsync(
+        Guid[] referencedIds,
+        CancellationToken cancellationToken)
+    {
+        if (referencedIds.Length == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        var files = await _db.EntityFiles
+            .AsNoTracking()
+            .Where(row => referencedIds.Contains(row.EntityId) &&
+                (row.Role == EntityFileRole.Thumbnail ||
+                 row.Role == EntityFileRole.Poster ||
+                 row.Role == EntityFileRole.Cover ||
+                 row.Role == EntityFileRole.Logo))
+            .ToListAsync(cancellationToken);
+
+        return files
+            .GroupBy(f => f.EntityId)
+            .ToDictionary(
+                g => g.Key,
+                g => (g.FirstOrDefault(f => f.Role == EntityFileRole.Thumbnail) ??
+                      g.FirstOrDefault(f => f.Role == EntityFileRole.Poster) ??
+                      g.FirstOrDefault(f => f.Role == EntityFileRole.Cover) ??
+                      g.FirstOrDefault(f => f.Role == EntityFileRole.Logo) ??
+                      g.First()).Path);
     }
 }

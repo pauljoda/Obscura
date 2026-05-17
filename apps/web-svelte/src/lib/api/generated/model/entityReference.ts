@@ -9,4 +9,5 @@ export interface EntityReference {
   id: string;
   kind: string;
   title: string;
+  thumbnailUrl?: string | null;
 }

@@ -6,7 +6,8 @@ namespace Obscura.Contracts.Entities;
 /// <param name="Id">Referenced entity identifier.</param>
 /// <param name="Kind">Referenced entity kind code.</param>
 /// <param name="Title">Referenced entity title.</param>
-public sealed record EntityReference(Guid Id, string Kind, string Title);
+/// <param name="ThumbnailUrl">Resolved thumbnail image path for the referenced entity, or null when no image exists.</param>
+public sealed record EntityReference(Guid Id, string Kind, string Title, string? ThumbnailUrl = null);
 
 /// <summary>
 /// API-facing rating capability payload.

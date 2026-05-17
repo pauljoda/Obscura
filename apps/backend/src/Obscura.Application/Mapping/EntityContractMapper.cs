@@ -207,5 +207,5 @@ public static partial class ContractMapper
         };
 
     private static ContractEntityReference ToEntityReference(DomainEntityReference reference) =>
-        new(reference.Id, reference.Kind.Code, reference.Title);
+        new(reference.Id, reference.Kind.Code, reference.Title, reference.ThumbnailUrl);
 }
