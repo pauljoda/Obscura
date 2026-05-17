@@ -462,6 +462,54 @@ public sealed class EntityProjectionServiceTests
     }
 
     [Fact]
+    public async Task SeriesDetailProjectsGenericChildrenByKindFromEntityChildLinks()
+    {
+        await using var db = CreateContext();
+        var seriesId = Guid.Parse("38383838-3838-3838-3838-383838383838");
+        var seasonId = Guid.Parse("39393939-3939-3939-3939-393939393939");
+        var episodeId = Guid.Parse("40404040-4040-4040-4040-404040404040");
+        SeedEntity(db, seriesId, "video-series", "Generic Series");
+        SeedEntity(db, seasonId, "video-season", "Season 1", parentEntityId: seriesId, sortOrder: 1);
+        SeedEntity(db, episodeId, "video", "Episode 1", parentEntityId: seasonId, sortOrder: 1);
+        SeedDate(db, seriesId, "first-air", "2020-01-01", new DateOnly(2020, 1, 1), "day");
+        SeedDate(db, seriesId, "end-air", "2024", new DateOnly(2024, 1, 1), "year");
+        db.EntityChildLinks.AddRange(
+            new EntityChildLinkRow
+            {
+                ParentEntityId = seriesId,
+                ChildEntityId = seasonId,
+                ChildKindCode = EntityKindRegistry.VideoSeason.Code,
+                SortOrder = 1,
+                IsStructural = true,
+                CreatedAt = DateTimeOffset.UtcNow
+            },
+            new EntityChildLinkRow
+            {
+                ParentEntityId = seasonId,
+                ChildEntityId = episodeId,
+                ChildKindCode = EntityKindRegistry.Video.Code,
+                SortOrder = 1,
+                IsStructural = true,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+        await db.SaveChangesAsync();
+
+        var service = new EntityProjectionService(db);
+        var series = await service.GetSeriesAsync(seriesId, CancellationToken.None);
+        var season = await service.GetSeasonAsync(seasonId, CancellationToken.None);
+
+        Assert.NotNull(series);
+        var seasonGroup = Assert.Single(series.ChildrenByKind.Sets);
+        Assert.Equal(EntityKindRegistry.VideoSeason.Code, seasonGroup.Kind.Code);
+        Assert.Equal(seasonId, Assert.Single(seasonGroup.Items).Id);
+        Assert.Equal(VideoSeriesRenderingMode.Seasons, series.RenderingMode);
+        Assert.Equal("Aired", series.GetCapability(CapabilityRegistry.Lifetime).Label);
+        Assert.NotNull(season);
+        Assert.Equal(seriesId, season.ParentEntityId);
+        Assert.Equal(episodeId, Assert.Single(season.ChildrenByKind.Get(EntityKindRegistry.Video)).Id);
+    }
+
+    [Fact]
     public async Task HierarchyTreeLoadsOrderedChildrenAndSkipsDeletedEntities()
     {
         await using var db = CreateContext();
@@ -788,13 +836,21 @@ public sealed class EntityProjectionServiceTests
         return new ObscuraDbContext(options);
     }
 
-    private static void SeedEntity(ObscuraDbContext db, Guid id, string kind, string title)
+    private static void SeedEntity(
+        ObscuraDbContext db,
+        Guid id,
+        string kind,
+        string title,
+        Guid? parentEntityId = null,
+        int? sortOrder = null)
     {
         db.Entities.Add(new EntityRow
         {
             Id = id,
             KindCode = kind,
             Title = title,
+            ParentEntityId = parentEntityId,
+            SortOrder = sortOrder,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         });
@@ -856,12 +912,23 @@ public sealed class EntityProjectionServiceTests
     }
 
     private static void SeedDate(ObscuraDbContext db, Guid entityId, string code, string value)
+        => SeedDate(db, entityId, code, value, null, null);
+
+    private static void SeedDate(
+        ObscuraDbContext db,
+        Guid entityId,
+        string code,
+        string value,
+        DateOnly? sortableValue,
+        string? precision)
     {
         db.EntityDates.Add(new EntityDateRow
         {
             EntityId = entityId,
             Code = code,
             Value = value,
+            SortableValue = sortableValue,
+            Precision = precision,
             UpdatedAt = DateTimeOffset.UtcNow
         });
     }

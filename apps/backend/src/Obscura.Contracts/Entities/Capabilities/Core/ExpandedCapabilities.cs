@@ -39,6 +39,9 @@ public sealed record StatsCapability(IReadOnlyList<EntityStat> Items) : EntityCa
 /// <summary>API-facing named date capability.</summary>
 public sealed record DatesCapability(IReadOnlyList<EntityDate> Items) : EntityCapability;
 
+/// <summary>API-facing semantic lifetime capability.</summary>
+public sealed record LifetimeCapability(EntityDate? Start, EntityDate? End, string? Label) : EntityCapability;
+
 /// <summary>API-facing shared technical metadata capability.</summary>
 public sealed record TechnicalCapability(
     TimeSpan? Duration,

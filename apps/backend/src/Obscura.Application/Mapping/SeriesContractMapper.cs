@@ -20,9 +20,9 @@ public static partial class ContractMapper
             series.Id,
             series.Kind.Code,
             series.Title,
+            series.ParentEntityId,
             ToEntityCapabilities(series.Capabilities),
-            ToEntityCards(series.Children),
-            ToEntityCards(series.Videos),
+            ToEntityChildGroups(series.ChildrenByKind),
             series.RenderingMode.ToCode());
 
     /// <summary>
@@ -35,7 +35,7 @@ public static partial class ContractMapper
             season.Id,
             season.Kind.Code,
             season.Title,
+            season.ParentEntityId,
             ToEntityCapabilities(season.Capabilities),
-            season.SeriesId,
-            ToEntityCards(season.Videos));
+            ToEntityChildGroups(season.ChildrenByKind));
 }

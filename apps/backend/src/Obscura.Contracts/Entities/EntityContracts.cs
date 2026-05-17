@@ -30,18 +30,27 @@ public sealed record EntityUrl(string Url, string? Label);
 /// <param name="Url">Optional provider URL for direct navigation.</param>
 public sealed record EntityExternalId(string Provider, string Value, string? Url);
 
+/// <summary>API-facing grouped children for one entity kind.</summary>
+/// <param name="Kind">Child entity kind code represented by the group.</param>
+/// <param name="Items">Child cards in deterministic display order.</param>
+public sealed record EntityChildGroup(string Kind, IReadOnlyList<EntityCard> Items);
+
 /// <summary>
-/// Normalized list-card shape used across media, taxonomy, and collection routes.
+/// Normalized card/detail shape used across media, taxonomy, and collection routes.
 /// </summary>
 /// <param name="Id">Global entity identifier.</param>
 /// <param name="Kind">Entity kind code.</param>
 /// <param name="Title">Primary display title.</param>
+/// <param name="ParentEntityId">Structural parent entity identifier, or null for root and virtual collection children.</param>
 /// <param name="Capabilities">Shared capabilities already projected for the card.</param>
+/// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
 public sealed record EntityCard(
     Guid Id,
     string Kind,
     string Title,
-    IReadOnlyList<EntityCapability> Capabilities);
+    Guid? ParentEntityId,
+    IReadOnlyList<EntityCapability> Capabilities,
+    IReadOnlyList<EntityChildGroup> ChildrenByKind);
 
 /// <summary>
 /// Cursor-paged entity list response.

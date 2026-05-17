@@ -18,16 +18,16 @@ public sealed record VideoSeriesListResponse(
 /// <param name="Kind">Entity kind code.</param>
 /// <param name="Title">Series title.</param>
 /// <param name="Capabilities">Shared entity capabilities for the series.</param>
-/// <param name="Children">Non-video child groupings, such as seasons, when available.</param>
-/// <param name="Videos">Playable video cards linked to the series.</param>
+/// <param name="ParentEntityId">Structural parent entity identifier, or null for root series.</param>
+/// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
 /// <param name="RenderingMode">UI hint for flat or grouped rendering.</param>
 public sealed record VideoSeriesDetail(
     Guid Id,
     string Kind,
     string Title,
+    Guid? ParentEntityId,
     IReadOnlyList<EntityCapability> Capabilities,
-    IReadOnlyList<EntityCard> Children,
-    IReadOnlyList<EntityCard> Videos,
+    IReadOnlyList<EntityChildGroup> ChildrenByKind,
     string RenderingMode);
 
 /// <summary>
@@ -36,13 +36,13 @@ public sealed record VideoSeriesDetail(
 /// <param name="Id">Season entity identifier.</param>
 /// <param name="Kind">Entity kind code.</param>
 /// <param name="Title">Season title.</param>
+/// <param name="ParentEntityId">Parent series entity identifier.</param>
 /// <param name="Capabilities">Shared entity capabilities for the season.</param>
-/// <param name="SeriesId">Parent series entity identifier.</param>
-/// <param name="Videos">Playable episode cards linked to the season in hierarchy order.</param>
+/// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
 public sealed record VideoSeasonDetail(
     Guid Id,
     string Kind,
     string Title,
+    Guid? ParentEntityId,
     IReadOnlyList<EntityCapability> Capabilities,
-    Guid SeriesId,
-    IReadOnlyList<EntityCard> Videos);
+    IReadOnlyList<EntityChildGroup> ChildrenByKind);

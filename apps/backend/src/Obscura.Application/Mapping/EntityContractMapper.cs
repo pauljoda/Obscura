@@ -90,7 +90,9 @@ public static partial class ContractMapper
             entity.Id,
             entity.Kind.Code,
             entity.Title,
-            ToEntityCapabilities(entity.Capabilities));
+            entity.ParentEntityId,
+            ToEntityCapabilities(entity.Capabilities),
+            ToEntityChildGroups(entity.ChildrenByKind));
 
     /// <summary>
     /// Converts a collection of domain entity roots into card contracts.
@@ -105,6 +107,11 @@ public static partial class ContractMapper
             .Select(ToEntityCapability)
             .Where(capability => capability is not null)
             .Select(capability => capability!)
+            .ToArray();
+
+    private static IReadOnlyList<EntityChildGroup> ToEntityChildGroups(EntityChildren children) =>
+        children.Sets
+            .Select(set => new EntityChildGroup(set.Kind.Code, ToEntityCards(set.Items)))
             .ToArray();
 
     private static EntityCapability? ToEntityCapability(ICapability capability) =>
@@ -168,6 +175,18 @@ public static partial class ContractMapper
                 date.Value,
                 date.SortableValue,
                 date.Precision)).ToArray()),
+            CapabilityLifetime lifetime => new LifetimeCapability(
+                lifetime.Start is null ? null : new ContractEntityDate(
+                    lifetime.Start.Code,
+                    lifetime.Start.Value,
+                    lifetime.Start.SortableValue,
+                    lifetime.Start.Precision),
+                lifetime.End is null ? null : new ContractEntityDate(
+                    lifetime.End.Code,
+                    lifetime.End.Value,
+                    lifetime.End.SortableValue,
+                    lifetime.End.Precision),
+                lifetime.Label),
             CapabilityTechnical technical => new TechnicalCapability(
                 technical.Duration,
                 technical.Width,

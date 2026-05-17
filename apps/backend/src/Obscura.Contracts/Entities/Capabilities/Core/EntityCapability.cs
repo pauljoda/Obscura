@@ -21,6 +21,7 @@ namespace Obscura.Contracts.Entities;
 [JsonDerivedType(typeof(SubtitlesCapability), "subtitles")]
 [JsonDerivedType(typeof(StatsCapability), "stats")]
 [JsonDerivedType(typeof(DatesCapability), "dates")]
+[JsonDerivedType(typeof(LifetimeCapability), "lifetime")]
 [JsonDerivedType(typeof(TechnicalCapability), "technical")]
 [JsonDerivedType(typeof(SourceCapability), "source")]
 [JsonDerivedType(typeof(ProgressCapability), "progress")]

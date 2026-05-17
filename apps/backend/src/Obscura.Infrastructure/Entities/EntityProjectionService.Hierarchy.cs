@@ -54,6 +54,30 @@ public sealed partial class EntityProjectionService
         IEntityKind? childKind,
         CancellationToken cancellationToken)
     {
+        var genericLinks = await _db.EntityChildLinks
+            .AsNoTracking()
+            .Where(link => link.ParentEntityId == parentId)
+            .Where(link => childKind == null || link.ChildKindCode == childKind.Code)
+            .OrderBy(link => link.SortOrder)
+            .ThenBy(link => link.ChildEntityId)
+            .ToListAsync(cancellationToken);
+
+        if (genericLinks.Count > 0)
+        {
+            var genericChildIds = genericLinks.Select(link => link.ChildEntityId).ToArray();
+            var genericChildRows = await _db.Entities
+                .AsNoTracking()
+                .Where(entity => genericChildIds.Contains(entity.Id) && entity.DeletedAt == null)
+                .ToListAsync(cancellationToken);
+            var genericCardsById = (await BuildEntitiesAsync(genericChildRows, cancellationToken))
+                .ToDictionary(card => card.Id);
+
+            return genericLinks
+                .Where(link => genericCardsById.ContainsKey(link.ChildEntityId))
+                .Select(link => genericCardsById[link.ChildEntityId])
+                .ToArray();
+        }
+
         var links = await _db.EntityHierarchyLinks
             .AsNoTracking()
             .Where(link => link.ParentEntityId == parentId && link.Relationship == relationship.Code)

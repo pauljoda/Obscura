@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Entity API cards now expose `parentEntityId`, grouped `childrenByKind`, and the new `lifetime` capability so clients can render series, seasons, and future mixed children through one generic shape.
 - Entity graph groundwork now gives every entity typed child groups, structural parent metadata, and storage-shape metadata, preparing series, seasons, collections, galleries, audio, and books to share one relationship model.
 - The identify review modal now shows individually selectable tags with NEW badges for unrecognized tags, EntityThumbnail-based credit and studio cards, multi-line descriptions, compact artwork thumbnails, and a consistent-size lightbox with slide-in animation and a Confirm button.
 - Applying identify results now cascades person profile photos and studio logos from the TMDB proposal into the linked Person and Studio entities, so credited actors and studios show artwork in browse and detail pages.
@@ -99,6 +100,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Changed
+- Series and season detail contracts now read their child cards from grouped entity-kind children instead of separate `children` and `videos` arrays.
 - Entity detail hero banners now use a shared responsive height cap and overlap value in the base component, keeping series and other entity detail pages more compact.
 - Identify review credit cards now prefer character names in their subtitle and only fall back to normalized credit roles for crew entries, keeping episode guest-star cards from showing provider category labels.
 - Identify review children now render as generic thumbnail cards with title, description, and child-count previews, so series seasons, episodes, and future volume/chapter-style cascades use the same responsive review surface.

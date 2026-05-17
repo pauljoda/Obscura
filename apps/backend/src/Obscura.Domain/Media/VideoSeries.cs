@@ -15,7 +15,8 @@ public sealed record VideoSeries : Entity
         VideoSeriesRenderingMode RenderingMode,
         IReadOnlyList<Entity> Children,
         IReadOnlyList<Entity> Videos,
-        IReadOnlyList<ICapability>? capabilities = null)
+        IReadOnlyList<ICapability>? capabilities = null,
+        EntityChildren? childrenByKind = null)
         : base(
             Id,
             EntityKindRegistry.VideoSeries,
@@ -30,7 +31,8 @@ public sealed record VideoSeries : Entity
                 CapabilityLinks.Empty,
                 CapabilityFlags.Empty,
                 CapabilityFiles.Empty
-            ])
+            ],
+            children: childrenByKind ?? BuildChildrenByKind(Children, Videos))
     {
         this.Status = Status;
         this.RenderingMode = RenderingMode;
@@ -49,8 +51,27 @@ public sealed record VideoSeries : Entity
         VideoSeriesRenderingMode RenderingMode,
         IReadOnlyList<Entity> children,
         IReadOnlyList<Entity> videos)
-        : this(entity.Id, entity.Title, Status, RenderingMode, children, videos, entity.Capabilities)
+        : this(
+            entity.Id,
+            entity.Title,
+            Status,
+            RenderingMode,
+            children,
+            videos,
+            entity.Capabilities,
+            entity.ChildrenByKind.Sets.Count > 0 ? entity.ChildrenByKind : null)
     {
+    }
+
+    private static EntityChildren BuildChildrenByKind(IReadOnlyList<Entity> children, IReadOnlyList<Entity> videos)
+    {
+        var sets = children
+            .Concat(videos)
+            .GroupBy(child => child.Kind.Code, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new EntityChildSet(group.First().Kind, group.ToArray()))
+            .ToArray();
+
+        return sets.Length == 0 ? EntityChildren.Empty : new EntityChildren(sets);
     }
 }
 
@@ -72,12 +93,15 @@ public sealed record VideoSeason : Entity
         string Title,
         Guid SeriesId,
         IReadOnlyList<ICapability>? capabilities = null,
-        IReadOnlyList<Entity>? videos = null)
+        IReadOnlyList<Entity>? videos = null,
+        EntityChildren? childrenByKind = null)
         : base(
             Id,
             EntityKindRegistry.VideoSeason,
             Title,
-            capabilities ?? [CapabilityImages.Empty, CapabilityDescription.Empty, CapabilityDates.Empty, CapabilitySource.Empty, CapabilityPosition.Empty])
+            capabilities ?? [CapabilityImages.Empty, CapabilityDescription.Empty, CapabilityDates.Empty, CapabilitySource.Empty, CapabilityPosition.Empty],
+            parentEntityId: SeriesId,
+            children: childrenByKind ?? BuildChildrenByKind(videos ?? []))
     {
         this.SeriesId = SeriesId;
         Videos = videos ?? [];
@@ -96,7 +120,18 @@ public sealed record VideoSeason : Entity
     /// <param name="SeriesId">Parent video-series entity identifier.</param>
     /// <param name="videos">Episode videos linked to this season in hierarchy order.</param>
     public VideoSeason(Entity entity, Guid SeriesId, IReadOnlyList<Entity>? videos = null)
-        : this(entity.Id, entity.Title, SeriesId, entity.Capabilities, videos)
+        : this(
+            entity.Id,
+            entity.Title,
+            SeriesId,
+            entity.Capabilities,
+            videos,
+            entity.ChildrenByKind.Sets.Count > 0 ? entity.ChildrenByKind : null)
     {
     }
+
+    private static EntityChildren BuildChildrenByKind(IReadOnlyList<Entity> videos) =>
+        videos.Count == 0
+            ? EntityChildren.Empty
+            : new EntityChildren([new EntityChildSet(EntityKindRegistry.Video, videos)]);
 }

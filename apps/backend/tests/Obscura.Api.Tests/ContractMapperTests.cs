@@ -42,6 +42,7 @@ public sealed class ContractMapperTests
     public void EntityCardSerializesTagCapabilityWithReferences()
     {
         var tagId = Guid.Parse("12121212-1212-1212-1212-121212121212");
+        var episodeId = Guid.Parse("23232323-2323-2323-2323-232323232323");
         var video = new Entity(
             Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
             EntityKindRegistry.Video,
@@ -50,9 +51,19 @@ public sealed class ContractMapperTests
                 new CapabilityTags([
                     new EntityTag(new Obscura.Domain.Entities.EntityReference(tagId, EntityKindRegistry.Tag, "Comedy"))
                 ])
-            ]);
+            ],
+            parentEntityId: Guid.Parse("34343434-3434-3434-3434-343434343434"),
+            children: new EntityChildren([
+                new EntityChildSet(EntityKindRegistry.Video, [
+                    new Entity(episodeId, EntityKindRegistry.Video, "Episode", [])
+                ])
+            ]));
 
         using var document = JsonDocument.Parse(JsonSerializer.Serialize(ContractMapper.ToEntityCard(video), JsonOptions));
+        Assert.Equal("34343434-3434-3434-3434-343434343434", document.RootElement.GetProperty("parentEntityId").GetGuid().ToString());
+        var childGroup = document.RootElement.GetProperty("childrenByKind").EnumerateArray().Single();
+        Assert.Equal("video", childGroup.GetProperty("kind").GetString());
+        Assert.Equal(episodeId, childGroup.GetProperty("items").EnumerateArray().Single().GetProperty("id").GetGuid());
         var tags = document.RootElement
             .GetProperty("capabilities")
             .EnumerateArray()
@@ -63,6 +74,31 @@ public sealed class ContractMapperTests
         Assert.Equal(tagId, item.GetProperty("id").GetGuid());
         Assert.Equal("tag", item.GetProperty("kind").GetString());
         Assert.Equal("Comedy", item.GetProperty("title").GetString());
+    }
+
+    [Fact]
+    public void EntityCardSerializesLifetimeCapabilityDiscriminator()
+    {
+        var series = new Entity(
+            Guid.Parse("abababab-abab-abab-abab-abababababab"),
+            EntityKindRegistry.VideoSeries,
+            "Mapped Series",
+            [
+                new CapabilityLifetime(
+                    new Obscura.Domain.Capabilities.EntityDate("first-air", "2020", new DateOnly(2020, 1, 1), "year"),
+                    new Obscura.Domain.Capabilities.EntityDate("end-air", "2024", new DateOnly(2024, 1, 1), "year"),
+                    "Aired")
+            ]);
+
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(ContractMapper.ToEntityCard(series), JsonOptions));
+        var lifetime = document.RootElement
+            .GetProperty("capabilities")
+            .EnumerateArray()
+            .Single(capability => capability.GetProperty("kind").GetString() == "lifetime");
+
+        Assert.Equal("first-air", lifetime.GetProperty("start").GetProperty("code").GetString());
+        Assert.Equal("end-air", lifetime.GetProperty("end").GetProperty("code").GetString());
+        Assert.Equal("Aired", lifetime.GetProperty("label").GetString());
     }
 
     [Fact]

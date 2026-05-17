@@ -93,7 +93,7 @@ public sealed partial class EntityProjectionService :
             return null;
         }
 
-        return (await BuildEntitiesAsync([row], cancellationToken)).Single();
+        return (await BuildEntitiesAsync([row], cancellationToken, includeChildren: true)).Single();
     }
 
     /// <inheritdoc />
@@ -404,7 +404,7 @@ public sealed partial class EntityProjectionService :
         var detail = await _db.VideoDetails
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-        var card = (await BuildEntitiesAsync([entity], cancellationToken)).Single();
+        var card = (await BuildEntitiesAsync([entity], cancellationToken, includeChildren: true)).Single();
 
         return new Video(card, detail?.SubtitlesExtractedAt);
     }
@@ -427,14 +427,24 @@ public sealed partial class EntityProjectionService :
             return null;
         }
 
-        var card = (await BuildEntitiesAsync([entity], cancellationToken)).Single();
+        var card = (await BuildEntitiesAsync([entity], cancellationToken, includeChildren: true)).Single();
         var detail = await _db.VideoSeriesDetails
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-        var seasons = await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.Season, EntityKindRegistry.VideoSeason, cancellationToken);
-        var videos = await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.Episode, EntityKindRegistry.Video, cancellationToken);
+        var seasons = card.ChildrenByKind.Get(EntityKindRegistry.VideoSeason).Cast<Entity>().ToArray();
+        var videos = card.ChildrenByKind.Get(EntityKindRegistry.Video).Cast<Entity>().ToArray();
+        if (seasons.Length == 0)
+        {
+            seasons = (await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.Season, EntityKindRegistry.VideoSeason, cancellationToken)).ToArray();
+        }
+
+        if (videos.Length == 0)
+        {
+            videos = (await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.Episode, EntityKindRegistry.Video, cancellationToken)).ToArray();
+        }
+
         var renderingMode = detail?.RenderingMode ??
-            (seasons.Count > 0 ? VideoSeriesRenderingMode.Seasons : VideoSeriesRenderingMode.Flat);
+            (seasons.Length > 0 ? VideoSeriesRenderingMode.Seasons : VideoSeriesRenderingMode.Flat);
 
         return new VideoSeries(card, detail?.Status, renderingMode, seasons, videos);
     }
@@ -453,12 +463,16 @@ public sealed partial class EntityProjectionService :
             return null;
         }
 
-        var card = (await BuildEntitiesAsync([entity], cancellationToken)).Single();
+        var card = (await BuildEntitiesAsync([entity], cancellationToken, includeChildren: true)).Single();
         var detail = await _db.VideoSeasonDetails
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
-        var seriesId = detail?.SeriesEntityId ?? await ResolveParentSeriesIdAsync(id, cancellationToken);
-        var videos = await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.Episode, EntityKindRegistry.Video, cancellationToken);
+        var seriesId = card.ParentEntityId ?? detail?.SeriesEntityId ?? await ResolveParentSeriesIdAsync(id, cancellationToken);
+        var videos = card.ChildrenByKind.Get(EntityKindRegistry.Video).Cast<Entity>().ToArray();
+        if (videos.Length == 0)
+        {
+            videos = (await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.Episode, EntityKindRegistry.Video, cancellationToken)).ToArray();
+        }
 
         return new VideoSeason(card, seriesId, videos);
     }
