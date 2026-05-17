@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Entity organization now has backend dry-run and apply endpoints that compute target folders and files from generic entity storage-shape metadata, so future UI work can move media without hard-coded series/gallery/book rules.
 - Entity detail responses now use the same `parentEntityId` and grouped `childrenByKind` shape as entity cards, so pages can render structural and virtual children through one graph contract.
 - Obscura now uses the generic entity graph as the only v2 relationship model. This is a breaking dev-schema change: reset or re-import v2 data so series, seasons, collections, galleries, audio libraries, and books rebuild through `childrenByKind`.
 - Entity API cards now expose `parentEntityId`, grouped `childrenByKind`, and the new `lifetime` capability so clients can render series, seasons, and future mixed children through one generic shape.
@@ -119,6 +120,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Identify credit and studio EntityThumbnail cards now show profile photos and logos from TMDB proposal children, and tag NEW badges now check the entity's full tag list (including NSFW tags) so existing tags are never falsely marked as new.
 
 ### Added
+- Backend organize plan and apply services were added for generic entity storage shapes, with tests for folder/file planning, archive-entry skipping, and source-path updates.
 - Typed entity-child access, semantic lifetime capability metadata, and the `entity_child_links` persistence table were added as the base of the generic entity graph migration.
 - TMDB series identify now includes episode guest-star and writer/director credits, and cascade apply now persists child tags, studio, credits, stats, classification, and provider links in addition to core title/date fields.
 - Identify apply now cascades person profile photos and studio logos from proposal children into linked Person and Studio entities, giving credited actors and studios artwork without a separate identify pass.

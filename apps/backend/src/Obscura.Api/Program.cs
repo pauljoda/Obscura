@@ -94,6 +94,7 @@ app.MapTaxonomyEndpoints();
 app.MapUserStateEndpoints();
 app.MapPluginEndpoints();
 app.MapIdentifyEndpoints();
+app.MapOrganizeEndpoints();
 
 var staticIndexPath = resolvedStaticWebRoot is not null
     ? Path.Combine(resolvedStaticWebRoot, "index.html")

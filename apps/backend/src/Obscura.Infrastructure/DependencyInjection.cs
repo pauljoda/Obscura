@@ -18,6 +18,7 @@ using Obscura.Infrastructure.Legacy;
 using Obscura.Infrastructure.Media.Adapters;
 using Obscura.Infrastructure.Media.Persistence;
 using Obscura.Infrastructure.Media.Processing;
+using Obscura.Infrastructure.Organization;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Plugins;
 using Obscura.Infrastructure.Processes;
@@ -25,6 +26,7 @@ using Obscura.Infrastructure.Queue;
 using Obscura.Infrastructure.Settings;
 using Obscura.Infrastructure.Upgrades;
 using Obscura.Infrastructure.Videos;
+using Obscura.Application.Organization;
 
 namespace Obscura.Infrastructure;
 
@@ -111,6 +113,7 @@ public static class DependencyInjection
         services.AddScoped<IRatingService>(provider => provider.GetRequiredService<EntityProjectionService>());
         services.AddScoped<IEntityMarkerService>(provider => provider.GetRequiredService<EntityProjectionService>());
         services.AddScoped<IVideoLibrary>(provider => provider.GetRequiredService<EntityProjectionService>());
+        services.AddScoped<IEntityOrganizer, EntityOrganizerService>();
         services.AddScoped<IVideoSourceService, VideoSourceService>();
         services.AddSingleton(new HlsAssetServiceOptions(
             cacheDir,
