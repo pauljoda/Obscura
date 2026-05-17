@@ -484,6 +484,8 @@
     --detail-text-disabled: var(--color-text-disabled, #4a5260);
     --detail-glass: rgba(12, 15, 21, 0.72);
     --detail-glass-blur: 12px;
+    --hero-banner-max-height: clamp(13rem, 36vw, 20rem);
+    --hero-lower-overlap: clamp(-3.75rem, -6vw, -2rem);
 
     display: grid;
     gap: 0;
@@ -516,7 +518,7 @@
     width: 100%;
     height: auto;
     display: block;
-    max-height: 22rem;
+    max-height: var(--hero-banner-max-height);
     object-fit: cover;
     filter: brightness(0.85) saturate(0.9);
   }
@@ -525,7 +527,7 @@
 
   .hero-lower {
     position: relative;
-    margin-top: -5%;
+    margin-top: var(--hero-lower-overlap);
     overflow: hidden;
   }
 
@@ -1105,8 +1107,9 @@
   /* ── Responsive ─────────────────────────────────────────── */
 
   @media (min-width: 640px) {
-    .hero-banner img {
-      max-height: 28rem;
+    .entity-detail {
+      --hero-banner-max-height: clamp(14rem, 32vw, 22rem);
+      --hero-lower-overlap: clamp(-4.25rem, -6vw, -2.5rem);
     }
 
     .hero-content {
@@ -1136,8 +1139,9 @@
   }
 
   @media (min-width: 1024px) {
-    .hero-banner img {
-      max-height: 34rem;
+    .entity-detail {
+      --hero-banner-max-height: clamp(15rem, 26vw, 24rem);
+      --hero-lower-overlap: clamp(-4.75rem, -5vw, -3rem);
     }
 
     [data-poster-size="small"] .poster-frame { --poster-width: 7rem; }

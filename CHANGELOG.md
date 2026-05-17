@@ -88,6 +88,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video detail pages now use the shared page padding without adding a second inset around the player, giving playback more room while matching browse-page spacing.
 - Scheduled v2 library scans now target the intended watched folder instead of falling back to all eligible roots, and configured static web builds are served directly even in development/test hosts.
 - Entity detail descriptions now render markdown through a sanitized v2 helper, preserving formatting while stripping unsafe HTML and script URLs.
+- Entity detail pages now keep hero banner art shorter and let the lower poster/title area overlap upward, so detail headers take less vertical space while keeping the artwork visible.
 - Videos now track playback state on the v2 backend — play count, accumulated watch time, and resume position are persisted per entity. Navigating back to a video resumes from where you left off, and the position is updated every 10 seconds during playback.
 - Every entity type now has a dedicated detail page using the v2 entity API — videos, series, galleries, images, books, audio libraries, performers, studios, tags, and collections all render through the shared `EntityDetail` component with kind-specific sections (credits, reading progress, track lists, bio details) composed via snippet slots. The temporary `/v2/` route prefix has been removed; all detail pages now live at their canonical paths (e.g. `/videos/{id}`, `/performers/{id}`).
 - All browse pages and the dashboard link directly to detail pages via a centralized entity route registry that mirrors the backend hierarchy definitions.
@@ -97,6 +98,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Changed
+- Entity detail hero banners now use a shared responsive height cap and overlap value in the base component, keeping series and other entity detail pages more compact.
 - Identify review credit cards now prefer character names in their subtitle and only fall back to normalized credit roles for crew entries, keeping episode guest-star cards from showing provider category labels.
 - Identify review children now render as generic thumbnail cards with title, description, and child-count previews, so series seasons, episodes, and future volume/chapter-style cascades use the same responsive review surface.
 - Identify review artwork previews and credit rows are now constrained to compact, scrollable thumbnail layouts so they no longer stretch the modal or dominate the review flow.
