@@ -37,6 +37,7 @@ public sealed record VideoEntityKind()
         CapabilityRegistry.Dates,
         CapabilityRegistry.Technical,
         CapabilityRegistry.Source,
+        CapabilityRegistry.Position,
         CapabilityRegistry.Classification
     ];
 }

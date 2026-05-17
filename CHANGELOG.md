@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Changelog entries are now curated release notes for important user-visible changes instead of an exhaustive development log.
 
 ### Fixed
+- Local v2 reset now keeps required entity-kind metadata so legacy migration tests can run cleanly.
 
 ### Removed
 - Historical v1-era release note detail was pruned from the changelog; git history remains the complete record.

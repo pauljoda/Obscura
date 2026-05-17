@@ -482,6 +482,8 @@ public sealed class EntityProjectionServiceTests
         Assert.NotNull(detail);
         Assert.Equal(seriesId, detail.ParentEntityId);
         Assert.Equal([episodeOneId, episodeTwoId], detail.Videos.Select(video => video.Id).ToArray());
+        Assert.Equal(1, detail.Videos[0].Position?.Items.Single(position => position.Code == "episode").Value);
+        Assert.Equal(2, detail.Videos[1].Position?.Items.Single(position => position.Code == "episode").Value);
     }
 
     [Fact]

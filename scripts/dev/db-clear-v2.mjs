@@ -44,7 +44,8 @@ BEGIN
     SELECT string_agg(format('%I.%I', schemaname, tablename), ', ' ORDER BY tablename)
     INTO v2_tables
     FROM pg_tables
-    WHERE schemaname = 'v2';
+    WHERE schemaname = 'v2'
+      AND tablename <> 'entity_kinds';
 
     IF v2_tables IS NULL THEN
         RAISE NOTICE 'No v2 schema tables found; nothing to clear.';
@@ -52,6 +53,40 @@ BEGIN
     END IF;
 
     EXECUTE 'TRUNCATE TABLE ' || v2_tables || ' RESTART IDENTITY CASCADE';
+
+    IF to_regclass('v2.entity_kinds') IS NOT NULL THEN
+        INSERT INTO v2.entity_kinds (
+            code,
+            display_name,
+            category,
+            allowed_child_kind_codes,
+            is_leaf,
+            storage_shape
+        )
+        VALUES
+            ('audio', 'Audio', 'Media', '[]'::jsonb, true, 'file'),
+            ('audio-library', 'Audio Library', 'Media', '["audio-library","audio-track"]'::jsonb, false, 'folder'),
+            ('audio-track', 'Audio Track', 'Media', '[]'::jsonb, true, 'file'),
+            ('book', 'Book', 'Media', '["book-volume","book-chapter","book-page"]'::jsonb, true, 'archive'),
+            ('book-chapter', 'Book Chapter', 'Media', '["book-page"]'::jsonb, false, 'none'),
+            ('book-page', 'Book Page', 'Media', '[]'::jsonb, true, 'archive-entry'),
+            ('book-volume', 'Book Volume', 'Media', '["book-chapter","book-page"]'::jsonb, false, 'none'),
+            ('collection', 'Collection', 'Collection', '["audio","audio-library","audio-track","book","book-chapter","book-page","book-volume","collection","gallery","image","person","studio","tag","video","video-season","video-series"]'::jsonb, false, 'none'),
+            ('gallery', 'Gallery', 'Media', '["gallery","image"]'::jsonb, false, 'folder'),
+            ('image', 'Image', 'Media', '[]'::jsonb, true, 'file'),
+            ('person', 'Person', 'Taxonomy', '[]'::jsonb, false, 'none'),
+            ('studio', 'Studio', 'Taxonomy', '["studio"]'::jsonb, false, 'none'),
+            ('tag', 'Tag', 'Taxonomy', '["tag"]'::jsonb, false, 'none'),
+            ('video', 'Video', 'Media', '[]'::jsonb, true, 'file'),
+            ('video-season', 'Video Season', 'Media', '["video"]'::jsonb, false, 'folder'),
+            ('video-series', 'Video Series', 'Media', '["video-season","video"]'::jsonb, false, 'folder')
+        ON CONFLICT (code) DO UPDATE SET
+            display_name = EXCLUDED.display_name,
+            category = EXCLUDED.category,
+            allowed_child_kind_codes = EXCLUDED.allowed_child_kind_codes,
+            is_leaf = EXCLUDED.is_leaf,
+            storage_shape = EXCLUDED.storage_shape;
+    END IF;
 
     IF to_regclass('v2.library_settings') IS NOT NULL
        AND to_regclass('public.library_settings') IS NOT NULL THEN

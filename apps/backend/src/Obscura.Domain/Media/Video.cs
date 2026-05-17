@@ -29,6 +29,7 @@ public sealed record Video : Entity
                 CapabilityFiles.Empty,
                 CapabilityPlayback.Empty,
                 CapabilityCounters.Empty,
+                CapabilityPosition.Empty,
                 CapabilityMarkers.Empty,
                 CapabilitySubtitles.Empty
             ])

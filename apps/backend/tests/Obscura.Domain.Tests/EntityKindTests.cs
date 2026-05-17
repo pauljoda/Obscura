@@ -86,6 +86,7 @@ public sealed class EntityKindTests
         Assert.Contains(CapabilityRegistry.Markers, EntityKindRegistry.Video.SupportedCapabilities);
         Assert.Contains(CapabilityRegistry.Subtitles, EntityKindRegistry.Video.SupportedCapabilities);
         Assert.Contains(CapabilityRegistry.Technical, EntityKindRegistry.Video.SupportedCapabilities);
+        Assert.Contains(CapabilityRegistry.Position, EntityKindRegistry.Video.SupportedCapabilities);
         Assert.Contains(CapabilityRegistry.Classification, EntityKindRegistry.Video.SupportedCapabilities);
 
         Assert.Contains(CapabilityRegistry.Progress, EntityKindRegistry.Book.SupportedCapabilities);
