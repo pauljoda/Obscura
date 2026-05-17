@@ -335,6 +335,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scan now propagates the NSFW flag from the library root to all child entities — images, audio libraries, audio tracks, book chapters, and book pages were previously missing the flag even when their parent library root was marked NSFW.
 
 ### Removed
+- Removed unused pre-v2 Svelte edit/card/filter components that still depended on deleted v1 frontend APIs and thumbnail modules.
 - Removed the old v2 relationship registry, hierarchy definitions, `IEntityHierarchy`, `EntityLibrary`, and `entity_hierarchy_links` persistence model in favor of the generic child-link graph.
 - Removed the legacy SvelteKit `/api` route tree, `$lib/v1` server/client helpers, TypeScript worker app, Drizzle database package, and shared `@obscura/app-core` server package.
 - Removed the obsolete `/api/videos/{id}/stream`, `/api/videos/{id}/hls/master.m3u8`, and `/api/videos/{id}/hls/{asset}` playback routes; Jellyfin-compatible `/Videos/...` routes now own playback.
