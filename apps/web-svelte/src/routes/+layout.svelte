@@ -35,7 +35,7 @@
     awaitingBreakingConsent: false,
   };
 
-  let { data = {}, children: pageContent } = $props();
+  let { data, children: pageContent } = $props();
   const layoutData = $derived({ ...defaultLayoutData, ...data });
 
   // Wire all context providers once at the root. The stores themselves
