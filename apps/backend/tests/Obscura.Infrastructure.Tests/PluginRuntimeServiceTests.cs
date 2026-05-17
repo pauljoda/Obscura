@@ -168,6 +168,98 @@ public sealed class PluginRuntimeServiceTests : IDisposable
         Assert.Equal("lookup-id", executor.CapturedRequest?.Action);
     }
 
+    [Fact]
+    public async Task IdentifyTraversesGenericChildGraphWhenProviderSupportsChildKinds()
+    {
+        var pluginDir = Path.Combine(_tempRoot, "tmdb");
+        Directory.CreateDirectory(pluginDir);
+        await File.WriteAllTextAsync(
+            Path.Combine(pluginDir, "manifest.v2.json"),
+            """
+            {
+              "manifestVersion": 2,
+              "apiTags": ["v2"],
+              "id": "tmdb",
+              "name": "TMDB",
+              "version": "1.2.0",
+              "runtime": "dotnet-process",
+              "entry": "Obscura.Plugin.Tmdb.dll",
+              "compat": {
+                "pluginApiMin": "2.0.0",
+                "pluginApiMax": null,
+                "obscuraMin": "0.22.0",
+                "obscuraMax": null
+              },
+              "auth": [
+                { "key": "apiKey", "label": "API key", "required": true, "url": "https://www.themoviedb.org/settings/api" }
+              ],
+              "supports": [
+                { "entityKind": "video-series", "actions": ["search"] },
+                { "entityKind": "video-season", "actions": ["search"] }
+              ]
+            }
+            """);
+
+        await using var db = CreateContext();
+        var now = DateTimeOffset.UtcNow;
+        var providerConfig = new ProviderConfigRow
+        {
+            Id = Guid.NewGuid(),
+            ProviderCode = "tmdb",
+            DisplayName = "TMDB",
+            ProviderType = ProviderType.ExternalProcess,
+            Enabled = true,
+            SettingsJson = "{}",
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        var seriesId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var seasonId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        db.ProviderConfigs.Add(providerConfig);
+        db.ProviderCredentials.Add(new ProviderCredentialRow
+        {
+            Id = Guid.NewGuid(),
+            ProviderConfigId = providerConfig.Id,
+            CredentialKey = "apiKey",
+            EncryptedValue = "secret",
+            CreatedAt = now,
+            UpdatedAt = now
+        });
+        db.Entities.AddRange(
+            new EntityRow { Id = seriesId, KindCode = "video-series", Title = "Example Series", CreatedAt = now, UpdatedAt = now },
+            new EntityRow { Id = seasonId, KindCode = "video-season", Title = "Season 1", ParentEntityId = seriesId, SortOrder = 1, CreatedAt = now, UpdatedAt = now });
+        db.EntityChildLinks.Add(new EntityChildLinkRow
+        {
+            ParentEntityId = seriesId,
+            ChildEntityId = seasonId,
+            ChildKindCode = "video-season",
+            SortOrder = 1,
+            IsStructural = true,
+            CreatedAt = now
+        });
+        await db.SaveChangesAsync();
+
+        var executor = new GraphCapturingProcessExecutor();
+        var catalog = new PluginCatalogService(db, new PluginCatalogOptions([_tempRoot], _tempRoot, "0.22.1-dev"));
+        var service = new IdentifyPluginService(
+            db,
+            catalog,
+            new IdentifyMatchHintResolver(db),
+            new DotnetPluginProcessRunner(executor, new PluginCatalogOptions([], _tempRoot, "0.22.1-dev")),
+            new EntityMetadataApplyService(db, new PluginArtworkServiceOptions(_tempRoot)));
+
+        var response = await service.IdentifyAsync(seriesId, "tmdb", null, CancellationToken.None);
+
+        Assert.True(response.Ok);
+        Assert.Equal([seriesId, seasonId], executor.Requests.Select(request => request.Entity.Id).ToArray());
+        Assert.Equal(seriesId, response.Result?.TargetEntityId);
+        var child = Assert.Single(response.Result!.Children);
+        Assert.Equal(seasonId, child.TargetEntityId);
+        Assert.Equal("video-season", child.TargetKind);
+        Assert.Equal(seriesId, executor.Requests[1].Graph?.Ancestors.Single().Id);
+        Assert.Equal(1, executor.Requests[1].Graph?.Positions["sortOrder"]);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))
@@ -215,6 +307,55 @@ public sealed class PluginRuntimeServiceTests : IDisposable
                         "Example",
                         null,
                         new Dictionary<string, string> { ["tmdb"] = "123" },
+                        [],
+                        [],
+                        null,
+                        [],
+                        new Dictionary<string, string>(),
+                        new Dictionary<string, int>(),
+                        new Dictionary<string, int>(),
+                        new Dictionary<string, int>(),
+                        null),
+                    [],
+                    [],
+                    []),
+                null);
+
+            return new ProcessExecutionResult(
+                0,
+                JsonSerializer.Serialize(response, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+                string.Empty);
+        }
+    }
+
+    private sealed class GraphCapturingProcessExecutor : ProcessExecutor
+    {
+        public List<IdentifyPluginRequest> Requests { get; } = [];
+
+        public override async Task<ProcessExecutionResult> RunAsync(
+            string fileName,
+            IReadOnlyList<string> arguments,
+            IReadOnlyDictionary<string, string>? environment,
+            CancellationToken cancellationToken)
+        {
+            var requestJson = await File.ReadAllTextAsync(arguments[1], cancellationToken);
+            var request = JsonSerializer.Deserialize<IdentifyPluginRequest>(
+                requestJson,
+                new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+            Requests.Add(request);
+
+            var response = new IdentifyPluginResponse(
+                true,
+                new EntityMetadataProposal(
+                    $"tmdb:{request.Entity.Kind}:{request.Entity.Id}",
+                    "tmdb",
+                    request.Entity.Kind,
+                    request.Graph?.Ancestors.Count > 0 ? 0.9m : 1m,
+                    request.Graph?.Ancestors.Count > 0 ? "graph-child" : "title-search",
+                    new EntityMetadataPatch(
+                        $"{request.Entity.Title} identified",
+                        null,
+                        new Dictionary<string, string>(),
                         [],
                         [],
                         null,

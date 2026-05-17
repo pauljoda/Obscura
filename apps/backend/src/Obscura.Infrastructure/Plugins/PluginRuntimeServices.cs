@@ -573,16 +573,15 @@ public sealed class IdentifyPluginService
             return new IdentifyPluginResponse(false, null, $"Missing required plugin credentials: {string.Join(", ", missingAuth)}.");
         }
 
-        var hints = await _hints.ResolveAsync(entityId, descriptor.Manifest.Id, cancellationToken);
-        var request = new IdentifyPluginRequest(
-            ProtocolVersion: 2,
-            Action: ResolveAction(descriptor.Manifest, query, hints),
-            Auth: auth,
-            Entity: new IdentifyEntitySnapshot(entity.Id, entity.KindCode, entity.Title),
-            Query: query ?? new IdentifyQuery(null, null, null),
-            Hints: hints);
-
-        return await _runner.IdentifyAsync(descriptor, request, cancellationToken);
+        return await IdentifyEntityWithGraphAsync(
+            entity,
+            descriptor,
+            auth,
+            query,
+            ancestors: [],
+            parentLink: null,
+            visited: [],
+            cancellationToken);
     }
 
     /// <summary>
@@ -619,6 +618,235 @@ public sealed class IdentifyPluginService
 
         return supports.Contains("search") ? "search" : supports.FirstOrDefault() ?? "search";
     }
+
+    private async Task<IdentifyPluginResponse> IdentifyEntityWithGraphAsync(
+        EntityRow entity,
+        PluginDescriptor descriptor,
+        IReadOnlyDictionary<string, string> auth,
+        IdentifyQuery? query,
+        IReadOnlyList<IdentifyEntitySnapshot> ancestors,
+        EntityChildLinkRow? parentLink,
+        HashSet<Guid> visited,
+        CancellationToken cancellationToken)
+    {
+        if (!visited.Add(entity.Id))
+        {
+            return new IdentifyPluginResponse(false, null, $"Cycle detected while identifying entity '{entity.Id}'.");
+        }
+
+        var hints = await _hints.ResolveAsync(entity.Id, descriptor.Manifest.Id, cancellationToken);
+        var positions = await ResolveGraphPositionsAsync(entity.Id, parentLink, cancellationToken);
+        var graph = ancestors.Count > 0 || positions.Count > 0
+            ? new IdentifyGraphContext(ancestors, positions)
+            : null;
+        var request = new IdentifyPluginRequest(
+            ProtocolVersion: 2,
+            Action: ResolveAction(descriptor.Manifest, query, hints),
+            Auth: auth,
+            Entity: new IdentifyEntitySnapshot(entity.Id, entity.KindCode, entity.Title),
+            Query: query ?? new IdentifyQuery(null, null, null),
+            Hints: hints,
+            Graph: graph);
+
+        var response = await _runner.IdentifyAsync(descriptor, request, cancellationToken);
+        if (!response.Ok || response.Result is null)
+        {
+            visited.Remove(entity.Id);
+            return response;
+        }
+
+        var proposal = await BuildGraphProposalAsync(
+            entity,
+            response.Result,
+            descriptor,
+            auth,
+            [new IdentifyEntitySnapshot(entity.Id, entity.KindCode, entity.Title), .. ancestors],
+            visited,
+            cancellationToken);
+        visited.Remove(entity.Id);
+        return response with { Result = proposal };
+    }
+
+    private async Task<EntityMetadataProposal> BuildGraphProposalAsync(
+        EntityRow entity,
+        EntityMetadataProposal providerProposal,
+        PluginDescriptor descriptor,
+        IReadOnlyDictionary<string, string> auth,
+        IReadOnlyList<IdentifyEntitySnapshot> ancestorPath,
+        HashSet<Guid> visited,
+        CancellationToken cancellationToken)
+    {
+        var existingChildren = await LoadGraphChildrenAsync(entity.Id, cancellationToken);
+        if (existingChildren.Count == 0)
+        {
+            return providerProposal with { TargetKind = entity.KindCode, TargetEntityId = entity.Id };
+        }
+
+        var structuralChildren = new List<EntityMetadataProposal>();
+        var usedProviderChildren = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var child in existingChildren)
+        {
+            var positions = await ResolveGraphPositionsAsync(child.Entity.Id, child.Link, cancellationToken);
+            var providerChild = providerProposal.Children
+                .Where(candidate => IsRelationshipProposal(candidate))
+                .Where(candidate => IsKindCompatible(child.Entity.KindCode, candidate.TargetKind))
+                .Select(candidate => new
+                {
+                    Proposal = candidate,
+                    Score = ScoreProposalMatch(child.Entity, child.Link, positions, candidate)
+                })
+                .Where(candidate => candidate.Score > 0)
+                .OrderByDescending(candidate => candidate.Score)
+                .FirstOrDefault(candidate => !usedProviderChildren.Contains(candidate.Proposal.ProposalId));
+
+            if (providerChild is not null)
+            {
+                usedProviderChildren.Add(providerChild.Proposal.ProposalId);
+                structuralChildren.Add(await BuildGraphProposalAsync(
+                    child.Entity,
+                    providerChild.Proposal,
+                    descriptor,
+                    auth,
+                    ancestorPath,
+                    visited,
+                    cancellationToken));
+                continue;
+            }
+
+            if (!SupportsKind(descriptor.Manifest, child.Entity.KindCode))
+            {
+                continue;
+            }
+
+            var childResponse = await IdentifyEntityWithGraphAsync(
+                child.Entity,
+                descriptor,
+                auth,
+                query: null,
+                ancestors: ancestorPath,
+                parentLink: child.Link,
+                visited,
+                cancellationToken);
+            if (childResponse.Ok && childResponse.Result is not null)
+            {
+                structuralChildren.Add(childResponse.Result);
+            }
+        }
+
+        var nonStructuralChildren = providerProposal.Children
+            .Where(child => !IsRelationshipProposal(child))
+            .ToArray();
+
+        return providerProposal with
+        {
+            TargetKind = entity.KindCode,
+            TargetEntityId = entity.Id,
+            Children = [.. structuralChildren, .. nonStructuralChildren]
+        };
+    }
+
+    private async Task<IReadOnlyList<GraphChild>> LoadGraphChildrenAsync(Guid parentEntityId, CancellationToken cancellationToken)
+    {
+        var links = await _db.EntityChildLinks
+            .AsNoTracking()
+            .Where(link => link.ParentEntityId == parentEntityId)
+            .OrderBy(link => link.SortOrder)
+            .ThenBy(link => link.ChildEntityId)
+            .ToArrayAsync(cancellationToken);
+        if (links.Length == 0)
+        {
+            return [];
+        }
+
+        var childIds = links.Select(link => link.ChildEntityId).ToArray();
+        var entities = await _db.Entities
+            .AsNoTracking()
+            .Where(row => childIds.Contains(row.Id) && row.DeletedAt == null)
+            .ToDictionaryAsync(row => row.Id, cancellationToken);
+
+        return links
+            .Where(link => entities.ContainsKey(link.ChildEntityId))
+            .Select(link => new GraphChild(link, entities[link.ChildEntityId]))
+            .ToArray();
+    }
+
+    private async Task<IReadOnlyDictionary<string, int>> ResolveGraphPositionsAsync(
+        Guid entityId,
+        EntityChildLinkRow? parentLink,
+        CancellationToken cancellationToken)
+    {
+        var positions = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        if (parentLink?.SortOrder is { } sortOrder)
+        {
+            positions["sortOrder"] = sortOrder;
+        }
+
+        var persisted = await _db.EntityPositions
+            .AsNoTracking()
+            .Where(row => row.EntityId == entityId)
+            .ToArrayAsync(cancellationToken);
+        foreach (var row in persisted)
+        {
+            positions[row.Code] = row.Value;
+        }
+
+        var seasonNumber = await _db.VideoSeasonDetails
+            .AsNoTracking()
+            .Where(row => row.EntityId == entityId)
+            .Select(row => (int?)row.SeasonNumber)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (seasonNumber is { } value)
+        {
+            positions["seasonNumber"] = value;
+        }
+
+        return positions;
+    }
+
+    private static bool SupportsKind(PluginManifestV2 manifest, string kind) =>
+        manifest.Supports.Any(support => support.EntityKind.Equals(kind, StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsRelationshipProposal(EntityMetadataProposal proposal) =>
+        proposal.TargetKind is not ("person" or "studio" or "tag");
+
+    private static bool IsKindCompatible(string entityKind, string proposalKind) =>
+        entityKind.Equals(proposalKind, StringComparison.OrdinalIgnoreCase) ||
+        (entityKind.Equals(EntityKindRegistry.Video.Code, StringComparison.OrdinalIgnoreCase) &&
+            proposalKind.Equals("video-episode", StringComparison.OrdinalIgnoreCase));
+
+    private static int ScoreProposalMatch(
+        EntityRow entity,
+        EntityChildLinkRow link,
+        IReadOnlyDictionary<string, int> positions,
+        EntityMetadataProposal proposal)
+    {
+        var score = 0;
+        if (!string.IsNullOrWhiteSpace(proposal.Patch.Title) &&
+            proposal.Patch.Title.Equals(entity.Title, StringComparison.OrdinalIgnoreCase))
+        {
+            score += 10;
+        }
+
+        foreach (var (key, value) in proposal.Patch.Positions)
+        {
+            if (positions.TryGetValue(key, out var existing) && existing == value)
+            {
+                score += 20;
+            }
+        }
+
+        if (link.SortOrder is { } sortOrder)
+        {
+            if (proposal.Patch.Positions.Values.Contains(sortOrder))
+            {
+                score += 5;
+            }
+        }
+
+        return score;
+    }
+
+    private sealed record GraphChild(EntityChildLinkRow Link, EntityRow Entity);
 }
 
 /// <summary>

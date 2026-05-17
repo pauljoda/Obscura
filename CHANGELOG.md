@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Identify now follows the generic entity graph when reviewing cascaded metadata: structural children are identified and applied by their own entity IDs instead of relying on series-specific season and episode matching.
 - Entity organization now has backend dry-run and apply endpoints that compute target folders and files from generic entity storage-shape metadata, so future UI work can move media without hard-coded series/gallery/book rules.
 - Entity detail responses now use the same `parentEntityId` and grouped `childrenByKind` shape as entity cards, so pages can render structural and virtual children through one graph contract.
 - Obscura now uses the generic entity graph as the only v2 relationship model. This is a breaking dev-schema change: reset or re-import v2 data so series, seasons, collections, galleries, audio libraries, and books rebuild through `childrenByKind`.
@@ -103,6 +104,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Changed
+- Plugin identify requests now include generic graph context for child entities, and identify proposals can carry the exact target entity ID that receives the reviewed metadata.
 - Video list preference, subtitle settings, and edit-form helper types now use v2-owned contract types instead of importing deleted v1 query/settings/entity types.
 - Generated Svelte API contracts now include the backend organize plan and apply endpoints.
 - Shared web fetch, upload, asset URL, and job dashboard helpers now use v2 API utilities and generated contract types instead of deleted v1 frontend modules.

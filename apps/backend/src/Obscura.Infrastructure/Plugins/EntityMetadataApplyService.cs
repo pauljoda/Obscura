@@ -138,10 +138,7 @@ public sealed class EntityMetadataApplyService
             await CascadeChildImagesAsync(proposal.Children, now, cancellationToken);
         }
 
-        if (proposal.Children.Any(c => c.TargetKind is "video-season"))
-        {
-            await CascadeSeriesChildrenAsync(entityId, proposal.Children, now, cancellationToken);
-        }
+        await ApplyGraphChildrenAsync(proposal.Children, now, cancellationToken);
 
         entity.UpdatedAt = now;
         await _db.SaveChangesAsync(cancellationToken);
@@ -484,81 +481,37 @@ public sealed class EntityMetadataApplyService
     }
 
     /// <summary>
-    /// Cascades season and episode metadata from proposal children into existing
-    /// hierarchy entities matched by season/episode position numbers.
+    /// Applies cascade metadata patch fields to an existing child entity.
     /// </summary>
-    private async Task CascadeSeriesChildrenAsync(
-        Guid seriesEntityId,
+    private async Task ApplyGraphChildrenAsync(
         IReadOnlyList<EntityMetadataProposal> children,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        foreach (var seasonProposal in children.Where(c => c.TargetKind is "video-season"))
+        foreach (var child in children)
         {
-            if (!seasonProposal.Patch.Positions.TryGetValue("seasonNumber", out var seasonNum))
-                continue;
-
-            var seasonDetail = await (
-                from link in _db.EntityChildLinks
-                join detail in _db.VideoSeasonDetails on link.ChildEntityId equals detail.EntityId
-                where link.ParentEntityId == seriesEntityId
-                      && link.ChildKindCode == EntityKindRegistry.VideoSeason.Code
-                      && detail.SeasonNumber == seasonNum
-                select detail).FirstOrDefaultAsync(cancellationToken);
-            if (seasonDetail is null)
-                continue;
-
-            var seasonEntity = await _db.Entities
-                .FirstOrDefaultAsync(row => row.Id == seasonDetail.EntityId && row.DeletedAt == null, cancellationToken);
-            if (seasonEntity is null)
-                continue;
-
-            await ApplyPatchToEntityAsync(seasonEntity, seasonProposal.Patch, seasonProposal.Images, now, cancellationToken);
-
-            if (seasonProposal.Children.Count == 0)
-                continue;
-
-            var episodeLinks = await _db.EntityChildLinks
-                .Where(link => link.ParentEntityId == seasonEntity.Id && link.ChildKindCode == EntityKindRegistry.Video.Code)
-                .ToArrayAsync(cancellationToken);
-            var episodeEntityIds = episodeLinks.Select(l => l.ChildEntityId).ToArray();
-
-            var episodePositions = await _db.EntityPositions
-                .Where(pos => episodeEntityIds.Contains(pos.EntityId) && pos.Code == "episodeNumber")
-                .ToArrayAsync(cancellationToken);
-            var episodeByNumber = episodePositions
-                .GroupBy(p => p.Value)
-                .ToDictionary(g => g.Key, g => g.First().EntityId);
-
-            foreach (var episodeProposal in seasonProposal.Children.Where(c => c.TargetKind is "video-episode"))
+            if (child.TargetEntityId is null)
             {
-                if (!episodeProposal.Patch.Positions.TryGetValue("episodeNumber", out var epNum))
-                    continue;
-
-                if (!episodeByNumber.TryGetValue(epNum, out var episodeEntityId))
-                {
-                    var bySortOrder = episodeLinks.FirstOrDefault(l => l.SortOrder == epNum);
-                    if (bySortOrder is null) continue;
-                    episodeEntityId = bySortOrder.ChildEntityId;
-                }
-
-                var episodeEntity = await _db.Entities
-                    .FirstOrDefaultAsync(row => row.Id == episodeEntityId && row.DeletedAt == null, cancellationToken);
-                if (episodeEntity is null)
-                    continue;
-
-                await ApplyPatchToEntityAsync(episodeEntity, episodeProposal.Patch, episodeProposal.Images, now, cancellationToken);
-                if (episodeProposal.Children.Count > 0 && episodeProposal.Patch.Credits.Count > 0)
-                {
-                    await CascadeChildImagesAsync(episodeProposal.Children, now, cancellationToken);
-                }
+                continue;
             }
+
+            var childEntity = await _db.Entities
+                .FirstOrDefaultAsync(row => row.Id == child.TargetEntityId.Value && row.DeletedAt == null, cancellationToken);
+            if (childEntity is null)
+            {
+                continue;
+            }
+
+            await ApplyPatchToEntityAsync(childEntity, child.Patch, child.Images, now, cancellationToken);
+            if (child.Children.Count > 0 && (child.Patch.Credits.Count > 0 || !string.IsNullOrWhiteSpace(child.Patch.Studio)))
+            {
+                await CascadeChildImagesAsync(child.Children, now, cancellationToken);
+            }
+
+            await ApplyGraphChildrenAsync(child.Children, now, cancellationToken);
         }
     }
 
-    /// <summary>
-    /// Applies cascade metadata patch fields to an existing child entity.
-    /// </summary>
     private async Task ApplyPatchToEntityAsync(
         EntityRow entity,
         EntityMetadataPatch patch,

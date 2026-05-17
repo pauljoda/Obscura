@@ -117,7 +117,8 @@ public sealed record IdentifyPluginRequest(
     IReadOnlyDictionary<string, string> Auth,
     IdentifyEntitySnapshot Entity,
     IdentifyQuery Query,
-    IdentifyMatchHints Hints);
+    IdentifyMatchHints Hints,
+    IdentifyGraphContext? Graph = null);
 
 /// <summary>
 /// Minimal entity snapshot passed to plugins.
@@ -126,6 +127,15 @@ public sealed record IdentifyPluginRequest(
 /// <param name="Kind">Obscura entity kind code.</param>
 /// <param name="Title">Current title.</param>
 public sealed record IdentifyEntitySnapshot(Guid Id, string Kind, string Title);
+
+/// <summary>
+/// Generic graph context for a plugin identify request.
+/// </summary>
+/// <param name="Ancestors">Structural ancestor entities from immediate parent outward.</param>
+/// <param name="Positions">Known generic ordering/position values for the current entity.</param>
+public sealed record IdentifyGraphContext(
+    IReadOnlyList<IdentifyEntitySnapshot> Ancestors,
+    IReadOnlyDictionary<string, int> Positions);
 
 /// <summary>
 /// User-entered identify query overrides.
@@ -195,7 +205,8 @@ public sealed record EntityMetadataProposal(
     EntityMetadataPatch Patch,
     IReadOnlyList<ImageCandidate> Images,
     IReadOnlyList<EntityMetadataProposal> Children,
-    IReadOnlyList<EntitySearchCandidate> Candidates);
+    IReadOnlyList<EntitySearchCandidate> Candidates,
+    Guid? TargetEntityId = null);
 
 /// <summary>
 /// Response envelope written by v2 plugin processes.

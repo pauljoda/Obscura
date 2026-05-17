@@ -144,6 +144,7 @@ public sealed class EntityMetadataApplyServiceTests
                     ProposalId: "tmdb:tv:12:season:1",
                     Provider: "tmdb",
                     TargetKind: "video-season",
+                    TargetEntityId: seasonId,
                     Confidence: 0.9m,
                     MatchReason: "cascade",
                     Patch: EmptyPatch() with
@@ -158,6 +159,7 @@ public sealed class EntityMetadataApplyServiceTests
                             ProposalId: "tmdb:tv:12:s1:e1",
                             Provider: "tmdb",
                             TargetKind: "video-episode",
+                            TargetEntityId: episodeId,
                             Confidence: 0.9m,
                             MatchReason: "cascade",
                             Patch: episodePatch,
@@ -197,6 +199,95 @@ public sealed class EntityMetadataApplyServiceTests
         Assert.Equal(33, (await db.EntityCounters.FindAsync([episodeId, "runtimeMinutes"]))?.Value);
         Assert.Equal(8, (await db.EntityStats.FindAsync([episodeId, "voteAverage"]))?.Value);
         Assert.Equal("episode", (await db.EntityClassifications.FindAsync([episodeId]))?.Value);
+    }
+
+    [Fact]
+    public async Task ApplyProposalChildrenWithTargetEntityIdsRecursesThroughGenericGraph()
+    {
+        await using var db = CreateContext();
+        var parentId = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        var childId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+        var grandchildId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        SeedEntity(db, parentId, "video-series", "Old Series");
+        SeedEntity(db, childId, "video-season", "Old Season");
+        SeedEntity(db, grandchildId, "video", "Old Episode");
+        db.EntityChildLinks.AddRange(
+            new EntityChildLinkRow
+            {
+                ParentEntityId = parentId,
+                ChildEntityId = childId,
+                ChildKindCode = "video-season",
+                SortOrder = 1,
+                IsStructural = true,
+                CreatedAt = DateTimeOffset.UtcNow
+            },
+            new EntityChildLinkRow
+            {
+                ParentEntityId = childId,
+                ChildEntityId = grandchildId,
+                ChildKindCode = "video",
+                SortOrder = 1,
+                IsStructural = true,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+        await db.SaveChangesAsync();
+
+        var proposal = new EntityMetadataProposal(
+            ProposalId: "provider:series:1",
+            Provider: "provider",
+            TargetKind: "video-series",
+            TargetEntityId: parentId,
+            Confidence: 1,
+            MatchReason: "external-id",
+            Patch: EmptyPatch() with { Title = "New Series" },
+            Images: [],
+            Children:
+            [
+                new EntityMetadataProposal(
+                    ProposalId: "provider:season:1",
+                    Provider: "provider",
+                    TargetKind: "video-season",
+                    TargetEntityId: childId,
+                    Confidence: 1,
+                    MatchReason: "graph-child",
+                    Patch: EmptyPatch() with
+                    {
+                        Title = "New Season",
+                        Dates = new Dictionary<string, string> { ["air"] = "2026-01-01" }
+                    },
+                    Images: [],
+                    Children:
+                    [
+                        new EntityMetadataProposal(
+                            ProposalId: "provider:episode:1",
+                            Provider: "provider",
+                            TargetKind: "video",
+                            TargetEntityId: grandchildId,
+                            Confidence: 1,
+                            MatchReason: "graph-child",
+                            Patch: EmptyPatch() with
+                            {
+                                Title = "New Episode",
+                                Description = "Episode metadata from its own proposal.",
+                                Positions = new Dictionary<string, int> { ["episodeNumber"] = 1 }
+                            },
+                            Images: [],
+                            Children: [],
+                            Candidates: [])
+                    ],
+                    Candidates: [])
+            ],
+            Candidates: []);
+
+        var service = new EntityMetadataApplyService(db, new PluginArtworkServiceOptions(Path.GetTempPath()));
+        await service.ApplyAsync(parentId, proposal, selectedFields: ["title"], selectedImages: null, CancellationToken.None);
+
+        Assert.Equal("New Series", (await db.Entities.FindAsync([parentId]))?.Title);
+        Assert.Equal("New Season", (await db.Entities.FindAsync([childId]))?.Title);
+        Assert.Equal("2026-01-01", (await db.EntityDates.FindAsync([childId, "air"]))?.Value);
+        Assert.Equal("New Episode", (await db.Entities.FindAsync([grandchildId]))?.Title);
+        Assert.Equal("Episode metadata from its own proposal.", (await db.EntityDescriptions.FindAsync([grandchildId]))?.Value);
+        Assert.Equal(1, (await db.EntityPositions.FindAsync([grandchildId, "episodeNumber"]))?.Value);
     }
 
     private static ObscuraDbContext CreateContext()
