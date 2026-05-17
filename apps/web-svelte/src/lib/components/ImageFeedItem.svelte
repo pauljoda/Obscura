@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Image as ImageIcon, Video as VideoIcon } from "@lucide/svelte";
   import type { ImageListItemDto } from "@obscura/contracts";
-  import { toApiUrl } from "$lib/v1/api/core-v1";
+  import { v2ApiAssetUrl as toApiUrl } from "$lib/api/orval-fetch";
   import { elementInView } from "$lib/hooks/element-in-view.svelte";
   import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
 

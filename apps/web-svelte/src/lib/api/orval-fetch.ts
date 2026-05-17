@@ -1,6 +1,6 @@
 import { env } from "$env/dynamic/public";
 
-const API_BASE = env.PUBLIC_API_URL || "/api";
+export const API_BASE = env.PUBLIC_API_URL || "/api";
 
 export function v2ApiPath(path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -21,6 +21,58 @@ export function v2AssetUrl(assetPath: string | null | undefined): string {
   if (!assetPath) return "";
   const normalized = assetPath.startsWith("/") ? assetPath : `/${assetPath}`;
   return normalized;
+}
+
+export function v2ApiAssetUrl(assetPath: string | null | undefined, cacheBust?: string): string | undefined {
+  if (!assetPath) return undefined;
+
+  if (assetPath.startsWith("http://") || assetPath.startsWith("https://")) {
+    return cacheBust ? `${assetPath}?v=${encodeURIComponent(cacheBust)}` : assetPath;
+  }
+
+  const normalized = assetPath.startsWith("/") ? assetPath : `/${assetPath}`;
+  const url = `${API_BASE}${normalized}`;
+  return cacheBust ? `${url}?v=${encodeURIComponent(cacheBust)}` : url;
+}
+
+export async function fetchV2Api<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+
+  if (init?.body && !headers.has("Content-Type") && !(init.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  const response = await fetch(v2ApiPath(path), {
+    ...init,
+    headers,
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `API ${response.status}: ${response.statusText}`);
+  }
+
+  const text = await response.text();
+  return (text ? JSON.parse(text) : undefined) as T;
+}
+
+export async function uploadV2File<T>(
+  path: string,
+  file: File,
+  extraFields?: Record<string, string>,
+): Promise<T> {
+  const form = new FormData();
+  if (extraFields) {
+    for (const [key, value] of Object.entries(extraFields)) {
+      form.append(key, value);
+    }
+  }
+  form.append("file", file);
+
+  return fetchV2Api<T>(path, {
+    method: "POST",
+    body: form,
+  });
 }
 
 export async function orvalFetch<TData>(

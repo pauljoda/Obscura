@@ -6,7 +6,7 @@ import {
   getTechnicalCapability,
   getThumbnailUrl,
 } from "$lib/api/capabilities";
-import { toApiUrl } from "$lib/v1/api/core-v1";
+import { v2ApiAssetUrl as toApiUrl } from "$lib/api/orval-fetch";
 
 export interface VideoCardPerformer {
   name: string;

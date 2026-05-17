@@ -9,7 +9,7 @@
  * resolves, the caller reads the provided `defaults` synchronously.
  */
 
-import { fetchApi } from "$lib/v1/api/core-v1";
+import { fetchV2Api as fetchApi } from "$lib/api/orval-fetch";
 
 interface UiPrefResponse<T> {
   key: string;

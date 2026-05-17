@@ -102,6 +102,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Changed
+- Shared web fetch, upload, asset URL, and job dashboard helpers now use v2 API utilities and generated contract types instead of deleted v1 frontend modules.
 - Web entity thumbnail, identify, lab, and job dashboard helpers now use the generated v2 graph card shape with `parentEntityId`, `childrenByKind`, and top-level generated job queue types.
 - Jellyfin-compatible HEAD playback probes are now hidden from the generated OpenAPI client while GET playback routes remain documented, keeping API generation focused on callable client operations.
 - Gallery, audio-library, collection, video, image, book, person, studio, tag, series, and season detail contracts now project generic child groups, and the Svelte detail routes use typed child helpers instead of relationship-specific arrays.

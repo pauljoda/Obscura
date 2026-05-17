@@ -26,7 +26,7 @@
     updateCollection,
     uploadCollectionCover,
   } from "$lib/v1/api/media-v1";
-  import { toApiUrl } from "$lib/v1/api/core-v1";
+  import { v2ApiAssetUrl as toApiUrl } from "$lib/api/orval-fetch";
   import ConditionBuilder from "./collections/ConditionBuilder.svelte";
   import type { SuggestionItem } from "$lib/collection-suggestions";
 

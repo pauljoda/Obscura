@@ -3,7 +3,7 @@ import type {
   AudioLibraryListItemDto,
   LibraryRootSummaryDto,
 } from "@obscura/contracts";
-import { fetchApi, uploadFile } from "$lib/v1/api/core-v1";
+import { fetchV2Api as fetchApi, uploadV2File as uploadFile } from "$lib/api/orval-fetch";
 import type { UploadFileProgress, UploadTarget } from "./upload-types";
 
 interface CreateUploaderOptions {

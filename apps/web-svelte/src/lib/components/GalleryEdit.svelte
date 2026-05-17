@@ -16,7 +16,7 @@
   } from "@lucide/svelte";
   import type { GalleryDetailDto } from "@obscura/contracts";
   import type { PerformerItem, StudioItem, TagItem } from "$lib/v1/api/types-v1";
-  import { toApiUrl } from "$lib/v1/api/core-v1";
+  import { v2ApiAssetUrl as toApiUrl } from "$lib/api/orval-fetch";
   import {
     deleteGalleryCover,
     setGalleryCoverFromImage,

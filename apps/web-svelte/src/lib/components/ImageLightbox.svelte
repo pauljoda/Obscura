@@ -19,7 +19,7 @@
   import { isVideoImage } from "@obscura/contracts";
   import { dur, ease, receiveThumb, sendThumb } from "@obscura/ui-svelte";
   import { fade } from "svelte/transition";
-  import { toApiUrl } from "$lib/v1/api/core-v1";
+  import { v2ApiAssetUrl as toApiUrl } from "$lib/api/orval-fetch";
   import { updateImage } from "$lib/v1/api/media-v1";
   import { buildLightboxImageSource, buildLightboxVideoSources } from "./image-lightbox-media";
   import NsfwBlur from "./nsfw/NsfwBlur.svelte";

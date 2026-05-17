@@ -15,7 +15,7 @@
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import { formatDuration, type AudioTrackListItemDto } from "@obscura/contracts";
-  import { toApiUrl } from "$lib/v1/api/core-v1";
+  import { v2ApiAssetUrl as toApiUrl } from "$lib/api/orval-fetch";
   import AudioWaveformFilmstrip from "./AudioWaveformFilmstrip.svelte";
 
   type RepeatMode = "off" | "all" | "one";

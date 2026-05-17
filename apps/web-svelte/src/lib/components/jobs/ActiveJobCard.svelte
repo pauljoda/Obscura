@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Square } from "@lucide/svelte";
   import { StatusLed, cn } from "@obscura/ui-svelte";
-  import type { JobRun } from "$lib/v1/api/types-v1";
+  import type { JobRunDto as JobRun } from "@obscura/contracts";
   import {
     displayJobHeading,
     formatElapsed,
