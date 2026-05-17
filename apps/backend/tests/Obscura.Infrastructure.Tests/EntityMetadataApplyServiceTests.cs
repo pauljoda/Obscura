@@ -446,6 +446,83 @@ public sealed class EntityMetadataApplyServiceTests
         Assert.Equal(0, credit.SortOrder);
     }
 
+    [Fact]
+    public async Task ApplyGraphChildArtworkDeduplicatesRepeatedLinkedPersonImages()
+    {
+        await using var db = CreateContext();
+        var seriesId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+        var episodeId = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff");
+        var personId = Guid.Parse("12121212-1212-1212-1212-121212121212");
+        SeedEntity(db, seriesId, "video-series", "Series");
+        SeedEntity(db, episodeId, "video", "Episode", parentEntityId: seriesId, sortOrder: 1);
+        SeedEntity(db, personId, "person", "Returning Actor");
+        db.EntityChildLinks.Add(new EntityChildLinkRow
+        {
+            ParentEntityId = seriesId,
+            ChildEntityId = episodeId,
+            ChildKindCode = "video",
+            SortOrder = 1,
+            IsStructural = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var personImage = new ImageCandidate(
+            Kind: "poster",
+            Url: "https://example.test/actor.jpg",
+            Source: "provider",
+            Rank: null,
+            Language: null,
+            Width: null,
+            Height: null);
+        var duplicatePersonChild = new EntityMetadataProposal(
+            ProposalId: "provider:person:actor",
+            Provider: "provider",
+            TargetKind: "person",
+            Confidence: 1,
+            MatchReason: "credit",
+            Patch: EmptyPatch() with { Title = "Returning Actor" },
+            Images: [personImage],
+            Children: [],
+            Candidates: []);
+        var proposal = new EntityMetadataProposal(
+            ProposalId: "provider:series:artwork",
+            Provider: "provider",
+            TargetKind: "video-series",
+            TargetEntityId: seriesId,
+            Confidence: 1,
+            MatchReason: "external-id",
+            Patch: EmptyPatch(),
+            Images: [],
+            Children:
+            [
+                new EntityMetadataProposal(
+                    ProposalId: "provider:episode:artwork",
+                    Provider: "provider",
+                    TargetKind: "video",
+                    TargetEntityId: episodeId,
+                    Confidence: 1,
+                    MatchReason: "graph-child",
+                    Patch: EmptyPatch() with
+                    {
+                        Credits = [new CreditPatch("Returning Actor", "person", "Character", 0)]
+                    },
+                    Images: [],
+                    Children: [duplicatePersonChild, duplicatePersonChild],
+                    Candidates: [])
+            ],
+            Candidates: []);
+
+        var service = new EntityMetadataApplyService(
+            db,
+            new PluginArtworkServiceOptions(Path.GetTempPath()),
+            new HttpClient(new FixedImageHandler()));
+        await service.ApplyAsync(seriesId, proposal, selectedFields: [], selectedImages: null, CancellationToken.None);
+
+        var file = await db.EntityFiles.SingleAsync(row => row.EntityId == personId && row.Role == EntityFileRole.Poster);
+        Assert.Equal("/assets/plugins/artwork/12121212-1212-1212-1212-121212121212/poster-bcec36434214.jpg", file.Path);
+    }
+
     private static ObscuraDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()
@@ -488,4 +565,13 @@ public sealed class EntityMetadataApplyServiceTests
         Stats: new Dictionary<string, int>(),
         Positions: new Dictionary<string, int>(),
         Classification: null);
+
+    private sealed class FixedImageHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent([1, 2, 3])
+            });
+    }
 }

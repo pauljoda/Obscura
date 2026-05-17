@@ -499,8 +499,7 @@ public sealed class EntityMetadataApplyService
             await File.WriteAllBytesAsync(physicalPath, bytes, cancellationToken);
 
             var publicPath = $"/assets/{relativePath.Replace(Path.DirectorySeparatorChar, '/')}";
-            var existing = await _db.EntityFiles
-                .FirstOrDefaultAsync(row => row.EntityId == entityId && row.Role == role, cancellationToken);
+            var existing = await FindEntityFileAsync(entityId, role, cancellationToken);
             if (existing is null)
             {
                 _db.EntityFiles.Add(new EntityFileRow
@@ -550,9 +549,11 @@ public sealed class EntityMetadataApplyService
                 continue;
             }
 
-            var hasFile = await _db.EntityFiles.AnyAsync(
-                row => row.EntityId == linkedEntity.Id && (row.Role == EntityFileRole.Poster || row.Role == EntityFileRole.Logo),
-                cancellationToken);
+            var hasFile = await HasEntityFileWithAnyRoleAsync(
+                linkedEntity.Id,
+                cancellationToken,
+                EntityFileRole.Poster,
+                EntityFileRole.Logo);
             if (hasFile)
             {
                 continue;
@@ -699,8 +700,7 @@ public sealed class EntityMetadataApplyService
                 "poster" => EntityFileRole.Poster,
                 _ => EntityFileRole.Thumbnail
             };
-            var hasFile = await _db.EntityFiles.AnyAsync(
-                row => row.EntityId == entity.Id && row.Role == role, cancellationToken);
+            var hasFile = await HasEntityFileWithAnyRoleAsync(entity.Id, cancellationToken, role);
             if (!hasFile)
             {
                 try
@@ -730,6 +730,17 @@ public sealed class EntityMetadataApplyService
 
         entity.UpdatedAt = now;
     }
+
+    private async Task<EntityFileRow?> FindEntityFileAsync(Guid entityId, EntityFileRole role, CancellationToken cancellationToken) =>
+        _db.EntityFiles.Local.FirstOrDefault(row => row.EntityId == entityId && row.Role == role)
+        ?? await _db.EntityFiles.FirstOrDefaultAsync(row => row.EntityId == entityId && row.Role == role, cancellationToken);
+
+    private async Task<bool> HasEntityFileWithAnyRoleAsync(
+        Guid entityId,
+        CancellationToken cancellationToken,
+        params EntityFileRole[] roles) =>
+        _db.EntityFiles.Local.Any(row => row.EntityId == entityId && roles.Contains(row.Role))
+        || await _db.EntityFiles.AnyAsync(row => row.EntityId == entityId && roles.Contains(row.Role), cancellationToken);
 
     private async Task<EntityRow?> FindEntityByKindAndTitleAsync(string kind, string title, CancellationToken cancellationToken) =>
         await _db.Entities.FirstOrDefaultAsync(
