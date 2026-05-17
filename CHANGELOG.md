@@ -6,11 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
-- The identify review modal now shows individually selectable tags with NEW badges for unrecognized tags, EntityThumbnail-based credit and studio cards, multi-line descriptions, larger artwork previews in a card grid, and a consistent-size lightbox with slide-in animation and a Confirm button.
+- The identify review modal now shows individually selectable tags with NEW badges for unrecognized tags, EntityThumbnail-based credit and studio cards, multi-line descriptions, compact artwork thumbnails, and a consistent-size lightbox with slide-in animation and a Confirm button.
 - Applying identify results now cascades person profile photos and studio logos from the TMDB proposal into the linked Person and Studio entities, so credited actors and studios show artwork in browse and detail pages.
 - Credit and studio thumbnail cards on video and series detail pages now display the referenced entity's image (profile photo or logo) instead of showing blank cards.
 - Identifying a TV series now fetches full episode metadata from TMDB and displays seasons and episodes after artwork in the review modal. Applying writes titles, descriptions, air dates, provider IDs, guest credits, and still images to each matched season and episode entity.
-- Identify review now lets users drill into cascaded children, such as seasons and episodes, using the same field, tag, credit, artwork, and child-review surface as the root entity.
+- Identify review now lets users drill into cascaded children, such as seasons and episodes, using the same field, tag, credit, artwork, and child-review surface as the root entity, with scroll reset so each child review opens at its header.
 - The Plugins page now manages v2 community plugins directly, including local discovery, install/remove, and editable API-key credentials for TMDB.
 - Saved TMDB API keys from the previous `TMDB_API_KEY` credential shape are now reused by the v2 `apiKey` plugin field.
 - Video and series detail pages now expose the v2 identify review drawer directly from the entity header.
@@ -97,9 +97,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library scanning is now 7% faster end-to-end than v1 (104s vs 112s wall time on an 11-file test library). Individual job types are dramatically faster: probes 11×, fingerprints 3.9×, subtitles 3.1×, preview+trickplay 1.2×. Total CPU work dropped 51% (385s vs 793s sequential sum).
 
 ### Changed
+- Identify review children now render as generic thumbnail cards with title, description, and child-count previews, so series seasons, episodes, and future volume/chapter-style cascades use the same responsive review surface.
+- Identify review artwork previews and credit rows are now constrained to compact, scrollable thumbnail layouts so they no longer stretch the modal or dominate the review flow.
 - Identify review now renders cascaded child metadata through a reusable relationship tree so future domains can review volume/chapter-style children without a season-only UI path.
 - Identify review now wraps and stacks dense metadata rows on narrow screens, avoiding fixed-width field and episode layouts that clipped inside the modal.
-- Identify review modal redesigned with individually selectable tags (NEW badge for unrecognized tags), EntityThumbnail-based credit and studio cards, multi-line description fields, larger artwork card grid, and a same-size slide-in lightbox with a Confirm button replacing the close icon.
+- Identify review modal redesigned with individually selectable tags (NEW badge for unrecognized tags), EntityThumbnail-based credit and studio cards, multi-line description fields, compact artwork card grid, and a same-size slide-in lightbox with a Confirm button replacing the close icon.
 - Identify credit and studio EntityThumbnail cards now show profile photos and logos from TMDB proposal children, and tag NEW badges now check the entity's full tag list (including NSFW tags) so existing tags are never falsely marked as new.
 
 ### Added

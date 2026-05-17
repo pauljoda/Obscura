@@ -11,7 +11,6 @@
     Loader2,
     ScanSearch,
     Sparkles,
-    User,
     X,
     Zap,
   } from "@lucide/svelte";
@@ -99,6 +98,7 @@
   let error = $state<string | null>(null);
   let expandedSections = $state<Record<string, boolean>>({ fields: true, tags: true, credits: true, studio: true, seasons: true, artwork: true, candidates: true });
   let lightboxGroup = $state<string | null>(null);
+  let modalBodyElement = $state<HTMLDivElement | null>(null);
 
   const scalarFieldKeys = ["title", "description", "externalIds", "urls", "dates", "counters", "stats", "positions", "classification"];
   const activeProposal = $derived.by(() => {
@@ -437,11 +437,17 @@
     if (!parentId && node.proposalId !== proposal.proposalId) return;
     reviewPath = [...reviewPath.filter((id) => id !== node.proposalId), node.proposalId];
     lightboxGroup = null;
+    queueMicrotask(scrollReviewToTop);
   }
 
   function leaveReviewScope() {
     reviewPath = reviewPath.slice(0, -1);
     lightboxGroup = null;
+    queueMicrotask(scrollReviewToTop);
+  }
+
+  function scrollReviewToTop() {
+    modalBodyElement?.scrollTo({ top: 0, behavior: "auto" });
   }
 
   function resetReviewSelections() {
@@ -618,6 +624,24 @@
     return selectedCascade[node.proposalId] !== false;
   }
 
+  function childCountLabel(node: CascadeNode): string | null {
+    if (node.children.length === 0) return null;
+    const childKinds = Array.from(new Set(node.children.map((child) => child.kind)));
+    const label = childKinds.length === 1
+      ? entityKindLabel(childKinds[0], node.children.length)
+      : node.children.length === 1 ? "Child" : "Children";
+    return `${node.children.length} ${label}`;
+  }
+
+  function entityKindLabel(kind: string, count: number): string {
+    const normalized = kind.toLowerCase();
+    if (normalized.includes("episode")) return count === 1 ? "Episode" : "Episodes";
+    if (normalized.includes("season")) return count === 1 ? "Season" : "Seasons";
+    if (normalized.includes("chapter")) return count === 1 ? "Chapter" : "Chapters";
+    if (normalized.includes("volume")) return count === 1 ? "Volume" : "Volumes";
+    return count === 1 ? "Child" : "Children";
+  }
+
   function defaultCascadeSelection(result: EntityMetadataProposal): Record<string, boolean> {
     const selected: Record<string, boolean> = {};
     for (const child of result.children) markCascadeSelected(child, selected);
@@ -756,7 +780,7 @@
       </header>
 
       <!-- Body -->
-      <div class="modal-body">
+      <div class="modal-body" bind:this={modalBodyElement}>
         {#if error}
           <div class="error-box" role="alert">
             <AlertCircle class="h-4 w-4" />
@@ -1015,7 +1039,7 @@
             {#if relationshipCascade.length > 0}
               <section class="section-card">
                 <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('seasons')} onkeydown={(e) => e.key === 'Enter' && toggleSection('seasons')}>
-                  <h4>Seasons & Episodes</h4>
+                  <h4>Children</h4>
                   <div class="section-meta">
                     <span class="count-badge">{cascadeSelectedCount} / {cascadeTotalCount}</span>
                     <span class="chevron" class:rotated={!expandedSections.seasons}><ChevronDown class="h-3.5 w-3.5" /></span>
@@ -1023,84 +1047,54 @@
                 </div>
                 {#if expandedSections.seasons}
                   <div class="section-body">
-                    <div class="seasons-list">
+                    <div class="child-list">
                       {#each relationshipCascade as node (node.proposalId)}
-                        <details class="season-group" open class:muted={!isCascadeSelected(node)}>
-                          <summary class="season-summary">
-                            <button
-                              type="button"
-                              class="field-check cascade-check"
-                              class:active={isCascadeSelected(node)}
-                              onclick={(event) => { event.preventDefault(); event.stopPropagation(); toggleCascadeNode(node); }}
-                              aria-label={`Toggle ${node.title}`}
-                            >
-                              {#if isCascadeSelected(node)}
-                                <Check class="h-3 w-3" />
-                              {/if}
-                            </button>
-                            <span class="season-number">{node.positionLabel}</span>
-                            <span class="season-title">{node.title}</span>
-                            {#if node.date}
-                              <span class="season-date">{node.date}</span>
+                        {@const childCount = childCountLabel(node)}
+                        <article class="child-card" class:muted={!isCascadeSelected(node)}>
+                          <button
+                            type="button"
+                            class="field-check child-check"
+                            class:active={isCascadeSelected(node)}
+                            onclick={() => toggleCascadeNode(node)}
+                            aria-label={`Toggle ${node.title}`}
+                          >
+                            {#if isCascadeSelected(node)}
+                              <Check class="h-3 w-3" />
                             {/if}
-                            <span class="season-ep-count">{node.children.length} child{node.children.length === 1 ? "" : "ren"}</span>
-                            <button
-                              type="button"
-                              class="review-node-btn"
-                              onclick={(event) => { event.preventDefault(); event.stopPropagation(); enterReviewScope(node); }}
-                            >
-                              Review
-                              <ChevronRight class="h-3 w-3" />
-                            </button>
-                          </summary>
-                          {#if node.description}
-                            <p class="cascade-description">{node.description}</p>
+                          </button>
+                          {#if node.imageUrl}
+                            <img src={node.imageUrl} alt="" class="child-thumb" />
+                          {:else}
+                            <div class="child-thumb child-thumb-empty">
+                              <ImageIcon class="h-4 w-4" />
+                            </div>
                           {/if}
-                          <div class="episode-list">
-                            {#each node.children as child (child.proposalId)}
-                              <div class="episode-row" class:muted={!isCascadeSelected(child)}>
-                                <button
-                                  type="button"
-                                  class="field-check cascade-check"
-                                  class:active={isCascadeSelected(child)}
-                                  onclick={() => toggleCascadeNode(child)}
-                                  aria-label={`Toggle ${child.title}`}
-                                >
-                                  {#if isCascadeSelected(child)}
-                                    <Check class="h-3 w-3" />
-                                  {/if}
-                                </button>
-                                {#if child.imageUrl}
-                                  <img src={child.imageUrl} alt="" class="episode-still" />
-                                {:else}
-                                  <div class="episode-still-empty">
-                                    <ImageIcon class="h-3 w-3" />
-                                  </div>
-                                {/if}
-                                <div class="episode-info">
-                                  <span class="episode-number">{child.positionLabel}</span>
-                                  <span class="episode-title">{child.title}</span>
-                                  {#if child.description}
-                                    <span class="episode-description">{child.description}</span>
-                                  {/if}
-                                </div>
-                                <div class="episode-meta">
-                                  {#if child.date}
-                                    <span>{child.date}</span>
-                                  {/if}
-                                  {#if child.creditCount > 0}
-                                    <span>{child.creditCount} credit{child.creditCount === 1 ? "" : "s"}</span>
-                                  {/if}
-                                  <span>{child.metadataCount} fields</span>
-                                </div>
-                                <button type="button" class="review-node-btn" onclick={() => enterReviewScope(child)}>
-                                  Review
-                                  <ChevronRight class="h-3 w-3" />
-                                </button>
-                              </div>
-                            {/each}
+                          <div class="child-main">
+                            <div class="child-heading">
+                              <span class="child-kind">{node.positionLabel}</span>
+                              <strong>{node.title}</strong>
+                            </div>
+                            {#if node.description}
+                              <p class="child-description">{node.description}</p>
+                            {/if}
+                            <div class="child-meta">
+                              {#if node.date}
+                                <span>{node.date}</span>
+                              {/if}
+                              {#if childCount}
+                                <span>{childCount}</span>
+                              {/if}
+                              {#if node.creditCount > 0}
+                                <span>{node.creditCount} credit{node.creditCount === 1 ? "" : "s"}</span>
+                              {/if}
+                              <span>{node.metadataCount} fields</span>
+                            </div>
                           </div>
-                        </details>
+                          <button type="button" class="review-node-btn" onclick={() => enterReviewScope(node)}>
+                            Review
+                            <ChevronRight class="h-3 w-3" />
+                          </button>
+                        </article>
                       {/each}
                     </div>
                   </div>
@@ -1266,6 +1260,7 @@
     display: flex;
     width: 100%;
     min-width: 0;
+    overflow: hidden;
     height: 100dvh;
     max-height: 100dvh;
     flex-direction: column;
@@ -1463,6 +1458,7 @@
   .review-sections {
     display: grid;
     gap: 0.6rem;
+    min-width: 0;
   }
 
   /* === Match bar === */
@@ -1525,6 +1521,7 @@
 
   /* === Section cards === */
   .section-card {
+    min-width: 0;
     border: 1px solid var(--color-border, #1c2235);
     background: rgba(12, 15, 21, 0.6);
     transition: opacity 0.2s;
@@ -1602,6 +1599,7 @@
   }
 
   .section-body {
+    min-width: 0;
     padding: 0 0.75rem 0.75rem;
   }
 
@@ -1676,12 +1674,13 @@
     font-size: 0.68rem;
     overflow-wrap: anywhere;
     text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .field-new-value.field-wrap {
     white-space: normal;
     display: -webkit-box;
     -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  .field-new-value.field-wrap {
     -webkit-line-clamp: 4;
     line-clamp: 4;
     line-height: 1.45;
@@ -1765,7 +1764,11 @@
 
   /* === Credits — horizontal EntityThumbnail scroller === */
   .credit-scroller {
-    display: flex;
+    display: grid;
+    max-width: 100%;
+    min-width: 0;
+    grid-auto-columns: clamp(5.5rem, 22vw, 7.5rem);
+    grid-auto-flow: column;
     gap: 0.6rem;
     overflow-x: auto;
     overflow-y: hidden;
@@ -1776,7 +1779,13 @@
   }
 
   .credit-thumbnail {
-    flex: 0 0 clamp(6rem, 36vw, 8.5rem);
+    min-width: 0;
+    width: 100%;
+  }
+
+  .credit-thumbnail :global(.entity-thumbnail) {
+    min-width: 0;
+    width: 100%;
   }
 
   .credit-role-label {
@@ -1805,175 +1814,100 @@
     letter-spacing: 0.06em;
   }
 
-  /* === Seasons & Episodes === */
-  .seasons-list {
+  /* === Generic relationship children === */
+  .child-list {
     display: grid;
     gap: 0.4rem;
   }
 
-  .season-group {
+  .child-card {
+    display: grid;
+    grid-template-columns: auto clamp(4.2rem, 18vw, 6rem) minmax(0, 1fr) auto;
+    gap: 0.6rem;
+    align-items: center;
+    min-width: 0;
     border: 1px solid var(--color-border, #1c2235);
     background: var(--color-surface-1, #0c0f15);
     transition: opacity 0.15s;
   }
-  .season-group.muted {
+  .child-card.muted {
     opacity: 0.45;
   }
 
-  .season-summary {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.45rem 0.6rem;
-    cursor: pointer;
-    user-select: none;
-    transition: background 0.15s;
-    list-style: none;
-  }
-  .season-summary::-webkit-details-marker { display: none; }
-  .season-summary::marker { display: none; content: ""; }
-  .season-summary:hover {
-    background: rgba(255, 255, 255, 0.02);
-  }
-
-  .season-number {
-    flex-shrink: 0;
-    padding: 0.12rem 0.35rem;
-    border: 1px solid rgba(196, 154, 90, 0.35);
-    background: rgba(196, 154, 90, 0.08);
-    color: var(--color-text-accent, #c49a5a);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 0.58rem;
-    font-weight: 600;
-  }
-
-  .season-title {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    color: var(--color-text-primary, #f2eed8);
-    font-size: 0.7rem;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .season-date {
-    flex-shrink: 0;
-    color: var(--color-text-disabled, #4a5260);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 0.55rem;
-  }
-
-  .season-ep-count {
-    flex-shrink: 0;
-    padding: 0.1rem 0.3rem;
-    border: 1px solid var(--color-border, #1c2235);
-    background: var(--color-surface-2, #101420);
-    color: var(--color-text-muted, #8a93a6);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 0.52rem;
-  }
-
-  .cascade-check {
+  .child-check {
     width: 1.05rem;
     height: 1.05rem;
     padding: 0;
+    margin-left: 0.55rem;
   }
 
-  .cascade-description {
-    margin: 0;
-    border-top: 1px solid var(--color-border, #1c2235);
-    padding: 0.55rem 0.65rem;
-    color: var(--color-text-muted, #8a93a6);
-    font-size: 0.64rem;
-    line-height: 1.45;
-  }
-
-  .episode-list {
-    display: grid;
-    gap: 1px;
-    border-top: 1px solid var(--color-border, #1c2235);
-    background: var(--color-border, #1c2235);
-  }
-
-  .episode-row {
-    display: grid;
-    grid-template-columns: auto minmax(3rem, 4rem) minmax(0, 1fr) auto auto;
-    gap: 0.5rem;
-    align-items: center;
-    padding: 0.35rem 0.6rem;
-    background: var(--color-surface-1, #0c0f15);
-    transition: opacity 0.15s;
-  }
-  .episode-row.muted {
-    opacity: 0.45;
-  }
-
-  .episode-still {
-    width: clamp(3rem, 12vw, 4rem);
+  .child-thumb {
+    display: block;
+    width: 100%;
     aspect-ratio: 16 / 9;
     object-fit: cover;
-    border: 1px solid var(--color-border, #1c2235);
+    border-inline: 1px solid var(--color-border, #1c2235);
+    background: var(--color-surface-2, #101420);
   }
 
-  .episode-still-empty {
+  .child-thumb-empty {
     display: grid;
-    width: clamp(3rem, 12vw, 4rem);
-    aspect-ratio: 16 / 9;
     place-items: center;
-    border: 1px solid var(--color-border, #1c2235);
-    background: var(--color-surface-2, #101420);
     color: var(--color-text-disabled, #4a5260);
   }
 
-  .episode-info {
+  .child-main {
+    display: grid;
+    min-width: 0;
+    gap: 0.28rem;
+    padding-block: 0.5rem;
+  }
+
+  .child-heading {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.2rem 0.4rem;
+    align-items: center;
+    gap: 0.28rem 0.45rem;
     min-width: 0;
   }
 
-  .episode-number {
-    flex-shrink: 0;
+  .child-heading strong {
+    min-width: 0;
+    color: var(--color-text-secondary, #c4c9d4);
+    font-size: 0.68rem;
+    font-weight: 550;
+    overflow-wrap: anywhere;
+  }
+
+  .child-kind {
+    padding: 0.1rem 0.32rem;
+    border: 1px solid rgba(196, 154, 90, 0.3);
+    background: rgba(196, 154, 90, 0.06);
     color: var(--color-text-muted, #8a93a6);
     font-family: "JetBrains Mono", monospace;
-    font-size: 0.58rem;
+    font-size: 0.52rem;
     font-weight: 600;
   }
 
-  .episode-title {
-    overflow: hidden;
-    min-width: 0;
-    color: var(--color-text-secondary, #c4c9d4);
-    font-size: 0.66rem;
-    overflow-wrap: anywhere;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .episode-description {
+  .child-description {
     display: -webkit-box;
-    flex-basis: 100%;
+    margin: 0;
     overflow: hidden;
     color: var(--color-text-muted, #8a93a6);
-    font-size: 0.58rem;
-    line-height: 1.35;
+    font-size: 0.6rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     line-clamp: 2;
   }
 
-  .episode-meta {
+  .child-meta {
     display: flex;
-    flex-shrink: 0;
     flex-wrap: wrap;
-    justify-content: flex-end;
     gap: 0.25rem;
-    max-width: 12rem;
   }
-  .episode-meta span {
+  .child-meta span {
     border: 1px solid var(--color-border, #1c2235);
     background: var(--color-surface-2, #101420);
     color: var(--color-text-disabled, #4a5260);
@@ -1992,6 +1926,7 @@
     background: rgba(196, 154, 90, 0.05);
     color: var(--color-text-secondary, #c4c9d4);
     padding: 0.18rem 0.42rem;
+    margin-right: 0.55rem;
     font-size: 0.56rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -2000,11 +1935,14 @@
   /* === Artwork cards === */
   .art-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 7rem), 9rem));
     gap: 0.5rem;
+    justify-content: start;
   }
 
   .art-card {
+    width: 100%;
+    max-width: 9rem;
     border: 1px solid var(--color-border, #1c2235);
     background: var(--color-surface-1, #0c0f15);
     transition: border-color 0.15s;
@@ -2411,22 +2349,16 @@
       white-space: normal;
     }
     .art-grid {
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 6.5rem), 8rem));
     }
-    .season-summary {
-      flex-wrap: wrap;
-    }
-    .episode-row {
-      grid-template-columns: auto minmax(3rem, 4rem) minmax(0, 1fr);
-    }
-    .episode-meta {
-      grid-column: 2 / -1;
-      justify-content: flex-start;
-      max-width: none;
+    .child-card {
+      grid-template-columns: auto clamp(4rem, 24vw, 5.5rem) minmax(0, 1fr);
+      padding-right: 0.55rem;
     }
     .review-node-btn {
-      grid-column: 2 / -1;
+      grid-column: 3 / -1;
       justify-self: start;
+      margin-right: 0;
     }
     .lightbox-panel {
       min-height: 100dvh;
@@ -2447,30 +2379,22 @@
     .section-body {
       padding-inline: 0.55rem;
     }
-    .season-summary {
-      align-items: flex-start;
-    }
-    .season-title {
-      flex-basis: calc(100% - 4rem);
-      white-space: normal;
-      overflow-wrap: anywhere;
-    }
-    .episode-row {
+    .child-card {
       grid-template-columns: auto minmax(0, 1fr);
+      align-items: start;
+      padding: 0.5rem;
     }
-    .episode-still,
-    .episode-still-empty {
+    .child-check {
+      margin-left: 0;
+    }
+    .child-thumb {
       grid-column: 2 / -1;
       width: min(100%, 12rem);
+      border: 1px solid var(--color-border, #1c2235);
     }
-    .episode-info,
-    .episode-meta,
+    .child-main,
     .review-node-btn {
       grid-column: 2 / -1;
     }
-    .episode-title {
-      white-space: normal;
-    }
   }
 </style>
-    min-width: 0;
