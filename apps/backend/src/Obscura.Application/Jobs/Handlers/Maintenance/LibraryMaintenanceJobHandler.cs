@@ -15,12 +15,12 @@ public sealed class LibraryMaintenanceJobHandler(
 {
     public JobType Type => JobType.LibraryMaintenance;
 
-    private static readonly (IEntityKind Kind, string CacheSubdir)[] AssetKinds =
+    private static readonly (EntityKind Kind, string CacheSubdir)[] AssetKinds =
     [
-        (EntityKindRegistry.Video, "videos"),
-        (EntityKindRegistry.Image, "images"),
-        (EntityKindRegistry.BookPage, "book-pages"),
-        (EntityKindRegistry.AudioTrack, "audio-tracks")
+        (EntityKind.Video, "videos"),
+        (EntityKind.Image, "images"),
+        (EntityKind.BookPage, "book-pages"),
+        (EntityKind.AudioTrack, "audio-tracks")
     ];
 
     public async Task HandleAsync(JobContext context, CancellationToken cancellationToken)
@@ -46,7 +46,7 @@ public sealed class LibraryMaintenanceJobHandler(
 
             var progress = 5 + ((i + 1) * progressPerKind);
             await context.ReportProgressAsync(progress,
-                $"{kind.Code}: {entityIds.Count} entities, {missing} missing assets, {orphans} orphans cleaned",
+                $"{kind}: {entityIds.Count} entities, {missing} missing assets, {orphans} orphans cleaned",
                 cancellationToken);
         }
 
@@ -59,7 +59,7 @@ public sealed class LibraryMaintenanceJobHandler(
             cancellationToken);
     }
 
-    private int ValidateAssets(IEntityKind kind, IReadOnlyList<Guid> entityIds)
+    private int ValidateAssets(EntityKind kind, IReadOnlyList<Guid> entityIds)
     {
         var missing = 0;
 
@@ -71,7 +71,7 @@ public sealed class LibraryMaintenanceJobHandler(
                 if (!File.Exists(path))
                 {
                     missing++;
-                    logger.LogDebug("Missing asset for {Kind} {EntityId}: {Path}", kind.Code, id, path);
+                    logger.LogDebug("Missing asset for {Kind} {EntityId}: {Path}", kind, id, path);
                 }
             }
         }
@@ -79,13 +79,15 @@ public sealed class LibraryMaintenanceJobHandler(
         return missing;
     }
 
-    private IReadOnlyList<string> GetExpectedAssetPaths(IEntityKind kind, Guid entityId)
+    private IReadOnlyList<string> GetExpectedAssetPaths(EntityKind kind, Guid entityId)
     {
-        if (ReferenceEquals(kind, EntityKindRegistry.Video)) return [assets.VideoThumbnailPath(entityId)];
-        if (ReferenceEquals(kind, EntityKindRegistry.Image)) return [assets.ImageThumbnailPath(entityId)];
-        if (ReferenceEquals(kind, EntityKindRegistry.BookPage)) return [assets.BookPageThumbnailPath(entityId)];
-        if (ReferenceEquals(kind, EntityKindRegistry.AudioTrack)) return [assets.AudioWaveformPath(entityId)];
-        return [];
+        return kind switch {
+            EntityKind.Video => [assets.VideoThumbnailPath(entityId)],
+            EntityKind.Image => [assets.ImageThumbnailPath(entityId)],
+            EntityKind.BookPage => [assets.BookPageThumbnailPath(entityId)],
+            EntityKind.AudioTrack => [assets.AudioWaveformPath(entityId)],
+            _ => []
+        };
     }
 
     private int CleanOrphanedCacheDirs(string cacheSubdir, HashSet<string> activeIdSet)

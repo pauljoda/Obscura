@@ -11,7 +11,7 @@ public interface IMaintenancePersistence
     /// <summary>
     /// Returns all non-deleted entity IDs for the given entity kind.
     /// </summary>
-    Task<IReadOnlyList<Guid>> GetActiveEntityIdsByKindAsync(IEntityKind kind, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Guid>> GetActiveEntityIdsByKindAsync(EntityKind kind, CancellationToken cancellationToken);
 
     /// <summary>
     /// Returns the base cache directory path (e.g. /data/cache).

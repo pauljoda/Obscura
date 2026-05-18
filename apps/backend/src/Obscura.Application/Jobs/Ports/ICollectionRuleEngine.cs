@@ -20,7 +20,7 @@ public interface ICollectionRuleEngine
 /// </summary>
 /// <param name="EntityKind">The matched entity's kind.</param>
 /// <param name="EntityId">The matched entity's ID.</param>
-public sealed record CollectionRuleMatch(IEntityKind EntityKind, Guid EntityId);
+public sealed record CollectionRuleMatch(EntityKind EntityKind, Guid EntityId);
 
 // ── Rule tree types matching the TypeScript contracts ──
 
