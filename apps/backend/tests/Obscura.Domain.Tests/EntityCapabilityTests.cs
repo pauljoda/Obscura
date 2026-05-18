@@ -135,4 +135,43 @@ public sealed class EntityCapabilityTests {
         Assert.Throws<ArgumentException>(() => series.AddChild(video));
         Assert.Throws<ArgumentException>(() => series.AddRelationship(video));
     }
+
+    [Fact]
+    public void CreditsCapabilityReferencesTheSamePersonInstance() {
+        var person = new Person(
+            Guid.Parse("88888888-8888-8888-8888-888888888888"),
+            "Ada Person");
+        var video = new Video(
+            Guid.Parse("99999999-9999-9999-9999-999999999999"),
+            "Episode 1",
+            subtitlesExtractedAt: null);
+
+        video.Credits!.Add(person, CreditRole.Actor, "Detective");
+        person.Rename("Ada Renamed");
+
+        var credit = Assert.Single(video.Credits.Credits);
+        Assert.Same(person, credit.Person);
+        Assert.Equal("Ada Renamed", credit.Person.Title);
+        Assert.Equal(CreditRole.Actor, credit.Role);
+        Assert.Equal("Detective", credit.Label);
+    }
+
+    [Fact]
+    public void CreditsCapabilityFiltersCreditsByRole() {
+        var actor = new Person(
+            Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
+            "Ada Actor");
+        var director = new Person(
+            Guid.Parse("bbbbbbbb-cccc-dddd-eeee-ffffffffffff"),
+            "Drew Director");
+        var series = new VideoSeries(
+            Guid.Parse("cccccccc-dddd-eeee-ffff-000000000000"),
+            "Series");
+
+        series.Credits!.Add(actor, CreditRole.Actor, "Lead");
+        series.Credits.Add(director, CreditRole.Director);
+
+        Assert.Equal([actor], series.Credits.ForRole(CreditRole.Actor).Select(credit => credit.Person));
+        Assert.Equal([director], series.Credits.ForRole(CreditRole.Director).Select(credit => credit.Person));
+    }
 }

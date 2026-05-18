@@ -39,7 +39,8 @@ public sealed class VideoSeries : Entity {
         new CapabilityImages(),
         new CapabilityLinks(),
         new CapabilityFlags(),
-        new CapabilityFiles()
+        new CapabilityFiles(),
+        new CapabilityCredits()
     ];
 }
 
@@ -57,7 +58,7 @@ public sealed class VideoSeason : Entity {
         : base(
             id,
             title,
-            capabilities ?? [new CapabilityImages(), new CapabilityDescription(), new CapabilityDates(), new CapabilitySource(), new CapabilityPosition()],
+            capabilities ?? [new CapabilityImages(), new CapabilityDescription(), new CapabilityDates(), new CapabilitySource(), new CapabilityPosition(), new CapabilityCredits()],
             parentEntityId: parentEntityId,
             sortOrder: sortOrder) {
         foreach (var video in videos ?? []) {

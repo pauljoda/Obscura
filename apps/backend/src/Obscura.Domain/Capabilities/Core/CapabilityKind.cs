@@ -59,5 +59,8 @@ public enum CapabilityKind {
     Position,
 
     /// <summary>Provider or user-facing classification values.</summary>
-    Classification
+    Classification,
+
+    /// <summary>People credited in the scope of an entity.</summary>
+    Credits
 }

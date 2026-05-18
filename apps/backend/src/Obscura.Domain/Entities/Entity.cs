@@ -114,6 +114,9 @@ public abstract class Entity {
     /// <summary>Classification capability when attached.</summary>
     public CapabilityClassification? Classification => GetCapability<CapabilityClassification>();
 
+    /// <summary>Credits capability when attached.</summary>
+    public CapabilityCredits? Credits => GetCapability<CapabilityCredits>();
+
     /// <summary>Marker capability when attached.</summary>
     public CapabilityMarkers? MarkerCapability => GetCapability<CapabilityMarkers>();
 

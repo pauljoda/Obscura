@@ -32,6 +32,7 @@ public sealed class Video : Entity {
         new CapabilityCounters(),
         new CapabilityPosition(),
         new CapabilityMarkers(),
-        new CapabilitySubtitles()
+        new CapabilitySubtitles(),
+        new CapabilityCredits()
     ];
 }
