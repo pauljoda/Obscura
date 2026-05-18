@@ -5,16 +5,20 @@ import {
   BookOpen,
   Film,
   FolderOpen,
+  Grid2x2,
   Image,
   Images,
+  LayoutList,
   LayoutDashboard,
   Music,
+  Palette,
   Puzzle,
   ScanSearch,
   Search,
   Settings,
   Tags,
   Users,
+  Wrench,
 } from "@lucide/svelte";
 
 /** Lucide components keyed by the `icon` slugs used in `appShellSections`. */
@@ -34,4 +38,8 @@ export const appShellNavIconMap: Record<string, Component<Record<string, unknown
   activity: Activity as unknown as Component<Record<string, unknown>>,
   settings: Settings as unknown as Component<Record<string, unknown>>,
   search: Search as unknown as Component<Record<string, unknown>>,
+  "grid-2x2": Grid2x2 as unknown as Component<Record<string, unknown>>,
+  "layout-list": LayoutList as unknown as Component<Record<string, unknown>>,
+  palette: Palette as unknown as Component<Record<string, unknown>>,
+  wrench: Wrench as unknown as Component<Record<string, unknown>>,
 };

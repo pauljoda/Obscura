@@ -1,7 +1,9 @@
 <script lang="ts">
   import { BookOpen, PanelLeftClose, PanelLeftOpen, Wrench } from "@lucide/svelte";
+  import { resolve } from "$app/paths";
   import { page } from "$app/state";
-  import { appShellSections, cn } from "@obscura/ui-svelte";
+  import { cn } from "@obscura/ui-svelte";
+  import { appShellSections } from "./app-shell-sections";
   import { appShellNavIconMap } from "./app-shell-nav-icon-map";
   import LogoMark from "./LogoMark.svelte";
   import ChangelogDialog from "./ChangelogDialog.svelte";
@@ -43,7 +45,7 @@
   <!-- Logo + collapse toggle -->
   <div class="flex h-14 items-center justify-between px-3 border-b border-border-subtle shrink-0">
     <a
-      href="/"
+      href={resolve("/")}
       aria-label="Dashboard"
       class="shrink-0 flex items-center h-full"
     >
@@ -103,7 +105,7 @@
             {@const active = isActive(item.href)}
             <li>
               <a
-                href={item.href}
+                href={resolve(item.href as "/")}
                 class={cn(
                   "group relative flex items-center px-2.5 py-2 text-sm transition-colors duration-fast whitespace-nowrap",
                   active
@@ -146,7 +148,7 @@
   <!-- Footer actions -->
   <div class="shrink-0 space-y-1 border-t border-border-subtle px-3 py-3">
     <a
-      href="/dev/v2-migration"
+      href={resolve("/dev/v2-migration")}
       aria-label="Open dev tools"
       title={!isExpanded ? "Dev Tools" : undefined}
       class="group flex h-8 items-center overflow-hidden whitespace-nowrap text-text-muted transition-colors duration-fast hover:bg-surface-2 hover:text-text-primary"

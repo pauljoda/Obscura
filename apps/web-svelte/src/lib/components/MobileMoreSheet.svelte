@@ -1,7 +1,9 @@
 <script lang="ts">
   import { X } from "@lucide/svelte";
+  import { resolve } from "$app/paths";
   import { page } from "$app/state";
-  import { appShellSections, cn } from "@obscura/ui-svelte";
+  import { cn } from "@obscura/ui-svelte";
+  import { appShellSections } from "./app-shell-sections";
   import { appShellNavIconMap } from "./app-shell-nav-icon-map";
 
   interface Props {
@@ -69,12 +71,12 @@
           </div>
           <ul class="space-y-0.5">
             {#each section.items as item (item.href)}
-              {@const href = item.href as string}
+              {@const href = item.href}
               {@const Icon = appShellNavIconMap[item.icon]}
               {@const active = pathname === href || (href !== "/" && pathname.startsWith(href + "/"))}
               <li>
                 <a
-                  href={href}
+                  href={resolve(href as "/")}
                   aria-current={active ? "page" : undefined}
                   class={cn(
                     "group relative flex items-center gap-3 px-2.5 py-2.5 text-sm transition-colors",

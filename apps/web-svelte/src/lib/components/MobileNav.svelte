@@ -1,30 +1,31 @@
 <script lang="ts">
   import { BookOpen, Film, Images, Users } from "@lucide/svelte";
+  import { resolve } from "$app/paths";
   import { page } from "$app/state";
+  import type { Component } from "svelte";
   import { cn } from "@obscura/ui-svelte";
+  import type { AppRouteId } from "$lib/app-routes";
   import MobileMoreSheet from "./MobileMoreSheet.svelte";
   import MobileMoreNavButton from "./MobileMoreNavButton.svelte";
+  import { appShellSections } from "./app-shell-sections";
 
-  const primaryTabs = [
+  interface PrimaryTab {
+    label: string;
+    href: AppRouteId;
+    icon: Component<Record<string, unknown>>;
+  }
+
+  const primaryTabs: PrimaryTab[] = [
     { label: "Videos", href: "/videos", icon: Film },
     { label: "Galleries", href: "/galleries", icon: Images },
     { label: "Books", href: "/books", icon: BookOpen },
     { label: "Actors", href: "/performers", icon: Users },
   ];
 
-  const moreRoutes = [
-    "/",
-    "/search",
-    "/images",
-    "/jobs",
-    "/studios",
-    "/tags",
-    "/collections",
-    "/identify",
-    "/settings",
-    "/audio",
-    "/plugins",
-  ];
+  const primaryHrefs = new Set(primaryTabs.map((tab) => tab.href));
+  const moreRoutes = appShellSections
+    .flatMap((section) => section.items.map((item) => item.href))
+    .filter((href) => !primaryHrefs.has(href));
 
   const pathname = $derived(page.url.pathname);
   let sheetOpen = $state(false);
@@ -32,6 +33,7 @@
     sheetOpen ||
       moreRoutes.some((route) => pathname === route || (route !== "/" && pathname.startsWith(route + "/"))),
   );
+
 </script>
 
 <nav
@@ -41,7 +43,7 @@
     {@const active = pathname === tab.href || pathname.startsWith(tab.href + "/")}
     {@const Icon = tab.icon}
     <a
-      href={tab.href}
+      href={resolve(tab.href as "/")}
       aria-current={active ? "page" : undefined}
       class={cn(
         "flex flex-col items-center gap-0.5 px-3 py-1.5 text-[0.65rem] transition-colors duration-fast",
