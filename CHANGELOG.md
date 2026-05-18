@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Removed
 - Historical v1-era release note detail was pruned from the changelog; git history remains the complete record.
 - The stale API projection service layer was removed from Application/Infrastructure while the new domain-first persistence slice is established.
+- Stale browse/detail API endpoints that depended on the removed projection layer were removed until the replacement `EntityRepository` API surface is rebuilt.
 
 ### Docs
 - Repository instructions now keep changelog updates short, user-focused, and release-note-worthy.

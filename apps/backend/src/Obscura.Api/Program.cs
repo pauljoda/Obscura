@@ -26,10 +26,8 @@ var cacheDir = ResolvePath(builder.Configuration["OBSCURA_CACHE_DIR"] ??
 
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("ObscuraDevCors", policy =>
-    {
+builder.Services.AddCors(options => {
+    options.AddPolicy("ObscuraDevCors", policy => {
         policy
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -45,31 +43,24 @@ builder.Services.AddObscuraInfrastructure(builder.Configuration, builder.Environ
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
+if (app.Environment.IsDevelopment()) {
     app.MapOpenApi();
     app.UseCors("ObscuraDevCors");
-    if (staticFileProvider is null)
-    {
+    if (staticFileProvider is null) {
         app.UseSpaDevServer("http://localhost:5173");
     }
 }
 
-if (staticFileProvider is not null)
-{
+if (staticFileProvider is not null) {
     app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = staticFileProvider });
     app.UseStaticFiles(new StaticFileOptions { FileProvider = staticFileProvider });
-}
-else
-{
+} else {
     app.UseDefaultFiles();
     app.UseStaticFiles();
 }
 
-if (Directory.Exists(cacheDir))
-{
-    app.UseStaticFiles(new StaticFileOptions
-    {
+if (Directory.Exists(cacheDir)) {
+    app.UseStaticFiles(new StaticFileOptions {
         FileProvider = new PhysicalFileProvider(cacheDir),
         RequestPath = "/assets",
         ServeUnknownFileTypes = false,
@@ -81,16 +72,11 @@ app.MapGet("/api/health", () =>
     .WithName("GetHealth")
     .WithSummary("Reports that the Obscura .NET backend is ready to accept requests.");
 
-app.MapEntityEndpoints();
-app.MapCollectionEndpoints();
-app.MapMediaEndpoints();
-app.MapSeriesEndpoints();
 app.MapVideoEndpoints();
 app.MapJellyfinPlaybackEndpoints();
 app.MapJobEndpoints();
 app.MapSettingsEndpoints();
 app.MapSystemEndpoints();
-app.MapTaxonomyEndpoints();
 app.MapUserStateEndpoints();
 app.MapPluginEndpoints();
 app.MapIdentifyEndpoints();
@@ -100,13 +86,10 @@ var staticIndexPath = resolvedStaticWebRoot is not null
     ? Path.Combine(resolvedStaticWebRoot, "index.html")
     : Path.Combine(app.Environment.WebRootPath ?? string.Empty, "index.html");
 
-if (File.Exists(staticIndexPath))
-{
+if (File.Exists(staticIndexPath)) {
     app.MapFallback(async () =>
         Results.Content(await File.ReadAllTextAsync(staticIndexPath), "text/html"));
-}
-else
-{
+} else {
     app.MapFallback(() => Results.NotFound(new ApiProblem(
         "not_found",
         "The requested Obscura route was not found.")));
@@ -116,10 +99,8 @@ await ObscuraMigrationRunner.ApplyObscuraMigrationsAsync(app.Services, app.Confi
 
 app.Run();
 
-static string? ResolveStaticWebRoot(string? configuredPath, string contentRootPath)
-{
-    if (string.IsNullOrWhiteSpace(configuredPath))
-    {
+static string? ResolveStaticWebRoot(string? configuredPath, string contentRootPath) {
+    if (string.IsNullOrWhiteSpace(configuredPath)) {
         return null;
     }
 

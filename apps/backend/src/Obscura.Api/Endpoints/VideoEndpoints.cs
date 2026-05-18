@@ -1,40 +1,12 @@
 using Obscura.Application.Videos;
 using Obscura.Contracts.System;
-using Obscura.Contracts.Videos;
 
 namespace Obscura.Api.Endpoints;
 
-public static class VideoEndpoints
-{
-    public static RouteGroupBuilder MapVideoEndpoints(this IEndpointRouteBuilder routes)
-    {
+public static class VideoEndpoints {
+    public static RouteGroupBuilder MapVideoEndpoints(this IEndpointRouteBuilder routes) {
         var group = routes.MapGroup("/api/videos")
             .WithTags("Videos");
-
-        group.MapGet("/", async (
-            VideoService videos,
-            CancellationToken cancellationToken) =>
-            await videos.ListVideosAsync(cancellationToken))
-            .WithName("ListVideos")
-            .WithSummary("Lists video entities through the video domain facade.");
-
-        group.MapGet("/{id:guid}", async (
-            Guid id,
-            VideoService videos,
-            CancellationToken cancellationToken) =>
-            {
-                var video = await videos.GetVideoAsync(id, cancellationToken);
-
-                return video is null
-                    ? Results.NotFound(new ApiProblem(
-                        "video_not_found",
-                        $"Video '{id}' was not found."))
-                    : Results.Ok(video);
-            })
-            .WithName("GetVideo")
-            .WithSummary("Gets one video detail record.")
-            .Produces<VideoDetail>()
-            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
         group.MapGet("/{id:guid}/subtitles/{trackId:guid}", StreamSubtitleAsync)
             .WithName("GetVideoSubtitle")
@@ -55,11 +27,9 @@ public static class VideoEndpoints
         Guid id,
         Guid trackId,
         IVideoSubtitleAssetService subtitles,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var subtitle = await subtitles.GetSubtitleAsync(id, trackId, cancellationToken);
-        if (subtitle is null)
-        {
+        if (subtitle is null) {
             return Results.NotFound(new ApiProblem(
                 "video_subtitle_not_found",
                 $"Subtitle track '{trackId}' for video '{id}' was not found."));
@@ -72,11 +42,9 @@ public static class VideoEndpoints
         Guid id,
         Guid trackId,
         IVideoSubtitleAssetService subtitles,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var subtitle = await subtitles.GetSubtitleSourceAsync(id, trackId, cancellationToken);
-        if (subtitle is null)
-        {
+        if (subtitle is null) {
             return Results.NotFound(new ApiProblem(
                 "video_subtitle_source_not_found",
                 $"Subtitle source '{trackId}' for video '{id}' was not found."));

@@ -6,10 +6,8 @@ using Obscura.Domain.Entities;
 
 namespace Obscura.Api.Endpoints;
 
-public static class JobEndpoints
-{
-    public static RouteGroupBuilder MapJobEndpoints(this IEndpointRouteBuilder routes)
-    {
+public static class JobEndpoints {
+    public static RouteGroupBuilder MapJobEndpoints(this IEndpointRouteBuilder routes) {
         var group = routes.MapGroup("/api/jobs")
             .WithTags("Jobs");
 
@@ -23,27 +21,24 @@ public static class JobEndpoints
         group.MapPost("/{type}", async (
             JobTypeRoute type,
             JobService jobs,
-            CancellationToken cancellationToken) =>
-        {
-            var response = await jobs.CreateAsync(type.Value, cancellationToken);
+            CancellationToken cancellationToken) => {
+                var response = await jobs.CreateAsync(type.Value, cancellationToken);
 
-            return Results.Accepted($"/api/jobs/{response.Job.Id}", response);
-        })
+                return Results.Accepted($"/api/jobs/{response.Job.Id}", response);
+            })
             .WithName("CreateJob")
             .WithSummary("Queues a background job run.");
 
         group.MapDelete("/", async (
             [FromQuery] string? type,
             JobService jobs,
-            CancellationToken cancellationToken) =>
-        {
-            if (!TryDecodeJobType(type, out var jobType))
-            {
-                return Results.BadRequest(new { message = $"Unknown job type '{type}'." });
-            }
+            CancellationToken cancellationToken) => {
+                if (!TryDecodeJobType(type, out var jobType)) {
+                    return Results.BadRequest(new { message = $"Unknown job type '{type}'." });
+                }
 
-            return Results.Ok(await jobs.CancelAsync(jobType, cancellationToken));
-        })
+                return Results.Ok(await jobs.CancelAsync(jobType, cancellationToken));
+            })
             .WithName("CancelJobs")
             .WithSummary("Cancels queued or running job runs.");
 
@@ -58,55 +53,48 @@ public static class JobEndpoints
         group.MapPost("/failures/clear", async (
             [FromQuery] string? type,
             JobService jobs,
-            CancellationToken cancellationToken) =>
-        {
-            if (!TryDecodeJobType(type, out var jobType))
-            {
-                return Results.BadRequest(new { message = $"Unknown job type '{type}'." });
-            }
+            CancellationToken cancellationToken) => {
+                if (!TryDecodeJobType(type, out var jobType)) {
+                    return Results.BadRequest(new { message = $"Unknown job type '{type}'." });
+                }
 
-            return Results.Ok(await jobs.ClearFailuresAsync(jobType, cancellationToken));
-        })
+                return Results.Ok(await jobs.ClearFailuresAsync(jobType, cancellationToken));
+            })
             .WithName("ClearJobFailures")
             .WithSummary("Clears failed job runs from the operations dashboard.");
 
         group.MapPost("/rebuild-previews", async (
             IMaintenancePersistence maintenance,
             IJobQueueService queue,
-            CancellationToken cancellationToken) =>
-        {
-            int enqueued = 0, skipped = 0;
+            CancellationToken cancellationToken) => {
+                int enqueued = 0, skipped = 0;
 
-            (IEntityKind Kind, JobType JobType)[] previewKinds =
-            [
-                (EntityKindRegistry.Video, JobType.GeneratePreview),
-                (EntityKindRegistry.Image, JobType.GenerateImageThumbnail),
-                (EntityKindRegistry.BookPage, JobType.GenerateBookPageThumbnail),
-                (EntityKindRegistry.AudioTrack, JobType.GenerateAudioWaveform)
-            ];
+                var previewKinds = new (EntityKind Kind, JobType JobType)[] {
+                    (EntityKind.Video, JobType.GeneratePreview),
+                    (EntityKind.Image, JobType.GenerateImageThumbnail),
+                    (EntityKind.BookPage, JobType.GenerateBookPageThumbnail),
+                    (EntityKind.AudioTrack, JobType.GenerateAudioWaveform)
+                };
 
-            foreach (var (kind, jobType) in previewKinds)
-            {
-                var entityIds = await maintenance.GetActiveEntityIdsByKindAsync(kind, cancellationToken);
-                foreach (var entityId in entityIds)
-                {
-                    var id = entityId.ToString();
-                    if (await queue.HasPendingAsync(jobType, id, cancellationToken))
-                    {
-                        skipped++;
-                        continue;
+                foreach (var (kind, jobType) in previewKinds) {
+                    var entityIds = await maintenance.GetActiveEntityIdsByKindAsync(kind, cancellationToken);
+                    foreach (var entityId in entityIds) {
+                        var id = entityId.ToString();
+                        if (await queue.HasPendingAsync(jobType, id, cancellationToken)) {
+                            skipped++;
+                            continue;
+                        }
+
+                        await queue.EnqueueAsync(new EnqueueJobRequest(
+                            Type: jobType,
+                            TargetEntityKind: EntityKindRegistry.ToCode(kind),
+                            TargetEntityId: id), cancellationToken);
+                        enqueued++;
                     }
-
-                    await queue.EnqueueAsync(new EnqueueJobRequest(
-                        Type: jobType,
-                        TargetEntityKind: kind.Code,
-                        TargetEntityId: id), cancellationToken);
-                    enqueued++;
                 }
-            }
 
-            return Results.Ok(new BulkJobResponse(enqueued, skipped));
-        })
+                return Results.Ok(new BulkJobResponse(enqueued, skipped));
+            })
             .WithName("RebuildPreviews")
             .WithSummary("Queues preview generation for all media entities.");
 
@@ -114,62 +102,53 @@ public static class JobEndpoints
             IMaintenancePersistence maintenance,
             ILibraryScanPersistence scanPersistence,
             IJobQueueService queue,
-            CancellationToken cancellationToken) =>
-        {
-            int enqueued = 0, skipped = 0;
+            CancellationToken cancellationToken) => {
+                int enqueued = 0, skipped = 0;
 
-            (IEntityKind Kind, JobType JobType)[] fingerprintKinds =
-            [
-                (EntityKindRegistry.Video, JobType.FingerprintVideo),
-                (EntityKindRegistry.Image, JobType.FingerprintImage),
-                (EntityKindRegistry.AudioTrack, JobType.FingerprintAudio)
-            ];
+                var fingerprintKinds = new (EntityKind Kind, JobType JobType)[] {
+                    (EntityKind.Video, JobType.FingerprintVideo),
+                    (EntityKind.Image, JobType.FingerprintImage),
+                    (EntityKind.AudioTrack, JobType.FingerprintAudio)
+                };
 
-            foreach (var (kind, jobType) in fingerprintKinds)
-            {
-                var entityIds = await maintenance.GetActiveEntityIdsByKindAsync(kind, cancellationToken);
-                foreach (var entityId in entityIds)
-                {
-                    if (await scanPersistence.HasEntityFingerprintAsync(
-                        entityId, FingerprintAlgorithm.Md5, cancellationToken))
-                    {
-                        skipped++;
-                        continue;
+                foreach (var (kind, jobType) in fingerprintKinds) {
+                    var entityIds = await maintenance.GetActiveEntityIdsByKindAsync(kind, cancellationToken);
+                    foreach (var entityId in entityIds) {
+                        if (await scanPersistence.HasEntityFingerprintAsync(
+                            entityId, FingerprintAlgorithm.Md5, cancellationToken)) {
+                            skipped++;
+                            continue;
+                        }
+
+                        var id = entityId.ToString();
+                        if (await queue.HasPendingAsync(jobType, id, cancellationToken)) {
+                            skipped++;
+                            continue;
+                        }
+
+                        await queue.EnqueueAsync(new EnqueueJobRequest(
+                            Type: jobType,
+                            TargetEntityKind: EntityKindRegistry.ToCode(kind),
+                            TargetEntityId: id), cancellationToken);
+                        enqueued++;
                     }
-
-                    var id = entityId.ToString();
-                    if (await queue.HasPendingAsync(jobType, id, cancellationToken))
-                    {
-                        skipped++;
-                        continue;
-                    }
-
-                    await queue.EnqueueAsync(new EnqueueJobRequest(
-                        Type: jobType,
-                        TargetEntityKind: kind.Code,
-                        TargetEntityId: id), cancellationToken);
-                    enqueued++;
                 }
-            }
 
-            return Results.Ok(new BulkJobResponse(enqueued, skipped));
-        })
+                return Results.Ok(new BulkJobResponse(enqueued, skipped));
+            })
             .WithName("BackfillFingerprints")
             .WithSummary("Queues fingerprint generation for entities that lack one.");
 
         return group;
     }
 
-    private static bool TryDecodeJobType(string? value, out JobType? type)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
+    private static bool TryDecodeJobType(string? value, out JobType? type) {
+        if (string.IsNullOrWhiteSpace(value)) {
             type = null;
             return true;
         }
 
-        if (value.TryDecodeAs<JobType>(out var decoded))
-        {
+        if (value.TryDecodeAs<JobType>(out var decoded)) {
             type = decoded;
             return true;
         }
@@ -183,8 +162,7 @@ public static class JobEndpoints
 /// Route-bound job type value that decodes public job codes at the HTTP edge.
 /// </summary>
 /// <param name="Value">Typed job operation resolved from the route segment.</param>
-public readonly record struct JobTypeRoute(JobType Value)
-{
+public readonly record struct JobTypeRoute(JobType Value) {
     /// <summary>
     /// Attempts to parse a route segment into a known typed job operation.
     /// </summary>
@@ -192,10 +170,8 @@ public readonly record struct JobTypeRoute(JobType Value)
     /// <param name="provider">Format provider supplied by the minimal API binder.</param>
     /// <param name="result">Parsed route value when the segment is known.</param>
     /// <returns>True when the route segment maps to a registered job type.</returns>
-    public static bool TryParse(string? value, IFormatProvider? provider, out JobTypeRoute result)
-    {
-        if (value is not null && value.TryDecodeAs<JobType>(out var type))
-        {
+    public static bool TryParse(string? value, IFormatProvider? provider, out JobTypeRoute result) {
+        if (value is not null && value.TryDecodeAs<JobType>(out var type)) {
             result = new JobTypeRoute(type);
             return true;
         }
