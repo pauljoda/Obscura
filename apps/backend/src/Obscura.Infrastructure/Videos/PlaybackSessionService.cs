@@ -8,28 +8,23 @@ namespace Obscura.Infrastructure.Videos;
 /// <summary>
 /// Persists Jellyfin-compatible playback events into Obscura's shared playback capability.
 /// </summary>
-public sealed class PlaybackSessionService : IPlaybackSessionService
-{
+public sealed class PlaybackSessionService : IPlaybackSessionService {
     private readonly EntityRepository _entities;
     private readonly ITranscodeSessionService _transcodes;
 
-    public PlaybackSessionService(EntityRepository entities, ITranscodeSessionService transcodes)
-    {
+    public PlaybackSessionService(EntityRepository entities, ITranscodeSessionService transcodes) {
         _entities = entities;
         _transcodes = transcodes;
     }
 
-    public Task StartAsync(PlaybackSessionRequest request, CancellationToken cancellationToken)
-    {
+    public Task StartAsync(PlaybackSessionRequest request, CancellationToken cancellationToken) {
         RegisterOrPing(request);
         return Task.CompletedTask;
     }
 
-    public async Task ProgressAsync(PlaybackSessionRequest request, CancellationToken cancellationToken)
-    {
+    public async Task ProgressAsync(PlaybackSessionRequest request, CancellationToken cancellationToken) {
         RegisterOrPing(request);
-        if (request.ItemId != Guid.Empty && request.PositionTicks is >= 0)
-        {
+        if (request.ItemId != Guid.Empty && request.PositionTicks is >= 0) {
             await UpdatePlaybackAsync(
                 request.ItemId,
                 TimeSpan.FromSeconds(ToSeconds(request.PositionTicks.Value)),
@@ -38,16 +33,13 @@ public sealed class PlaybackSessionService : IPlaybackSessionService
         }
     }
 
-    public Task PingAsync(PlaybackSessionRequest request, CancellationToken cancellationToken)
-    {
+    public Task PingAsync(PlaybackSessionRequest request, CancellationToken cancellationToken) {
         RegisterOrPing(request);
         return Task.CompletedTask;
     }
 
-    public async Task StopAsync(PlaybackSessionRequest request, CancellationToken cancellationToken)
-    {
-        if (request.ItemId != Guid.Empty)
-        {
+    public async Task StopAsync(PlaybackSessionRequest request, CancellationToken cancellationToken) {
+        if (request.ItemId != Guid.Empty) {
             await UpdatePlaybackAsync(
                 request.ItemId,
                 request.PositionTicks is >= 0 ? TimeSpan.FromSeconds(ToSeconds(request.PositionTicks.Value)) : TimeSpan.Zero,
@@ -55,21 +47,18 @@ public sealed class PlaybackSessionService : IPlaybackSessionService
                 cancellationToken);
         }
 
-        if (!string.IsNullOrWhiteSpace(request.PlaySessionId))
-        {
+        if (!string.IsNullOrWhiteSpace(request.PlaySessionId)) {
             await _transcodes.CancelAsync(request.PlaySessionId!, cancellationToken);
         }
     }
 
-    public async Task<UserItemData?> MarkPlayedAsync(Guid itemId, CancellationToken cancellationToken)
-    {
+    public async Task<UserItemData?> MarkPlayedAsync(Guid itemId, CancellationToken cancellationToken) {
         return await UpdatePlaybackAsync(itemId, TimeSpan.Zero, completed: true, cancellationToken) is null
             ? null
             : new UserItemData(Played: true, PlaybackPositionTicks: 0);
     }
 
-    public async Task<UserItemData?> MarkUnplayedAsync(Guid itemId, CancellationToken cancellationToken)
-    {
+    public async Task<UserItemData?> MarkUnplayedAsync(Guid itemId, CancellationToken cancellationToken) {
         return await UpdatePlaybackAsync(itemId, TimeSpan.Zero, completed: false, cancellationToken) is null
             ? null
             : new UserItemData(Played: false, PlaybackPositionTicks: 0);
@@ -79,17 +68,14 @@ public sealed class PlaybackSessionService : IPlaybackSessionService
         Guid itemId,
         TimeSpan resumeTime,
         bool completed,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var entity = await _entities.FindAsync(itemId, cancellationToken);
-        if (entity is null)
-        {
+        if (entity is null) {
             return null;
         }
 
         var playback = entity.GetCapability<CapabilityPlayback>();
-        if (playback is null)
-        {
+        if (playback is null) {
             playback = new CapabilityPlayback();
             entity.AddCapability(playback);
         }
@@ -99,15 +85,12 @@ public sealed class PlaybackSessionService : IPlaybackSessionService
         return entity;
     }
 
-    private void RegisterOrPing(PlaybackSessionRequest request)
-    {
-        if (string.IsNullOrWhiteSpace(request.PlaySessionId))
-        {
+    private void RegisterOrPing(PlaybackSessionRequest request) {
+        if (string.IsNullOrWhiteSpace(request.PlaySessionId)) {
             return;
         }
 
-        if (request.ItemId == Guid.Empty)
-        {
+        if (request.ItemId == Guid.Empty) {
             _transcodes.Ping(request.PlaySessionId!);
             return;
         }

@@ -18,13 +18,11 @@ namespace Obscura.Application;
 /// <summary>
 /// Registers application-layer use-case services.
 /// </summary>
-public static class DependencyInjection
-{
+public static class DependencyInjection {
     /// <summary>
     /// Adds Obscura application services that orchestrate domain ports for API endpoints and future workers.
     /// </summary>
-    public static IServiceCollection AddObscuraApplication(this IServiceCollection services)
-    {
+    public static IServiceCollection AddObscuraApplication(this IServiceCollection services) {
         services.AddScoped<JobService>();
         services.AddScoped<SystemMigrationService>();
 
@@ -34,8 +32,7 @@ public static class DependencyInjection
     /// <summary>
     /// Adds application job handlers, the hosted queue worker, scan scheduler, and history pruner.
     /// </summary>
-    public static IServiceCollection AddObscuraWorkerApplication(this IServiceCollection services)
-    {
+    public static IServiceCollection AddObscuraWorkerApplication(this IServiceCollection services) {
         // Legacy / utility handlers
         services.AddTransient<IJobHandler, NoOpJobHandler>();
         services.AddTransient<IJobHandler, LegacyVideoImportJobHandler>();

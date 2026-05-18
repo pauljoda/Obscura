@@ -11,8 +11,7 @@ namespace Obscura.Application.Jobs.Handlers.Maintenance;
 public sealed class LibraryMaintenanceJobHandler(
     ILogger<LibraryMaintenanceJobHandler> logger,
     IMaintenancePersistence persistence,
-    IMediaAssetGenerator assets) : IJobHandler
-{
+    IMediaAssetGenerator assets) : IJobHandler {
     public JobType Type => JobType.LibraryMaintenance;
 
     private static readonly (EntityKind Kind, string CacheSubdir)[] AssetKinds =
@@ -23,16 +22,14 @@ public sealed class LibraryMaintenanceJobHandler(
         (EntityKind.AudioTrack, "audio-tracks")
     ];
 
-    public async Task HandleAsync(JobContext context, CancellationToken cancellationToken)
-    {
+    public async Task HandleAsync(JobContext context, CancellationToken cancellationToken) {
         await context.ReportProgressAsync(5, "Starting maintenance", cancellationToken);
 
         var totalOrphansRemoved = 0;
         var totalMissingAssets = 0;
         var progressPerKind = 90 / AssetKinds.Length;
 
-        for (var i = 0; i < AssetKinds.Length; i++)
-        {
+        for (var i = 0; i < AssetKinds.Length; i++) {
             var (kind, cacheSubdir) = AssetKinds[i];
 
             var entityIds = await persistence.GetActiveEntityIdsByKindAsync(kind, cancellationToken);
@@ -59,17 +56,13 @@ public sealed class LibraryMaintenanceJobHandler(
             cancellationToken);
     }
 
-    private int ValidateAssets(EntityKind kind, IReadOnlyList<Guid> entityIds)
-    {
+    private int ValidateAssets(EntityKind kind, IReadOnlyList<Guid> entityIds) {
         var missing = 0;
 
-        foreach (var id in entityIds)
-        {
+        foreach (var id in entityIds) {
             var expectedPaths = GetExpectedAssetPaths(kind, id);
-            foreach (var path in expectedPaths)
-            {
-                if (!File.Exists(path))
-                {
+            foreach (var path in expectedPaths) {
+                if (!File.Exists(path)) {
                     missing++;
                     logger.LogDebug("Missing asset for {Kind} {EntityId}: {Path}", kind, id, path);
                 }
@@ -79,8 +72,7 @@ public sealed class LibraryMaintenanceJobHandler(
         return missing;
     }
 
-    private IReadOnlyList<string> GetExpectedAssetPaths(EntityKind kind, Guid entityId)
-    {
+    private IReadOnlyList<string> GetExpectedAssetPaths(EntityKind kind, Guid entityId) {
         return kind switch {
             EntityKind.Video => [assets.VideoThumbnailPath(entityId)],
             EntityKind.Image => [assets.ImageThumbnailPath(entityId)],
@@ -90,26 +82,21 @@ public sealed class LibraryMaintenanceJobHandler(
         };
     }
 
-    private int CleanOrphanedCacheDirs(string cacheSubdir, HashSet<string> activeIdSet)
-    {
+    private int CleanOrphanedCacheDirs(string cacheSubdir, HashSet<string> activeIdSet) {
         var cacheBase = persistence.GetCacheBasePath();
         var kindCacheDir = Path.Combine(cacheBase, cacheSubdir);
         if (!Directory.Exists(kindCacheDir)) return 0;
 
         var orphans = 0;
-        foreach (var dir in Directory.GetDirectories(kindCacheDir))
-        {
+        foreach (var dir in Directory.GetDirectories(kindCacheDir)) {
             var dirName = Path.GetFileName(dir);
             if (activeIdSet.Contains(dirName)) continue;
 
-            try
-            {
+            try {
                 Directory.Delete(dir, recursive: true);
                 orphans++;
                 logger.LogInformation("Removed orphaned cache dir: {Path}", dir);
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 logger.LogWarning(ex, "Failed to remove orphaned cache dir: {Path}", dir);
             }
         }

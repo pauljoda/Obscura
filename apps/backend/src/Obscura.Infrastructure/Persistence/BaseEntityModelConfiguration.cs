@@ -5,12 +5,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Persistence;
 
-internal static class BaseEntityModelConfiguration
-{
-    public static void ConfigureBaseEntityModel(this ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<EntityKindRow>(entity =>
-        {
+internal static class BaseEntityModelConfiguration {
+    public static void ConfigureBaseEntityModel(this ModelBuilder modelBuilder) {
+        modelBuilder.Entity<EntityKindRow>(entity => {
             entity.ToTable("entity_kinds");
             entity.HasKey(row => row.Code);
             entity.Property(row => row.Code).HasColumnName("code").HasMaxLength(64);
@@ -19,12 +16,10 @@ internal static class BaseEntityModelConfiguration
             entity.Property(row => row.StorageShape).HasColumnName("storage_shape").HasMaxLength(64).IsRequired();
             entity.Property(row => row.IsLeaf).HasColumnName("is_leaf");
             entity.Property(row => row.AllowedChildKindCodesJson).HasColumnName("allowed_child_kind_codes").HasColumnType("jsonb").IsRequired();
-            entity.HasData(EntityKindRegistry.All.Select(kind =>
-            {
+            entity.HasData(EntityKindRegistry.All.Select(kind => {
                 var metadata = EntityKindMetadataRegistry.Require(kind.Value);
 
-                return new EntityKindRow
-                {
+                return new EntityKindRow {
                     Code = kind.Code,
                     DisplayName = kind.DisplayName,
                     Category = kind.Category.ToString(),
@@ -35,8 +30,7 @@ internal static class BaseEntityModelConfiguration
             }));
         });
 
-        modelBuilder.Entity<EntityRow>(entity =>
-        {
+        modelBuilder.Entity<EntityRow>(entity => {
             entity.ToTable("entities");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
@@ -59,8 +53,7 @@ internal static class BaseEntityModelConfiguration
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
-        modelBuilder.Entity<EntityRatingRow>(entity =>
-        {
+        modelBuilder.Entity<EntityRatingRow>(entity => {
             entity.ToTable("entity_ratings");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -75,8 +68,7 @@ internal static class BaseEntityModelConfiguration
                 "value >= 0 AND value <= 5"));
         });
 
-        modelBuilder.Entity<EntityFlagRow>(entity =>
-        {
+        modelBuilder.Entity<EntityFlagRow>(entity => {
             entity.ToTable("entity_flags");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");

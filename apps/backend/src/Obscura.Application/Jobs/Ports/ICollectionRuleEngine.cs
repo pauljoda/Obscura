@@ -7,8 +7,7 @@ namespace Obscura.Application.Jobs.Ports;
 /// <summary>
 /// Port for evaluating collection rule trees against the entity model.
 /// </summary>
-public interface ICollectionRuleEngine
-{
+public interface ICollectionRuleEngine {
     /// <summary>
     /// Evaluates a rule tree JSON string and returns all matching entity references.
     /// </summary>
@@ -35,8 +34,7 @@ public abstract record CollectionRuleNode;
 /// <summary>
 /// A leaf condition in the rule tree that filters entities by a field/operator/value triple.
 /// </summary>
-public sealed record CollectionRuleCondition : CollectionRuleNode
-{
+public sealed record CollectionRuleCondition : CollectionRuleNode {
     [JsonPropertyName("entityTypes")]
     public IReadOnlyList<string> EntityTypes { get; init; } = [];
 
@@ -53,8 +51,7 @@ public sealed record CollectionRuleCondition : CollectionRuleNode
 /// <summary>
 /// A group node combining child rules with a logical operator (and, or, not).
 /// </summary>
-public sealed record CollectionRuleGroup : CollectionRuleNode
-{
+public sealed record CollectionRuleGroup : CollectionRuleNode {
     [JsonPropertyName("operator")]
     public string Operator { get; init; } = "and";
 

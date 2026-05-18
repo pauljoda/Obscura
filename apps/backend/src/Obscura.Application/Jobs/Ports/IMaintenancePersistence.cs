@@ -6,8 +6,7 @@ namespace Obscura.Application.Jobs.Ports;
 /// Port for library maintenance operations — querying entity IDs for cache validation
 /// and cleaning up orphaned cache entries.
 /// </summary>
-public interface IMaintenancePersistence
-{
+public interface IMaintenancePersistence {
     /// <summary>
     /// Returns all non-deleted entity IDs for the given entity kind.
     /// </summary>

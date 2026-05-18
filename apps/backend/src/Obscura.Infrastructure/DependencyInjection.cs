@@ -30,13 +30,11 @@ using Obscura.Application.Organization;
 
 namespace Obscura.Infrastructure;
 
-public static class DependencyInjection
-{
+public static class DependencyInjection {
     public static IServiceCollection AddObscuraInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration,
-        string? contentRootPath = null)
-    {
+        string? contentRootPath = null) {
         var configuredConnectionString =
             configuration["DATABASE_URL"] ??
             configuration.GetConnectionString("Obscura") ??
@@ -132,24 +130,20 @@ public static class DependencyInjection
             ? path
             : Path.Combine(basePath, path));
 
-    private static IReadOnlyList<string> ResolvePluginDevPaths(IConfiguration configuration, string basePath)
-    {
+    private static IReadOnlyList<string> ResolvePluginDevPaths(IConfiguration configuration, string basePath) {
         var configured = configuration["OBSCURA_PLUGIN_DEV_PATHS"] ??
             configuration["Obscura:Plugins:DevPaths"];
         var paths = new List<string>();
-        if (!string.IsNullOrWhiteSpace(configured))
-        {
+        if (!string.IsNullOrWhiteSpace(configured)) {
             paths.AddRange(configured
                 .Split([',', ';'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
                 .Select(path => NormalizePath(path, basePath)));
         }
 
         var repoRoot = FindRepoRoot(basePath);
-        if (repoRoot is not null)
-        {
+        if (repoRoot is not null) {
             var siblingCommunityRepo = Path.GetFullPath(Path.Combine(repoRoot, "..", "obscura-community-plugins"));
-            if (Directory.Exists(siblingCommunityRepo))
-            {
+            if (Directory.Exists(siblingCommunityRepo)) {
                 paths.Add(siblingCommunityRepo);
             }
 
@@ -159,52 +153,40 @@ public static class DependencyInjection
         return paths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
-    private static string ResolveCurrentVersion(IConfiguration configuration, string basePath)
-    {
+    private static string ResolveCurrentVersion(IConfiguration configuration, string basePath) {
         var configured = configuration["OBSCURA_VERSION"] ??
             configuration["Obscura:Version"];
-        if (!string.IsNullOrWhiteSpace(configured))
-        {
+        if (!string.IsNullOrWhiteSpace(configured)) {
             return configured;
         }
 
         var repoRoot = FindRepoRoot(basePath);
-        if (repoRoot is null)
-        {
+        if (repoRoot is null) {
             return "0.0.0-dev";
         }
 
         var packageJson = Path.Combine(repoRoot, "package.json");
-        if (!File.Exists(packageJson))
-        {
+        if (!File.Exists(packageJson)) {
             return "0.0.0-dev";
         }
 
-        try
-        {
+        try {
             using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(packageJson));
             return document.RootElement.TryGetProperty("version", out var version)
                 ? version.GetString() ?? "0.0.0-dev"
                 : "0.0.0-dev";
-        }
-        catch (System.Text.Json.JsonException)
-        {
+        } catch (System.Text.Json.JsonException) {
             return "0.0.0-dev";
-        }
-        catch (IOException)
-        {
+        } catch (IOException) {
             return "0.0.0-dev";
         }
     }
 
-    private static string? FindRepoRoot(string start)
-    {
+    private static string? FindRepoRoot(string start) {
         var directory = new DirectoryInfo(start);
-        while (directory is not null)
-        {
+        while (directory is not null) {
             if (File.Exists(Path.Combine(directory.FullName, "pnpm-workspace.yaml")) &&
-                File.Exists(Path.Combine(directory.FullName, "package.json")))
-            {
+                File.Exists(Path.Combine(directory.FullName, "package.json"))) {
                 return directory.FullName;
             }
 
