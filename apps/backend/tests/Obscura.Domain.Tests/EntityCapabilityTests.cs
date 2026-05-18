@@ -1,6 +1,7 @@
 using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Media;
+using Obscura.Domain.Taxonomy;
 
 namespace Obscura.Domain.Tests;
 
@@ -92,5 +93,46 @@ public sealed class EntityCapabilityTests {
         Assert.Same(season, Assert.Single(series.ChildrenOf<VideoSeason>()));
         Assert.Same(episode, Assert.Single(series.ChildrenOf<Video>()));
         Assert.Equal([season, episode], series.ChildEntities);
+        Assert.Equal([season], series.ChildrenByKind[EntityKind.VideoSeason]);
+        Assert.Equal([episode], series.ChildrenByKind[EntityKind.Video]);
+    }
+
+    [Fact]
+    public void EntityRelationshipsCanBeAddedAndReturnedByKindAndConcreteType() {
+        var video = new Video(
+            Guid.Parse("33333333-3333-3333-3333-333333333333"),
+            "Episode 1",
+            subtitlesExtractedAt: null);
+        var person = new Person(
+            Guid.Parse("44444444-4444-4444-4444-444444444444"),
+            "Ada Person");
+        var tag = new Tag(
+            Guid.Parse("55555555-5555-5555-5555-555555555555"),
+            "Noir");
+
+        video.AddRelationship(person);
+        video.AddRelationship(tag);
+
+        Assert.Same(person, Assert.Single(video.RelationshipsOf<Person>()));
+        Assert.Same(tag, Assert.Single(video.RelationshipsOf<Tag>()));
+        Assert.Equal([person], video.RelationshipsByKind[EntityKind.Person]);
+        Assert.Equal([tag], video.RelationshipsByKind[EntityKind.Tag]);
+    }
+
+    [Fact]
+    public void EntityRejectsDuplicateChildrenAndRelationships() {
+        var video = new Video(
+            Guid.Parse("66666666-6666-6666-6666-666666666666"),
+            "Episode 1",
+            subtitlesExtractedAt: null);
+        var series = new VideoSeries(
+            Guid.Parse("77777777-7777-7777-7777-777777777777"),
+            "Series");
+
+        series.AddChild(video);
+        series.AddRelationship(video);
+
+        Assert.Throws<ArgumentException>(() => series.AddChild(video));
+        Assert.Throws<ArgumentException>(() => series.AddRelationship(video));
     }
 }

@@ -7,8 +7,8 @@ namespace Obscura.Domain.Entities;
 /// </summary>
 public abstract class Entity {
     private readonly List<EntityCapability> _capabilities = [];
-    private readonly List<EntityChild> _children = [];
-    private readonly List<EntityRelationship> _relationships = [];
+    private readonly Dictionary<EntityKind, List<Entity>> _childrenByKind = [];
+    private readonly Dictionary<EntityKind, List<Entity>> _relationshipsByKind = [];
 
     /// <summary>
     /// Creates an entity with optional capabilities, child relationships, and non-structural relationships.
@@ -24,8 +24,8 @@ public abstract class Entity {
         Guid id,
         string title,
         IEnumerable<EntityCapability>? capabilities = null,
-        IEnumerable<EntityChild>? children = null,
-        IEnumerable<EntityRelationship>? relationships = null,
+        IEnumerable<Entity>? children = null,
+        IEnumerable<Entity>? relationships = null,
         Guid? parentEntityId = null,
         int? sortOrder = null) {
         Id = id;
@@ -40,11 +40,11 @@ public abstract class Entity {
         }
 
         foreach (var child in children ?? []) {
-            AddChild(child.Entity, child.Role, child.SortOrder);
+            AddChild(child);
         }
 
         foreach (var relationship in relationships ?? []) {
-            AddRelationship(relationship.Entity, relationship.Role, relationship.SortOrder);
+            AddRelationship(relationship);
         }
     }
 
@@ -66,14 +66,17 @@ public abstract class Entity {
     /// <summary>Attached capabilities in insertion order.</summary>
     public IReadOnlyList<EntityCapability> Capabilities => _capabilities;
 
-    /// <summary>Structural child relationships in insertion order.</summary>
-    public IReadOnlyList<EntityChild> Children => _children;
+    /// <summary>Structural child entities grouped by their concrete entity kind.</summary>
+    public IReadOnlyDictionary<EntityKind, IReadOnlyList<Entity>> ChildrenByKind => Snapshot(_childrenByKind);
 
     /// <summary>Structural child entities in insertion order.</summary>
-    public IReadOnlyList<Entity> ChildEntities => _children.Select(child => child.Entity).ToArray();
+    public IReadOnlyList<Entity> ChildEntities => _childrenByKind.Values.SelectMany(children => children).ToArray();
 
-    /// <summary>Non-structural relationships in insertion order.</summary>
-    public IReadOnlyList<EntityRelationship> Relationships => _relationships;
+    /// <summary>Non-structural related entities grouped by their concrete entity kind.</summary>
+    public IReadOnlyDictionary<EntityKind, IReadOnlyList<Entity>> RelationshipsByKind => Snapshot(_relationshipsByKind);
+
+    /// <summary>Non-structural related entities in insertion order within each kind group.</summary>
+    public IReadOnlyList<Entity> Relationships => _relationshipsByKind.Values.SelectMany(relationships => relationships).ToArray();
 
     /// <summary>User rating capability when attached.</summary>
     public CapabilityRating? Rating => GetCapability<CapabilityRating>();
@@ -193,17 +196,16 @@ public abstract class Entity {
     /// Adds a structural child relationship.
     /// </summary>
     /// <param name="child">Child entity.</param>
-    /// <param name="role">Relationship role.</param>
     /// <param name="sortOrder">Optional child order.</param>
-    public void AddChild(Entity child, ChildRole role = ChildRole.Structural, int? sortOrder = null) {
+    public void AddChild(Entity child, int? sortOrder = null) {
         ArgumentNullException.ThrowIfNull(child);
-        if (_children.Any(existing => existing.Entity.Id == child.Id)) {
+        if (_childrenByKind.Values.SelectMany(children => children).Any(existing => existing.Id == child.Id)) {
             throw new ArgumentException($"Entity '{Id}' already has child '{child.Id}'.", nameof(child));
         }
 
         child.ParentEntityId = Id;
         child.SortOrder = sortOrder;
-        _children.Add(new EntityChild(child, role, sortOrder));
+        AddToKindMap(_childrenByKind, child);
     }
 
     /// <summary>
@@ -213,7 +215,7 @@ public abstract class Entity {
     /// <returns>Matching child entities in insertion order.</returns>
     public IReadOnlyList<TEntity> ChildrenOf<TEntity>()
         where TEntity : Entity =>
-        _children.Select(child => child.Entity).OfType<TEntity>().ToArray();
+        ChildrenOf(EntityKindCatalog.Require(typeof(TEntity))).OfType<TEntity>().ToArray();
 
     /// <summary>
     /// Gets structural children by entity kind.
@@ -221,19 +223,53 @@ public abstract class Entity {
     /// <param name="kind">Entity kind to retrieve.</param>
     /// <returns>Matching child entities in insertion order.</returns>
     public IReadOnlyList<Entity> ChildrenOf(EntityKind kind) =>
-        _children
-            .Where(child => child.Entity.Kind == kind)
-            .Select(child => child.Entity)
-            .ToArray();
+        _childrenByKind.TryGetValue(kind, out var children)
+            ? children.ToArray()
+            : [];
 
     /// <summary>
     /// Adds a non-structural relationship.
     /// </summary>
     /// <param name="entity">Related entity.</param>
-    /// <param name="role">Relationship role.</param>
-    /// <param name="sortOrder">Optional display order.</param>
-    public void AddRelationship(Entity entity, RelationshipRole role, int? sortOrder = null) {
+    public void AddRelationship(Entity entity) {
         ArgumentNullException.ThrowIfNull(entity);
-        _relationships.Add(new EntityRelationship(entity, role, sortOrder));
+        if (_relationshipsByKind.Values.SelectMany(relationships => relationships).Any(existing => existing.Id == entity.Id)) {
+            throw new ArgumentException($"Entity '{Id}' already has relationship '{entity.Id}'.", nameof(entity));
+        }
+
+        AddToKindMap(_relationshipsByKind, entity);
     }
+
+    /// <summary>
+    /// Gets non-structural relationships by concrete entity type.
+    /// </summary>
+    /// <typeparam name="TEntity">Concrete relationship type to retrieve.</typeparam>
+    /// <returns>Matching related entities in insertion order.</returns>
+    public IReadOnlyList<TEntity> RelationshipsOf<TEntity>()
+        where TEntity : Entity =>
+        RelationshipsOf(EntityKindCatalog.Require(typeof(TEntity))).OfType<TEntity>().ToArray();
+
+    /// <summary>
+    /// Gets non-structural relationships by entity kind.
+    /// </summary>
+    /// <param name="kind">Entity kind to retrieve.</param>
+    /// <returns>Matching related entities in insertion order.</returns>
+    public IReadOnlyList<Entity> RelationshipsOf(EntityKind kind) =>
+        _relationshipsByKind.TryGetValue(kind, out var relationships)
+            ? relationships.ToArray()
+            : [];
+
+    private static void AddToKindMap(Dictionary<EntityKind, List<Entity>> map, Entity entity) {
+        if (!map.TryGetValue(entity.Kind, out var bucket)) {
+            bucket = [];
+            map.Add(entity.Kind, bucket);
+        }
+
+        bucket.Add(entity);
+    }
+
+    private static IReadOnlyDictionary<EntityKind, IReadOnlyList<Entity>> Snapshot(Dictionary<EntityKind, List<Entity>> map) =>
+        map.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<Entity>)pair.Value.ToArray());
 }
