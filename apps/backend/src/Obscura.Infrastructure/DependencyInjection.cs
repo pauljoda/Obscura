@@ -8,10 +8,10 @@ using Obscura.Application.Jobs.Ports;
 using Obscura.Application.Migrations;
 using Obscura.Application.Settings;
 using Obscura.Application.Videos;
+using Obscura.Application.Entities;
 using Obscura.Infrastructure.Backups;
 using Obscura.Infrastructure.Collections;
 using Obscura.Infrastructure.Database;
-using Obscura.Domain.Interfaces;
 using Obscura.Infrastructure.Entities;
 using Obscura.Infrastructure.FreshStart;
 using Obscura.Infrastructure.Legacy;
@@ -107,12 +107,7 @@ public static class DependencyInjection
                 provider.GetRequiredService<NpgsqlDataSource>(),
                 provider.GetRequiredService<AssetPathService>().CacheRoot,
                 provider.GetRequiredService<ILogger<LegacyAssetNormalizationService>>()));
-        services.AddScoped<EntityProjectionService>();
-        services.AddScoped<IEntityCatalog>(provider => provider.GetRequiredService<EntityProjectionService>());
-        services.AddScoped<IEntityDetails>(provider => provider.GetRequiredService<EntityProjectionService>());
-        services.AddScoped<IRatingService>(provider => provider.GetRequiredService<EntityProjectionService>());
-        services.AddScoped<IEntityMarkerService>(provider => provider.GetRequiredService<EntityProjectionService>());
-        services.AddScoped<IVideoLibrary>(provider => provider.GetRequiredService<EntityProjectionService>());
+        services.AddScoped<EntityRepository, EfEntityRepository>();
         services.AddScoped<IEntityOrganizer, EntityOrganizerService>();
         services.AddScoped<IVideoSourceService, VideoSourceService>();
         services.AddSingleton(new HlsAssetServiceOptions(

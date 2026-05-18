@@ -10,9 +10,9 @@ namespace Obscura.Infrastructure.Media.Persistence;
 /// </summary>
 public sealed class MaintenancePersistenceService(ObscuraDbContext db, string dataDir) : IMaintenancePersistence
 {
-    public async Task<IReadOnlyList<Guid>> GetActiveEntityIdsByKindAsync(IEntityKind kind, CancellationToken cancellationToken) =>
+    public async Task<IReadOnlyList<Guid>> GetActiveEntityIdsByKindAsync(EntityKind kind, CancellationToken cancellationToken) =>
         await db.Entities
-            .Where(e => e.KindCode == kind.Code && e.DeletedAt == null)
+            .Where(e => e.KindCode == EntityKindRegistry.ToCode(kind) && e.DeletedAt == null)
             .Select(e => e.Id)
             .ToListAsync(cancellationToken);
 

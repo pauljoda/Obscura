@@ -23,8 +23,8 @@ public sealed class CollectionRuleEngine(ObscuraDbContext db) : ICollectionRuleE
         ["480p"] = (0, 719)
     };
 
-    private static readonly IEntityKind[] TargetKinds =
-        [EntityKindRegistry.Video, EntityKindRegistry.Gallery, EntityKindRegistry.Image, EntityKindRegistry.Book, EntityKindRegistry.AudioTrack];
+    private static readonly EntityKind[] TargetKinds =
+        [EntityKind.Video, EntityKind.Gallery, EntityKind.Image, EntityKind.Book, EntityKind.AudioTrack];
 
     public async Task<IReadOnlyList<CollectionRuleMatch>> EvaluateAsync(
         string ruleTreeJson, CancellationToken cancellationToken)
@@ -36,7 +36,7 @@ public sealed class CollectionRuleEngine(ObscuraDbContext db) : ICollectionRuleE
 
         foreach (var kind in TargetKinds)
         {
-            var kindCode = kind.Code;
+            var kindCode = EntityKindRegistry.ToCode(kind);
             var ctx = new SqlBuildContext();
             var whereFragment = TranslateNode(group, kindCode, ctx);
             if (whereFragment is null) continue;

@@ -21,7 +21,7 @@ internal static class BaseEntityModelConfiguration
             entity.Property(row => row.AllowedChildKindCodesJson).HasColumnName("allowed_child_kind_codes").HasColumnType("jsonb").IsRequired();
             entity.HasData(EntityKindRegistry.All.Select(kind =>
             {
-                var metadata = EntityKindMetadataRegistry.Require(kind);
+                var metadata = EntityKindMetadataRegistry.Require(kind.Value);
 
                 return new EntityKindRow
                 {
@@ -29,8 +29,8 @@ internal static class BaseEntityModelConfiguration
                     DisplayName = kind.DisplayName,
                     Category = kind.Category.ToString(),
                     StorageShape = metadata.StorageShape.ToCode(),
-                    IsLeaf = metadata.IsLeaf,
-                    AllowedChildKindCodesJson = JsonSerializer.Serialize(metadata.AllowedChildKinds.Select(childKind => childKind.Code).ToArray())
+                    IsLeaf = metadata.AllowedChildKinds.Count == 0,
+                    AllowedChildKindCodesJson = JsonSerializer.Serialize(metadata.AllowedChildKinds.Select(EntityKindRegistry.ToCode).ToArray())
                 };
             }));
         });
