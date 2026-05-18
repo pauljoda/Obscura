@@ -174,4 +174,21 @@ public sealed class EntityCapabilityTests {
         Assert.Equal([actor], series.Credits.ForRole(CreditRole.Actor).Select(credit => credit.Person));
         Assert.Equal([director], series.Credits.ForRole(CreditRole.Director).Select(credit => credit.Person));
     }
+
+    [Fact]
+    public void EntityRequiresConcreteTypesToProvideDefaultCapabilities() {
+        var factory = typeof(Entity).GetMethod("CreateDefaultCapabilities", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var video = new Video(
+            Guid.Parse("dddddddd-eeee-ffff-0000-111111111111"),
+            "Episode 1",
+            subtitlesExtractedAt: null);
+        var image = new Image(
+            Guid.Parse("eeeeeeee-ffff-0000-1111-222222222222"),
+            "Still");
+
+        Assert.NotNull(factory);
+        Assert.True(factory!.IsAbstract);
+        Assert.NotNull(video.Credits);
+        Assert.NotNull(image.Rating);
+    }
 }

@@ -8,14 +8,14 @@ namespace Obscura.Domain.Taxonomy;
 /// </summary>
 public sealed class Tag : Entity {
     public Tag(Guid id, string title, bool ignoreAutoTag = false, IEnumerable<EntityCapability>? capabilities = null)
-        : base(id, title, capabilities ?? DefaultCapabilities()) {
+        : base(id, title, capabilities) {
         IgnoreAutoTag = ignoreAutoTag;
     }
 
     public override EntityKind Kind => EntityKind.Tag;
     public bool IgnoreAutoTag { get; private set; }
 
-    private static IEnumerable<EntityCapability> DefaultCapabilities() =>
+    protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
         new CapabilityRating(),
         new CapabilityImages(),

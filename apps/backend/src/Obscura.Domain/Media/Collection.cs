@@ -19,7 +19,7 @@ public sealed class Collection : Entity {
         DateTimeOffset? lastRefreshedAt = null,
         IEnumerable<Entity>? items = null,
         IEnumerable<EntityCapability>? capabilities = null)
-        : base(id, title, capabilities ?? DefaultCapabilities()) {
+        : base(id, title, capabilities) {
         Mode = mode;
         RuleTreeJson = ruleTreeJson;
         CoverMode = coverMode;
@@ -40,7 +40,7 @@ public sealed class Collection : Entity {
     public DateTimeOffset? LastRefreshedAt { get; private set; }
     public IReadOnlyList<Entity> Items { get; private set; }
 
-    private static IEnumerable<EntityCapability> DefaultCapabilities() =>
+    protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
         new CapabilityRating(),
         new CapabilityImages(),

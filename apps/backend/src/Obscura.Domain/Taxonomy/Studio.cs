@@ -8,12 +8,12 @@ namespace Obscura.Domain.Taxonomy;
 /// </summary>
 public sealed class Studio : Entity {
     public Studio(Guid id, string title, IEnumerable<EntityCapability>? capabilities = null)
-        : base(id, title, capabilities ?? DefaultCapabilities()) {
+        : base(id, title, capabilities) {
     }
 
     public override EntityKind Kind => EntityKind.Studio;
 
-    private static IEnumerable<EntityCapability> DefaultCapabilities() =>
+    protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
         new CapabilityRating(),
         new CapabilityImages(),

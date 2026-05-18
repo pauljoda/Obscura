@@ -15,7 +15,7 @@ public sealed class VideoSeries : Entity {
         IEnumerable<Entity>? children = null,
         IEnumerable<Entity>? videos = null,
         IEnumerable<EntityCapability>? capabilities = null)
-        : base(id, title, capabilities ?? DefaultCapabilities()) {
+        : base(id, title, capabilities) {
         Status = status;
         RenderingMode = renderingMode;
 
@@ -33,7 +33,7 @@ public sealed class VideoSeries : Entity {
     public VideoSeriesRenderingMode RenderingMode { get; private set; }
     public IReadOnlyList<Entity> Videos => ChildrenOf(EntityKind.Video);
 
-    private static IEnumerable<EntityCapability> DefaultCapabilities() =>
+    protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
         new CapabilityRating(),
         new CapabilityImages(),
@@ -58,7 +58,7 @@ public sealed class VideoSeason : Entity {
         : base(
             id,
             title,
-            capabilities ?? [new CapabilityImages(), new CapabilityDescription(), new CapabilityDates(), new CapabilitySource(), new CapabilityPosition(), new CapabilityCredits()],
+            capabilities,
             parentEntityId: parentEntityId,
             sortOrder: sortOrder) {
         foreach (var video in videos ?? []) {
@@ -68,4 +68,14 @@ public sealed class VideoSeason : Entity {
 
     public override EntityKind Kind => EntityKind.VideoSeason;
     public IReadOnlyList<Entity> Videos => ChildrenOf(EntityKind.Video);
+
+    protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
+    [
+        new CapabilityImages(),
+        new CapabilityDescription(),
+        new CapabilityDates(),
+        new CapabilitySource(),
+        new CapabilityPosition(),
+        new CapabilityCredits()
+    ];
 }

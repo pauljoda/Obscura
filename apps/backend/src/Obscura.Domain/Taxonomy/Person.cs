@@ -25,7 +25,7 @@ public sealed class Person : Entity {
         int? careerStart = null,
         int? careerEnd = null,
         IEnumerable<EntityCapability>? capabilities = null)
-        : base(id, title, capabilities ?? DefaultCapabilities()) {
+        : base(id, title, capabilities) {
         Disambiguation = disambiguation;
         Gender = gender;
         Birthdate = birthdate;
@@ -69,7 +69,7 @@ public sealed class Person : Entity {
         CareerEnd = end;
     }
 
-    private static IEnumerable<EntityCapability> DefaultCapabilities() =>
+    protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
         new CapabilityRating(),
         new CapabilityImages(),

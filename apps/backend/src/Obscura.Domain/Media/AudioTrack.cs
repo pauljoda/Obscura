@@ -13,7 +13,7 @@ public sealed class AudioTrack : Entity {
         string? embeddedArtist,
         string? embeddedAlbum,
         IEnumerable<EntityCapability>? capabilities = null)
-        : base(id, title, capabilities ?? DefaultCapabilities()) {
+        : base(id, title, capabilities) {
         EmbeddedArtist = embeddedArtist;
         EmbeddedAlbum = embeddedAlbum;
     }
@@ -35,7 +35,7 @@ public sealed class AudioTrack : Entity {
         playback.MarkPlayed(resumeTime, playedAt);
     }
 
-    private static IEnumerable<EntityCapability> DefaultCapabilities() =>
+    protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
         new CapabilityRating(),
         new CapabilityImages(),

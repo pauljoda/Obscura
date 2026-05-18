@@ -12,7 +12,7 @@ public sealed class Video : Entity {
         string title,
         DateTimeOffset? subtitlesExtractedAt,
         IEnumerable<EntityCapability>? capabilities = null)
-        : base(id, title, capabilities ?? DefaultCapabilities()) {
+        : base(id, title, capabilities) {
         SubtitlesExtractedAt = subtitlesExtractedAt;
     }
 
@@ -21,7 +21,7 @@ public sealed class Video : Entity {
     /// <summary>When embedded subtitles were last extracted, when known.</summary>
     public DateTimeOffset? SubtitlesExtractedAt { get; private set; }
 
-    private static IEnumerable<EntityCapability> DefaultCapabilities() =>
+    protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
         new CapabilityRating(),
         new CapabilityImages(),

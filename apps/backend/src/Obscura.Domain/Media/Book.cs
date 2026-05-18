@@ -13,7 +13,7 @@ public sealed class Book : Entity {
         BookType bookType,
         Guid? coverPageId,
         IEnumerable<EntityCapability>? capabilities = null)
-        : base(id, title, capabilities ?? DefaultCapabilities()) {
+        : base(id, title, capabilities) {
         BookType = bookType;
         CoverPageId = coverPageId;
     }
@@ -57,7 +57,7 @@ public sealed class Book : Entity {
         progress.MarkCompleted(completedAt);
     }
 
-    private static IEnumerable<EntityCapability> DefaultCapabilities() =>
+    protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
         new CapabilityRating(),
         new CapabilityImages(),

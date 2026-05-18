@@ -13,7 +13,7 @@ public sealed class Gallery : Entity {
         GalleryType galleryType,
         Guid? coverImageId,
         IEnumerable<EntityCapability>? capabilities = null)
-        : base(id, title, capabilities ?? DefaultCapabilities()) {
+        : base(id, title, capabilities) {
         GalleryType = galleryType;
         CoverImageId = coverImageId;
     }
@@ -22,7 +22,7 @@ public sealed class Gallery : Entity {
     public GalleryType GalleryType { get; private set; }
     public Guid? CoverImageId { get; private set; }
 
-    private static IEnumerable<EntityCapability> DefaultCapabilities() =>
+    protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
         new CapabilityRating(),
         new CapabilityImages(),

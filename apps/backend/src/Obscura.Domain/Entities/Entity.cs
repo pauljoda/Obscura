@@ -35,7 +35,7 @@ public abstract class Entity {
         ParentEntityId = parentEntityId;
         SortOrder = sortOrder;
 
-        foreach (var capability in capabilities ?? []) {
+        foreach (var capability in capabilities ?? CreateDefaultCapabilities()) {
             AddCapability(capability);
         }
 
@@ -135,6 +135,13 @@ public abstract class Entity {
             ? throw new ArgumentException("Entity title cannot be empty.", nameof(title))
             : title;
     }
+
+    /// <summary>
+    /// Creates fresh default capabilities for this concrete entity type.
+    /// Implementations must not read derived instance state because this method is called from the base constructor.
+    /// </summary>
+    /// <returns>Fresh capability instances for a new entity.</returns>
+    protected abstract IEnumerable<EntityCapability> CreateDefaultCapabilities();
 
     /// <summary>
     /// Gets an attached capability by concrete type.

@@ -8,12 +8,12 @@ namespace Obscura.Domain.Media;
 /// </summary>
 public sealed class Image : Entity {
     public Image(Guid id, string title, IEnumerable<EntityCapability>? capabilities = null)
-        : base(id, title, capabilities ?? DefaultCapabilities()) {
+        : base(id, title, capabilities) {
     }
 
     public override EntityKind Kind => EntityKind.Image;
 
-    private static IEnumerable<EntityCapability> DefaultCapabilities() =>
+    protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
         new CapabilityRating(),
         new CapabilityImages(),
