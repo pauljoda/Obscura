@@ -20,7 +20,7 @@ public sealed record AudioTrackDetail(
     Guid? ParentEntityId,
     int? SortOrder,
     IReadOnlyList<EntityCapability> Capabilities,
-    IReadOnlyList<EntityChildGroup> ChildrenByKind,
-    IReadOnlyList<EntityRelationshipGroup> Relationships,
+    IReadOnlyList<EntityGroup> ChildrenByKind,
+    IReadOnlyList<EntityGroup> Relationships,
     string? EmbeddedArtist,
     string? EmbeddedAlbum);

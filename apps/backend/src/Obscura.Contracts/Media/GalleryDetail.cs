@@ -21,8 +21,8 @@ public sealed record GalleryDetail(
     Guid? ParentEntityId,
     int? SortOrder,
     IReadOnlyList<EntityCapability> Capabilities,
-    IReadOnlyList<EntityChildGroup> ChildrenByKind,
-    IReadOnlyList<EntityRelationshipGroup> Relationships,
+    IReadOnlyList<EntityGroup> ChildrenByKind,
+    IReadOnlyList<EntityGroup> Relationships,
     IReadOnlyList<EntityCreditMetadata> CreditMetadata,
     string GalleryType,
     Guid? CoverImageId);

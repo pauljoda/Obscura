@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Identify review now recognizes existing tags and credits in the v2 relationship model and lets review thumbnails be selected without navigating away.
 - The C# domain model was intentionally reset around abstract entities and mutable typed capabilities, creating a breaking foundation for the next EF/API integration pass.
 - Domain persistence now starts from an application-level `EntityRepository`, keeping entities persistence-ignorant while EF hydrates short-lived domain slices.
+- Entity API contracts now model child and relationship groups as labeled arrays of entity thumbnails instead of domain/entity-reference records.
 
 ### Added
 - High-level v2 implementation summary for the rebuilt Obscura architecture, media model, playback pipeline, and UI surfaces.
@@ -26,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Changelog entries are now curated release notes for important user-visible changes instead of an exhaustive development log.
 - Domain entities now use a breaking object-oriented model with enum entity kinds and attached mutable capabilities instead of registry/string capability lookups.
 - Entity children and relationships now group by `EntityKind`, and video credits now live in a mutable typed credits capability.
+- Child and relationship API payloads now share one grouped entity shape with `kind`, `label`, and `entities` fields.
 
 ### Fixed
 - Series, season, video, gallery, collection, and audio detail pages now show their migrated child items and relationships again.

@@ -20,7 +20,7 @@ public sealed record BookDetail(
     Guid? ParentEntityId,
     int? SortOrder,
     IReadOnlyList<EntityCapability> Capabilities,
-    IReadOnlyList<EntityChildGroup> ChildrenByKind,
-    IReadOnlyList<EntityRelationshipGroup> Relationships,
+    IReadOnlyList<EntityGroup> ChildrenByKind,
+    IReadOnlyList<EntityGroup> Relationships,
     string BookType,
     Guid? CoverPageId);

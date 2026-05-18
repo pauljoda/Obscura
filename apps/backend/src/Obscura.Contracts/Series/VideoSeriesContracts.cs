@@ -21,7 +21,7 @@ public sealed record VideoSeriesListResponse(
 /// <param name="ParentEntityId">Structural parent entity identifier, or null for root series.</param>
 /// <param name="SortOrder">Optional structural order under the parent entity.</param>
 /// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
-/// <param name="Relationships">Generic non-structural relationships keyed by code, kind, and label.</param>
+/// <param name="Relationships">Generic non-structural relationship groups keyed by entity kind.</param>
 /// <param name="CreditMetadata">Relationship edge metadata for credited people shown on detail pages.</param>
 public sealed record VideoSeriesDetail(
     Guid Id,
@@ -30,8 +30,8 @@ public sealed record VideoSeriesDetail(
     Guid? ParentEntityId,
     int? SortOrder,
     IReadOnlyList<EntityCapability> Capabilities,
-    IReadOnlyList<EntityChildGroup> ChildrenByKind,
-    IReadOnlyList<EntityRelationshipGroup> Relationships,
+    IReadOnlyList<EntityGroup> ChildrenByKind,
+    IReadOnlyList<EntityGroup> Relationships,
     IReadOnlyList<EntityCreditMetadata> CreditMetadata);
 
 /// <summary>
@@ -44,7 +44,7 @@ public sealed record VideoSeriesDetail(
 /// <param name="SortOrder">Optional structural order under the parent entity.</param>
 /// <param name="Capabilities">Shared entity capabilities for the season.</param>
 /// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
-/// <param name="Relationships">Generic non-structural relationships keyed by code, kind, and label.</param>
+/// <param name="Relationships">Generic non-structural relationship groups keyed by entity kind.</param>
 public sealed record VideoSeasonDetail(
     Guid Id,
     string Kind,
@@ -52,5 +52,5 @@ public sealed record VideoSeasonDetail(
     Guid? ParentEntityId,
     int? SortOrder,
     IReadOnlyList<EntityCapability> Capabilities,
-    IReadOnlyList<EntityChildGroup> ChildrenByKind,
-    IReadOnlyList<EntityRelationshipGroup> Relationships);
+    IReadOnlyList<EntityGroup> ChildrenByKind,
+    IReadOnlyList<EntityGroup> Relationships);

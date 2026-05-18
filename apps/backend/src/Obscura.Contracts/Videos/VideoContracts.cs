@@ -21,7 +21,7 @@ public sealed record VideoListResponse(
 /// <param name="SortOrder">Optional structural order under the parent entity.</param>
 /// <param name="Capabilities">Shared entity capabilities for the video.</param>
 /// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
-/// <param name="Relationships">Generic non-structural relationships keyed by code, kind, and label.</param>
+/// <param name="Relationships">Generic non-structural relationship groups keyed by entity kind.</param>
 /// <param name="CreditMetadata">Relationship edge metadata for credited people shown on detail pages.</param>
 /// <param name="SubtitlesExtractedAt">When embedded subtitles were last extracted, when known.</param>
 public sealed record VideoDetail(
@@ -31,7 +31,7 @@ public sealed record VideoDetail(
     Guid? ParentEntityId,
     int? SortOrder,
     IReadOnlyList<EntityCapability> Capabilities,
-    IReadOnlyList<EntityChildGroup> ChildrenByKind,
-    IReadOnlyList<EntityRelationshipGroup> Relationships,
+    IReadOnlyList<EntityGroup> ChildrenByKind,
+    IReadOnlyList<EntityGroup> Relationships,
     IReadOnlyList<EntityCreditMetadata> CreditMetadata,
     DateTimeOffset? SubtitlesExtractedAt);

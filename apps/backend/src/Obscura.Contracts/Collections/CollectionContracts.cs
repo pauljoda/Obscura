@@ -21,7 +21,7 @@ public sealed record CollectionListResponse(
 /// <param name="SortOrder">Optional structural order under the parent entity.</param>
 /// <param name="Capabilities">Shared entity capabilities for the collection.</param>
 /// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
-/// <param name="Relationships">Generic non-structural relationships keyed by code, kind, and label.</param>
+/// <param name="Relationships">Generic non-structural relationship groups keyed by entity kind.</param>
 /// <param name="Mode">Collection membership mode.</param>
 /// <param name="RuleTreeJson">Dynamic collection rule tree JSON, when present.</param>
 /// <param name="CoverMode">Collection cover selection mode.</param>
@@ -36,8 +36,8 @@ public sealed record CollectionDetail(
     Guid? ParentEntityId,
     int? SortOrder,
     IReadOnlyList<EntityCapability> Capabilities,
-    IReadOnlyList<EntityChildGroup> ChildrenByKind,
-    IReadOnlyList<EntityRelationshipGroup> Relationships,
+    IReadOnlyList<EntityGroup> ChildrenByKind,
+    IReadOnlyList<EntityGroup> Relationships,
     string? Mode = null,
     string? RuleTreeJson = null,
     string? CoverMode = null,

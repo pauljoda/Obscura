@@ -1,15 +1,6 @@
 namespace Obscura.Contracts.Entities;
 
 /// <summary>
-/// API-facing lightweight reference to another entity.
-/// </summary>
-/// <param name="Id">Referenced entity identifier.</param>
-/// <param name="Kind">Referenced entity kind code.</param>
-/// <param name="Title">Referenced entity title.</param>
-/// <param name="ThumbnailUrl">Resolved thumbnail image path for the referenced entity, or null when no image exists.</param>
-public sealed record EntityReference(Guid Id, string Kind, string Title, string? ThumbnailUrl = null);
-
-/// <summary>
 /// API-facing rating capability payload.
 /// </summary>
 /// <param name="Value">Rating value from 0 through 5, or null when no rating exists.</param>
@@ -29,22 +20,6 @@ public sealed record EntityUrl(string Url, string? Label);
 /// <param name="Value">Provider-specific identifier value.</param>
 /// <param name="Url">Optional provider URL for direct navigation.</param>
 public sealed record EntityExternalId(string Provider, string Value, string? Url);
-
-/// <summary>API-facing grouped child identifiers for one entity kind.</summary>
-/// <param name="Kind">Child entity kind code represented by the group.</param>
-/// <param name="EntityIds">Child entity identifiers in deterministic display order.</param>
-public sealed record EntityChildGroup(string Kind, IReadOnlyList<Guid> EntityIds);
-
-/// <summary>API-facing grouped non-structural references for one relationship label.</summary>
-/// <param name="Code">Stable relationship code such as tags, studio, cast, or artists.</param>
-/// <param name="Kind">Target entity kind code represented by the group.</param>
-/// <param name="Label">Human-readable label for the relationship group.</param>
-/// <param name="EntityIds">Referenced entity identifiers in deterministic display order.</param>
-public sealed record EntityRelationshipGroup(
-    string Code,
-    string Kind,
-    string Label,
-    IReadOnlyList<Guid> EntityIds);
 
 /// <summary>Credit metadata exposed by detail routes that need character or role labels.</summary>
 /// <param name="PersonId">Referenced person entity identifier.</param>
@@ -73,6 +48,12 @@ public sealed record EntityThumbnail(
     bool IsNsfw,
     bool IsOrganized);
 
+/// <summary>API-facing grouped entities for child and relationship collections.</summary>
+/// <param name="Kind">Entity kind code represented by the group.</param>
+/// <param name="Label">Human-readable group label, such as Episodes, Tags, or Cast.</param>
+/// <param name="Entities">Entities in deterministic display order.</param>
+public sealed record EntityGroup(string Kind, string Label, IReadOnlyList<EntityThumbnail> Entities);
+
 /// <summary>Batch thumbnail request body.</summary>
 /// <param name="Ids">Entity identifiers to resolve.</param>
 public sealed record EntityThumbnailBatchRequest(IReadOnlyList<Guid> Ids);
@@ -91,7 +72,7 @@ public sealed record EntityThumbnailBatchResponse(IReadOnlyList<EntityThumbnail>
 /// <param name="SortOrder">Optional structural order under the parent entity.</param>
 /// <param name="Capabilities">Shared capabilities already projected for the card.</param>
 /// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
-/// <param name="Relationships">Generic non-structural relationships keyed by code, kind, and label.</param>
+/// <param name="Relationships">Generic non-structural relationship groups keyed by entity kind.</param>
 public sealed record EntityCard(
     Guid Id,
     string Kind,
@@ -99,8 +80,8 @@ public sealed record EntityCard(
     Guid? ParentEntityId,
     int? SortOrder,
     IReadOnlyList<EntityCapability> Capabilities,
-    IReadOnlyList<EntityChildGroup> ChildrenByKind,
-    IReadOnlyList<EntityRelationshipGroup> Relationships);
+    IReadOnlyList<EntityGroup> ChildrenByKind,
+    IReadOnlyList<EntityGroup> Relationships);
 
 /// <summary>
 /// Cursor-paged entity list response.
