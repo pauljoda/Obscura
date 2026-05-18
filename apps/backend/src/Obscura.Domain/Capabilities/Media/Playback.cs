@@ -13,8 +13,7 @@ public sealed record Playback(
     TimeSpan PlayDuration,
     TimeSpan ResumeTime,
     DateTimeOffset? LastPlayedAt,
-    DateTimeOffset? CompletedAt)
-{
+    DateTimeOffset? CompletedAt) {
     /// <summary>
     /// Empty playback state for media that has never been played.
     /// </summary>

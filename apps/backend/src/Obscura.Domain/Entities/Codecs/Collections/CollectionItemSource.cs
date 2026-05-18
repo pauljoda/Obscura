@@ -3,8 +3,7 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Closed set of reasons an item appears inside a collection.
 /// </summary>
-public enum CollectionItemSource
-{
+public enum CollectionItemSource {
     /// <summary>The user explicitly added the item.</summary>
     Manual,
 
@@ -15,14 +14,11 @@ public enum CollectionItemSource
 /// <summary>
 /// Codec for collection item source codes.
 /// </summary>
-public sealed class CollectionItemSourceCodec : EnumCodec<CollectionItemSource>
-{
+public sealed class CollectionItemSourceCodec : EnumCodec<CollectionItemSource> {
     public CollectionItemSourceCodec()
-        : base(new Dictionary<CollectionItemSource, string>
-        {
+        : base(new Dictionary<CollectionItemSource, string> {
             [CollectionItemSource.Manual] = "manual",
             [CollectionItemSource.Dynamic] = "dynamic"
-        })
-    {
+        }) {
     }
 }

@@ -3,8 +3,7 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Extension helpers for encoding and decoding enum values through the discovered codec registry.
 /// </summary>
-public static class CodecRegistryExtensions
-{
+public static class CodecRegistryExtensions {
     /// <summary>
     /// Encodes a closed-set enum value with its discovered codec.
     /// </summary>

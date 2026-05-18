@@ -3,8 +3,7 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Closed set of subtitle discovery or generation sources.
 /// </summary>
-public enum EntitySubtitleSource
-{
+public enum EntitySubtitleSource {
     /// <summary>User supplied subtitle file.</summary>
     Manual,
 
@@ -27,18 +26,15 @@ public enum EntitySubtitleSource
 /// <summary>
 /// Codec for entity subtitle source codes.
 /// </summary>
-public sealed class EntitySubtitleSourceCodec : EnumCodec<EntitySubtitleSource>
-{
+public sealed class EntitySubtitleSourceCodec : EnumCodec<EntitySubtitleSource> {
     public EntitySubtitleSourceCodec()
-        : base(new Dictionary<EntitySubtitleSource, string>
-        {
+        : base(new Dictionary<EntitySubtitleSource, string> {
             [EntitySubtitleSource.Manual] = "manual",
             [EntitySubtitleSource.Embedded] = "embedded",
             [EntitySubtitleSource.Generated] = "generated",
             [EntitySubtitleSource.Provider] = "provider",
             [EntitySubtitleSource.Upload] = "upload",
             [EntitySubtitleSource.Sidecar] = "sidecar"
-        })
-    {
+        }) {
     }
 }

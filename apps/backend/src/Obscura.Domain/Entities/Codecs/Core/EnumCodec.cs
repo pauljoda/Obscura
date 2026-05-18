@@ -5,8 +5,7 @@ namespace Obscura.Domain.Entities;
 /// </summary>
 /// <typeparam name="TValue">Closed-set enum type handled by the codec.</typeparam>
 public abstract class EnumCodec<TValue> : ICodec<TValue>
-    where TValue : struct, Enum
-{
+    where TValue : struct, Enum {
     private readonly IReadOnlyDictionary<TValue, string> _encode;
     private readonly IReadOnlyDictionary<string, TValue> _decode;
 
@@ -14,8 +13,7 @@ public abstract class EnumCodec<TValue> : ICodec<TValue>
     /// Creates a codec from the supplied enum mappings.
     /// </summary>
     /// <param name="codes">Complete enum-to-code map for the closed set.</param>
-    protected EnumCodec(IReadOnlyDictionary<TValue, string> codes)
-    {
+    protected EnumCodec(IReadOnlyDictionary<TValue, string> codes) {
         _encode = codes;
         _decode = codes.ToDictionary(
             pair => Normalize(pair.Value),
@@ -27,10 +25,8 @@ public abstract class EnumCodec<TValue> : ICodec<TValue>
     public Type ValueType => typeof(TValue);
 
     /// <inheritdoc />
-    public string Encode(TValue value)
-    {
-        if (_encode.TryGetValue(value, out var code))
-        {
+    public string Encode(TValue value) {
+        if (_encode.TryGetValue(value, out var code)) {
             return code;
         }
 
@@ -38,10 +34,8 @@ public abstract class EnumCodec<TValue> : ICodec<TValue>
     }
 
     /// <inheritdoc />
-    public TValue Decode(string code)
-    {
-        if (TryDecode(code, out var value))
-        {
+    public TValue Decode(string code) {
+        if (TryDecode(code, out var value)) {
             return value;
         }
 
@@ -49,10 +43,8 @@ public abstract class EnumCodec<TValue> : ICodec<TValue>
     }
 
     /// <inheritdoc />
-    public bool TryDecode(string code, out TValue value)
-    {
-        if (string.IsNullOrWhiteSpace(code))
-        {
+    public bool TryDecode(string code, out TValue value) {
+        if (string.IsNullOrWhiteSpace(code)) {
             value = default;
             return false;
         }
@@ -61,10 +53,8 @@ public abstract class EnumCodec<TValue> : ICodec<TValue>
     }
 
     /// <inheritdoc />
-    public string EncodeObject(object value)
-    {
-        if (value is TValue typedValue)
-        {
+    public string EncodeObject(object value) {
+        if (value is TValue typedValue) {
             return Encode(typedValue);
         }
 

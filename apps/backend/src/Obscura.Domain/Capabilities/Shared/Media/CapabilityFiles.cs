@@ -1,17 +1,13 @@
 namespace Obscura.Domain.Capabilities;
 
 /// <summary>
-/// File capability for an entity that supports attached source, generated, or cached files.
+/// Mutable file capability for attached source, generated, or cached files.
 /// </summary>
-/// <param name="Items">Projected files attached to the entity.</param>
-public sealed record CapabilityFiles(IReadOnlyList<EntityFile> Items) : ICapability<CapabilityFiles>
-{
-    /// <inheritdoc />
-    public static ICapabilityKind<CapabilityFiles> CapabilityKind { get; } = new CapabilityKind<CapabilityFiles>("files", "Files");
+public sealed class CapabilityFiles : EntityCapability {
+    public CapabilityFiles(IReadOnlyList<EntityFile>? items = null) {
+        Items = items?.ToArray() ?? [];
+    }
 
-    /// <inheritdoc />
-    public ICapabilityKind Kind => CapabilityKind;
-
-    /// <summary>A reusable empty file capability.</summary>
-    public static CapabilityFiles Empty { get; } = new([]);
+    public override CapabilityKind Kind => CapabilityKind.Files;
+    public IReadOnlyList<EntityFile> Items { get; private set; }
 }

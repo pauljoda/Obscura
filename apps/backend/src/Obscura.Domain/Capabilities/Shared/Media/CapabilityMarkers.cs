@@ -1,17 +1,13 @@
 namespace Obscura.Domain.Capabilities;
 
 /// <summary>
-/// Marker capability for entities that expose timeline, page, or navigation markers.
+/// Mutable marker capability for timeline, page, or navigation markers.
 /// </summary>
-/// <param name="Items">Ordered marker list attached to the entity.</param>
-public sealed record CapabilityMarkers(IReadOnlyList<EntityMarker> Items) : ICapability<CapabilityMarkers>
-{
-    /// <inheritdoc />
-    public static ICapabilityKind<CapabilityMarkers> CapabilityKind { get; } = new CapabilityKind<CapabilityMarkers>("markers", "Markers");
+public sealed class CapabilityMarkers : EntityCapability {
+    public CapabilityMarkers(IReadOnlyList<EntityMarker>? items = null) {
+        Items = items?.ToArray() ?? [];
+    }
 
-    /// <inheritdoc />
-    public ICapabilityKind Kind => CapabilityKind;
-
-    /// <summary>A reusable empty marker capability.</summary>
-    public static CapabilityMarkers Empty { get; } = new([]);
+    public override CapabilityKind Kind => CapabilityKind.Markers;
+    public IReadOnlyList<EntityMarker> Items { get; private set; }
 }

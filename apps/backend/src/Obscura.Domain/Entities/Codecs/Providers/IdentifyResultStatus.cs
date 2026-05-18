@@ -3,8 +3,7 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Closed set of review states for provider identification results.
 /// </summary>
-public enum IdentifyResultStatus
-{
+public enum IdentifyResultStatus {
     /// <summary>Result is waiting for review or application.</summary>
     Pending,
 
@@ -21,16 +20,13 @@ public enum IdentifyResultStatus
 /// <summary>
 /// Codec for provider identification result status codes.
 /// </summary>
-public sealed class IdentifyResultStatusCodec : EnumCodec<IdentifyResultStatus>
-{
+public sealed class IdentifyResultStatusCodec : EnumCodec<IdentifyResultStatus> {
     public IdentifyResultStatusCodec()
-        : base(new Dictionary<IdentifyResultStatus, string>
-        {
+        : base(new Dictionary<IdentifyResultStatus, string> {
             [IdentifyResultStatus.Pending] = "pending",
             [IdentifyResultStatus.Applied] = "applied",
             [IdentifyResultStatus.Rejected] = "rejected",
             [IdentifyResultStatus.Failed] = "failed"
-        })
-    {
+        }) {
     }
 }

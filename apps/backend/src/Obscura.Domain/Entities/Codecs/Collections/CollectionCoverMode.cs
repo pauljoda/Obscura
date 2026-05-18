@@ -3,8 +3,7 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Closed set of collection cover generation strategies.
 /// </summary>
-public enum CollectionCoverMode
-{
+public enum CollectionCoverMode {
     /// <summary>Cover generated from multiple collection items.</summary>
     Mosaic,
 
@@ -18,15 +17,12 @@ public enum CollectionCoverMode
 /// <summary>
 /// Codec for collection cover mode codes.
 /// </summary>
-public sealed class CollectionCoverModeCodec : EnumCodec<CollectionCoverMode>
-{
+public sealed class CollectionCoverModeCodec : EnumCodec<CollectionCoverMode> {
     public CollectionCoverModeCodec()
-        : base(new Dictionary<CollectionCoverMode, string>
-        {
+        : base(new Dictionary<CollectionCoverMode, string> {
             [CollectionCoverMode.Mosaic] = "mosaic",
             [CollectionCoverMode.Custom] = "custom",
             [CollectionCoverMode.Item] = "item"
-        })
-    {
+        }) {
     }
 }

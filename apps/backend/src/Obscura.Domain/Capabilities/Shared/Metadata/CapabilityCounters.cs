@@ -1,17 +1,13 @@
 namespace Obscura.Domain.Capabilities;
 
 /// <summary>
-/// Counter capability for entities that track named integer event counts.
+/// Mutable counter capability for named integer event counts.
 /// </summary>
-/// <param name="Items">Named counters attached to the entity.</param>
-public sealed record CapabilityCounters(IReadOnlyList<EntityCounter> Items) : ICapability<CapabilityCounters>
-{
-    /// <inheritdoc />
-    public static ICapabilityKind<CapabilityCounters> CapabilityKind { get; } = new CapabilityKind<CapabilityCounters>("counters", "Counters");
+public sealed class CapabilityCounters : EntityCapability {
+    public CapabilityCounters(IReadOnlyList<EntityCounter>? items = null) {
+        Items = items?.ToArray() ?? [];
+    }
 
-    /// <inheritdoc />
-    public ICapabilityKind Kind => CapabilityKind;
-
-    /// <summary>A reusable empty counter capability.</summary>
-    public static CapabilityCounters Empty { get; } = new([]);
+    public override CapabilityKind Kind => CapabilityKind.Counters;
+    public IReadOnlyList<EntityCounter> Items { get; private set; }
 }

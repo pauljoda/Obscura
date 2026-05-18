@@ -4,56 +4,34 @@ using Obscura.Domain.Entities;
 namespace Obscura.Domain.Media;
 
 /// <summary>
-/// Video entity extension. Shared metadata is exposed through capabilities; only video-only state stays direct.
+/// Domain model for a playable video media item.
 /// </summary>
-public sealed record Video : Entity
-{
-    /// <summary>
-    /// Creates a video entity extension with explicit shared capabilities.
-    /// </summary>
+public sealed class Video : Entity {
     public Video(
-        Guid Id,
-        string Title,
-        DateTimeOffset? SubtitlesExtractedAt,
-        IReadOnlyList<ICapability>? capabilities = null)
-        : base(
-            Id,
-            EntityKindRegistry.Video,
-            Title,
-            capabilities ??
-            [
-                new CapabilityRating(null),
-                CapabilityImages.Empty,
-                CapabilityLinks.Empty,
-                CapabilityFlags.Empty,
-                CapabilityFiles.Empty,
-                CapabilityPlayback.Empty,
-                CapabilityCounters.Empty,
-                CapabilityPosition.Empty,
-                CapabilityMarkers.Empty,
-                CapabilitySubtitles.Empty
-            ])
-    {
-        this.SubtitlesExtractedAt = SubtitlesExtractedAt;
+        Guid id,
+        string title,
+        DateTimeOffset? subtitlesExtractedAt,
+        IEnumerable<EntityCapability>? capabilities = null)
+        : base(id, title, capabilities ?? DefaultCapabilities()) {
+        SubtitlesExtractedAt = subtitlesExtractedAt;
     }
+
+    public override EntityKind Kind => EntityKind.Video;
 
     /// <summary>When embedded subtitles were last extracted, when known.</summary>
-    public DateTimeOffset? SubtitlesExtractedAt { get; init; }
+    public DateTimeOffset? SubtitlesExtractedAt { get; private set; }
 
-    /// <summary>
-    /// Creates a video from an already hydrated entity root.
-    /// </summary>
-    public Video(Entity entity, DateTimeOffset? SubtitlesExtractedAt)
-        : base(
-            entity.Id,
-            EntityKindRegistry.Video,
-            entity.Title,
-            entity.Capabilities,
-            entity.ParentEntityId,
-            entity.SortOrder,
-            entity.ChildrenByKind,
-            entity.Relationships)
-    {
-        this.SubtitlesExtractedAt = SubtitlesExtractedAt;
-    }
+    private static IEnumerable<EntityCapability> DefaultCapabilities() =>
+    [
+        new CapabilityRating(),
+        new CapabilityImages(),
+        new CapabilityLinks(),
+        new CapabilityFlags(),
+        new CapabilityFiles(),
+        new CapabilityPlayback(),
+        new CapabilityCounters(),
+        new CapabilityPosition(),
+        new CapabilityMarkers(),
+        new CapabilitySubtitles()
+    ];
 }

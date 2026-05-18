@@ -3,8 +3,7 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Non-generic contract for a codec that translates one closed-set value type to and from stable text codes.
 /// </summary>
-public interface ICodec
-{
+public interface ICodec {
     /// <summary>
     /// Gets the enum value type handled by this codec.
     /// </summary>
@@ -30,8 +29,7 @@ public interface ICodec
 /// </summary>
 /// <typeparam name="TValue">Closed-set enum type handled by this codec.</typeparam>
 public interface ICodec<TValue> : ICodec
-    where TValue : struct, Enum
-{
+    where TValue : struct, Enum {
     /// <summary>
     /// Encodes an enum value into its stable text code.
     /// </summary>

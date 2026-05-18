@@ -1,23 +1,54 @@
 namespace Obscura.Domain.Capabilities;
 
 /// <summary>
-/// Non-time progress capability for page, chapter, and other unit-based reading flows.
+/// Mutable non-time progress capability for page, chapter, and other unit-based flows.
 /// </summary>
-public sealed record CapabilityProgress(
-    Guid? CurrentEntityId,
-    string Unit,
-    int Index,
-    int Total,
-    string? Mode,
-    DateTimeOffset? CompletedAt,
-    DateTimeOffset? UpdatedAt) : ICapability<CapabilityProgress>
-{
-    /// <inheritdoc />
-    public static ICapabilityKind<CapabilityProgress> CapabilityKind { get; } = new CapabilityKind<CapabilityProgress>("progress", "Progress");
+public sealed class CapabilityProgress : EntityCapability {
+    /// <summary>
+    /// Creates a progress capability.
+    /// </summary>
+    public CapabilityProgress(
+        Guid? currentEntityId = null,
+        string unit = "item",
+        int index = 0,
+        int total = 0,
+        string? mode = null,
+        DateTimeOffset? completedAt = null,
+        DateTimeOffset? updatedAt = null) {
+        CurrentEntityId = currentEntityId;
+        Unit = unit;
+        Index = index;
+        Total = total;
+        Mode = mode;
+        CompletedAt = completedAt;
+        UpdatedAt = updatedAt;
+    }
 
     /// <inheritdoc />
-    public ICapabilityKind Kind => CapabilityKind;
+    public override CapabilityKind Kind => CapabilityKind.Progress;
 
-    /// <summary>A reusable empty progress capability.</summary>
-    public static CapabilityProgress Empty { get; } = new(null, "item", 0, 0, null, null, null);
+    public Guid? CurrentEntityId { get; private set; }
+    public string Unit { get; private set; }
+    public int Index { get; private set; }
+    public int Total { get; private set; }
+    public string? Mode { get; private set; }
+    public DateTimeOffset? CompletedAt { get; private set; }
+    public DateTimeOffset? UpdatedAt { get; private set; }
+
+    /// <summary>Moves the progress cursor to a specific entity and index.</summary>
+    public void MoveTo(Guid currentEntityId, string unit, int index, int total, string? mode, DateTimeOffset updatedAt) {
+        CurrentEntityId = currentEntityId;
+        Unit = unit;
+        Index = index;
+        Total = total;
+        Mode = mode;
+        CompletedAt = null;
+        UpdatedAt = updatedAt;
+    }
+
+    /// <summary>Marks the progress as completed.</summary>
+    public void MarkCompleted(DateTimeOffset completedAt) {
+        CompletedAt = completedAt;
+        UpdatedAt = completedAt;
+    }
 }

@@ -1,26 +1,39 @@
 namespace Obscura.Domain.Capabilities;
 
 /// <summary>
-/// Shared technical metadata for media-like entities.
+/// Mutable technical metadata capability for media-like entities.
 /// </summary>
-public sealed record CapabilityTechnical(
-    TimeSpan? Duration = null,
-    int? Width = null,
-    int? Height = null,
-    double? FrameRate = null,
-    int? BitRate = null,
-    int? SampleRate = null,
-    int? Channels = null,
-    string? Codec = null,
-    string? Container = null,
-    string? Format = null) : ICapability<CapabilityTechnical>
-{
+public sealed class CapabilityTechnical : EntityCapability {
     /// <inheritdoc />
-    public static ICapabilityKind<CapabilityTechnical> CapabilityKind { get; } = new CapabilityKind<CapabilityTechnical>("technical", "Technical");
+    public override CapabilityKind Kind => CapabilityKind.Technical;
 
-    /// <inheritdoc />
-    public ICapabilityKind Kind => CapabilityKind;
+    /// <summary>Media duration when known.</summary>
+    public TimeSpan? Duration { get; set; }
 
-    /// <summary>A reusable empty technical capability.</summary>
-    public static CapabilityTechnical Empty { get; } = new();
+    /// <summary>Pixel width when known.</summary>
+    public int? Width { get; set; }
+
+    /// <summary>Pixel height when known.</summary>
+    public int? Height { get; set; }
+
+    /// <summary>Video frame rate when known.</summary>
+    public double? FrameRate { get; set; }
+
+    /// <summary>Media bit rate when known.</summary>
+    public int? BitRate { get; set; }
+
+    /// <summary>Audio sample rate when known.</summary>
+    public int? SampleRate { get; set; }
+
+    /// <summary>Audio channel count when known.</summary>
+    public int? Channels { get; set; }
+
+    /// <summary>Primary codec when known.</summary>
+    public string? Codec { get; set; }
+
+    /// <summary>Container name when known.</summary>
+    public string? Container { get; set; }
+
+    /// <summary>Format name when known.</summary>
+    public string? Format { get; set; }
 }

@@ -1,70 +1,43 @@
 namespace Obscura.Domain.Entities;
 
 /// <summary>
-/// Scan and organization metadata for one entity kind.
+/// Domain metadata that describes the broad storage shape and structural child kinds for an entity kind.
 /// </summary>
-/// <param name="Kind">Entity kind this metadata describes.</param>
-/// <param name="StorageShape">Filesystem storage shape for scan and organize rules.</param>
-/// <param name="AllowedChildKinds">Child kinds this entity can group through the generic graph.</param>
+/// <param name="Kind">Entity kind described by this metadata.</param>
+/// <param name="StorageShape">Filesystem storage shape this kind normally represents.</param>
+/// <param name="AllowedChildKinds">Entity kinds that can be structural children.</param>
 public sealed record EntityKindMetadata(
-    IEntityKind Kind,
+    EntityKind Kind,
     EntityStorageShape StorageShape,
-    IReadOnlyList<IEntityKind> AllowedChildKinds)
-{
-    /// <summary>True when this kind is a file/archive leaf or archive entry.</summary>
-    public bool IsLeaf => StorageShape is EntityStorageShape.File or EntityStorageShape.Archive or EntityStorageShape.ArchiveEntry;
-}
+    IReadOnlyList<EntityKind> AllowedChildKinds);
 
 /// <summary>
-/// Code-defined graph metadata for known entity kinds.
+/// Provides domain-only metadata for known entity kinds without involving storage or API strings.
 /// </summary>
-public static class EntityKindMetadataRegistry
-{
-    private static readonly Lazy<IReadOnlyDictionary<string, EntityKindMetadata>> ItemsByCode = new(CreateItemsByCode);
-
-    /// <summary>All entity-kind metadata entries in deterministic kind-code order.</summary>
-    public static IReadOnlyList<EntityKindMetadata> All => ItemsByCode.Value.Values.ToArray();
+public static class EntityKindMetadataRegistry {
+    private static readonly IReadOnlyDictionary<EntityKind, EntityKindMetadata> Items = new Dictionary<EntityKind, EntityKindMetadata> {
+        [EntityKind.VideoSeries] = new(EntityKind.VideoSeries, EntityStorageShape.Folder, [EntityKind.VideoSeason, EntityKind.Video]),
+        [EntityKind.VideoSeason] = new(EntityKind.VideoSeason, EntityStorageShape.Folder, [EntityKind.Video]),
+        [EntityKind.Video] = new(EntityKind.Video, EntityStorageShape.File, []),
+        [EntityKind.Gallery] = new(EntityKind.Gallery, EntityStorageShape.Folder, [EntityKind.Gallery, EntityKind.Image]),
+        [EntityKind.Image] = new(EntityKind.Image, EntityStorageShape.File, []),
+        [EntityKind.AudioLibrary] = new(EntityKind.AudioLibrary, EntityStorageShape.Folder, [EntityKind.AudioLibrary, EntityKind.AudioTrack]),
+        [EntityKind.AudioTrack] = new(EntityKind.AudioTrack, EntityStorageShape.File, []),
+        [EntityKind.Audio] = new(EntityKind.Audio, EntityStorageShape.File, []),
+        [EntityKind.Book] = new(EntityKind.Book, EntityStorageShape.Archive, [EntityKind.BookVolume, EntityKind.BookChapter, EntityKind.BookPage]),
+        [EntityKind.BookVolume] = new(EntityKind.BookVolume, EntityStorageShape.None, [EntityKind.BookChapter, EntityKind.BookPage]),
+        [EntityKind.BookChapter] = new(EntityKind.BookChapter, EntityStorageShape.None, [EntityKind.BookPage]),
+        [EntityKind.BookPage] = new(EntityKind.BookPage, EntityStorageShape.ArchiveEntry, []),
+        [EntityKind.Person] = new(EntityKind.Person, EntityStorageShape.None, []),
+        [EntityKind.Studio] = new(EntityKind.Studio, EntityStorageShape.None, [EntityKind.Studio]),
+        [EntityKind.Tag] = new(EntityKind.Tag, EntityStorageShape.None, [EntityKind.Tag]),
+        [EntityKind.Collection] = new(EntityKind.Collection, EntityStorageShape.None, Enum.GetValues<EntityKind>())
+    };
 
     /// <summary>
-    /// Gets metadata for a registered entity kind.
+    /// Gets metadata for an entity kind.
     /// </summary>
     /// <param name="kind">Entity kind to describe.</param>
-    /// <returns>Graph and storage metadata for the supplied kind.</returns>
-    public static EntityKindMetadata Require(IEntityKind kind)
-    {
-        ArgumentNullException.ThrowIfNull(kind);
-        if (ItemsByCode.Value.TryGetValue(kind.Code, out var metadata))
-        {
-            return metadata;
-        }
-
-        throw new InvalidOperationException($"Missing entity kind metadata for '{kind.Code}'.");
-    }
-
-    private static IReadOnlyDictionary<string, EntityKindMetadata> CreateItemsByCode()
-    {
-        var items = new[]
-        {
-            new EntityKindMetadata(EntityKindRegistry.VideoSeries, EntityStorageShape.Folder, [EntityKindRegistry.VideoSeason, EntityKindRegistry.Video]),
-            new EntityKindMetadata(EntityKindRegistry.VideoSeason, EntityStorageShape.Folder, [EntityKindRegistry.Video]),
-            new EntityKindMetadata(EntityKindRegistry.Video, EntityStorageShape.File, []),
-            new EntityKindMetadata(EntityKindRegistry.Gallery, EntityStorageShape.Folder, [EntityKindRegistry.Gallery, EntityKindRegistry.Image]),
-            new EntityKindMetadata(EntityKindRegistry.Image, EntityStorageShape.File, []),
-            new EntityKindMetadata(EntityKindRegistry.AudioLibrary, EntityStorageShape.Folder, [EntityKindRegistry.AudioLibrary, EntityKindRegistry.AudioTrack]),
-            new EntityKindMetadata(EntityKindRegistry.AudioTrack, EntityStorageShape.File, []),
-            new EntityKindMetadata(EntityKindRegistry.Audio, EntityStorageShape.File, []),
-            new EntityKindMetadata(EntityKindRegistry.Book, EntityStorageShape.Archive, [EntityKindRegistry.BookVolume, EntityKindRegistry.BookChapter, EntityKindRegistry.BookPage]),
-            new EntityKindMetadata(EntityKindRegistry.BookVolume, EntityStorageShape.None, [EntityKindRegistry.BookChapter, EntityKindRegistry.BookPage]),
-            new EntityKindMetadata(EntityKindRegistry.BookChapter, EntityStorageShape.None, [EntityKindRegistry.BookPage]),
-            new EntityKindMetadata(EntityKindRegistry.BookPage, EntityStorageShape.ArchiveEntry, []),
-            new EntityKindMetadata(EntityKindRegistry.Person, EntityStorageShape.None, []),
-            new EntityKindMetadata(EntityKindRegistry.Studio, EntityStorageShape.None, [EntityKindRegistry.Studio]),
-            new EntityKindMetadata(EntityKindRegistry.Tag, EntityStorageShape.None, [EntityKindRegistry.Tag]),
-            new EntityKindMetadata(EntityKindRegistry.Collection, EntityStorageShape.None, EntityKindRegistry.All)
-        };
-
-        return items
-            .OrderBy(item => item.Kind.Code, StringComparer.Ordinal)
-            .ToDictionary(item => item.Kind.Code, StringComparer.OrdinalIgnoreCase);
-    }
+    /// <returns>Metadata for the requested kind.</returns>
+    public static EntityKindMetadata Require(EntityKind kind) => Items[kind];
 }

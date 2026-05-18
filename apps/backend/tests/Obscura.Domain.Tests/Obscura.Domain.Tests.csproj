@@ -20,7 +20,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Obscura.Domain\Obscura.Domain.csproj" />
-    <ProjectReference Include="..\..\src\Obscura.Contracts\Obscura.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

@@ -3,8 +3,7 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Closed set of reader layouts supported by the book reading surface.
 /// </summary>
-public enum ReaderMode
-{
+public enum ReaderMode {
     /// <summary>One page or spread at a time.</summary>
     Paged,
 
@@ -15,14 +14,11 @@ public enum ReaderMode
 /// <summary>
 /// Codec for book reader layout codes.
 /// </summary>
-public sealed class ReaderModeCodec : EnumCodec<ReaderMode>
-{
+public sealed class ReaderModeCodec : EnumCodec<ReaderMode> {
     public ReaderModeCodec()
-        : base(new Dictionary<ReaderMode, string>
-        {
+        : base(new Dictionary<ReaderMode, string> {
             [ReaderMode.Paged] = "paged",
             [ReaderMode.Webtoon] = "webtoon"
-        })
-    {
+        }) {
     }
 }

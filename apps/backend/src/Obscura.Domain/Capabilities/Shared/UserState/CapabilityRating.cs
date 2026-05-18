@@ -1,14 +1,33 @@
 namespace Obscura.Domain.Capabilities;
 
 /// <summary>
-/// Rating capability for an entity that supports user ratings.
+/// Mutable rating capability for entities that support user ratings.
 /// </summary>
-/// <param name="Value">Validated rating value, or null when the entity is unrated.</param>
-public sealed record CapabilityRating(Rating? Value) : ICapability<CapabilityRating>
-{
-    /// <inheritdoc />
-    public static ICapabilityKind<CapabilityRating> CapabilityKind { get; } = new CapabilityKind<CapabilityRating>("rating", "Rating");
+public sealed class CapabilityRating : EntityCapability {
+    /// <summary>
+    /// Creates a rating capability.
+    /// </summary>
+    /// <param name="value">Optional zero-through-five rating value.</param>
+    public CapabilityRating(int? value = null) {
+        Value = value is null ? null : new Rating(value.Value).Value;
+    }
 
     /// <inheritdoc />
-    public ICapabilityKind Kind => CapabilityKind;
+    public override CapabilityKind Kind => CapabilityKind.Rating;
+
+    /// <summary>Current normalized rating value, or null when unrated.</summary>
+    public int? Value { get; private set; }
+
+    /// <summary>
+    /// Sets the rating value.
+    /// </summary>
+    /// <param name="value">Rating value clamped onto the shared zero-through-five scale.</param>
+    public void Rate(int value) {
+        Value = new Rating(value).Value;
+    }
+
+    /// <summary>Clears the current rating.</summary>
+    public void Clear() {
+        Value = null;
+    }
 }

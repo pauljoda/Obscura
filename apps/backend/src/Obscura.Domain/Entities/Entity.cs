@@ -1,205 +1,239 @@
-using System.Diagnostics.CodeAnalysis;
 using Obscura.Domain.Capabilities;
 
 namespace Obscura.Domain.Entities;
 
 /// <summary>
-/// The root object for anything Obscura can display, organize, rate, tag, or relate to other objects.
+/// Abstract root for anything Obscura can display, organize, rate, tag, or relate to other objects.
 /// </summary>
-public record Entity
-{
+public abstract class Entity {
+    private readonly List<EntityCapability> _capabilities = [];
+    private readonly List<EntityChild> _children = [];
+    private readonly List<EntityRelationship> _relationships = [];
+
     /// <summary>
-    /// Creates a global entity root with a modular list of supported capabilities.
+    /// Creates an entity with optional capabilities, child relationships, and non-structural relationships.
     /// </summary>
-    /// <param name="id">Stable global entity identifier.</param>
-    /// <param name="kind">Code-defined entity kind that determines broad behavior and routing.</param>
+    /// <param name="id">Stable entity identifier.</param>
     /// <param name="title">Primary user-facing title.</param>
-    /// <param name="capabilities">Reusable behaviors and projections attached to this entity.</param>
-    /// <exception cref="ArgumentException">Thrown when more than one capability has the same kind code.</exception>
-    public Entity(
+    /// <param name="capabilities">Mutable behavior modules to attach to this entity.</param>
+    /// <param name="children">Structural child relationships.</param>
+    /// <param name="relationships">Non-structural relationships.</param>
+    /// <param name="parentEntityId">Optional structural parent identifier.</param>
+    /// <param name="sortOrder">Optional structural order under the parent.</param>
+    protected Entity(
         Guid id,
-        IEntityKind kind,
         string title,
-        IReadOnlyList<ICapability> capabilities,
+        IEnumerable<EntityCapability>? capabilities = null,
+        IEnumerable<EntityChild>? children = null,
+        IEnumerable<EntityRelationship>? relationships = null,
         Guid? parentEntityId = null,
-        int? sortOrder = null,
-        EntityChildren? children = null,
-        EntityRelationships? relationships = null)
-    {
+        int? sortOrder = null) {
         Id = id;
-        Kind = kind;
-        Title = title;
-        Capabilities = NormalizeCapabilities(capabilities);
+        Title = string.IsNullOrWhiteSpace(title)
+            ? throw new ArgumentException("Entity title cannot be empty.", nameof(title))
+            : title;
         ParentEntityId = parentEntityId;
         SortOrder = sortOrder;
-        ChildrenByKind = children ?? EntityChildren.Empty;
-        Relationships = relationships ?? EntityRelationships.Empty;
+
+        foreach (var capability in capabilities ?? []) {
+            AddCapability(capability);
+        }
+
+        foreach (var child in children ?? []) {
+            AddChild(child.Entity, child.Role, child.SortOrder);
+        }
+
+        foreach (var relationship in relationships ?? []) {
+            AddRelationship(relationship.Entity, relationship.Role, relationship.SortOrder);
+        }
     }
 
-    /// <summary>Stable global entity identifier.</summary>
-    public Guid Id { get; init; }
-
-    /// <summary>Code-defined entity kind that determines broad behavior and routing.</summary>
-    public IEntityKind Kind { get; init; }
+    /// <summary>Stable entity identifier.</summary>
+    public Guid Id { get; }
 
     /// <summary>Primary user-facing title.</summary>
-    public string Title { get; init; }
+    public string Title { get; private set; }
 
-    /// <summary>Reusable behaviors and projections attached to this entity.</summary>
-    public IReadOnlyList<ICapability> Capabilities { get; init; }
+    /// <summary>Closed domain kind for this concrete entity.</summary>
+    public abstract EntityKind Kind { get; }
 
     /// <summary>Structural parent entity identifier when this entity is owned by another entity.</summary>
-    public Guid? ParentEntityId { get; init; }
+    public Guid? ParentEntityId { get; private set; }
 
     /// <summary>Optional structural order under the parent entity.</summary>
-    public int? SortOrder { get; init; }
+    public int? SortOrder { get; private set; }
 
-    /// <summary>Grouped child projections keyed by entity kind through typed accessors.</summary>
-    public EntityChildren ChildrenByKind { get; init; }
+    /// <summary>Attached capabilities in insertion order.</summary>
+    public IReadOnlyList<EntityCapability> Capabilities => _capabilities;
 
-    /// <summary>Grouped non-structural references such as tags, cast, studios, artists, or publishers.</summary>
-    public EntityRelationships Relationships { get; init; }
+    /// <summary>Structural child relationships in insertion order.</summary>
+    public IReadOnlyList<EntityChild> Children => _children;
 
-    /// <summary>Description text when supported by this entity.</summary>
-    public string? Description => TryGetCapability(CapabilityRegistry.Description, out var capability) ? capability.Value : null;
+    /// <summary>Structural child entities in insertion order.</summary>
+    public IReadOnlyList<Entity> ChildEntities => _children.Select(child => child.Entity).ToArray();
 
-    /// <summary>Images capability when supported by this entity.</summary>
-    public CapabilityImages? Images => TryGetCapability(CapabilityRegistry.Images, out var capability) ? capability : null;
+    /// <summary>Non-structural relationships in insertion order.</summary>
+    public IReadOnlyList<EntityRelationship> Relationships => _relationships;
 
-    /// <summary>Files capability when supported by this entity.</summary>
-    public CapabilityFiles? Files => TryGetCapability(CapabilityRegistry.Files, out var capability) ? capability : null;
+    /// <summary>User rating capability when attached.</summary>
+    public CapabilityRating? Rating => GetCapability<CapabilityRating>();
 
-    /// <summary>Stats capability when supported by this entity.</summary>
-    public CapabilityStats? Stats => TryGetCapability(CapabilityRegistry.Stats, out var capability) ? capability : null;
+    /// <summary>Description capability when attached.</summary>
+    public CapabilityDescription? Description => GetCapability<CapabilityDescription>();
 
-    /// <summary>Dates capability when supported by this entity.</summary>
-    public CapabilityDates? Dates => TryGetCapability(CapabilityRegistry.Dates, out var capability) ? capability : null;
+    /// <summary>Image capability when attached.</summary>
+    public CapabilityImages? Images => GetCapability<CapabilityImages>();
 
-    /// <summary>Lifetime capability when supported by this entity.</summary>
-    public CapabilityLifetime? Lifetime => TryGetCapability(CapabilityRegistry.Lifetime, out var capability) ? capability : null;
+    /// <summary>File capability when attached.</summary>
+    public CapabilityFiles? Files => GetCapability<CapabilityFiles>();
 
-    /// <summary>Technical metadata capability when supported by this entity.</summary>
-    public CapabilityTechnical? Technical => TryGetCapability(CapabilityRegistry.Technical, out var capability) ? capability : null;
+    /// <summary>Stats capability when attached.</summary>
+    public CapabilityStats? Stats => GetCapability<CapabilityStats>();
 
-    /// <summary>Source provenance capability when supported by this entity.</summary>
-    public CapabilitySource? Source => TryGetCapability(CapabilityRegistry.Source, out var capability) ? capability : null;
+    /// <summary>Dates capability when attached.</summary>
+    public CapabilityDates? Dates => GetCapability<CapabilityDates>();
 
-    /// <summary>Progress capability when supported by this entity.</summary>
-    public CapabilityProgress? Progress => TryGetCapability(CapabilityRegistry.Progress, out var capability) ? capability : null;
+    /// <summary>Lifetime capability when attached.</summary>
+    public CapabilityLifetime? Lifetime => GetCapability<CapabilityLifetime>();
 
-    /// <summary>Position capability when supported by this entity.</summary>
-    public CapabilityPosition? Position => TryGetCapability(CapabilityRegistry.Position, out var capability) ? capability : null;
+    /// <summary>Technical metadata capability when attached.</summary>
+    public CapabilityTechnical? Technical => GetCapability<CapabilityTechnical>();
 
-    /// <summary>Classification capability when supported by this entity.</summary>
-    public CapabilityClassification? Classification => TryGetCapability(CapabilityRegistry.Classification, out var capability) ? capability : null;
+    /// <summary>Source provenance capability when attached.</summary>
+    public CapabilitySource? Source => GetCapability<CapabilitySource>();
 
-    /// <summary>Marker capability when supported by this entity.</summary>
-    public CapabilityMarkers? MarkerCapability => TryGetCapability(CapabilityRegistry.Markers, out var capability) ? capability : null;
+    /// <summary>Progress capability when attached.</summary>
+    public CapabilityProgress? Progress => GetCapability<CapabilityProgress>();
 
-    /// <summary>Subtitle capability when supported by this entity.</summary>
-    public CapabilitySubtitles? SubtitleCapability => TryGetCapability(CapabilityRegistry.Subtitles, out var capability) ? capability : null;
+    /// <summary>Position capability when attached.</summary>
+    public CapabilityPosition? Position => GetCapability<CapabilityPosition>();
 
-    /// <summary>Playback capability when supported by this entity.</summary>
-    public CapabilityPlayback? PlaybackCapability => TryGetCapability(CapabilityRegistry.Playback, out var capability) ? capability : null;
+    /// <summary>Classification capability when attached.</summary>
+    public CapabilityClassification? Classification => GetCapability<CapabilityClassification>();
 
-    /// <summary>
-    /// Checks whether this entity supports a capability kind.
-    /// </summary>
-    /// <param name="kind">Capability kind to look up.</param>
-    /// <returns><see langword="true" /> when the entity includes the capability kind, even if the capability data is empty.</returns>
-    public bool HasCapability(ICapabilityKind kind) =>
-        Capabilities.Any(capability => string.Equals(
-            capability.Kind.Code,
-            kind.Code,
-            StringComparison.OrdinalIgnoreCase));
+    /// <summary>Marker capability when attached.</summary>
+    public CapabilityMarkers? MarkerCapability => GetCapability<CapabilityMarkers>();
+
+    /// <summary>Subtitle capability when attached.</summary>
+    public CapabilitySubtitles? SubtitleCapability => GetCapability<CapabilitySubtitles>();
+
+    /// <summary>Playback state when playback capability is attached.</summary>
+    public Playback? Playback => GetCapability<CapabilityPlayback>()?.Value;
 
     /// <summary>
-    /// Gets a supported capability by kind.
+    /// Updates the title while preserving entity identity.
     /// </summary>
-    /// <typeparam name="TCapability">Concrete capability type represented by the kind.</typeparam>
-    /// <param name="kind">Typed capability kind to retrieve.</param>
-    /// <returns>The supported capability instance.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when this entity does not support the capability kind.</exception>
-    public TCapability GetCapability<TCapability>(ICapabilityKind<TCapability> kind)
-        where TCapability : class, ICapability
-    {
-        if (TryGetCapability(kind, out var capability))
-        {
-            return capability;
-        }
-
-        throw new InvalidOperationException($"Entity '{Id}' does not support capability '{kind.Code}'.");
+    /// <param name="title">New non-empty title.</param>
+    public void Rename(string title) {
+        Title = string.IsNullOrWhiteSpace(title)
+            ? throw new ArgumentException("Entity title cannot be empty.", nameof(title))
+            : title;
     }
 
     /// <summary>
-    /// Attempts to get a supported capability by kind.
+    /// Gets an attached capability by concrete type.
     /// </summary>
-    /// <typeparam name="TCapability">Concrete capability type represented by the kind.</typeparam>
-    /// <param name="kind">Typed capability kind to retrieve.</param>
-    /// <param name="capability">The supported capability when the method returns true.</param>
-    /// <returns><see langword="true" /> when this entity supports the capability kind; otherwise <see langword="false" />.</returns>
-    public bool TryGetCapability<TCapability>(
-        ICapabilityKind<TCapability> kind,
-        [NotNullWhen(true)] out TCapability? capability)
-        where TCapability : class, ICapability
-    {
-        var match = Capabilities.FirstOrDefault(capability => string.Equals(
-            capability.Kind.Code,
-            kind.Code,
-            StringComparison.OrdinalIgnoreCase));
-
-        if (match is TCapability typed)
-        {
-            capability = typed;
-            return true;
-        }
-
-        capability = null;
-        return false;
-    }
+    /// <typeparam name="TCapability">Concrete capability type to retrieve.</typeparam>
+    /// <returns>The attached capability instance, or null when missing.</returns>
+    public TCapability? GetCapability<TCapability>()
+        where TCapability : EntityCapability =>
+        _capabilities.OfType<TCapability>().SingleOrDefault();
 
     /// <summary>
-    /// Returns a copy of the entity with one explicit capability added or replaced by kind.
+    /// Gets an attached capability by concrete type or throws when missing.
     /// </summary>
-    /// <typeparam name="TCapability">Concrete capability type represented by the kind.</typeparam>
-    /// <param name="kind">Capability kind to replace.</param>
-    /// <param name="capability">Capability value to attach to the entity.</param>
-    /// <returns>A new entity with the supplied capability in its explicit capability list.</returns>
-    public Entity WithCapability<TCapability>(
-        ICapabilityKind<TCapability> kind,
-        TCapability capability)
-        where TCapability : class, ICapability
-    {
-        ArgumentNullException.ThrowIfNull(kind);
+    /// <typeparam name="TCapability">Concrete capability type to retrieve.</typeparam>
+    /// <returns>The attached capability instance.</returns>
+    public TCapability RequireCapability<TCapability>()
+        where TCapability : EntityCapability =>
+        GetCapability<TCapability>()
+            ?? throw new InvalidOperationException($"Entity '{Id}' does not have capability '{typeof(TCapability).Name}'.");
+
+    /// <summary>
+    /// Checks whether a concrete capability type is attached.
+    /// </summary>
+    /// <typeparam name="TCapability">Concrete capability type to check.</typeparam>
+    /// <returns>True when the capability is attached; otherwise false.</returns>
+    public bool HasCapability<TCapability>()
+        where TCapability : EntityCapability =>
+        GetCapability<TCapability>() is not null;
+
+    /// <summary>
+    /// Attaches a capability instance to this entity.
+    /// </summary>
+    /// <param name="capability">Capability instance to attach.</param>
+    /// <exception cref="ArgumentException">Thrown when this entity already has a capability of the same kind.</exception>
+    public void AddCapability(EntityCapability capability) {
         ArgumentNullException.ThrowIfNull(capability);
-
-        var next = Capabilities
-            .Where(existing => !string.Equals(
-                existing.Kind.Code,
-                kind.Code,
-                StringComparison.OrdinalIgnoreCase))
-            .Append(capability)
-            .ToArray();
-
-        return this with { Capabilities = next };
-    }
-
-    private static IReadOnlyList<ICapability> NormalizeCapabilities(IReadOnlyList<ICapability> capabilities)
-    {
-        ArgumentNullException.ThrowIfNull(capabilities);
-
-        var duplicates = capabilities
-            .GroupBy(capability => capability.Kind.Code, StringComparer.OrdinalIgnoreCase)
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key)
-            .ToArray();
-        if (duplicates.Length > 0)
-        {
-            throw new ArgumentException(
-                $"Entity capabilities contain duplicate kind codes: {string.Join(", ", duplicates)}.",
-                nameof(capabilities));
+        if (_capabilities.Any(existing => existing.Kind == capability.Kind)) {
+            throw new ArgumentException($"Entity '{Id}' already has capability {capability.Kind}.", nameof(capability));
         }
 
-        return capabilities.ToArray();
+        capability.AttachTo(this);
+        _capabilities.Add(capability);
+    }
+
+    /// <summary>
+    /// Removes a capability by concrete type and detaches it from this entity.
+    /// </summary>
+    /// <typeparam name="TCapability">Concrete capability type to remove.</typeparam>
+    /// <returns>True when a capability was removed; otherwise false.</returns>
+    public bool RemoveCapability<TCapability>()
+        where TCapability : EntityCapability {
+        var capability = GetCapability<TCapability>();
+        if (capability is null) {
+            return false;
+        }
+
+        capability.DetachFrom(this);
+        return _capabilities.Remove(capability);
+    }
+
+    /// <summary>
+    /// Adds a structural child relationship.
+    /// </summary>
+    /// <param name="child">Child entity.</param>
+    /// <param name="role">Relationship role.</param>
+    /// <param name="sortOrder">Optional child order.</param>
+    public void AddChild(Entity child, ChildRole role = ChildRole.Structural, int? sortOrder = null) {
+        ArgumentNullException.ThrowIfNull(child);
+        if (_children.Any(existing => existing.Entity.Id == child.Id)) {
+            throw new ArgumentException($"Entity '{Id}' already has child '{child.Id}'.", nameof(child));
+        }
+
+        child.ParentEntityId = Id;
+        child.SortOrder = sortOrder;
+        _children.Add(new EntityChild(child, role, sortOrder));
+    }
+
+    /// <summary>
+    /// Gets structural children by concrete entity type.
+    /// </summary>
+    /// <typeparam name="TEntity">Concrete child type to retrieve.</typeparam>
+    /// <returns>Matching child entities in insertion order.</returns>
+    public IReadOnlyList<TEntity> ChildrenOf<TEntity>()
+        where TEntity : Entity =>
+        _children.Select(child => child.Entity).OfType<TEntity>().ToArray();
+
+    /// <summary>
+    /// Gets structural children by entity kind.
+    /// </summary>
+    /// <param name="kind">Entity kind to retrieve.</param>
+    /// <returns>Matching child entities in insertion order.</returns>
+    public IReadOnlyList<Entity> ChildrenOf(EntityKind kind) =>
+        _children
+            .Where(child => child.Entity.Kind == kind)
+            .Select(child => child.Entity)
+            .ToArray();
+
+    /// <summary>
+    /// Adds a non-structural relationship.
+    /// </summary>
+    /// <param name="entity">Related entity.</param>
+    /// <param name="role">Relationship role.</param>
+    /// <param name="sortOrder">Optional display order.</param>
+    public void AddRelationship(Entity entity, RelationshipRole role, int? sortOrder = null) {
+        ArgumentNullException.ThrowIfNull(entity);
+        _relationships.Add(new EntityRelationship(entity, role, sortOrder));
     }
 }

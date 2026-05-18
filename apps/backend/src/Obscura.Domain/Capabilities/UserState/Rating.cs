@@ -3,8 +3,7 @@ namespace Obscura.Domain.Capabilities;
 /// <summary>
 /// Represents the rating capability once an entity has an explicit rating value.
 /// </summary>
-public sealed record Rating
-{
+public sealed record Rating {
     /// <summary>Lowest rating value supported by Obscura.</summary>
     public const int MinValue = 0;
 
@@ -17,16 +16,14 @@ public sealed record Rating
     /// Creates a rating and normalizes it onto Obscura's shared zero-through-five rating scale.
     /// </summary>
     /// <param name="value">Integer rating value to clamp into the supported range.</param>
-    public Rating(int value)
-    {
+    public Rating(int value) {
         Value = value;
     }
 
     /// <summary>
     /// Gets or initializes the normalized rating value.
     /// </summary>
-    public int Value
-    {
+    public int Value {
         get => _value;
         init => _value = Normalize(value);
     }
@@ -44,10 +41,8 @@ public sealed record Rating
     /// <param name="value">Nullable integer rating value from storage.</param>
     /// <returns>A rating with a normalized value between 0 and 5.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value" /> is null.</exception>
-    public static Rating FromNullable(int? value)
-    {
-        if (value is null)
-        {
+    public static Rating FromNullable(int? value) {
+        if (value is null) {
             throw new ArgumentNullException(nameof(value));
         }
 

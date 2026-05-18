@@ -6,73 +6,42 @@ namespace Obscura.Domain.Media;
 /// <summary>
 /// Domain model for a playable audio track.
 /// </summary>
-public sealed record AudioTrack : Entity
-{
-    /// <summary>
-    /// Creates an audio track with explicit shared capabilities and source tag metadata.
-    /// </summary>
+public sealed class AudioTrack : Entity {
     public AudioTrack(
-        Guid Id,
-        string Title,
-        string? EmbeddedArtist,
-        string? EmbeddedAlbum,
-        IReadOnlyList<ICapability>? capabilities = null)
-        : base(
-            Id,
-            EntityKindRegistry.AudioTrack,
-            Title,
-            capabilities ??
-            [
-                new CapabilityRating(null),
-                CapabilityImages.Empty,
-                CapabilityLinks.Empty,
-                CapabilityFlags.Empty,
-                CapabilityFiles.Empty,
-                CapabilityPlayback.Empty
-            ])
-    {
-        this.EmbeddedArtist = EmbeddedArtist;
-        this.EmbeddedAlbum = EmbeddedAlbum;
+        Guid id,
+        string title,
+        string? embeddedArtist,
+        string? embeddedAlbum,
+        IEnumerable<EntityCapability>? capabilities = null)
+        : base(id, title, capabilities ?? DefaultCapabilities()) {
+        EmbeddedArtist = embeddedArtist;
+        EmbeddedAlbum = embeddedAlbum;
     }
 
-    /// <summary>Artist value read from embedded audio tags, when known.</summary>
-    public string? EmbeddedArtist { get; init; }
-
-    /// <summary>Album value read from embedded audio tags, when known.</summary>
-    public string? EmbeddedAlbum { get; init; }
+    public override EntityKind Kind => EntityKind.AudioTrack;
+    public string? EmbeddedArtist { get; private set; }
+    public string? EmbeddedAlbum { get; private set; }
 
     /// <summary>
-    /// Creates an audio track from an already hydrated entity root.
+    /// Records a playback event on the attached playback capability.
     /// </summary>
-    public AudioTrack(Entity entity, string? embeddedArtist, string? embeddedAlbum)
-        : this(entity.Id, entity.Title, embeddedArtist, embeddedAlbum, entity.Capabilities)
-    {
+    public void MarkPlayed(TimeSpan resumeTime, DateTimeOffset playedAt) {
+        var playback = GetCapability<CapabilityPlayback>();
+        if (playback is null) {
+            playback = new CapabilityPlayback();
+            AddCapability(playback);
+        }
+
+        playback.MarkPlayed(resumeTime, playedAt);
     }
 
-    /// <summary>
-    /// Returns a copy of the audio track after a playback event.
-    /// </summary>
-    /// <param name="resumeTime">Playback position where the next session should resume.</param>
-    /// <param name="playedAt">Timestamp of the playback event.</param>
-    /// <returns>A new audio track with incremented playback state.</returns>
-    public AudioTrack MarkPlayed(TimeSpan resumeTime, DateTimeOffset playedAt)
-    {
-        var playback = TryGetCapability(CapabilityRegistry.Playback, out var existing)
-            ? existing.Value
-            : Playback.Empty;
-        var next = playback with
-        {
-            PlayCount = playback.PlayCount + 1,
-            ResumeTime = resumeTime < TimeSpan.Zero ? TimeSpan.Zero : resumeTime,
-            LastPlayedAt = playedAt,
-            CompletedAt = null
-        };
-
-        return this with
-        {
-            Capabilities = WithCapability(
-                CapabilityRegistry.Playback,
-                new CapabilityPlayback(next)).Capabilities
-        };
-    }
+    private static IEnumerable<EntityCapability> DefaultCapabilities() =>
+    [
+        new CapabilityRating(),
+        new CapabilityImages(),
+        new CapabilityLinks(),
+        new CapabilityFlags(),
+        new CapabilityFiles(),
+        new CapabilityPlayback()
+    ];
 }

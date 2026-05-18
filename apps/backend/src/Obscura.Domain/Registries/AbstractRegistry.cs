@@ -8,8 +8,7 @@ namespace Obscura.Domain.Registries;
 /// <typeparam name="TItem">Contract implemented by each discovered registry value.</typeparam>
 /// <typeparam name="TKey">Stable key type used to look up a registered value.</typeparam>
 public abstract class AbstractRegistry<TItem, TKey>
-    where TKey : notnull
-{
+    where TKey : notnull {
     private readonly Assembly _assembly;
     private readonly Func<TItem, TKey> _keySelector;
     private readonly IEqualityComparer<TKey>? _keyComparer;
@@ -28,8 +27,7 @@ public abstract class AbstractRegistry<TItem, TKey>
         Assembly assembly,
         Func<TItem, TKey> keySelector,
         IEqualityComparer<TKey>? keyComparer = null,
-        Func<IEnumerable<TItem>, IEnumerable<TItem>>? orderItems = null)
-    {
+        Func<IEnumerable<TItem>, IEnumerable<TItem>>? orderItems = null) {
         _assembly = assembly;
         _keySelector = keySelector;
         _keyComparer = keyComparer;
@@ -49,10 +47,8 @@ public abstract class AbstractRegistry<TItem, TKey>
     /// <param name="key">Stable lookup key.</param>
     /// <param name="item">The registered item when the method returns true.</param>
     /// <returns><see langword="true" /> when the key is registered; otherwise <see langword="false" />.</returns>
-    protected bool TryGetKey(TKey? key, out TItem item)
-    {
-        if (key is not null && _itemsByKey.Value.TryGetValue(key, out item!))
-        {
+    protected bool TryGetKey(TKey? key, out TItem item) {
+        if (key is not null && _itemsByKey.Value.TryGetValue(key, out item!)) {
             return true;
         }
 
@@ -66,10 +62,8 @@ public abstract class AbstractRegistry<TItem, TKey>
     /// <param name="key">Stable lookup key.</param>
     /// <param name="createErrorMessage">Function that creates the missing-key error message.</param>
     /// <returns>The registered item for the key.</returns>
-    protected TItem RequireKey(TKey key, Func<TKey, string> createErrorMessage)
-    {
-        if (TryGetKey(key, out var item))
-        {
+    protected TItem RequireKey(TKey key, Func<TKey, string> createErrorMessage) {
+        if (TryGetKey(key, out var item)) {
             return item;
         }
 
@@ -94,8 +88,7 @@ public abstract class AbstractRegistry<TItem, TKey>
     /// <returns>Created registry item.</returns>
     protected virtual TItem CreateItem(Type type) => (TItem)Activator.CreateInstance(type)!;
 
-    private IReadOnlyList<TItem> DiscoverItems()
-    {
+    private IReadOnlyList<TItem> DiscoverItems() {
         var discoveredItems = _assembly.GetTypes()
             .Where(IsDiscoverableType)
             .Select(CreateItem);

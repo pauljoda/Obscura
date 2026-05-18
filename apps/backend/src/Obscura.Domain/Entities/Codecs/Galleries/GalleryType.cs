@@ -3,8 +3,7 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Closed set of gallery storage shapes known to Obscura.
 /// </summary>
-public enum GalleryType
-{
+public enum GalleryType {
     /// <summary>Gallery assembled from existing image entities or metadata without one source folder.</summary>
     Virtual,
 
@@ -18,15 +17,12 @@ public enum GalleryType
 /// <summary>
 /// Codec for gallery storage shape codes.
 /// </summary>
-public sealed class GalleryTypeCodec : EnumCodec<GalleryType>
-{
+public sealed class GalleryTypeCodec : EnumCodec<GalleryType> {
     public GalleryTypeCodec()
-        : base(new Dictionary<GalleryType, string>
-        {
+        : base(new Dictionary<GalleryType, string> {
             [GalleryType.Virtual] = "virtual",
             [GalleryType.Folder] = "folder",
             [GalleryType.Zip] = "zip"
-        })
-    {
+        }) {
     }
 }

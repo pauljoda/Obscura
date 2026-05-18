@@ -3,8 +3,7 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Closed set of preferred playback startup strategies.
 /// </summary>
-public enum PlaybackMode
-{
+public enum PlaybackMode {
     /// <summary>Try direct playback first when the browser can play the source.</summary>
     Direct,
 
@@ -15,14 +14,11 @@ public enum PlaybackMode
 /// <summary>
 /// Codec for playback mode codes.
 /// </summary>
-public sealed class PlaybackModeCodec : EnumCodec<PlaybackMode>
-{
+public sealed class PlaybackModeCodec : EnumCodec<PlaybackMode> {
     public PlaybackModeCodec()
-        : base(new Dictionary<PlaybackMode, string>
-        {
+        : base(new Dictionary<PlaybackMode, string> {
             [PlaybackMode.Direct] = "direct",
             [PlaybackMode.Hls] = "hls"
-        })
-    {
+        }) {
     }
 }

@@ -3,8 +3,7 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Filesystem storage shape used by scan and organize rules for an entity kind.
 /// </summary>
-public enum EntityStorageShape
-{
+public enum EntityStorageShape {
     /// <summary>Entity has no direct filesystem storage representation.</summary>
     None,
 
@@ -24,17 +23,14 @@ public enum EntityStorageShape
 /// <summary>
 /// Codec for persisting entity storage-shape codes.
 /// </summary>
-public sealed class EntityStorageShapeCodec : EnumCodec<EntityStorageShape>
-{
+public sealed class EntityStorageShapeCodec : EnumCodec<EntityStorageShape> {
     public EntityStorageShapeCodec()
-        : base(new Dictionary<EntityStorageShape, string>
-        {
+        : base(new Dictionary<EntityStorageShape, string> {
             [EntityStorageShape.None] = "none",
             [EntityStorageShape.Folder] = "folder",
             [EntityStorageShape.File] = "file",
             [EntityStorageShape.Archive] = "archive",
             [EntityStorageShape.ArchiveEntry] = "archive-entry"
-        })
-    {
+        }) {
     }
 }

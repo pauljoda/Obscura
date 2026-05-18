@@ -1,17 +1,26 @@
 namespace Obscura.Domain.Capabilities;
 
 /// <summary>
-/// Description capability for entities that expose synopsis, overview, notes, or details text.
+/// Mutable description capability for entities that expose synopsis, overview, notes, or details text.
 /// </summary>
-/// <param name="Value">User-facing description text.</param>
-public sealed record CapabilityDescription(string Value) : ICapability<CapabilityDescription>
-{
-    /// <inheritdoc />
-    public static ICapabilityKind<CapabilityDescription> CapabilityKind { get; } = new CapabilityKind<CapabilityDescription>("description", "Description");
+public sealed class CapabilityDescription : EntityCapability {
+    /// <summary>
+    /// Creates a description capability.
+    /// </summary>
+    /// <param name="value">User-facing description text.</param>
+    public CapabilityDescription(string value = "") {
+        Value = value;
+    }
 
     /// <inheritdoc />
-    public ICapabilityKind Kind => CapabilityKind;
+    public override CapabilityKind Kind => CapabilityKind.Description;
 
-    /// <summary>A reusable empty description capability.</summary>
-    public static CapabilityDescription Empty { get; } = new(string.Empty);
+    /// <summary>User-facing description text.</summary>
+    public string Value { get; private set; }
+
+    /// <summary>Updates the description text.</summary>
+    /// <param name="value">Replacement description text.</param>
+    public void SetValue(string value) {
+        Value = value;
+    }
 }

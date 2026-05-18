@@ -3,8 +3,7 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Closed set of semantic file roles attached to entities.
 /// </summary>
-public enum EntityFileRole
-{
+public enum EntityFileRole {
     /// <summary>Original playable or readable source file.</summary>
     Source,
 
@@ -42,11 +41,9 @@ public enum EntityFileRole
 /// <summary>
 /// Codec for entity file role codes.
 /// </summary>
-public sealed class EntityFileRoleCodec : EnumCodec<EntityFileRole>
-{
+public sealed class EntityFileRoleCodec : EnumCodec<EntityFileRole> {
     public EntityFileRoleCodec()
-        : base(new Dictionary<EntityFileRole, string>
-        {
+        : base(new Dictionary<EntityFileRole, string> {
             [EntityFileRole.Source] = "source",
             [EntityFileRole.Thumbnail] = "thumbnail",
             [EntityFileRole.Poster] = "poster",
@@ -58,7 +55,6 @@ public sealed class EntityFileRoleCodec : EnumCodec<EntityFileRole>
             [EntityFileRole.Waveform] = "waveform",
             [EntityFileRole.Cover] = "cover",
             [EntityFileRole.Hls] = "hls"
-        })
-    {
+        }) {
     }
 }

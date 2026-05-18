@@ -4,8 +4,7 @@ namespace Obscura.Domain.Entities;
 /// Closed set of queue job types known to the .NET backend.
 /// Each value maps 1:1 to a processor that the worker can dispatch.
 /// </summary>
-public enum JobType
-{
+public enum JobType {
     /// <summary>No-operation job used to verify queue plumbing.</summary>
     Noop,
 
@@ -76,11 +75,9 @@ public enum JobType
 /// <summary>
 /// Codec for queue job type codes.
 /// </summary>
-public sealed class JobTypeCodec : EnumCodec<JobType>
-{
+public sealed class JobTypeCodec : EnumCodec<JobType> {
     public JobTypeCodec()
-        : base(new Dictionary<JobType, string>
-        {
+        : base(new Dictionary<JobType, string> {
             [JobType.Noop] = "noop",
             [JobType.ScanLibrary] = "scan-library",
             [JobType.ScanGallery] = "scan-gallery",
@@ -101,7 +98,6 @@ public sealed class JobTypeCodec : EnumCodec<JobType>
             [JobType.LibraryMaintenance] = "library-maintenance",
             [JobType.LegacyVideoImport] = "legacy-video-import",
             [JobType.LegacyMediaImport] = "legacy-media-import"
-        })
-    {
+        }) {
     }
 }

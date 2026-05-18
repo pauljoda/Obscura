@@ -1,17 +1,13 @@
 namespace Obscura.Domain.Capabilities;
 
 /// <summary>
-/// Statistics capability for stored or derived inventory counts.
+/// Mutable statistics capability for stored or derived inventory counts.
 /// </summary>
-/// <param name="Items">Named statistic values attached to the entity.</param>
-public sealed record CapabilityStats(IReadOnlyList<EntityStat> Items) : ICapability<CapabilityStats>
-{
-    /// <inheritdoc />
-    public static ICapabilityKind<CapabilityStats> CapabilityKind { get; } = new CapabilityKind<CapabilityStats>("stats", "Stats");
+public sealed class CapabilityStats : EntityCapability {
+    public CapabilityStats(IReadOnlyList<EntityStat>? items = null) {
+        Items = items?.ToArray() ?? [];
+    }
 
-    /// <inheritdoc />
-    public ICapabilityKind Kind => CapabilityKind;
-
-    /// <summary>A reusable empty stats capability.</summary>
-    public static CapabilityStats Empty { get; } = new([]);
+    public override CapabilityKind Kind => CapabilityKind.Stats;
+    public IReadOnlyList<EntityStat> Items { get; private set; }
 }

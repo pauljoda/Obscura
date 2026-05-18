@@ -1,19 +1,17 @@
 namespace Obscura.Domain.Capabilities;
 
 /// <summary>
-/// Flag capability for an entity that supports shared user-facing boolean state.
+/// Mutable flag capability for shared user-facing boolean state.
 /// </summary>
-/// <param name="IsFavorite">Whether the entity is marked as a favorite.</param>
-/// <param name="IsNsfw">Whether the entity should be treated as adult or hidden in SFW mode.</param>
-/// <param name="IsOrganized">Whether the entity has been reviewed and accepted into the organized library.</param>
-public sealed record CapabilityFlags(bool? IsFavorite, bool? IsNsfw, bool? IsOrganized) : ICapability<CapabilityFlags>
-{
-    /// <inheritdoc />
-    public static ICapabilityKind<CapabilityFlags> CapabilityKind { get; } = new CapabilityKind<CapabilityFlags>("flags", "Flags");
+public sealed class CapabilityFlags : EntityCapability {
+    public CapabilityFlags(bool? isFavorite = null, bool? isNsfw = null, bool? isOrganized = null) {
+        IsFavorite = isFavorite;
+        IsNsfw = isNsfw;
+        IsOrganized = isOrganized;
+    }
 
-    /// <inheritdoc />
-    public ICapabilityKind Kind => CapabilityKind;
-
-    /// <summary>A reusable empty flags capability.</summary>
-    public static CapabilityFlags Empty { get; } = new(null, null, null);
+    public override CapabilityKind Kind => CapabilityKind.Flags;
+    public bool? IsFavorite { get; private set; }
+    public bool? IsNsfw { get; private set; }
+    public bool? IsOrganized { get; private set; }
 }

@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Identify review now separates structural children from related people and studios, so series cascades can carry seasons, episodes, credits, and artwork together.
 - Identify now applies full credit lists even when the same person has multiple roles on a title, preserving the combined credit metadata without crashing.
 - Identify review now recognizes existing tags and credits in the v2 relationship model and lets review thumbnails be selected without navigating away.
+- The C# domain model was intentionally reset around abstract entities and mutable typed capabilities, creating a breaking foundation for the next EF/API integration pass.
 
 ### Added
 - High-level v2 implementation summary for the rebuilt Obscura architecture, media model, playback pipeline, and UI surfaces.
@@ -22,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 - The v2 development data model was simplified around generic entity children, relationships, and thumbnail projections; rescanning/importing v1 data is required.
 - Changelog entries are now curated release notes for important user-visible changes instead of an exhaustive development log.
+- Domain entities now use a breaking object-oriented model with enum entity kinds and attached mutable capabilities instead of registry/string capability lookups.
 
 ### Fixed
 - Series, season, video, gallery, collection, and audio detail pages now show their migrated child items and relationships again.

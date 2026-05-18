@@ -1,18 +1,31 @@
 namespace Obscura.Domain.Capabilities;
 
 /// <summary>
-/// Classification capability for provider or user-facing ratings and certifications.
+/// Mutable classification capability for provider or user-facing ratings and certifications.
 /// </summary>
-/// <param name="Value">Classification value, such as a content rating or certification.</param>
-/// <param name="System">Optional classification system or provider code.</param>
-public sealed record CapabilityClassification(string? Value, string? System = null) : ICapability<CapabilityClassification>
-{
-    /// <inheritdoc />
-    public static ICapabilityKind<CapabilityClassification> CapabilityKind { get; } = new CapabilityKind<CapabilityClassification>("classification", "Classification");
+public sealed class CapabilityClassification : EntityCapability {
+    /// <summary>
+    /// Creates a classification capability.
+    /// </summary>
+    /// <param name="value">Classification value.</param>
+    /// <param name="system">Optional classification system or provider code.</param>
+    public CapabilityClassification(string? value = null, string? system = null) {
+        Value = value;
+        System = system;
+    }
 
     /// <inheritdoc />
-    public ICapabilityKind Kind => CapabilityKind;
+    public override CapabilityKind Kind => CapabilityKind.Classification;
 
-    /// <summary>A reusable empty classification capability.</summary>
-    public static CapabilityClassification Empty { get; } = new(Value: null);
+    /// <summary>Classification value, such as a content rating or certification.</summary>
+    public string? Value { get; private set; }
+
+    /// <summary>Optional classification system or provider code.</summary>
+    public string? System { get; private set; }
+
+    /// <summary>Updates the classification values.</summary>
+    public void Set(string? value, string? system = null) {
+        Value = value;
+        System = system;
+    }
 }

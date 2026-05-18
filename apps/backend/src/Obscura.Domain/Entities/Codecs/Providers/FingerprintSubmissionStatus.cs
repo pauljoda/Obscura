@@ -3,8 +3,7 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Closed set of statuses for outbound fingerprint submissions.
 /// </summary>
-public enum FingerprintSubmissionStatus
-{
+public enum FingerprintSubmissionStatus {
     /// <summary>Submission completed successfully.</summary>
     Success,
 
@@ -15,14 +14,11 @@ public enum FingerprintSubmissionStatus
 /// <summary>
 /// Codec for outbound fingerprint submission status codes.
 /// </summary>
-public sealed class FingerprintSubmissionStatusCodec : EnumCodec<FingerprintSubmissionStatus>
-{
+public sealed class FingerprintSubmissionStatusCodec : EnumCodec<FingerprintSubmissionStatus> {
     public FingerprintSubmissionStatusCodec()
-        : base(new Dictionary<FingerprintSubmissionStatus, string>
-        {
+        : base(new Dictionary<FingerprintSubmissionStatus, string> {
             [FingerprintSubmissionStatus.Success] = "success",
             [FingerprintSubmissionStatus.Error] = "error"
-        })
-    {
+        }) {
     }
 }

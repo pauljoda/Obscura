@@ -3,8 +3,7 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Closed set of queue job lifecycle statuses.
 /// </summary>
-public enum JobRunStatus
-{
+public enum JobRunStatus {
     /// <summary>Job is waiting to be claimed by a worker.</summary>
     Queued,
 
@@ -24,17 +23,14 @@ public enum JobRunStatus
 /// <summary>
 /// Codec for queue job lifecycle status codes.
 /// </summary>
-public sealed class JobRunStatusCodec : EnumCodec<JobRunStatus>
-{
+public sealed class JobRunStatusCodec : EnumCodec<JobRunStatus> {
     public JobRunStatusCodec()
-        : base(new Dictionary<JobRunStatus, string>
-        {
+        : base(new Dictionary<JobRunStatus, string> {
             [JobRunStatus.Queued] = "queued",
             [JobRunStatus.Running] = "running",
             [JobRunStatus.Completed] = "completed",
             [JobRunStatus.Failed] = "failed",
             [JobRunStatus.Cancelled] = "cancelled"
-        })
-    {
+        }) {
     }
 }

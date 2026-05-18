@@ -2,11 +2,9 @@ using Obscura.Domain.Entities;
 
 namespace Obscura.Domain.Tests;
 
-public sealed class CodecRegistryTests
-{
+public sealed class CodecRegistryTests {
     [Fact]
-    public void RegistryDiscoversCodecsByEnumType()
-    {
+    public void RegistryDiscoversCodecsByEnumType() {
         var bookTypes = CodecRegistry.Get<BookType>();
         var jobStatuses = CodecRegistry.Get<JobRunStatus>();
 

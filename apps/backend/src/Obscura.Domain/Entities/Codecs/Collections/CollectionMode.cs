@@ -3,8 +3,7 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Closed set of collection population strategies.
 /// </summary>
-public enum CollectionMode
-{
+public enum CollectionMode {
     /// <summary>User-managed collection membership.</summary>
     Manual,
 
@@ -18,15 +17,12 @@ public enum CollectionMode
 /// <summary>
 /// Codec for collection population mode codes.
 /// </summary>
-public sealed class CollectionModeCodec : EnumCodec<CollectionMode>
-{
+public sealed class CollectionModeCodec : EnumCodec<CollectionMode> {
     public CollectionModeCodec()
-        : base(new Dictionary<CollectionMode, string>
-        {
+        : base(new Dictionary<CollectionMode, string> {
             [CollectionMode.Manual] = "manual",
             [CollectionMode.Dynamic] = "dynamic",
             [CollectionMode.Hybrid] = "hybrid"
-        })
-    {
+        }) {
     }
 }

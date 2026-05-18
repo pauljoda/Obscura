@@ -6,45 +6,28 @@ namespace Obscura.Domain.Media;
 /// <summary>
 /// Domain model for an image gallery.
 /// </summary>
-public sealed record Gallery : Entity
-{
-    /// <summary>
-    /// Creates a gallery with explicit shared capabilities and gallery-only fields.
-    /// </summary>
+public sealed class Gallery : Entity {
     public Gallery(
-        Guid Id,
-        string Title,
-        GalleryType GalleryType,
-        Guid? CoverImageId,
-        IReadOnlyList<ICapability>? capabilities = null)
-        : base(
-            Id,
-            EntityKindRegistry.Gallery,
-            Title,
-            capabilities ??
-            [
-                new CapabilityRating(null),
-                CapabilityImages.Empty,
-                CapabilityLinks.Empty,
-                CapabilityFlags.Empty,
-                CapabilityFiles.Empty
-            ])
-    {
-        this.GalleryType = GalleryType;
-        this.CoverImageId = CoverImageId;
+        Guid id,
+        string title,
+        GalleryType galleryType,
+        Guid? coverImageId,
+        IEnumerable<EntityCapability>? capabilities = null)
+        : base(id, title, capabilities ?? DefaultCapabilities()) {
+        GalleryType = galleryType;
+        CoverImageId = coverImageId;
     }
 
-    /// <summary>Gallery storage shape.</summary>
-    public GalleryType GalleryType { get; init; }
+    public override EntityKind Kind => EntityKind.Gallery;
+    public GalleryType GalleryType { get; private set; }
+    public Guid? CoverImageId { get; private set; }
 
-    /// <summary>Optional image entity selected as the gallery cover.</summary>
-    public Guid? CoverImageId { get; init; }
-
-    /// <summary>
-    /// Creates a gallery from an already hydrated entity root.
-    /// </summary>
-    public Gallery(Entity entity, GalleryType GalleryType, Guid? CoverImageId)
-        : this(entity.Id, entity.Title, GalleryType, CoverImageId, entity.Capabilities)
-    {
-    }
+    private static IEnumerable<EntityCapability> DefaultCapabilities() =>
+    [
+        new CapabilityRating(),
+        new CapabilityImages(),
+        new CapabilityLinks(),
+        new CapabilityFlags(),
+        new CapabilityFiles()
+    ];
 }

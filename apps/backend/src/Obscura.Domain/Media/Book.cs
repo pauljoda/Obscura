@@ -6,85 +6,64 @@ namespace Obscura.Domain.Media;
 /// <summary>
 /// Domain model for a book, comic, manga, or other page-based media item.
 /// </summary>
-public sealed record Book : Entity
-{
-    /// <summary>
-    /// Creates a book with explicit shared capabilities and book-only fields.
-    /// </summary>
+public sealed class Book : Entity {
     public Book(
-        Guid Id,
-        string Title,
-        BookType BookType,
-        Guid? CoverPageId,
-        IReadOnlyList<ICapability>? capabilities = null)
-        : base(
-            Id,
-            EntityKindRegistry.Book,
-            Title,
-            capabilities ??
-            [
-                new CapabilityRating(null),
-                CapabilityImages.Empty,
-                CapabilityLinks.Empty,
-                CapabilityFlags.Empty,
-                CapabilityFiles.Empty,
-                CapabilityProgress.Empty
-            ])
-    {
-        this.BookType = BookType;
-        this.CoverPageId = CoverPageId;
+        Guid id,
+        string title,
+        BookType bookType,
+        Guid? coverPageId,
+        IEnumerable<EntityCapability>? capabilities = null)
+        : base(id, title, capabilities ?? DefaultCapabilities()) {
+        BookType = bookType;
+        CoverPageId = coverPageId;
     }
 
-    /// <summary>Book category such as book, comic, or manga.</summary>
-    public BookType BookType { get; init; }
-
-    /// <summary>Optional page entity selected as the book cover.</summary>
-    public Guid? CoverPageId { get; init; }
+    public override EntityKind Kind => EntityKind.Book;
+    public BookType BookType { get; private set; }
+    public Guid? CoverPageId { get; private set; }
 
     /// <summary>
-    /// Creates a book from an already hydrated entity root.
+    /// Moves the reading cursor to a chapter and page.
     /// </summary>
-    public Book(Entity entity, BookType BookType, Guid? CoverPageId)
-        : this(entity.Id, entity.Title, BookType, CoverPageId, entity.Capabilities)
-    {
-    }
+    public void MoveReaderToChapter(Guid chapterId, int pageIndex, int pageCount, ReaderMode readerMode) {
+        var progress = GetCapability<CapabilityProgress>();
+        if (progress is null) {
+            progress = new CapabilityProgress();
+            AddCapability(progress);
+        }
 
-    /// <summary>
-    /// Returns a copy of the book with its reading cursor moved to a chapter and page.
-    /// </summary>
-    public Book MoveReaderToChapter(Guid chapterId, int pageIndex, int pageCount, ReaderMode readerMode)
-    {
         var normalizedPageCount = Math.Max(0, pageCount);
         var normalizedPageIndex = normalizedPageCount == 0
             ? 0
             : Math.Clamp(pageIndex, 0, normalizedPageCount - 1);
 
-        return this with
-        {
-            Capabilities = WithCapability(
-                CapabilityRegistry.Progress,
-                new CapabilityProgress(
-                    chapterId,
-                    "page",
-                    normalizedPageIndex,
-                    normalizedPageCount,
-                    readerMode.ToCode(),
-                    null,
-                    DateTimeOffset.UtcNow)).Capabilities
-        };
+        progress.MoveTo(
+            chapterId,
+            "page",
+            normalizedPageIndex,
+            normalizedPageCount,
+            readerMode.ToCode(),
+            DateTimeOffset.UtcNow);
     }
 
-    /// <summary>
-    /// Returns a copy of the book marked as completed at the supplied time.
-    /// </summary>
-    public Book MarkCompleted(DateTimeOffset completedAt)
-    {
-        var current = Progress ?? CapabilityProgress.Empty;
-        return this with
-        {
-            Capabilities = WithCapability(
-                CapabilityRegistry.Progress,
-                current with { CompletedAt = completedAt, UpdatedAt = completedAt }).Capabilities
-        };
+    /// <summary>Marks the book as completed at the supplied time.</summary>
+    public void MarkCompleted(DateTimeOffset completedAt) {
+        var progress = GetCapability<CapabilityProgress>();
+        if (progress is null) {
+            progress = new CapabilityProgress();
+            AddCapability(progress);
+        }
+
+        progress.MarkCompleted(completedAt);
     }
+
+    private static IEnumerable<EntityCapability> DefaultCapabilities() =>
+    [
+        new CapabilityRating(),
+        new CapabilityImages(),
+        new CapabilityLinks(),
+        new CapabilityFlags(),
+        new CapabilityFiles(),
+        new CapabilityProgress()
+    ];
 }

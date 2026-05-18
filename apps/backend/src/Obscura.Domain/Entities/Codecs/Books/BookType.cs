@@ -3,8 +3,7 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// Closed set of page-based media categories supported by the core book model.
 /// </summary>
-public enum BookType
-{
+public enum BookType {
     /// <summary>Default book-shaped item when no narrower category is known.</summary>
     Book,
 
@@ -21,16 +20,13 @@ public enum BookType
 /// <summary>
 /// Codec for book category codes stored in rows and exposed through contracts.
 /// </summary>
-public sealed class BookTypeCodec : EnumCodec<BookType>
-{
+public sealed class BookTypeCodec : EnumCodec<BookType> {
     public BookTypeCodec()
-        : base(new Dictionary<BookType, string>
-        {
+        : base(new Dictionary<BookType, string> {
             [BookType.Book] = "book",
             [BookType.Comic] = "comic",
             [BookType.Manga] = "manga",
             [BookType.Novel] = "novel"
-        })
-    {
+        }) {
     }
 }

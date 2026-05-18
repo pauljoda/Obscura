@@ -4,74 +4,36 @@ using Obscura.Domain.Entities;
 namespace Obscura.Domain.Media;
 
 /// <summary>
-/// Structural book volume aggregate used by chaptered or volume-grouped books.
+/// Structural book volume aggregate.
 /// </summary>
-public sealed record BookVolume : Entity
-{
-    public BookVolume(
-        Guid Id,
-        string Title,
-        IReadOnlyList<ICapability>? capabilities = null)
-        : base(
-            Id,
-            EntityKindRegistry.BookVolume,
-            Title,
-            capabilities ?? [CapabilityImages.Empty, CapabilityFiles.Empty, CapabilityStats.Empty, CapabilitySource.Empty, CapabilityPosition.Empty])
-    {
+public sealed class BookVolume : Entity {
+    public BookVolume(Guid id, string title, IEnumerable<EntityCapability>? capabilities = null)
+        : base(id, title, capabilities ?? [new CapabilityImages(), new CapabilityFiles(), new CapabilityStats(), new CapabilitySource(), new CapabilityPosition()]) {
     }
 
-    public BookVolume(Entity entity)
-        : this(entity.Id, entity.Title, entity.Capabilities)
-    {
-    }
+    public override EntityKind Kind => EntityKind.BookVolume;
 }
 
 /// <summary>
-/// Structural book chapter aggregate used by readers and book hierarchy traversal.
+/// Structural book chapter aggregate.
 /// </summary>
-public sealed record BookChapter : Entity
-{
-    public BookChapter(
-        Guid Id,
-        string Title,
-        Guid? CoverPageId,
-        IReadOnlyList<ICapability>? capabilities = null)
-        : base(
-            Id,
-            EntityKindRegistry.BookChapter,
-            Title,
-            capabilities ?? [CapabilityImages.Empty, CapabilityFiles.Empty, CapabilityFingerprints.Empty, CapabilityStats.Empty, CapabilitySource.Empty, CapabilityPosition.Empty])
-    {
-        this.CoverPageId = CoverPageId;
+public sealed class BookChapter : Entity {
+    public BookChapter(Guid id, string title, Guid? coverPageId, IEnumerable<EntityCapability>? capabilities = null)
+        : base(id, title, capabilities ?? [new CapabilityImages(), new CapabilityFiles(), new CapabilityFingerprints(), new CapabilityStats(), new CapabilitySource(), new CapabilityPosition()]) {
+        CoverPageId = coverPageId;
     }
 
-    public Guid? CoverPageId { get; init; }
-
-    public BookChapter(Entity entity, Guid? CoverPageId)
-        : this(entity.Id, entity.Title, CoverPageId, entity.Capabilities)
-    {
-    }
+    public override EntityKind Kind => EntityKind.BookChapter;
+    public Guid? CoverPageId { get; private set; }
 }
 
 /// <summary>
-/// Structural book page aggregate used by readers and image projection.
+/// Structural book page aggregate.
 /// </summary>
-public sealed record BookPage : Entity
-{
-    public BookPage(
-        Guid Id,
-        string Title,
-        IReadOnlyList<ICapability>? capabilities = null)
-        : base(
-            Id,
-            EntityKindRegistry.BookPage,
-            Title,
-            capabilities ?? [CapabilityImages.Empty, CapabilityFiles.Empty, CapabilityFingerprints.Empty, CapabilityTechnical.Empty, CapabilitySource.Empty, CapabilityPosition.Empty])
-    {
+public sealed class BookPage : Entity {
+    public BookPage(Guid id, string title, IEnumerable<EntityCapability>? capabilities = null)
+        : base(id, title, capabilities ?? [new CapabilityImages(), new CapabilityFiles(), new CapabilityFingerprints(), new CapabilityTechnical(), new CapabilitySource(), new CapabilityPosition()]) {
     }
 
-    public BookPage(Entity entity)
-        : this(entity.Id, entity.Title, entity.Capabilities)
-    {
-    }
+    public override EntityKind Kind => EntityKind.BookPage;
 }
