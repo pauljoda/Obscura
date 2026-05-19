@@ -253,9 +253,9 @@ public sealed class PluginCatalogService
         foreach (var field in manifest.Auth)
         {
             if (!stored.ContainsKey(field.Key) &&
-                TryResolveStoredCredential(stored, manifest.Id, field.Key, out var legacyValue))
+                TryResolveStoredCredential(stored, manifest.Id, field.Key, out var aliasedValue))
             {
-                stored[field.Key] = legacyValue;
+                stored[field.Key] = aliasedValue;
             }
 
             var value = ResolveEnvironmentCredential(manifest.Id, field.Key);

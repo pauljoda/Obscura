@@ -51,7 +51,7 @@ public sealed class JobQueueServiceTests
         await using var db = CreateContext();
         var service = new JobQueueService(db);
 
-        var created = await service.EnqueueAsync(JobType.LegacyMediaImport, CancellationToken.None);
+        var created = await service.EnqueueAsync(JobType.ImportMetadata, CancellationToken.None);
         await service.ClaimNextAsync("worker-1", CancellationToken.None);
         await service.FailAsync(created.Id, "missing handler", TimeSpan.Zero, CancellationToken.None);
         await service.ClaimNextAsync("worker-1", CancellationToken.None);
@@ -88,7 +88,7 @@ public sealed class JobQueueServiceTests
         Assert.Equal(JobRunStatus.Cancelled, cancelledQueued.Status);
         Assert.Equal(JobRunStatus.Cancelled, cancelledPending.Status);
 
-        var failed = await service.EnqueueAsync(JobType.LegacyMediaImport, CancellationToken.None);
+        var failed = await service.EnqueueAsync(JobType.ImportMetadata, CancellationToken.None);
         await service.ClaimNextAsync("worker-2", CancellationToken.None);
         await service.FailAsync(failed.Id, "permanent", TimeSpan.Zero, CancellationToken.None);
         await service.ClaimNextAsync("worker-2", CancellationToken.None);
@@ -96,7 +96,7 @@ public sealed class JobQueueServiceTests
         await service.ClaimNextAsync("worker-2", CancellationToken.None);
         await service.FailAsync(failed.Id, "permanent", TimeSpan.Zero, CancellationToken.None);
 
-        var cleared = await service.ClearFailuresAsync(JobType.LegacyMediaImport, CancellationToken.None);
+        var cleared = await service.ClearFailuresAsync(JobType.ImportMetadata, CancellationToken.None);
         var clearedFailed = await db.JobRuns.FindAsync(failed.Id);
 
         Assert.Equal(1, cleared);

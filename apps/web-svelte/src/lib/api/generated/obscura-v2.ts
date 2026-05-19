@@ -27,13 +27,11 @@ import type {
   GetJellyfinVideoHlsSegmentParams,
   GetJellyfinVideoMasterPlaylistParams,
   GetOrganizePlanParams,
-  IdentifyBulkSessionResult,
+  IdentifyBulkSession,
   IdentifyBulkStartRequest,
   IdentifyEntityRequest,
   ImageDetail,
   JobListResponse,
-  LegacyMediaImportResponse,
-  LegacyVideoImportResponse,
   LibraryBrowseResponse,
   LibraryConfigResponse,
   LibraryRoot,
@@ -71,8 +69,6 @@ import type {
   StudioDetail,
   TagDetail,
   TaxonomyListResponse,
-  V2FreshStartPrepareResponse,
-  V2UpgradeGateStatusResponse,
   VideoDetail,
   VideoListResponse,
   VideoSeasonDetail,
@@ -2792,229 +2788,6 @@ export const updateLibrarySettings = async (librarySettingsUpdateRequest: Librar
 
 
 
-export type getV2UpgradeGateResponse200 = {
-  data: V2UpgradeGateStatusResponse
-  status: 200
-}
-
-export type getV2UpgradeGateResponseSuccess = (getV2UpgradeGateResponse200) & {
-  headers: Headers;
-};
-;
-
-export type getV2UpgradeGateResponse = (getV2UpgradeGateResponseSuccess)
-
-export const getGetV2UpgradeGateUrl = () => {
-
-
-
-
-  return `/api/system/v2-upgrade-gate`
-}
-
-/**
- * @summary Reports whether the v2 global entity upgrade has user consent.
- */
-export const getV2UpgradeGate = async ( options?: RequestInit): Promise<getV2UpgradeGateResponse> => {
-
-  return orvalFetch<getV2UpgradeGateResponse>(getGetV2UpgradeGateUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-export type acceptV2UpgradeGateResponse200 = {
-  data: V2UpgradeGateStatusResponse
-  status: 200
-}
-
-export type acceptV2UpgradeGateResponseSuccess = (acceptV2UpgradeGateResponse200) & {
-  headers: Headers;
-};
-;
-
-export type acceptV2UpgradeGateResponse = (acceptV2UpgradeGateResponseSuccess)
-
-export const getAcceptV2UpgradeGateUrl = () => {
-
-
-
-
-  return `/api/system/v2-upgrade-gate/accept`
-}
-
-/**
- * @summary Records consent for the v2 global entity upgrade.
- */
-export const acceptV2UpgradeGate = async ( options?: RequestInit): Promise<acceptV2UpgradeGateResponse> => {
-
-  return orvalFetch<acceptV2UpgradeGateResponse>(getAcceptV2UpgradeGateUrl(),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-export type promptV2UpgradeGateResponse200 = {
-  data: void
-  status: 200
-}
-
-export type promptV2UpgradeGateResponseSuccess = (promptV2UpgradeGateResponse200) & {
-  headers: Headers;
-};
-;
-
-export type promptV2UpgradeGateResponse = (promptV2UpgradeGateResponseSuccess)
-
-export const getPromptV2UpgradeGateUrl = () => {
-
-
-
-
-  return `/api/system/v2-upgrade-gate/prompt`
-}
-
-/**
- * @summary Re-arms the v2 global entity upgrade gate for local migration testing without deleting existing v2 data.
- */
-export const promptV2UpgradeGate = async ( options?: RequestInit): Promise<promptV2UpgradeGateResponse> => {
-
-  return orvalFetch<promptV2UpgradeGateResponse>(getPromptV2UpgradeGateUrl(),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-export type prepareV2FreshStartResponse200 = {
-  data: V2FreshStartPrepareResponse
-  status: 200
-}
-
-export type prepareV2FreshStartResponse409 = {
-  data: ApiProblem
-  status: 409
-}
-
-export type prepareV2FreshStartResponseSuccess = (prepareV2FreshStartResponse200) & {
-  headers: Headers;
-};
-export type prepareV2FreshStartResponseError = (prepareV2FreshStartResponse409) & {
-  headers: Headers;
-};
-
-export type prepareV2FreshStartResponse = (prepareV2FreshStartResponseSuccess | prepareV2FreshStartResponseError)
-
-export const getPrepareV2FreshStartUrl = () => {
-
-
-
-
-  return `/api/system/v2-fresh-start/prepare`
-}
-
-/**
- * @summary Backs up the current database and preserves settings/library roots for a v2 fresh start.
- */
-export const prepareV2FreshStart = async ( options?: RequestInit): Promise<prepareV2FreshStartResponse> => {
-
-  return orvalFetch<prepareV2FreshStartResponse>(getPrepareV2FreshStartUrl(),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-export type importLegacyVideosResponse200 = {
-  data: LegacyVideoImportResponse
-  status: 200
-}
-
-export type importLegacyVideosResponseSuccess = (importLegacyVideosResponse200) & {
-  headers: Headers;
-};
-;
-
-export type importLegacyVideosResponse = (importLegacyVideosResponseSuccess)
-
-export const getImportLegacyVideosUrl = () => {
-
-
-
-
-  return `/api/system/v2-legacy-video-import`
-}
-
-/**
- * @summary Imports legacy video and series metadata into the v2 global entity tables for side-by-side migration testing.
- */
-export const importLegacyVideos = async ( options?: RequestInit): Promise<importLegacyVideosResponse> => {
-
-  return orvalFetch<importLegacyVideosResponse>(getImportLegacyVideosUrl(),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-export type importLegacyMediaResponse200 = {
-  data: LegacyMediaImportResponse
-  status: 200
-}
-
-export type importLegacyMediaResponseSuccess = (importLegacyMediaResponse200) & {
-  headers: Headers;
-};
-;
-
-export type importLegacyMediaResponse = (importLegacyMediaResponseSuccess)
-
-export const getImportLegacyMediaUrl = () => {
-
-
-
-
-  return `/api/system/v2-legacy-media-import`
-}
-
-/**
- * @summary Imports legacy image, gallery, book, and audio metadata into the v2 global entity tables for side-by-side migration testing.
- */
-export const importLegacyMedia = async ( options?: RequestInit): Promise<importLegacyMediaResponse> => {
-
-  return orvalFetch<importLegacyMediaResponse>(getImportLegacyMediaUrl(),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
 export type listPluginsResponse200 = {
   data: PluginProvider[]
   status: 200
@@ -3316,7 +3089,7 @@ export const applyIdentifyProposal = async (entityId: string,
 
 
 export type startBulkIdentifyResponse202 = {
-  data: IdentifyBulkSessionResult
+  data: IdentifyBulkSession
   status: 202
 }
 
@@ -3360,7 +3133,7 @@ export const startBulkIdentify = async (identifyBulkStartRequest: IdentifyBulkSt
 
 
 export type getBulkIdentifySessionResponse200 = {
-  data: IdentifyBulkSessionResult
+  data: IdentifyBulkSession
   status: 200
 }
 

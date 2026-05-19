@@ -20,8 +20,8 @@ const dryRun = Boolean(args["dry-run"]);
 if (args.help || !backupArg) {
   console.log(`Usage: pnpm dev:db:restore --file=path --yes [--docker|--local] [--dry-run]
 
-Restores a local custom-format PostgreSQL dump for migration testing.
-This drops the public, drizzle, pgboss, and v2 schemas before restoring.
+Restores a local custom-format PostgreSQL dump for development.
+This drops all non-system schemas before restoring.
 
 Defaults:
   DATABASE_URL=${DEFAULT_DATABASE_URL}
@@ -43,10 +43,19 @@ const databaseUrl = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
 const { database, user } = databaseParts(databaseUrl);
 const mode = toolMode(args, "pg_restore");
 const resetSql = `
-DROP SCHEMA IF EXISTS public CASCADE;
-DROP SCHEMA IF EXISTS drizzle CASCADE;
-DROP SCHEMA IF EXISTS pgboss CASCADE;
-DROP SCHEMA IF EXISTS v2 CASCADE;
+DO $$
+DECLARE schema_name text;
+BEGIN
+  FOR schema_name IN
+    SELECT nspname
+    FROM pg_namespace
+    WHERE nspname <> 'information_schema'
+      AND nspname NOT LIKE 'pg_%'
+  LOOP
+    EXECUTE format('DROP SCHEMA IF EXISTS %I CASCADE', schema_name);
+  END LOOP;
+END $$;
+
 CREATE SCHEMA public;
 `;
 

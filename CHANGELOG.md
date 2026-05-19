@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Entity pages now load and display child and related items through a lighter relationship model, making large series, galleries, and collections faster to browse.
 - Playback now follows Jellyfin-compatible video routes for playback negotiation, direct streaming, adaptive HLS, trickplay image playlists, playback sessions, and watched-state updates.
 - The Svelte frontend now renders the v2 browse, dashboard, detail, identify, plugins, settings, and playback surfaces through shared Dark Room components instead of the older v1 UI patterns.
-- V2 migration and scanning preserve core metadata where possible, rebuild generated cache assets, and make breaking schema resets explicit while the project remains pre-1.0.
+- The temporary v2 migration, fresh-start, backup, and legacy-import tools were removed now that current builds run directly on the EF-backed entity model.
 - Identify review now separates structural children from related people and studios, so series cascades can carry seasons, episodes, credits, and artwork together.
 - Identify now applies full credit lists even when the same person has multiple roles on a title, preserving the combined credit metadata without crashing.
 - Identify review now recognizes existing tags and credits in the v2 relationship model and lets review thumbnails be selected without navigating away.
@@ -45,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Removed
 - Historical v1-era release note detail was pruned from the changelog; git history remains the complete record.
 - The stale API projection service layer was removed from Application/Infrastructure while the new domain-first persistence slice is established.
+- Temporary v2 upgrade-gate, fresh-start, backup, and legacy import endpoints/jobs/UI were removed from the app.
 
 ### Docs
 - Backend architecture guidance now documents the Clean Architecture, DDD-lite, CQRS-lite, EF Core, DTO, and generated-client contract for future Obscura work.

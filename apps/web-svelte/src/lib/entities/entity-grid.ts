@@ -180,7 +180,7 @@ function previewAssets(entity: EntityGridSourceEntity, roles: string[]): EntityT
   return results;
 }
 
-/** Finds a legacy VTT sprite map or Jellyfin image playlist from entity image assets. */
+/** Finds a VTT sprite map or Jellyfin image playlist from entity image assets. */
 function findSpriteHover(entity: EntityGridSourceEntity): { spriteUrl?: string; vttUrl: string } | null {
   if (!isFullEntityCard(entity) && entity.hoverKind === "sprite" && entity.hoverUrl) {
     return { vttUrl: entity.hoverUrl };

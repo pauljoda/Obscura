@@ -23,7 +23,6 @@
     "docs:serve": "node scripts/docs-site.mjs serve",
     "docs:check": "pnpm --filter @obscura/documentation-site typecheck && pnpm --filter @obscura/documentation-site build",
     "dev:db:backup": "node scripts/dev/db-backup.mjs",
-    "dev:db:clear-v2": "node scripts/dev/db-clear-v2.mjs",
     "dev:db:restore": "node scripts/dev/db-restore.mjs",
     "dev:seed-scroll": "node scripts/dev/seed-scroll-fixtures.mjs",
     "dev:kill": "bash scripts/dev/kill-orphans.sh",

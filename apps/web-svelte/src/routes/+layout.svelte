@@ -8,7 +8,6 @@
   import Sidebar from "$lib/components/Sidebar.svelte";
   import CanvasHeader from "$lib/components/CanvasHeader.svelte";
   import MobileNav from "$lib/components/MobileNav.svelte";
-  import BreakingUpgradeGate from "$lib/components/BreakingUpgradeGate.svelte";
   import CommandPalette from "$lib/components/CommandPalette.svelte";
   import PlaylistController from "$lib/components/PlaylistController.svelte";
 
@@ -27,12 +26,11 @@
   }
 
   const defaultLayoutData: Required<
-    Pick<App.PageData, "initialNsfwMode" | "lanAutoEnable" | "initialCollapsed" | "awaitingBreakingConsent">
+    Pick<App.PageData, "initialNsfwMode" | "lanAutoEnable" | "initialCollapsed">
   > = {
     initialNsfwMode: readNsfwCookie(),
     lanAutoEnable: false,
     initialCollapsed: false,
-    awaitingBreakingConsent: false,
   };
 
   let { data, children: pageContent } = $props();
@@ -96,38 +94,34 @@
   const playlistOffset = $derived(playlist.isActive ? "3.5rem" : "0px");
 </script>
 
-<BreakingUpgradeGate awaitingConsent={layoutData.awaitingBreakingConsent}>
-  {#snippet children()}
-    <div
-      class="flex min-h-dvh"
-      style:--obscura-bottom-dock-padding={bottomDockPadding}
-      style:--obscura-playlist-offset={playlistOffset}
-      style:--obscura-mobile-bottom-clearance="calc(3.5rem + var(--obscura-playlist-offset) + var(--obscura-bottom-dock-padding))"
-      style:--obscura-desktop-bottom-clearance="calc(var(--obscura-playlist-offset) + var(--obscura-bottom-dock-padding))"
-    >
-      <!-- Desktop sidebar -->
-      <div class="hidden md:block">
-        <Sidebar collapsed={chrome.sidebarCollapsed} onToggle={() => chrome.toggleSidebar()} />
-      </div>
+<div
+  class="flex min-h-dvh"
+  style:--obscura-bottom-dock-padding={bottomDockPadding}
+  style:--obscura-playlist-offset={playlistOffset}
+  style:--obscura-mobile-bottom-clearance="calc(3.5rem + var(--obscura-playlist-offset) + var(--obscura-bottom-dock-padding))"
+  style:--obscura-desktop-bottom-clearance="calc(var(--obscura-playlist-offset) + var(--obscura-bottom-dock-padding))"
+>
+  <!-- Desktop sidebar -->
+  <div class="hidden md:block">
+    <Sidebar collapsed={chrome.sidebarCollapsed} onToggle={() => chrome.toggleSidebar()} />
+  </div>
 
-      <main
-        bind:this={mainScroller}
-        class={cn(
-          "flex flex-1 flex-col transition-[margin-left] duration-moderate",
-          "h-[calc(100dvh-var(--obscura-mobile-bottom-clearance))] overflow-y-auto [scrollbar-gutter:stable] md:h-[calc(100dvh-var(--obscura-desktop-bottom-clearance))]",
-          chrome.sidebarCollapsed ? "md:ml-14" : "md:ml-60",
-        )}
-        style:transition-timing-function="var(--ease-mechanical)"
-      >
-        <CanvasHeader />
-        <div class="flex-1 p-5">
-          {@render pageContent()}
-        </div>
-      </main>
-
-      <MobileNav />
-      <CommandPalette />
-      <PlaylistController />
+  <main
+    bind:this={mainScroller}
+    class={cn(
+      "flex flex-1 flex-col transition-[margin-left] duration-moderate",
+      "h-[calc(100dvh-var(--obscura-mobile-bottom-clearance))] overflow-y-auto [scrollbar-gutter:stable] md:h-[calc(100dvh-var(--obscura-desktop-bottom-clearance))]",
+      chrome.sidebarCollapsed ? "md:ml-14" : "md:ml-60",
+    )}
+    style:transition-timing-function="var(--ease-mechanical)"
+  >
+    <CanvasHeader />
+    <div class="flex-1 p-5">
+      {@render pageContent()}
     </div>
-  {/snippet}
-</BreakingUpgradeGate>
+  </main>
+
+  <MobileNav />
+  <CommandPalette />
+  <PlaylistController />
+</div>

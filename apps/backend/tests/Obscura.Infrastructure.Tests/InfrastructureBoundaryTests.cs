@@ -9,8 +9,6 @@ public sealed class InfrastructureBoundaryTests
         var applicationAssembly = typeof(Obscura.Application.Entities.SetEntityRatingCommand).Assembly;
         var removedInterfaceNames = new[]
         {
-            "Obscura.Infrastructure.Backups.IDatabaseBackupService",
-            "Obscura.Infrastructure.Backups.IProcessRunner",
             "Obscura.Infrastructure.Media.IMediaToolService",
             "Obscura.Infrastructure.Processes.IProcessExecutor",
             "Obscura.Application.Entities.EntityRepository",

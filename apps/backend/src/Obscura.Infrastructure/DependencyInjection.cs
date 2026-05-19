@@ -1,19 +1,14 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Obscura.Application.Jobs;
 using Obscura.Application.Jobs.Ports;
-using Obscura.Application.Migrations;
 using Obscura.Application.Settings;
 using Obscura.Application.Videos;
-using Obscura.Infrastructure.Backups;
 using Obscura.Infrastructure.Collections;
 using Obscura.Infrastructure.Database;
 using Obscura.Infrastructure.Entities;
-using Obscura.Infrastructure.FreshStart;
-using Obscura.Infrastructure.Legacy;
 using Obscura.Infrastructure.Media.Adapters;
 using Obscura.Infrastructure.Media.Persistence;
 using Obscura.Infrastructure.Media.Processing;
@@ -23,7 +18,6 @@ using Obscura.Infrastructure.Plugins;
 using Obscura.Infrastructure.Processes;
 using Obscura.Infrastructure.Queue;
 using Obscura.Infrastructure.Settings;
-using Obscura.Infrastructure.Upgrades;
 using Obscura.Infrastructure.UserState;
 using Obscura.Infrastructure.Videos;
 
@@ -51,9 +45,6 @@ public static class DependencyInjection {
         services.AddSingleton(_ => NpgsqlDataSource.Create(connectionString));
         services.AddDbContext<ObscuraDbContext>((provider, options) =>
             options.UseNpgsql(provider.GetRequiredService<NpgsqlDataSource>()));
-        services.AddSingleton(new V2UpgradeGateOptions(dataDir));
-        services.AddScoped<IV2UpgradeGate, V2UpgradeGate>();
-        services.AddSingleton(new DatabaseBackupServiceOptions(connectionString, dataDir));
         services.AddSingleton<ProcessExecutor>();
         services.AddSingleton<MediaToolService>();
         services.AddSingleton<FileDiscoveryService>();
@@ -90,20 +81,6 @@ public static class DependencyInjection {
             new MaintenancePersistenceService(provider.GetRequiredService<ObscuraDbContext>(), dataDir));
         services.AddScoped<ICollectionRuleEngine, CollectionRuleEngine>();
         services.AddScoped<ICollectionRefreshPersistence, CollectionRefreshPersistenceService>();
-        services.AddScoped<DatabaseBackupService>();
-        services.AddScoped<IV2FreshStartService>(provider =>
-            new V2FreshStartService(
-                provider.GetRequiredService<ObscuraDbContext>(),
-                provider.GetRequiredService<DatabaseBackupService>(),
-                cacheDir,
-                provider.GetRequiredService<ILogger<V2FreshStartService>>()));
-        services.AddScoped<ILegacyMediaImportService, LegacyMediaImportService>();
-        services.AddScoped<ILegacyVideoImportService, LegacyVideoImportService>();
-        services.AddScoped<ILegacyAssetNormalizationService>(provider =>
-            new LegacyAssetNormalizationService(
-                provider.GetRequiredService<NpgsqlDataSource>(),
-                provider.GetRequiredService<AssetPathService>().CacheRoot,
-                provider.GetRequiredService<ILogger<LegacyAssetNormalizationService>>()));
         services.AddScoped<EfEntityRepository>();
         services.AddScoped<EfEntityReadUseCases>();
         services.AddScoped<EntityWriteUseCases>();

@@ -4,10 +4,11 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { EntityMetadataProposal } from './entityMetadataProposal';
 
-export interface IdentifyUseCaseResult {
+export interface IdentifyPluginResponse {
   ok: boolean;
-  result: unknown;
+  result: null | EntityMetadataProposal;
   /** @nullable */
   error: string | null;
 }

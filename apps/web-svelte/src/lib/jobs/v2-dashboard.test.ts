@@ -27,8 +27,8 @@ describe("v2 jobs dashboard adapter", () => {
   it("builds queue summaries and dashboard buckets from v2 jobs", () => {
     const dashboard = buildV2JobsDashboard([
       { ...baseJob, id: "queued", type: "scan-library", status: "queued" },
-      { ...baseJob, id: "running", type: "legacy-video-import", status: "running", progress: 40 },
-      { ...baseJob, id: "failed", type: "legacy-media-import", status: "failed", message: "bad" },
+      { ...baseJob, id: "running", type: "import-metadata", status: "running", progress: 40 },
+      { ...baseJob, id: "failed", type: "refresh-collection", status: "failed", message: "bad" },
       { ...baseJob, id: "done", type: "noop", status: "completed", finishedAt: "2026-05-13T12:01:00Z" },
     ]);
 

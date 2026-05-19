@@ -62,14 +62,7 @@ public enum JobType {
     RefreshCollection,
 
     /// <summary>Moves video-derived assets between cache and media-adjacent storage.</summary>
-    LibraryMaintenance,
-
-    // ── Legacy migration ────────────────────────────────────────
-    /// <summary>Imports legacy v1 video records into the v2 entity model.</summary>
-    LegacyVideoImport,
-
-    /// <summary>Imports legacy v1 gallery, image, book, and audio records into v2.</summary>
-    LegacyMediaImport
+    LibraryMaintenance
 }
 
 /// <summary>
@@ -95,9 +88,7 @@ public sealed class JobTypeCodec : EnumCodec<JobType> {
             [JobType.ExtractSubtitles] = "extract-subtitles",
             [JobType.ImportMetadata] = "import-metadata",
             [JobType.RefreshCollection] = "refresh-collection",
-            [JobType.LibraryMaintenance] = "library-maintenance",
-            [JobType.LegacyVideoImport] = "legacy-video-import",
-            [JobType.LegacyMediaImport] = "legacy-media-import"
+            [JobType.LibraryMaintenance] = "library-maintenance"
         }) {
     }
 }

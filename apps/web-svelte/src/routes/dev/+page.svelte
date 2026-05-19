@@ -11,7 +11,6 @@
     Search,
     Settings,
     Users,
-    Wrench,
   } from "@lucide/svelte";
   import { resolve } from "$app/paths";
   import type { AppRouteId } from "$lib/app-routes";
@@ -81,12 +80,6 @@
       href: "/dev/detail-lab",
       description: "Preview entity detail layouts and controls.",
       icon: LayoutList,
-    },
-    {
-      label: "Migration Tools",
-      href: "/dev/v2-migration",
-      description: "Open the existing backend migration control surface.",
-      icon: Wrench,
     },
   ];
 

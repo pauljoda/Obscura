@@ -55,7 +55,7 @@ public sealed class VideoSourceServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task PrefersPersistedMediaSourceMetadataOverLegacyTechnicalRow()
+    public async Task PrefersPersistedMediaSourceMetadataOverTechnicalRow()
     {
         await using var db = CreateContext();
         var videoId = Guid.Parse("33333333-3333-3333-3333-333333333333");

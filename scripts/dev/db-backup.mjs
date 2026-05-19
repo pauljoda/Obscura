@@ -26,7 +26,7 @@ const { database, user } = databaseParts(databaseUrl);
 if (args.help) {
   console.log(`Usage: pnpm dev:db:backup [--file=path] [--out-dir=path] [--docker|--local] [--dry-run]
 
-Creates a custom-format PostgreSQL dump for local migration testing.
+Creates a custom-format PostgreSQL dump for local development.
 Default output: ${DEFAULT_BACKUP_DIR}/obscura-dev-<timestamp>.dump
 Default DB: ${DEFAULT_DATABASE_URL}`);
   process.exit(0);

@@ -656,9 +656,9 @@ public sealed class HlsAssetService : IHlsAssetService
         string name) =>
         renditions.FirstOrDefault(candidate =>
             candidate.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) ??
-        ResolveLegacyHeightRendition(renditions, name);
+        ResolveHeightRenditionAlias(renditions, name);
 
-    private static VirtualHlsRendition? ResolveLegacyHeightRendition(
+    private static VirtualHlsRendition? ResolveHeightRenditionAlias(
         IReadOnlyList<VirtualHlsRendition> renditions,
         string name)
     {

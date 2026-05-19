@@ -126,19 +126,7 @@ const V2_JOB_DEFINITIONS = [
     label: "Library Maintenance",
     description: "Moves video-derived assets between cache and media-adjacent storage.",
   },
-  // Legacy / utility
-  {
-    type: "legacy-video-import",
-    queueName: "metadata-import",
-    label: "Legacy Video Import",
-    description: "Imports legacy video records into the v2 namespace.",
-  },
-  {
-    type: "legacy-media-import",
-    queueName: "metadata-import",
-    label: "Legacy Media Import",
-    description: "Imports legacy gallery, image, book, and audio records into v2.",
-  },
+  // Utility
   {
     type: "noop",
     queueName: "library-maintenance",
@@ -176,13 +164,13 @@ function definitionForJob(type: string): V2JobDefinition {
 }
 
 function queueSummaryBase(definition: V2JobDefinition): QueueSummaryDto {
-  const legacyDefinition = queueDefinitionByName.get(definition.queueName);
+  const queueDefinition = queueDefinitionByName.get(definition.queueName);
   return {
     name: definition.queueName,
-    label: definition.label || legacyDefinition?.label || definition.queueName,
-    description: definition.description || legacyDefinition?.description || "",
+    label: definition.label || queueDefinition?.label || definition.queueName,
+    description: definition.description || queueDefinition?.description || "",
     status: "idle",
-    concurrency: legacyDefinition?.concurrency ?? 1,
+    concurrency: queueDefinition?.concurrency ?? 1,
     active: 0,
     waiting: 0,
     delayed: 0,

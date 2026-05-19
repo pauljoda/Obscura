@@ -7,7 +7,7 @@ using Obscura.Infrastructure.Persistence.Entities;
 namespace Obscura.Infrastructure.Media.Persistence;
 
 /// <summary>
-/// Implements entity persistence operations for library scanning against the v2 schema.
+/// Implements entity persistence operations for library scanning against the entity schema.
 /// </summary>
 public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibraryScanPersistence
 {

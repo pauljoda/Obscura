@@ -77,7 +77,6 @@ app.MapEntityEndpoints();
 app.MapJellyfinPlaybackEndpoints();
 app.MapJobEndpoints();
 app.MapSettingsEndpoints();
-app.MapSystemEndpoints();
 app.MapUserStateEndpoints();
 app.MapPluginEndpoints();
 app.MapIdentifyEndpoints();

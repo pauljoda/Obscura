@@ -38,10 +38,10 @@
   import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
 
-  type LegacyEntityKind = "video_series" | "video_movie" | "video_episode" | "book";
+  type IdentifyEntityKind = "video_series" | "video_movie" | "video_episode" | "book";
 
   interface IdentifyTarget {
-    entityKind: LegacyEntityKind | string;
+    entityKind: IdentifyEntityKind | string;
     entityId: string;
     title: string;
     existingCreditNames?: string[];
@@ -49,7 +49,7 @@
   }
 
   interface Props {
-    entityKind: LegacyEntityKind | string;
+    entityKind: IdentifyEntityKind | string;
     entityId: string;
     title: string;
     label?: string;

@@ -11,7 +11,6 @@ declare global {
       initialCollapsed?: boolean;
       initialNsfwMode?: NsfwMode;
       lanAutoEnable?: boolean;
-      awaitingBreakingConsent?: boolean;
     }
     // interface PageState {}
     // interface Platform {}

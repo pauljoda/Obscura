@@ -10,7 +10,6 @@ using Obscura.Application.Jobs.Handlers.Maintenance;
 using Obscura.Application.Jobs.Handlers.Probe;
 using Obscura.Application.Jobs.Handlers.Scan;
 using Obscura.Application.Jobs.Ports;
-using Obscura.Application.Migrations;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Application;
@@ -24,7 +23,6 @@ public static class DependencyInjection {
     /// </summary>
     public static IServiceCollection AddObscuraApplication(this IServiceCollection services) {
         services.AddScoped<JobService>();
-        services.AddScoped<SystemMigrationService>();
 
         return services;
     }
@@ -33,10 +31,8 @@ public static class DependencyInjection {
     /// Adds application job handlers, the hosted queue worker, scan scheduler, and history pruner.
     /// </summary>
     public static IServiceCollection AddObscuraWorkerApplication(this IServiceCollection services) {
-        // Legacy / utility handlers
+        // Utility handlers
         services.AddTransient<IJobHandler, NoOpJobHandler>();
-        services.AddTransient<IJobHandler, LegacyVideoImportJobHandler>();
-        services.AddTransient<IJobHandler, LegacyMediaImportJobHandler>();
 
         // Scanning
         services.AddTransient<IJobHandler, ScanLibraryJobHandler>();

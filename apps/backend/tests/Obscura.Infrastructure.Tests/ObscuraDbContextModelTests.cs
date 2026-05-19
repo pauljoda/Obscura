@@ -198,7 +198,7 @@ public sealed class ObscuraDbContextModelTests
     }
 
     [Fact]
-    public void GalleryDetailsDoNotKeepLegacyPhotographerMetadata()
+    public void GalleryDetailsDoNotKeepPhotographerMetadata()
     {
         Assert.Null(typeof(Gallery).GetProperty("Photographer"));
         Assert.Null(typeof(GalleryDetailRow).GetProperty("Photographer"));

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseTrickplayImagePlaylist, parseTrickplayVtt } from "./trickplay";
 
 describe("trickplay parsing", () => {
-  it("parses legacy VTT sprite maps", () => {
+  it("parses VTT sprite maps", () => {
     const frames = parseTrickplayVtt(`
 WEBVTT
 

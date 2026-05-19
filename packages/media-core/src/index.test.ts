@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, it, expect } from "vitest";
@@ -34,23 +34,6 @@ async function hasBinary(name: string): Promise<boolean> {
     return true;
   } catch {
     return false;
-  }
-}
-
-function findTestWorkspaceRoot() {
-  let current = process.cwd();
-
-  while (true) {
-    if (existsSync(path.join(current, "pnpm-workspace.yaml"))) {
-      return current;
-    }
-
-    const parent = path.dirname(current);
-    if (parent === current) {
-      return process.cwd();
-    }
-
-    current = parent;
   }
 }
 
@@ -414,38 +397,6 @@ describe("isAnimatedFormat", () => {
 });
 
 describe("resolveExistingMediaPath", () => {
-  it("maps deleted legacy sample-media paths to the fixture media that still exists in the repo", () => {
-    const workspaceRoot = findTestWorkspaceRoot();
-    const fixtureFile = path.join(
-      workspaceRoot,
-      "tests",
-      "fixtures",
-      "media",
-      "videos",
-      "Resolve Existing Media Path",
-      "synthetic.mp4",
-    );
-    const legacyPath = path.join(
-      workspaceRoot,
-      "apps",
-      "web",
-      "public",
-      "media",
-      "scenes",
-      "Resolve Existing Media Path",
-      "synthetic.mp4",
-    );
-
-    mkdirSync(path.dirname(fixtureFile), { recursive: true });
-    writeFileSync(fixtureFile, "");
-
-    try {
-      expect(resolveExistingMediaPath(legacyPath)).toBe(fixtureFile);
-    } finally {
-      rmSync(path.dirname(fixtureFile), { recursive: true, force: true });
-    }
-  });
-
   it("returns the original path when the file already exists", () => {
     const tempDir = mkdtempSync(path.join(tmpdir(), "obscura-media-path-"));
     const existingPath = path.join(tempDir, "synthetic.mp4");

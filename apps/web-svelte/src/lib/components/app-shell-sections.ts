@@ -28,7 +28,6 @@ const devSection: AppShellNavSection = {
     { label: "Design System", href: "/design-language", icon: "palette" },
     { label: "Thumbnail Lab", href: "/dev/thumbnail-lab", icon: "grid-2x2" },
     { label: "Detail Lab", href: "/dev/detail-lab", icon: "layout-list" },
-    { label: "Migration Tools", href: "/dev/v2-migration", icon: "wrench" },
   ],
 };
 

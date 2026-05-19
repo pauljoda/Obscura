@@ -22,8 +22,6 @@ import {
   listStudios,
   listTags,
   listCollections,
-  importLegacyMedia,
-  importLegacyVideos,
   listAudioLibraries,
   listAudioTracks,
   listBooks,
@@ -47,8 +45,6 @@ import type {
   ImageDetail,
   JobListResponse,
   JobRun,
-  LegacyMediaImportResponse,
-  LegacyVideoImportResponse,
   MediaListResponse,
   PersonDetail,
   Rating,
@@ -113,8 +109,6 @@ export type V2CollectionDetail = CollectionDetail;
 export type V2CollectionListResponse = CollectionListResponse;
 export type V2TaxonomyListResponse = TaxonomyListResponse;
 export type V2SettingsResponse = SettingsResponse;
-export type V2LegacyVideoImportResponse = LegacyVideoImportResponse;
-export type V2LegacyMediaImportResponse = LegacyMediaImportResponse;
 export type V2MediaListResponse = MediaListResponse;
 export interface V2EntityReference {
   id: string;
@@ -683,16 +677,4 @@ export async function backfillV2Fingerprints(
   });
 
   return readV2Json(response, "Failed to queue fingerprint backfill");
-}
-
-export function importV2LegacyVideos(
-  options?: V2RequestOptions,
-): Promise<V2LegacyVideoImportResponse> {
-  return importLegacyVideos({ signal: options?.signal }).then((response) => response.data);
-}
-
-export function importV2LegacyMedia(
-  options?: V2RequestOptions,
-): Promise<V2LegacyMediaImportResponse> {
-  return importLegacyMedia({ signal: options?.signal }).then((response) => response.data);
 }

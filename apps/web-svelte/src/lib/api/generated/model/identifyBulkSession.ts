@@ -4,15 +4,13 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
-import type { IdentifyBulkResultResult } from './identifyBulkResultResult';
+import type { IdentifyBulkResult } from './identifyBulkResult';
 
-export interface IdentifyBulkSessionResult {
+export interface IdentifyBulkSession {
   id: string;
   provider: string;
   entityIds: string[];
-  results: IdentifyBulkResultResult[];
+  results: IdentifyBulkResult[];
   status: string;
   createdAt: string;
-  /** @nullable */
-  completedAt?: string | null;
 }

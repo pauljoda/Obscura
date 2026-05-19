@@ -10,7 +10,7 @@ namespace Obscura.Infrastructure.Tests;
 public sealed class LibraryScanPersistenceServiceTests
 {
     [Fact]
-    public async Task DownstreamNeedsProbeWhenLegacyTechnicalRowsLackMediaSources()
+    public async Task DownstreamNeedsProbeWhenTechnicalRowsLackMediaSources()
     {
         await using var db = CreateContext();
         var videoId = Guid.Parse("11111111-1111-1111-1111-111111111111");

@@ -517,41 +517,11 @@ function findWorkspaceRoot(startDir: string) {
   }
 }
 
-function resolveLegacyWorkspaceMediaCandidates(filePath: string) {
-  const workspaceRoot = findWorkspaceRoot(process.cwd());
-  if (!workspaceRoot) {
-    return [path.resolve(filePath)];
-  }
-
-  const normalized = path.resolve(filePath);
-  const candidates = [normalized];
-  const legacyRoots = [
-    {
-      from: path.join(workspaceRoot, "apps", "web", "public", "media", "scenes"),
-      to: path.join(workspaceRoot, "tests", "fixtures", "media", "videos"),
-    },
-  ];
-
-  for (const mapping of legacyRoots) {
-    const normalizedFrom = path.resolve(mapping.from);
-    if (normalized === normalizedFrom || normalized.startsWith(`${normalizedFrom}${path.sep}`)) {
-      candidates.push(path.join(mapping.to, path.relative(normalizedFrom, normalized)));
-    }
-  }
-
-  return [...new Set(candidates)];
-}
-
 export function resolveExistingMediaPath(filePath: string | null | undefined) {
   if (!filePath) return null;
 
-  for (const candidate of resolveLegacyWorkspaceMediaCandidates(filePath)) {
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-
-  return null;
+  const candidate = path.resolve(filePath);
+  return existsSync(candidate) ? candidate : null;
 }
 
 function getDefaultCacheRoots() {
@@ -564,14 +534,12 @@ function getDefaultCacheRoots() {
     };
   }
 
-  const sharedCache = path.join(workspaceRoot, ".obscura-cache");
-  const legacyWorkerCache = path.join(workspaceRoot, "apps", "worker", ".obscura-cache");
-  const legacyApiCache = path.join(workspaceRoot, "apps", "api", ".obscura-cache");
   const dotnetCache = path.join(workspaceRoot, "apps", "backend", "data", "cache");
+  const sharedCache = path.join(workspaceRoot, ".obscura-cache");
 
   return {
     canonical: sharedCache,
-    candidates: [sharedCache, dotnetCache, legacyWorkerCache, legacyApiCache],
+    candidates: [sharedCache, dotnetCache],
   };
 }
 
@@ -585,9 +553,8 @@ export function getCacheRootDir() {
 
 /**
  * Cache roots we should search when reading generated assets.
- * The shared workspace cache is canonical, but we continue to read from the
- * pre-cutover worker/API cache directories so existing generated media stays
- * visible until it is rebuilt or moved.
+ * The shared workspace cache is canonical, with the .NET dev cache included
+ * so local backend-generated media can still be discovered.
  */
 export function getCacheRootCandidates() {
   if (process.env.OBSCURA_CACHE_DIR) {

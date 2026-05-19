@@ -1,13 +1,11 @@
 using Obscura.Application.Jobs;
 using Obscura.Application.Organization;
 using Obscura.Application.Settings;
-using Obscura.Application.System;
 using Obscura.Application.Videos;
 using Obscura.Contracts.Jobs;
 using Obscura.Contracts.Organize;
 using Obscura.Contracts.Playback;
 using Obscura.Contracts.Settings;
-using Obscura.Contracts.System;
 
 namespace Obscura.Api.Mapping;
 
@@ -160,40 +158,6 @@ internal static class ApplicationContractMapping
 
     private static LibraryBrowseEntry ToContract(LibraryBrowseEntryResult result) =>
         new(result.Name, result.Path);
-
-    public static V2UpgradeGateStatusResponse ToContract(this V2UpgradeGateStatusResult result) =>
-        new(result.GateId, result.Accepted);
-
-    public static LegacyVideoImportResponse ToContract(this LegacyVideoImportResultDto result) =>
-        new(
-            result.SeriesImported,
-            result.VideosImported,
-            result.PeopleImported,
-            result.TagsImported,
-            result.StudiosImported,
-            result.LinksImported);
-
-    public static LegacyMediaImportResponse ToContract(this LegacyMediaImportResultDto result) =>
-        new(
-            result.ImagesImported,
-            result.GalleriesImported,
-            result.BooksImported,
-            result.AudioLibrariesImported,
-            result.AudioTracksImported,
-            result.CollectionsImported,
-            result.LinksImported);
-
-    public static V2FreshStartPrepareResponse ToContract(this V2FreshStartPrepareResult result) =>
-        new(
-            result.BackupPath,
-            result.PreservedLibraryRoots,
-            result.PreservedSettings,
-            result.MediaReset,
-            result.VideoImport?.ToContract(),
-            result.MediaImport?.ToContract());
-
-    public static ApiProblem ToContract(this ApplicationProblem problem) =>
-        new(problem.Code, problem.Message);
 
     public static PlaybackInfoQuery ToApplication(this PlaybackInfoRequest request) =>
         new()

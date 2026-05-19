@@ -70,7 +70,7 @@ public sealed class JobEndpointServiceTests
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
 
-        using var response = await client.PostAsync("/api/jobs/failures/clear?type=legacy-media-import", null);
+        using var response = await client.PostAsync("/api/jobs/failures/clear?type=import-metadata", null);
         var payload = await response.Content.ReadFromJsonAsync<JobFailureClearResponse>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -123,7 +123,7 @@ public sealed class JobEndpointServiceTests
             Task.FromResult(id == ExistingJobId);
 
         public Task<int> ClearFailuresAsync(JobType? type, CancellationToken cancellationToken) =>
-            Task.FromResult(type == JobType.LegacyMediaImport ? 2 : 0);
+            Task.FromResult(type == JobType.ImportMetadata ? 2 : 0);
 
         public Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken) =>
             throw new NotSupportedException();

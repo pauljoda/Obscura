@@ -60,7 +60,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task CatalogReusesLegacyProviderCredentialKeysForV2AuthFields()
+    public async Task CatalogReusesAliasedProviderCredentialKeysForAuthFields()
     {
         var pluginDir = Path.Combine(_tempRoot, "tmdb");
         Directory.CreateDirectory(pluginDir);
@@ -108,7 +108,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
             Id = Guid.NewGuid(),
             ProviderConfigId = config.Id,
             CredentialKey = "TMDB_API_KEY",
-            EncryptedValue = "legacy-secret",
+            EncryptedValue = "aliased-secret",
             CreatedAt = now,
             UpdatedAt = now
         });
@@ -120,7 +120,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
 
         Assert.True(provider.Installed);
         Assert.Empty(provider.MissingAuthKeys);
-        Assert.Equal("legacy-secret", auth["apiKey"]);
+        Assert.Equal("aliased-secret", auth["apiKey"]);
     }
 
     [Fact]
