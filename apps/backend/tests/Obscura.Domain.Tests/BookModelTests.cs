@@ -15,8 +15,8 @@ public sealed class BookModelTests {
             capabilities:
             [
                 new CapabilityStats([
-                    new EntityStat("pages", 120),
-                    new EntityStat("chapters", 6)
+                    new CapabilityStats.Item("pages", 120),
+                    new CapabilityStats.Item("chapters", 6)
                 ])
             ]);
 

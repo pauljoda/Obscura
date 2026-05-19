@@ -113,18 +113,18 @@ public sealed class EfEntityRepositoryTests {
         var video = new Video(id, "Faithful", subtitlesExtractedAt: null);
 
         Set(video, new CapabilityDescription("A noir mystery"));
-        Set(video, new CapabilityTechnical { Width = 1920, Height = 1080, Codec = "h264" });
-        Set(video, new CapabilityFiles([new EntityFile(EntityFileRole.Source, "/media/v.mp4", "video/mp4")]));
-        Set(video, new CapabilityStats([new EntityStat("scenes", 12)]));
+        Set(video, MakeTechnical(width: 1920, height: 1080, codec: "h264"));
+        Set(video, new CapabilityFiles([new CapabilityFiles.Item(EntityFileRole.Source, "/media/v.mp4", "video/mp4")]));
+        Set(video, new CapabilityStats([new CapabilityStats.Item("scenes", 12)]));
         Set(video, new CapabilityDates([new EntityDate("released", "2020-01-01", new DateOnly(2020, 1, 1), "day")]));
-        Set(video, new CapabilitySource([new EntitySource("stash", "abc")]));
-        Set(video, new CapabilityPosition([new EntityPosition("episode", 5, "E5")]));
+        Set(video, new CapabilitySource([new CapabilitySource.Item("stash", "abc")]));
+        Set(video, new CapabilityPosition([new CapabilityPosition.Item("episode", 5, "E5")]));
         Set(video, new CapabilityLinks(
-            [new EntityUrl("https://example.test", "Example")],
-            [new EntityExternalId("tmdb", "42", "https://tmdb.test/42")]));
-        Set(video, new CapabilitySubtitles([new EntitySubtitle(
+            [new CapabilityLinks.Url("https://example.test", "Example")],
+            [new CapabilityLinks.ExternalId("tmdb", "42", "https://tmdb.test/42")]));
+        Set(video, new CapabilitySubtitles([new CapabilitySubtitles.Item(
             Guid.NewGuid(), "en", "English", "srt", EntitySubtitleSource.Embedded, "/s/en.srt", "srt", null, true)]));
-        Set(video, new CapabilityFingerprints([new EntityFingerprint(FingerprintAlgorithm.Md5, "deadbeef")]));
+        Set(video, new CapabilityFingerprints([new CapabilityFingerprints.Item(FingerprintAlgorithm.Md5, "deadbeef")]));
         Set(video, new CapabilityClassification("R", "MPAA"));
         Set(video, new CapabilityProgress(currentEntityId: null, unit: "chapter", index: 4, total: 10, mode: "paged", updatedAt: DateTimeOffset.UtcNow));
 
@@ -142,7 +142,7 @@ public sealed class EfEntityRepositoryTests {
         Assert.Equal("abc", Assert.Single(loaded.Source!.Items).Value);
         Assert.Equal("E5", Assert.Single(loaded.Position!.Items).Label);
         var links = loaded.GetCapability<CapabilityLinks>()!;
-        Assert.Equal("https://example.test", Assert.Single(links.Urls).Url);
+        Assert.Equal("https://example.test", Assert.Single(links.Urls).Value);
         Assert.Equal("tmdb", Assert.Single(links.ExternalIds).Provider);
         Assert.Equal("en", Assert.Single(loaded.SubtitleCapability!.Items).Language);
         Assert.Equal(FingerprintAlgorithm.Md5, Assert.Single(loaded.GetCapability<CapabilityFingerprints>()!.Items).Algorithm);
@@ -191,6 +191,13 @@ public sealed class EfEntityRepositoryTests {
         Assert.Equal(CollectionCoverMode.Custom, loadedCollection.CoverMode);
         Assert.Equal(TimeSpan.FromSeconds(9), loadedCollection.SlideshowDuration);
         Assert.True(loadedCollection.SlideshowAutoAdvance);
+    }
+
+    private static CapabilityTechnical MakeTechnical(
+        int? width = null, int? height = null, string? codec = null) {
+        var technical = new CapabilityTechnical();
+        technical.Apply(width: width, height: height, codec: codec);
+        return technical;
     }
 
     private static void Set(Entity entity, EntityCapability capability) {

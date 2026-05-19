@@ -6,6 +6,13 @@ using Obscura.Domain.Taxonomy;
 namespace Obscura.Domain.Tests;
 
 public sealed class TypedEntityModelTests {
+    private static CapabilityTechnical MakeTechnical(
+        TimeSpan? duration = null, int? width = null, int? height = null, string? codec = null) {
+        var technical = new CapabilityTechnical();
+        technical.Apply(duration: duration, width: width, height: height, codec: codec);
+        return technical;
+    }
+
     [Theory]
     [InlineData(typeof(Video), EntityKind.Video)]
     [InlineData(typeof(VideoSeries), EntityKind.VideoSeries)]
@@ -68,7 +75,7 @@ public sealed class TypedEntityModelTests {
             capabilities:
             [
                 new CapabilityPlayback(),
-                new CapabilityTechnical { Duration = TimeSpan.FromSeconds(90), Codec = "flac" }
+                MakeTechnical(duration: TimeSpan.FromSeconds(90), codec: "flac")
             ]);
 
         track.MarkPlayed(TimeSpan.FromSeconds(45), DateTimeOffset.Parse("2026-05-12T12:00:00Z"));
@@ -88,7 +95,7 @@ public sealed class TypedEntityModelTests {
             capabilities:
             [
                 new CapabilityDescription("Direct description"),
-                new CapabilityTechnical { Duration = TimeSpan.FromMinutes(2), Width = 1920, Height = 1080 },
+                MakeTechnical(duration: TimeSpan.FromMinutes(2), width: 1920, height: 1080),
                 new CapabilityClassification("PG"),
                 new CapabilityPlayback(),
                 new CapabilityMarkers(),

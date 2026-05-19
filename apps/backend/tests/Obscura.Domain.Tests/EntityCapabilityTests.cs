@@ -18,7 +18,6 @@ public sealed class EntityCapabilityTests {
         var attached = video.GetCapability<CapabilityRating>();
 
         Assert.Same(rating, attached);
-        Assert.Same(video, attached!.Entity);
     }
 
     [Fact]
@@ -70,7 +69,6 @@ public sealed class EntityCapabilityTests {
 
         Assert.True(removed);
         Assert.Null(image.GetCapability<CapabilityRating>());
-        Assert.Null(rating.Entity);
     }
 
     [Fact]
