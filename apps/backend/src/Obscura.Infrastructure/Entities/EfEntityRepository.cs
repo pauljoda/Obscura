@@ -162,7 +162,7 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
         }
 
         entity.RemoveCapability<CapabilityPlayback>();
-        entity.AddCapability(new CapabilityPlayback(new Playback(
+        entity.AddCapability(new CapabilityPlayback(new CapabilityPlayback.State(
             row.PlayCount,
             TimeSpan.FromSeconds(row.PlayDurationSeconds),
             TimeSpan.FromSeconds(row.ResumeSeconds),
@@ -180,7 +180,7 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
         }
 
         entity.RemoveCapability<CapabilityMarkers>();
-        entity.AddCapability(new CapabilityMarkers(rows.Select(row => new EntityMarker(row.Id, row.Title, row.Seconds, row.EndSeconds)).ToArray()));
+        entity.AddCapability(new CapabilityMarkers(rows.Select(row => new CapabilityMarkers.Item(row.Id, row.Title, row.Seconds, row.EndSeconds)).ToArray()));
     }
 
     private async Task HydrateCapabilitiesAsync(Entity entity, CancellationToken cancellationToken) {
@@ -195,18 +195,19 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
         var technical = await db.EntityTechnical.AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
         if (technical is not null) {
-            Replace(entity, new CapabilityTechnical {
-                Duration = technical.DurationSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null,
-                Width = technical.Width,
-                Height = technical.Height,
-                FrameRate = technical.FrameRate,
-                BitRate = technical.BitRate,
-                SampleRate = technical.SampleRate,
-                Channels = technical.Channels,
-                Codec = technical.Codec,
-                Container = technical.Container,
-                Format = technical.Format
-            });
+            var technicalCapability = new CapabilityTechnical();
+            technicalCapability.Apply(
+                technical.DurationSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null,
+                technical.Width,
+                technical.Height,
+                technical.FrameRate,
+                technical.BitRate,
+                technical.SampleRate,
+                technical.Channels,
+                technical.Codec,
+                technical.Container,
+                technical.Format);
+            Replace(entity, technicalCapability);
         }
 
         var classification = await db.EntityClassifications.AsNoTracking()
@@ -234,21 +235,21 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
             .Where(row => row.EntityId == id).ToArrayAsync(cancellationToken);
         if (urls.Length > 0 || externalIds.Length > 0) {
             Replace(entity, new CapabilityLinks(
-                urls.Select(row => new EntityUrl(row.Url, row.Label)).ToArray(),
-                externalIds.Select(row => new EntityExternalId(row.Provider, row.Value, row.Url)).ToArray()));
+                urls.Select(row => new CapabilityLinks.Url(row.Url, row.Label)).ToArray(),
+                externalIds.Select(row => new CapabilityLinks.ExternalId(row.Provider, row.Value, row.Url)).ToArray()));
         }
 
         var files = await db.EntityFiles.AsNoTracking()
             .Where(row => row.EntityId == id).OrderBy(row => row.CreatedAt).ToArrayAsync(cancellationToken);
         if (files.Length > 0) {
             Replace(entity, new CapabilityFiles(
-                files.Select(row => new EntityFile(row.Role, row.Path, row.MimeType)).ToArray()));
+                files.Select(row => new CapabilityFiles.Item(row.Role, row.Path, row.MimeType)).ToArray()));
         }
 
         var subtitles = await db.EntitySubtitles.AsNoTracking()
             .Where(row => row.EntityId == id).OrderBy(row => row.CreatedAt).ToArrayAsync(cancellationToken);
         if (subtitles.Length > 0) {
-            Replace(entity, new CapabilitySubtitles(subtitles.Select(row => new EntitySubtitle(
+            Replace(entity, new CapabilitySubtitles(subtitles.Select(row => new CapabilitySubtitles.Item(
                 row.Id, row.Language, row.Label, row.Format, row.Source,
                 row.StoragePath, row.SourceFormat, row.SourcePath, row.IsDefault)).ToArray()));
         }
@@ -257,13 +258,13 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
             .Where(row => row.EntityId == id).OrderBy(row => row.CreatedAt).ToArrayAsync(cancellationToken);
         if (fingerprints.Length > 0) {
             Replace(entity, new CapabilityFingerprints(
-                fingerprints.Select(row => new EntityFingerprint(row.Algorithm, row.Value)).ToArray()));
+                fingerprints.Select(row => new CapabilityFingerprints.Item(row.Algorithm, row.Value)).ToArray()));
         }
 
         var stats = await db.EntityStats.AsNoTracking()
             .Where(row => row.EntityId == id).OrderBy(row => row.Code).ToArrayAsync(cancellationToken);
         if (stats.Length > 0) {
-            Replace(entity, new CapabilityStats(stats.Select(row => new EntityStat(row.Code, row.Value)).ToArray()));
+            Replace(entity, new CapabilityStats(stats.Select(row => new CapabilityStats.Item(row.Code, row.Value)).ToArray()));
         }
 
         var dates = await db.EntityDates.AsNoTracking()
@@ -276,14 +277,14 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
         var sources = await db.EntitySources.AsNoTracking()
             .Where(row => row.EntityId == id).OrderBy(row => row.Code).ToArrayAsync(cancellationToken);
         if (sources.Length > 0) {
-            Replace(entity, new CapabilitySource(sources.Select(row => new EntitySource(row.Code, row.Value)).ToArray()));
+            Replace(entity, new CapabilitySource(sources.Select(row => new CapabilitySource.Item(row.Code, row.Value)).ToArray()));
         }
 
         var positions = await db.EntityPositions.AsNoTracking()
             .Where(row => row.EntityId == id).OrderBy(row => row.Code).ToArrayAsync(cancellationToken);
         if (positions.Length > 0) {
             Replace(entity, new CapabilityPosition(positions.Select(row =>
-                new EntityPosition(row.Code, row.Value, row.Label)).ToArray()));
+                new CapabilityPosition.Item(row.Code, row.Value, row.Label)).ToArray()));
         }
     }
 
@@ -312,7 +313,7 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
             relationshipIndex++;
         }
 
-        foreach (var credit in entity.Credits?.Credits ?? Array.Empty<EntityCredit>()) {
+        foreach (var credit in entity.Credits?.Credits ?? Array.Empty<CapabilityCredits.Item>()) {
             await SaveEntityAsync(credit.Person, visited, cancellationToken);
         }
 
@@ -348,7 +349,7 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
         }
 
         var creditIndex = 0;
-        foreach (var credit in entity.Credits?.Credits ?? Array.Empty<EntityCredit>()) {
+        foreach (var credit in entity.Credits?.Credits ?? Array.Empty<CapabilityCredits.Item>()) {
             db.EntityRelationshipLinks.Add(new EntityRelationshipLinkRow {
                 EntityId = entity.Id,
                 RelationshipCode = CreditsRelationshipCode,
@@ -605,7 +606,7 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
             var order = 0;
             foreach (var url in links.Urls) {
                 db.EntityUrls.Add(new EntityUrlRow {
-                    Id = Guid.NewGuid(), EntityId = id, Url = url.Url, Label = url.Label, SortOrder = order++, CreatedAt = now
+                    Id = Guid.NewGuid(), EntityId = id, Url = url.Value, Label = url.Label, SortOrder = order++, CreatedAt = now
                 });
             }
 

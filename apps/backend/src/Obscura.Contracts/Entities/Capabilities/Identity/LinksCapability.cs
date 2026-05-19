@@ -1,5 +1,5 @@
-using EntityUrl = Obscura.Domain.Capabilities.EntityUrl;
-using EntityExternalId = Obscura.Domain.Capabilities.EntityExternalId;
+using EntityUrl = Obscura.Domain.Capabilities.CapabilityLinks.Url;
+using EntityExternalId = Obscura.Domain.Capabilities.CapabilityLinks.ExternalId;
 
 namespace Obscura.Contracts.Entities;
 

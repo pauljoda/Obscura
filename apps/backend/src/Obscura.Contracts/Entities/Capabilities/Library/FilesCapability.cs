@@ -1,4 +1,4 @@
-using EntityFile = Obscura.Domain.Capabilities.EntityFile;
+using EntityFile = Obscura.Domain.Capabilities.CapabilityFiles.Item;
 
 namespace Obscura.Contracts.Entities;
 

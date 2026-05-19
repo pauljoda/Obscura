@@ -1,4 +1,4 @@
-using EntityFingerprint = Obscura.Domain.Capabilities.EntityFingerprint;
+using EntityFingerprint = Obscura.Domain.Capabilities.CapabilityFingerprints.Item;
 
 namespace Obscura.Contracts.Entities;
 

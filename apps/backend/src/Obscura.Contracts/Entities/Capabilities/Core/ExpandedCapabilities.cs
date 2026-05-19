@@ -1,9 +1,9 @@
-using EntityMarker = Obscura.Domain.Capabilities.EntityMarker;
-using EntitySubtitle = Obscura.Domain.Capabilities.EntitySubtitle;
-using EntityStat = Obscura.Domain.Capabilities.EntityStat;
+using EntityMarker = Obscura.Domain.Capabilities.CapabilityMarkers.Item;
+using EntitySubtitle = Obscura.Domain.Capabilities.CapabilitySubtitles.Item;
+using EntityStat = Obscura.Domain.Capabilities.CapabilityStats.Item;
 using EntityDate = Obscura.Domain.Capabilities.EntityDate;
-using EntitySource = Obscura.Domain.Capabilities.EntitySource;
-using EntityPosition = Obscura.Domain.Capabilities.EntityPosition;
+using EntitySource = Obscura.Domain.Capabilities.CapabilitySource.Item;
+using EntityPosition = Obscura.Domain.Capabilities.CapabilityPosition.Item;
 
 namespace Obscura.Contracts.Entities;
 
