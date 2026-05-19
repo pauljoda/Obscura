@@ -266,12 +266,6 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
             Replace(entity, new CapabilityStats(stats.Select(row => new EntityStat(row.Code, row.Value)).ToArray()));
         }
 
-        var counters = await db.EntityCounters.AsNoTracking()
-            .Where(row => row.EntityId == id).OrderBy(row => row.Code).ToArrayAsync(cancellationToken);
-        if (counters.Length > 0) {
-            Replace(entity, new CapabilityCounters(counters.Select(row => new EntityCounter(row.Code, row.Value)).ToArray()));
-        }
-
         var dates = await db.EntityDates.AsNoTracking()
             .Where(row => row.EntityId == id).OrderBy(row => row.Code).ToArrayAsync(cancellationToken);
         if (dates.Length > 0) {
@@ -559,7 +553,6 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
         db.EntitySubtitles.RemoveRange(db.EntitySubtitles.Where(r => r.EntityId == id));
         db.EntityFileFingerprints.RemoveRange(db.EntityFileFingerprints.Where(r => r.EntityId == id));
         db.EntityStats.RemoveRange(db.EntityStats.Where(r => r.EntityId == id));
-        db.EntityCounters.RemoveRange(db.EntityCounters.Where(r => r.EntityId == id));
         db.EntityDates.RemoveRange(db.EntityDates.Where(r => r.EntityId == id));
         db.EntitySources.RemoveRange(db.EntitySources.Where(r => r.EntityId == id));
         db.EntityPositions.RemoveRange(db.EntityPositions.Where(r => r.EntityId == id));
@@ -648,10 +641,6 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
 
         foreach (var stat in entity.Stats?.Items ?? []) {
             db.EntityStats.Add(new EntityStatRow { EntityId = id, Code = stat.Code, Value = stat.Value, UpdatedAt = now });
-        }
-
-        foreach (var counter in entity.GetCapability<CapabilityCounters>()?.Items ?? []) {
-            db.EntityCounters.Add(new EntityCounterRow { EntityId = id, Code = counter.Code, Value = counter.Value, UpdatedAt = now });
         }
 
         foreach (var date in entity.Dates?.Items ?? []) {

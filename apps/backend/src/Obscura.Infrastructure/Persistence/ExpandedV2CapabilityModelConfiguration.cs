@@ -46,18 +46,6 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<EntityPlaybackRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<EntityCounterRow>(entity =>
-        {
-            entity.ToTable("entity_counters");
-            entity.HasKey(row => new { row.EntityId, row.Code });
-            entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.Code).HasColumnName("code").HasMaxLength(64).IsRequired();
-            entity.Property(row => row.Value).HasColumnName("value");
-            entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
-            entity.HasOne<EntityRow>().WithMany().HasForeignKey(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
-            entity.ToTable(table => table.HasCheckConstraint("ck_entity_counters_value", "value >= 0"));
-        });
-
         modelBuilder.Entity<EntityStatRow>(entity =>
         {
             entity.ToTable("entity_stats");

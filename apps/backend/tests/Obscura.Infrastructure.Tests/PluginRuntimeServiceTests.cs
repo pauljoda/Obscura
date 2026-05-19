@@ -421,7 +421,6 @@ public sealed class PluginRuntimeServiceTests : IDisposable
                         new Dictionary<string, string>(),
                         new Dictionary<string, int>(),
                         new Dictionary<string, int>(),
-                        new Dictionary<string, int>(),
                         null),
                     [],
                     [],
@@ -468,7 +467,6 @@ public sealed class PluginRuntimeServiceTests : IDisposable
                         null,
                         [],
                         new Dictionary<string, string>(),
-                        new Dictionary<string, int>(),
                         new Dictionary<string, int>(),
                         new Dictionary<string, int>(),
                         null),
@@ -586,7 +584,6 @@ public sealed class PluginRuntimeServiceTests : IDisposable
         Studio: null,
         Credits: [],
         Dates: new Dictionary<string, string>(),
-        Counters: new Dictionary<string, int>(),
         Stats: new Dictionary<string, int>(),
         Positions: new Dictionary<string, int>(),
         Classification: null);

@@ -116,11 +116,6 @@ public static class EntityCardProjector
             capabilities.Add(new StatsCapability(stats.Items));
         }
 
-        if (entity.GetCapability<CapabilityCounters>() is { } counters)
-        {
-            capabilities.Add(new CountersCapability(counters.Items));
-        }
-
         if (entity.Dates is { } dates)
         {
             capabilities.Add(new DatesCapability(dates.Items));

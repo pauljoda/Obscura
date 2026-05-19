@@ -184,7 +184,6 @@ public sealed record EntityMetadataPatch(
     string? Studio,
     IReadOnlyList<CreditPatch> Credits,
     IReadOnlyDictionary<string, string> Dates,
-    IReadOnlyDictionary<string, int> Counters,
     IReadOnlyDictionary<string, int> Stats,
     IReadOnlyDictionary<string, int> Positions,
     string? Classification);

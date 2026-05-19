@@ -301,10 +301,6 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
             0,
             now,
             cancellationToken);
-        db.EntityCounters.Add(new EntityCounterRow
-        {
-            EntityId = id, Code = "page_count", Value = pageCount, UpdatedAt = now
-        });
         if (isNsfw)
         {
             db.EntityFlags.Add(new EntityFlagRow { EntityId = id, IsNsfw = true, UpdatedAt = now });

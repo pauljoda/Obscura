@@ -32,8 +32,7 @@ public sealed class EntityMetadataApplyServiceTests
                 Studio: "Obscura Pictures",
                 Credits: [new CreditPatch("Ada Actor", "person", "Lead", 0)],
                 Dates: new Dictionary<string, string> { ["released"] = "2026-05-16" },
-                Counters: new Dictionary<string, int> { ["runtime-minutes"] = 90 },
-                Stats: new Dictionary<string, int> { ["votes"] = 42 },
+                Stats: new Dictionary<string, int> { ["runtime-minutes"] = 90, ["votes"] = 42 },
                 Positions: new Dictionary<string, int>(),
                 Classification: "movie"),
             Images: [],
@@ -69,7 +68,7 @@ public sealed class EntityMetadataApplyServiceTests
             .Select(row => row.Title)
             .SingleAsync());
         Assert.Equal("2026-05-16", (await db.EntityDates.FindAsync([entityId, "released"]))?.Value);
-        Assert.Equal(90, (await db.EntityCounters.FindAsync([entityId, "runtime-minutes"]))?.Value);
+        Assert.Equal(90, (await db.EntityStats.FindAsync([entityId, "runtime-minutes"]))?.Value);
         Assert.Equal(42, (await db.EntityStats.FindAsync([entityId, "votes"]))?.Value);
         Assert.Equal("movie", (await db.EntityClassifications.FindAsync([entityId]))?.Value);
     }
@@ -126,8 +125,7 @@ public sealed class EntityMetadataApplyServiceTests
             Studio: null,
             Credits: [new CreditPatch("Guest Actor", "guest", "Visitor", 3)],
             Dates: new Dictionary<string, string> { ["air"] = "2026-05-16" },
-            Counters: new Dictionary<string, int> { ["runtimeMinutes"] = 33 },
-            Stats: new Dictionary<string, int> { ["voteAverage"] = 8 },
+            Stats: new Dictionary<string, int> { ["runtimeMinutes"] = 33, ["voteAverage"] = 8 },
             Positions: new Dictionary<string, int> { ["seasonNumber"] = 1, ["episodeNumber"] = 1 },
             Classification: "episode");
         var proposal = new EntityMetadataProposal(
@@ -196,7 +194,7 @@ public sealed class EntityMetadataApplyServiceTests
             .Select(row => row.MetadataJson)
             .SingleAsync()) ?? string.Empty);
         Assert.Equal("2026-05-16", (await db.EntityDates.FindAsync([episodeId, "air"]))?.Value);
-        Assert.Equal(33, (await db.EntityCounters.FindAsync([episodeId, "runtimeMinutes"]))?.Value);
+        Assert.Equal(33, (await db.EntityStats.FindAsync([episodeId, "runtimeMinutes"]))?.Value);
         Assert.Equal(8, (await db.EntityStats.FindAsync([episodeId, "voteAverage"]))?.Value);
         Assert.Equal("episode", (await db.EntityClassifications.FindAsync([episodeId]))?.Value);
     }
@@ -733,7 +731,6 @@ public sealed class EntityMetadataApplyServiceTests
         Studio: null,
         Credits: [],
         Dates: new Dictionary<string, string>(),
-        Counters: new Dictionary<string, int>(),
         Stats: new Dictionary<string, int>(),
         Positions: new Dictionary<string, int>(),
         Classification: null);

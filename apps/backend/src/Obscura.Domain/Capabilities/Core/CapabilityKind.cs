@@ -25,9 +25,6 @@ public enum CapabilityKind {
     /// <summary>Playback resume, completion, and play-count state.</summary>
     Playback,
 
-    /// <summary>Named integer counters.</summary>
-    Counters,
-
     /// <summary>Stable hashes and fingerprints.</summary>
     Fingerprints,
 

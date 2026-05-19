@@ -48,8 +48,6 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<EntityPlaybackRow> EntityPlayback => Set<EntityPlaybackRow>();
 
-    public DbSet<EntityCounterRow> EntityCounters => Set<EntityCounterRow>();
-
     public DbSet<EntityStatRow> EntityStats => Set<EntityStatRow>();
 
     public DbSet<EntityDateRow> EntityDates => Set<EntityDateRow>();

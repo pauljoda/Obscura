@@ -20,6 +20,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Entity API contracts now model child and relationship groups as labeled arrays of entity thumbnails instead of domain/entity-reference records.
 - Browse, detail, thumbnail, rating, flag, playback, and marker routes are back on the .NET API and now read through EF projections while writes save domain entity state.
 - Plugin identify requests now use `structuralContext` instead of the old `graph` field, so community v2 plugins must update to the new structural-context protocol.
+- Reads and writes now flow through one faithful domain entity and a single projection, so detail pages, ratings, flags, playback, markers, and all other capabilities stay consistent across the app.
+- The legacy "counters" concept was removed: scraped numeric metadata (runtime, vote counts, and similar) now lives in entity stats, and structural counts are derived from child items instead of being stored. Community identify plugins must send `stats` instead of `counters`, and you should rescan your library roots.
 
 ### Added
 - High-level v2 implementation summary for the rebuilt Obscura architecture, media model, playback pipeline, and UI surfaces.
@@ -32,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Entity children and relationships now group by `EntityKind`, and video credits now live in a mutable typed credits capability.
 - Child and relationship API payloads now share one grouped entity shape with `kind`, `label`, and `entities` fields.
 - Plugin identify protocol context was renamed from `graph` / `IdentifyGraphContext` to `structuralContext` / `IdentifyStructuralContext`.
+- The `Counters` capability, `entity_counters` table, and the plugin metadata-patch `counters` field were removed; numeric scraped metadata now uses `stats`. Rescanning v1 data is required.
 
 ### Fixed
 - Backend startup no longer reports pending EF model changes from entity-kind seed metadata drift.

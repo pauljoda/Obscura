@@ -29,7 +29,6 @@ public sealed class Video : Entity {
         new CapabilityFlags(),
         new CapabilityFiles(),
         new CapabilityPlayback(),
-        new CapabilityCounters(),
         new CapabilityPosition(),
         new CapabilityMarkers(),
         new CapabilitySubtitles(),

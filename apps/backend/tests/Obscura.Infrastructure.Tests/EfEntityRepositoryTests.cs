@@ -116,7 +116,6 @@ public sealed class EfEntityRepositoryTests {
         Set(video, new CapabilityTechnical { Width = 1920, Height = 1080, Codec = "h264" });
         Set(video, new CapabilityFiles([new EntityFile(EntityFileRole.Source, "/media/v.mp4", "video/mp4")]));
         Set(video, new CapabilityStats([new EntityStat("scenes", 12)]));
-        Set(video, new CapabilityCounters([new EntityCounter("plays", 3)]));
         Set(video, new CapabilityDates([new EntityDate("released", "2020-01-01", new DateOnly(2020, 1, 1), "day")]));
         Set(video, new CapabilitySource([new EntitySource("stash", "abc")]));
         Set(video, new CapabilityPosition([new EntityPosition("episode", 5, "E5")]));
@@ -139,7 +138,6 @@ public sealed class EfEntityRepositoryTests {
         Assert.Equal("h264", loaded.Technical!.Codec);
         Assert.Equal(EntityFileRole.Source, Assert.Single(loaded.Files!.Items).Role);
         Assert.Equal(12, Assert.Single(loaded.Stats!.Items).Value);
-        Assert.Equal(3, Assert.Single(loaded.GetCapability<CapabilityCounters>()!.Items).Value);
         Assert.Equal("released", Assert.Single(loaded.Dates!.Items).Code);
         Assert.Equal("abc", Assert.Single(loaded.Source!.Items).Value);
         Assert.Equal("E5", Assert.Single(loaded.Position!.Items).Label);

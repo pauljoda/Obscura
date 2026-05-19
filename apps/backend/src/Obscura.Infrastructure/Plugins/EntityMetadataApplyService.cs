@@ -109,11 +109,6 @@ public sealed class EntityMetadataApplyService
             await UpsertDatesAsync(entityId, patch.Dates, now, cancellationToken);
         }
 
-        if (selected.Contains("counters"))
-        {
-            await UpsertCountersAsync(entityId, patch.Counters, now, cancellationToken);
-        }
-
         if (selected.Contains("stats"))
         {
             await UpsertStatsAsync(entityId, patch.Stats, now, cancellationToken);
@@ -391,23 +386,6 @@ public sealed class EntityMetadataApplyService
             {
                 existing.Value = value;
                 existing.SortableValue = ParseDateOnly(value);
-                existing.UpdatedAt = now;
-            }
-        }
-    }
-
-    private async Task UpsertCountersAsync(Guid entityId, IReadOnlyDictionary<string, int> counters, DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        foreach (var (code, value) in counters)
-        {
-            var existing = await _db.EntityCounters.FindAsync([entityId, code], cancellationToken);
-            if (existing is null)
-            {
-                _db.EntityCounters.Add(new EntityCounterRow { EntityId = entityId, Code = code, Value = value, UpdatedAt = now });
-            }
-            else
-            {
-                existing.Value = value;
                 existing.UpdatedAt = now;
             }
         }
@@ -748,11 +726,6 @@ public sealed class EntityMetadataApplyService
         if (patch.Dates.Count > 0)
         {
             await UpsertDatesAsync(entity.Id, patch.Dates, now, cancellationToken);
-        }
-
-        if (patch.Counters.Count > 0)
-        {
-            await UpsertCountersAsync(entity.Id, patch.Counters, now, cancellationToken);
         }
 
         if (patch.Stats.Count > 0)
