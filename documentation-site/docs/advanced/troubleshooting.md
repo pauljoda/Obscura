@@ -24,19 +24,17 @@ Common causes:
   sudo chown -R 999:999 /var/lib/docker/volumes/<volume>/_data/postgres   # path varies
   docker compose up -d
   ```
-- **Migrations failed** — the migrator refuses to start the app on an inconsistent schema. The error is verbatim in the logs. If you see `relation "..." does not exist` after a destructive change, check whether you missed accepting a [breaking gate](../users/upgrading.md#breaking-upgrades-and-the-gate).
+- **Migrations failed** — the migrator refuses to start the app on an inconsistent schema. The error is verbatim in the logs. If you see `relation "..." does not exist` after a destructive change, read the release notes and restore your last `/data` snapshot if you need to roll back.
 - **Port 8008 already in use** — another container or process is bound. Find it: `lsof -i :8008` (host) or `docker ps` to spot the conflict.
 
-## The breaking-gate keeps coming back
+## A migration fails after upgrading
 
-It shouldn't. The marker file at `/data/.breaking-gate/<gate-id>.accepted` is what suppresses it. If you see the gate after accepting:
+Obscura applies EF Core migrations on startup. If a migration fails:
 
-- Check that `/data` is **persistent**. A bind mount that isn't actually mounted, or a tmpfs, won't survive restarts.
-- Check the marker file:
-  ```bash
-  docker compose exec obscura ls -la /data/.breaking-gate/
-  ```
-  If it's missing, accept the gate again. If it's there but the gate still appears, file an issue with the logs.
+- Stop the container.
+- Read the failing SQL/error in `docker compose logs obscura --tail 200`.
+- Check `CHANGELOG.md` for any required rescan or manual action.
+- Restore `/data` from your pre-upgrade snapshot if you need to go back to the previous image.
 
 ## Library scan finds nothing
 

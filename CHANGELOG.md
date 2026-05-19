@@ -50,6 +50,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Docs
 - Backend architecture guidance now documents the Clean Architecture, DDD-lite, CQRS-lite, EF Core, DTO, and generated-client contract for future Obscura work.
 - Repository instructions now keep changelog updates short, user-focused, and release-note-worthy.
+- User docs no longer reference the removed breaking-upgrade gate, and historical project plans were removed from the repo docs.
 
 ## [0.22.0] - 2026-05-09
 ### What's New

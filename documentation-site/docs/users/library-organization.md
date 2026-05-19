@@ -91,7 +91,7 @@ When a file is imported, Obscura merges metadata in this order:
 2. **JSON sidecar** — `<filename>.info.json` next to the file. Keys mirror the YouTube-DL info-json format where applicable.
 3. **NFO sidecar** — Kodi/Jellyfin-style `<filename>.nfo`.
 
-User edits in the UI take precedence; **a normal rescan does not overwrite fields you've changed**. (The exception is the one-time breaking-gate rescan, which rebuilds the database from scratch.)
+User edits in the UI take precedence; **a normal rescan does not overwrite fields you've changed**. If a future pre-1.0 upgrade requires rebuilding metadata, the release notes will say so explicitly.
 
 ## What the classifier ignores
 
@@ -244,6 +244,6 @@ Rescan when:
 - You added or removed files on disk
 - You moved files between folders (re-classification will pick up the new layout)
 - You enabled or disabled scan flags on a library root
-- You're recovering from a breaking-gate consent
+- A release note asked you to rebuild metadata after an upgrade
 
 Trigger scans manually from the **Operations** page (sidebar → **Jobs** → **Library scan** queue → **Run**), or set **Auto-scan** in Settings.

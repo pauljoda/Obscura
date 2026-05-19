@@ -63,7 +63,7 @@ docker compose pull && docker compose up -d
 
 | Mount | Purpose | Notes |
 | --- | --- | --- |
-| `/data` | PostgreSQL data, generated cache (HLS, thumbnails, sprites, waveforms), breaking-gate consent markers. | Use a named volume or a host bind mount on a fast disk. |
+| `/data` | PostgreSQL data and generated cache (HLS, thumbnails, sprites, waveforms). | Use a named volume or a host bind mount on a fast disk. |
 | `/media` | Your media library. | Read-only is supported; if you want Obscura to upload files to a folder, mount it read-write. |
 
 You can mount **multiple** library roots. The simplest pattern is to mount each top-level library directly:

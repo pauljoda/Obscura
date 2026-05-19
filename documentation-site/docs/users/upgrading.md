@@ -1,12 +1,12 @@
 ---
 sidebar_position: 9
 title: Upgrading
-description: Image tags, version policy, the breaking-gate, and how to roll back.
+description: Image tags, version policy, breaking changes, and how to roll back.
 ---
 
 # Upgrading
 
-Obscura is pre-1.0 and we don't carry compatibility shims between schema breaks. This page tells you what each image tag means, how the breaking-gate works, and how to roll back when something doesn't go your way.
+Obscura is pre-1.0 and we don't carry compatibility shims between schema breaks. This page tells you what each image tag means, how breaking changes are announced, and how to roll back when something doesn't go your way.
 
 ## Image tags
 
@@ -50,29 +50,20 @@ Migrations apply on boot. The web UI and worker share the same migration runner;
 
 If a migration fails, the container exits — Obscura would rather refuse to start than serve a half-migrated database. The error appears in `docker compose logs obscura`.
 
-## Breaking upgrades and the gate
+## Breaking upgrades
 
-When a release would destroy data, Obscura blocks startup with a one-time gate before the destructive migration runs.
+When a release would destroy data or require a rescan, the release notes call that out under **What's New** and the Keep a Changelog sections. Read those notes before upgrading, especially while Obscura is pre-1.0.
 
-You'll see this if:
+For breaking upgrades:
 
-- Your `/data` was created on an older schema with data the new release intends to drop, **and**
-- You haven't already accepted this gate.
-
-The gate explains what changes and what to do (almost always: "rescan your library after continuing"). Click **Continue & rebuild library** to accept; Obscura writes a marker at `/data/.breaking-gate/<gate-id>.accepted`, restarts the API process, and reloads the page when it comes back up.
-
-After the gate accepts:
-
-1. The destructive migration runs.
-2. Your library files on disk are untouched — only DB rows are rebuilt.
-3. You'll need to **rescan** from Operations → Library scan → Run.
-4. The marker prevents the gate from reappearing on subsequent boots.
+1. Snapshot `/data` before pulling the new image.
+2. Read `CHANGELOG.md` for any rescan or manual-action instructions.
+3. Start the new image and let EF Core migrations run on boot.
+4. If the release notes say to rebuild metadata, run a fresh scan from Operations -> Library scan -> Run.
 
 :::caution
-The gate is the only "are you sure" step. If you click through and decide later you wanted the old state, the only way back is restoring `/data` from a snapshot taken before the upgrade. Take the snapshot first.
+If you upgrade and decide later you wanted the old state, the only way back is restoring `/data` from a snapshot taken before the upgrade. Take the snapshot first.
 :::
-
-The full policy lives in `CLAUDE.md` under "Breaking-change policy"; any future break gate should live in the .NET backend and be surfaced by the Svelte UI.
 
 ## Rolling back
 

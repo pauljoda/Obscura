@@ -6,40 +6,15 @@ description: From a fresh container to a scanned library.
 
 # First Boot
 
-This page walks through what happens the first time you open Obscura: any one-time gates, adding library roots, kicking off the first scan, and verifying it landed.
+This page walks through what happens the first time you open Obscura: adding library roots, kicking off the first scan, and verifying it landed.
 
 ## 1. Open the app
 
-After `docker compose up -d` completes, open [http://localhost:8008](http://localhost:8008). You should see one of two things:
+After `docker compose up -d` completes, open [http://localhost:8008](http://localhost:8008). A fresh install opens to an empty dashboard with no library roots.
 
-- **Empty dashboard.** A fresh install with no library roots. Skip to step 3.
-- **Breaking-upgrade gate.** A full-page takeover explaining a destructive schema change.
+If you're upgrading an existing install instead of starting fresh, read [Upgrading](./upgrading.md) first.
 
-## 2. The breaking-upgrade gate (if shown)
-
-Obscura is pre-1.0. When a release would destroy data (e.g. dropping a populated table from a previous schema), the app blocks startup with a one-time gate that shows what changes and asks for explicit consent.
-
-The gate appears when:
-
-- Your `/data` volume contains data from a previous schema, **and**
-- The current release contains a destructive migration that hasn't been accepted yet.
-
-Click **Continue & rebuild library**. Obscura writes a marker file to `/data/.breaking-gate/<gate-id>.accepted`, restarts the API process, and reloads the page when it comes back up. The polling loop waits up to 60 seconds.
-
-After the gate accepts:
-
-1. Pending migrations apply (drops + recreates as needed).
-2. The breaking-gate marker prevents the gate from re-appearing on subsequent boots.
-3. Your library files on disk are untouched — only DB rows are rebuilt.
-4. You'll need to **rescan** your library roots (covered below).
-
-:::caution
-Don't bypass the gate. The gate exists because the migration *will* drop data, and the only safe path is to run the destructive migration intentionally and rescan. Restoring a `/data` snapshot from before the upgrade is the only way back.
-:::
-
-If you're upgrading and want to read the change in context, see [Upgrading](./upgrading.md).
-
-## 3. Add a library root
+## 2. Add a library root
 
 Open **Settings** (sidebar bottom-left) and find the **Watched Libraries** card.
 
@@ -61,7 +36,7 @@ Repeat for each root you want Obscura to watch. The path you enter is the path t
 Read [Library Organization](./library-organization.md) before scanning. The depth of files under a root determines whether they become **movies**, **flat-series episodes**, or **seasoned-series episodes**. Adjusting after the fact means a rescan and re-identify pass.
 :::
 
-## 4. Configure global library settings
+## 3. Configure global library settings
 
 The other panels on the Settings page govern how scans behave and what gets generated. Sensible defaults are set out of the box; the ones worth thinking about up front:
 
@@ -76,7 +51,7 @@ The other panels on the Settings page govern how scans behave and what gets gene
 
 The full reference is in [Settings](./settings.md). Defaults are fine for a first scan.
 
-## 5. Run the first scan
+## 4. Run the first scan
 
 Open the **Operations** page (sidebar → **Jobs**) — this is where you watch and trigger background work.
 
@@ -99,7 +74,7 @@ You don't need to watch all of it — the worker handles things. Watch for **Fai
 On a large library the first scan can take a long time — gigabytes of preview clips and trickplay sprites get generated. You can keep using the app while this runs; the dashboard and library pages update as previews land.
 :::
 
-## 6. Verify
+## 5. Verify
 
 Hop to **Videos** in the sidebar. You should see your scanned files with:
 
@@ -109,7 +84,7 @@ Hop to **Videos** in the sidebar. You should see your scanned files with:
 
 Hover a thumbnail to scrub through trickplay sprites. Click to open the detail page and play.
 
-## 7. Identify (optional but recommended)
+## 6. Identify (optional but recommended)
 
 Filenames give you titles and episode numbers, but not posters, descriptions, performers, or studios. That's what **Identify** does.
 

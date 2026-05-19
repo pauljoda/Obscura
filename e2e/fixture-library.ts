@@ -1,5 +1,5 @@
 import { expect, type APIRequestContext } from "@playwright/test";
-import { access } from "node:fs/promises";
+import { access, readdir } from "node:fs/promises";
 import path from "node:path";
 
 const apiBase = process.env.OBSCURA_E2E_API_URL ?? "http://127.0.0.1:8008/api";
@@ -27,6 +27,32 @@ async function pathExists(targetPath: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function hasVideoFile(targetPath: string): Promise<boolean> {
+  const supportedExtensions = new Set([".mp4", ".mkv", ".mov", ".webm", ".avi"]);
+  const pending = [targetPath];
+
+  while (pending.length > 0) {
+    const current = pending.pop()!;
+    let entries;
+    try {
+      entries = await readdir(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      const child = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        pending.push(child);
+      } else if (entry.isFile() && supportedExtensions.has(path.extname(entry.name).toLowerCase())) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 async function listVideoRoots(request: APIRequestContext): Promise<LibraryRoot[]> {
@@ -78,7 +104,7 @@ export async function ensureFixtureLibraryRoot(request: APIRequestContext): Prom
     return repoMatch;
   }
 
-  if (await pathExists(repoFixtureRoot)) {
+  if (await pathExists(repoFixtureRoot) && await hasVideoFile(repoFixtureRoot)) {
     return createLibraryRoot(request, repoFixtureRoot);
   }
 

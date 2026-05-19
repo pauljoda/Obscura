@@ -71,7 +71,7 @@ A retained list of recently-completed jobs at the bottom. Useful when you want t
 
 ## Running a scan manually
 
-Even with auto-scan enabled, you'll often want to kick off a scan explicitly — after adding files, after tweaking a library root, after recovering from a breaking-gate.
+Even with auto-scan enabled, you'll often want to kick off a scan explicitly — after adding files, after tweaking a library root, or after an upgrade that asks you to rebuild metadata.
 
 1. Open Operations.
 2. Find the **Library scan** queue card.
