@@ -26,12 +26,7 @@ public sealed class AudioTrack : Entity {
     /// Records a playback event on the attached playback capability.
     /// </summary>
     public void MarkPlayed(TimeSpan resumeTime, DateTimeOffset playedAt) {
-        var playback = GetCapability<CapabilityPlayback>();
-        if (playback is null) {
-            playback = new CapabilityPlayback();
-            AddCapability(playback);
-        }
-
+        var playback = RequireCapability<CapabilityPlayback>();
         playback.MarkPlayed(resumeTime, playedAt);
     }
 

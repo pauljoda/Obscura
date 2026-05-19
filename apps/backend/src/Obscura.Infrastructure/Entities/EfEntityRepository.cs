@@ -64,7 +64,7 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
             return existing;
         }
 
-        var entity = CreateEntity(row);
+        var entity = await CreateEntityAsync(row, cancellationToken);
         context.Add(entity);
         await HydrateChildrenAsync(entity, context, cancellationToken);
         await HydrateRelationshipsAsync(entity, context, cancellationToken);
@@ -84,10 +84,12 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
             .Where(link => link.ParentEntityId == entity.Id)
             .OrderBy(link => link.SortOrder)
             .ToArrayAsync(cancellationToken);
+        var childIds = links.Select(link => link.ChildEntityId).ToArray();
+        var childRows = await db.Entities.AsNoTracking()
+            .Where(row => childIds.Contains(row.Id) && row.DeletedAt == null)
+            .ToDictionaryAsync(row => row.Id, cancellationToken);
         foreach (var link in links) {
-            var childRow = await db.Entities.AsNoTracking()
-                .FirstOrDefaultAsync(row => row.Id == link.ChildEntityId && row.DeletedAt == null, cancellationToken);
-            if (childRow is null) {
+            if (!childRows.TryGetValue(link.ChildEntityId, out var childRow)) {
                 continue;
             }
 
@@ -107,10 +109,12 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
             .OrderBy(link => link.RelationshipCode)
             .ThenBy(link => link.SortOrder)
             .ToArrayAsync(cancellationToken);
+        var targetIds = links.Select(link => link.TargetEntityId).ToArray();
+        var targetRows = await db.Entities.AsNoTracking()
+            .Where(row => targetIds.Contains(row.Id) && row.DeletedAt == null)
+            .ToDictionaryAsync(row => row.Id, cancellationToken);
         foreach (var link in links) {
-            var targetRow = await db.Entities.AsNoTracking()
-                .FirstOrDefaultAsync(row => row.Id == link.TargetEntityId && row.DeletedAt == null, cancellationToken);
-            if (targetRow is null) {
+            if (!targetRows.TryGetValue(link.TargetEntityId, out var targetRow)) {
                 continue;
             }
 
@@ -455,6 +459,92 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
         }
 
         await SaveCapabilitiesAsync(entity, cancellationToken);
+        await SaveDetailAsync(entity, cancellationToken);
+    }
+
+    private async Task SaveDetailAsync(Entity entity, CancellationToken cancellationToken) {
+        var id = entity.Id;
+        switch (entity) {
+            case Video video: {
+                var row = await db.VideoDetails.FindAsync([id], cancellationToken)
+                    ?? Track(db.VideoDetails, new VideoDetailRow { EntityId = id });
+                row.SubtitlesExtractedAt = video.SubtitlesExtractedAt;
+                break;
+            }
+            case VideoSeries series: {
+                var row = await db.VideoSeriesDetails.FindAsync([id], cancellationToken)
+                    ?? Track(db.VideoSeriesDetails, new VideoSeriesDetailRow { EntityId = id });
+                row.Status = series.Status;
+                break;
+            }
+            case Gallery gallery: {
+                var row = await db.GalleryDetails.FindAsync([id], cancellationToken)
+                    ?? Track(db.GalleryDetails, new GalleryDetailRow { EntityId = id });
+                row.GalleryType = gallery.GalleryType;
+                row.CoverImageEntityId = gallery.CoverImageId;
+                break;
+            }
+            case Book book: {
+                var row = await db.BookDetails.FindAsync([id], cancellationToken)
+                    ?? Track(db.BookDetails, new BookDetailRow { EntityId = id });
+                row.BookType = book.BookType;
+                row.CoverPageEntityId = book.CoverPageId;
+                break;
+            }
+            case BookChapter chapter: {
+                var row = await db.BookChapterDetails.FindAsync([id], cancellationToken)
+                    ?? Track(db.BookChapterDetails, new BookChapterDetailRow { EntityId = id });
+                row.CoverPageEntityId = chapter.CoverPageId;
+                break;
+            }
+            case AudioTrack track: {
+                var row = await db.AudioTrackDetails.FindAsync([id], cancellationToken)
+                    ?? Track(db.AudioTrackDetails, new AudioTrackDetailRow { EntityId = id });
+                row.EmbeddedArtist = track.EmbeddedArtist;
+                row.EmbeddedAlbum = track.EmbeddedAlbum;
+                break;
+            }
+            case Person person: {
+                var row = await db.PersonDetails.FindAsync([id], cancellationToken)
+                    ?? Track(db.PersonDetails, new PersonDetailRow { EntityId = id });
+                row.Disambiguation = person.Disambiguation;
+                row.Gender = person.Gender;
+                row.Country = person.Country;
+                row.Ethnicity = person.Ethnicity;
+                row.EyeColor = person.EyeColor;
+                row.HairColor = person.HairColor;
+                row.Height = person.Height;
+                row.Weight = person.Weight;
+                row.Measurements = person.Measurements;
+                row.Tattoos = person.Tattoos;
+                row.Piercings = person.Piercings;
+                break;
+            }
+            case Tag tag: {
+                var row = await db.TagDetails.FindAsync([id], cancellationToken)
+                    ?? Track(db.TagDetails, new TagDetailRow { EntityId = id });
+                row.IgnoreAutoTag = tag.IgnoreAutoTag;
+                break;
+            }
+            case Collection collection: {
+                var row = await db.CollectionDetails.FindAsync([id], cancellationToken)
+                    ?? Track(db.CollectionDetails, new CollectionDetailRow { EntityId = id });
+                row.Mode = collection.Mode;
+                row.RuleTreeJson = collection.RuleTreeJson;
+                row.CoverMode = collection.CoverMode;
+                row.CoverItemEntityId = collection.CoverItemId;
+                row.SlideshowDurationSeconds = (int)collection.SlideshowDuration.TotalSeconds;
+                row.SlideshowAutoAdvance = collection.SlideshowAutoAdvance;
+                row.LastRefreshedAt = collection.LastRefreshedAt;
+                break;
+            }
+        }
+    }
+
+    private static TRow Track<TRow>(DbSet<TRow> set, TRow row)
+        where TRow : class {
+        set.Add(row);
+        return row;
     }
 
     private async Task SaveCapabilitiesAsync(Entity entity, CancellationToken cancellationToken) {
@@ -611,25 +701,86 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
         row.UpdatedAt = now;
     }
 
-    private static Entity CreateEntity(EntityRow row) =>
-        EntityKindRegistry.Require(row.KindCode) switch {
-            EntityKind.AudioLibrary => new AudioLibrary(row.Id, row.Title),
-            EntityKind.AudioTrack => new AudioTrack(row.Id, row.Title, embeddedArtist: null, embeddedAlbum: null),
-            EntityKind.Book => new Book(row.Id, row.Title, BookType.Book, coverPageId: null),
-            EntityKind.BookVolume => new BookVolume(row.Id, row.Title),
-            EntityKind.BookChapter => new BookChapter(row.Id, row.Title, coverPageId: null),
-            EntityKind.BookPage => new BookPage(row.Id, row.Title),
-            EntityKind.Collection => new Collection(row.Id, row.Title),
-            EntityKind.Gallery => new Gallery(row.Id, row.Title, GalleryType.Virtual, coverImageId: null),
-            EntityKind.Image => new Image(row.Id, row.Title),
-            EntityKind.Person => new Person(row.Id, row.Title),
-            EntityKind.Studio => new Studio(row.Id, row.Title),
-            EntityKind.Tag => new Tag(row.Id, row.Title),
-            EntityKind.Video => new Video(row.Id, row.Title, subtitlesExtractedAt: null),
-            EntityKind.VideoSeries => new VideoSeries(row.Id, row.Title),
-            EntityKind.VideoSeason => new VideoSeason(row.Id, row.Title, row.ParentEntityId, sortOrder: row.SortOrder),
-            _ => throw new InvalidOperationException($"Entity kind '{row.KindCode}' cannot be hydrated.")
-        };
+    private async Task<Entity> CreateEntityAsync(EntityRow row, CancellationToken cancellationToken) {
+        var id = row.Id;
+        switch (EntityKindRegistry.Require(row.KindCode)) {
+            case EntityKind.AudioLibrary:
+                return new AudioLibrary(id, row.Title);
+            case EntityKind.AudioTrack: {
+                var detail = await db.AudioTrackDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                return new AudioTrack(id, row.Title, detail?.EmbeddedArtist, detail?.EmbeddedAlbum);
+            }
+            case EntityKind.Book: {
+                var detail = await db.BookDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                return new Book(id, row.Title, detail?.BookType ?? BookType.Book, detail?.CoverPageEntityId);
+            }
+            case EntityKind.BookVolume:
+                return new BookVolume(id, row.Title);
+            case EntityKind.BookChapter: {
+                var detail = await db.BookChapterDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                return new BookChapter(id, row.Title, detail?.CoverPageEntityId);
+            }
+            case EntityKind.BookPage:
+                return new BookPage(id, row.Title);
+            case EntityKind.Collection: {
+                var detail = await db.CollectionDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                return detail is null
+                    ? new Collection(id, row.Title)
+                    : new Collection(
+                        id,
+                        row.Title,
+                        detail.Mode,
+                        detail.RuleTreeJson,
+                        detail.CoverMode,
+                        detail.CoverItemEntityId,
+                        TimeSpan.FromSeconds(detail.SlideshowDurationSeconds),
+                        detail.SlideshowAutoAdvance,
+                        detail.LastRefreshedAt);
+            }
+            case EntityKind.Gallery: {
+                var detail = await db.GalleryDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                return new Gallery(id, row.Title, detail?.GalleryType ?? GalleryType.Virtual, detail?.CoverImageEntityId);
+            }
+            case EntityKind.Image:
+                return new Image(id, row.Title);
+            case EntityKind.Person: {
+                var detail = await db.PersonDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                return new Person(
+                    id,
+                    row.Title,
+                    detail?.Disambiguation,
+                    detail?.Gender,
+                    birthdate: null,
+                    detail?.Country,
+                    detail?.Ethnicity,
+                    detail?.EyeColor,
+                    detail?.HairColor,
+                    detail?.Height,
+                    detail?.Weight,
+                    detail?.Measurements,
+                    detail?.Tattoos,
+                    detail?.Piercings);
+            }
+            case EntityKind.Studio:
+                return new Studio(id, row.Title);
+            case EntityKind.Tag: {
+                var detail = await db.TagDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                return new Tag(id, row.Title, detail?.IgnoreAutoTag ?? false);
+            }
+            case EntityKind.Video: {
+                var detail = await db.VideoDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                return new Video(id, row.Title, detail?.SubtitlesExtractedAt);
+            }
+            case EntityKind.VideoSeries: {
+                var detail = await db.VideoSeriesDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                return new VideoSeries(id, row.Title, detail?.Status);
+            }
+            case EntityKind.VideoSeason:
+                return new VideoSeason(id, row.Title, row.ParentEntityId, sortOrder: row.SortOrder);
+            default:
+                throw new InvalidOperationException($"Entity kind '{row.KindCode}' cannot be hydrated.");
+        }
+    }
 
     private static CreditRole DecodeCreditRole(string? metadataJson) {
         if (string.IsNullOrWhiteSpace(metadataJson)) {

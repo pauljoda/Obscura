@@ -153,6 +153,48 @@ public sealed class EfEntityRepositoryTests {
         Assert.Equal(10, loaded.Progress!.Total);
     }
 
+    [Fact]
+    public async Task SaveThenFindRoundTripsKindSpecificDetail() {
+        await using var db = CreateContext();
+        var repository = new EfEntityRepository(db);
+        var cover = Guid.Parse("12121212-1212-1212-1212-121212121212");
+        var refreshed = DateTimeOffset.UtcNow;
+
+        var gallery = new Gallery(Guid.NewGuid(), "G", GalleryType.Zip, cover);
+        var person = new Person(Guid.NewGuid(), "P", disambiguation: "the elder", gender: "f", country: "US", height: 170);
+        var tag = new Tag(Guid.NewGuid(), "T", ignoreAutoTag: true);
+        var track = new AudioTrack(Guid.NewGuid(), "A", "Artist", "Album");
+        var book = new Book(Guid.NewGuid(), "B", BookType.Manga, cover);
+        var collection = new Collection(Guid.NewGuid(), "C", CollectionMode.Dynamic, "{}", CollectionCoverMode.Custom, cover, TimeSpan.FromSeconds(9), true, refreshed);
+
+        foreach (var entity in new Entity[] { gallery, person, tag, track, book, collection }) {
+            await repository.SaveAsync(entity, CancellationToken.None);
+        }
+
+        var loadedGallery = await repository.RequireAsync<Gallery>(gallery.Id, CancellationToken.None);
+        Assert.Equal(GalleryType.Zip, loadedGallery.GalleryType);
+        Assert.Equal(cover, loadedGallery.CoverImageId);
+
+        var loadedPerson = await repository.RequireAsync<Person>(person.Id, CancellationToken.None);
+        Assert.Equal("the elder", loadedPerson.Disambiguation);
+        Assert.Equal("US", loadedPerson.Country);
+        Assert.Equal(170, loadedPerson.Height);
+
+        Assert.True((await repository.RequireAsync<Tag>(tag.Id, CancellationToken.None)).IgnoreAutoTag);
+
+        var loadedTrack = await repository.RequireAsync<AudioTrack>(track.Id, CancellationToken.None);
+        Assert.Equal("Artist", loadedTrack.EmbeddedArtist);
+        Assert.Equal("Album", loadedTrack.EmbeddedAlbum);
+
+        Assert.Equal(BookType.Manga, (await repository.RequireAsync<Book>(book.Id, CancellationToken.None)).BookType);
+
+        var loadedCollection = await repository.RequireAsync<Collection>(collection.Id, CancellationToken.None);
+        Assert.Equal(CollectionMode.Dynamic, loadedCollection.Mode);
+        Assert.Equal(CollectionCoverMode.Custom, loadedCollection.CoverMode);
+        Assert.Equal(TimeSpan.FromSeconds(9), loadedCollection.SlideshowDuration);
+        Assert.True(loadedCollection.SlideshowAutoAdvance);
+    }
+
     private static void Set(Entity entity, EntityCapability capability) {
         var remove = typeof(Entity).GetMethod(nameof(Entity.RemoveCapability))!
             .MakeGenericMethod(capability.GetType());

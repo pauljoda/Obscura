@@ -26,12 +26,7 @@ public sealed class Book : Entity {
     /// Moves the reading cursor to a chapter and page.
     /// </summary>
     public void MoveReaderToChapter(Guid chapterId, int pageIndex, int pageCount, ReaderMode readerMode) {
-        var progress = GetCapability<CapabilityProgress>();
-        if (progress is null) {
-            progress = new CapabilityProgress();
-            AddCapability(progress);
-        }
-
+        var progress = RequireCapability<CapabilityProgress>();
         var normalizedPageCount = Math.Max(0, pageCount);
         var normalizedPageIndex = normalizedPageCount == 0
             ? 0
@@ -48,12 +43,7 @@ public sealed class Book : Entity {
 
     /// <summary>Marks the book as completed at the supplied time.</summary>
     public void MarkCompleted(DateTimeOffset completedAt) {
-        var progress = GetCapability<CapabilityProgress>();
-        if (progress is null) {
-            progress = new CapabilityProgress();
-            AddCapability(progress);
-        }
-
+        var progress = RequireCapability<CapabilityProgress>();
         progress.MarkCompleted(completedAt);
     }
 
