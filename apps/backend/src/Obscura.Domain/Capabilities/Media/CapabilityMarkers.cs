@@ -3,7 +3,7 @@ namespace Obscura.Domain.Capabilities;
 /// <summary>
 /// Mutable marker capability for timeline, page, or navigation markers.
 /// </summary>
-public sealed class CapabilityMarkers : CollectionCapability<CapabilityMarkers.Item, Guid> {
+public sealed class CapabilityMarkers : CollectionCapability<CapabilityMarkers.Item> {
     /// <summary>
     /// Creates the marker capability, keeping markers ordered by start time.
     /// </summary>
@@ -18,10 +18,7 @@ public sealed class CapabilityMarkers : CollectionCapability<CapabilityMarkers.I
     /// <param name="Title">Human-readable marker label.</param>
     /// <param name="Seconds">Start time in seconds from the beginning of the media.</param>
     /// <param name="EndSeconds">Optional end time in seconds when the marker spans a range.</param>
-    public sealed record Item(Guid Id, string Title, double Seconds, double? EndSeconds) : ICapabilityItem<Guid> {
-        /// <inheritdoc />
-        public Guid Key => Id;
-    }
+    public sealed record Item(Guid Id, string Title, double Seconds, double? EndSeconds);
 
     /// <summary>Adds a marker and returns its stable identifier.</summary>
     public Guid Add(string title, double seconds, double? endSeconds = null) {
@@ -33,17 +30,17 @@ public sealed class CapabilityMarkers : CollectionCapability<CapabilityMarkers.I
 
     /// <summary>Updates an existing marker.</summary>
     public bool Update(Guid markerId, string title, double seconds, double? endSeconds = null) {
-        if (!Contains(markerId)) {
+        if (RemoveItems(item => item.Id == markerId) == 0) {
             return false;
         }
 
-        Set(new Item(markerId, NormalizeTitle(title), ClampSeconds(seconds), ClampEndSeconds(seconds, endSeconds)));
+        AddItem(new Item(markerId, NormalizeTitle(title), ClampSeconds(seconds), ClampEndSeconds(seconds, endSeconds)));
         SortBy(item => item.Seconds);
         return true;
     }
 
     /// <summary>Deletes an existing marker.</summary>
-    public bool Delete(Guid markerId) => Remove(markerId);
+    public bool Delete(Guid markerId) => RemoveItems(item => item.Id == markerId) > 0;
 
     private static string NormalizeTitle(string title) =>
         string.IsNullOrWhiteSpace(title)

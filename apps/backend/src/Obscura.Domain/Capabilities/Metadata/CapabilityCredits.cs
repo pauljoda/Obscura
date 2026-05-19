@@ -7,19 +7,11 @@ namespace Obscura.Domain.Capabilities;
 /// Mutable list of people credited in the scope of the owning entity.
 /// </summary>
 public sealed class CapabilityCredits(IEnumerable<CapabilityCredits.Item>? items = null)
-    : CollectionCapability<CapabilityCredits.Item, CapabilityCredits.Identity>(items) {
-    /// <summary>
-    /// Composite identity of a credit: the same person may be credited once per role and label.
-    /// </summary>
-    /// <param name="PersonId">Referenced person identifier.</param>
-    /// <param name="Role">Credit role.</param>
-    /// <param name="Label">Optional scoped label, such as a character name.</param>
-    public readonly record struct Identity(Guid PersonId, CreditRole Role, string? Label);
-
+    : CollectionCapability<CapabilityCredits.Item>(items) {
     /// <summary>
     /// Person credit scoped to one entity, including the role and optional display label for that scope.
     /// </summary>
-    public sealed class Item : ICapabilityItem<Identity> {
+    public sealed class Item {
         /// <summary>
         /// Creates a scoped person credit.
         /// </summary>
@@ -40,9 +32,6 @@ public sealed class CapabilityCredits(IEnumerable<CapabilityCredits.Item>? items
 
         /// <summary>Optional scoped label, such as a character name.</summary>
         public string? Label { get; }
-
-        /// <inheritdoc />
-        public Identity Key => new(Person.Id, Role, Label);
     }
 
     /// <summary>Credits attached to the entity in insertion order.</summary>
@@ -58,11 +47,14 @@ public sealed class CapabilityCredits(IEnumerable<CapabilityCredits.Item>? items
     /// <exception cref="ArgumentException">Thrown when the same person, role, and label are already credited.</exception>
     public Item Add(Person person, CreditRole role, string? label = null) {
         ArgumentNullException.ThrowIfNull(person);
-        var credit = new Item(person, role, label);
-        if (Contains(credit.Key)) {
+        if (Items.Any(credit =>
+                credit.Person.Id == person.Id &&
+                credit.Role == role &&
+                string.Equals(credit.Label, label, StringComparison.Ordinal))) {
             throw new ArgumentException($"Person '{person.Id}' already has a matching {role} credit.", nameof(person));
         }
 
+        var credit = new Item(person, role, label);
         AddItem(credit);
         return credit;
     }
