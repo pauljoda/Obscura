@@ -6,7 +6,7 @@ public sealed class InfrastructureBoundaryTests
     public void InfrastructureDoesNotKeepOneToOneServiceInterfaces()
     {
         var infrastructureAssembly = typeof(Obscura.Infrastructure.DependencyInjection).Assembly;
-        var applicationAssembly = typeof(Obscura.Application.Entities.SetEntityRatingCommand).Assembly;
+        var applicationAssembly = typeof(Obscura.Application.Jobs.JobService).Assembly;
         var removedInterfaceNames = new[]
         {
             "Obscura.Infrastructure.Media.IMediaToolService",

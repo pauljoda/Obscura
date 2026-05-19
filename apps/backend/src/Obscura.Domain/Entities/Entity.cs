@@ -7,8 +7,7 @@ namespace Obscura.Domain.Entities;
 /// </summary>
 public abstract class Entity {
     private readonly List<EntityCapability> _capabilities = [];
-    private readonly Dictionary<EntityKind, List<Entity>> _childrenByKind = [];
-    private readonly Dictionary<EntityKind, List<Entity>> _relationshipsByKind = [];
+    private readonly List<EntityLink> _links = [];
 
     /// <summary>
     /// Creates an entity with optional capabilities, child relationships, and non-structural relationships.
@@ -67,16 +66,18 @@ public abstract class Entity {
     public IReadOnlyList<EntityCapability> Capabilities => _capabilities;
 
     /// <summary>Structural child entities grouped by their concrete entity kind.</summary>
-    public IReadOnlyDictionary<EntityKind, IReadOnlyList<Entity>> ChildrenByKind => Snapshot(_childrenByKind);
+    public IReadOnlyDictionary<EntityKind, IReadOnlyList<Entity>> ChildrenByKind => GroupByKind(structural: true);
 
     /// <summary>Structural child entities in insertion order.</summary>
-    public IReadOnlyList<Entity> ChildEntities => _childrenByKind.Values.SelectMany(children => children).ToArray();
+    public IReadOnlyList<Entity> ChildEntities =>
+        _links.Where(link => link.Structural).Select(link => link.Entity).ToArray();
 
     /// <summary>Non-structural related entities grouped by their concrete entity kind.</summary>
-    public IReadOnlyDictionary<EntityKind, IReadOnlyList<Entity>> RelationshipsByKind => Snapshot(_relationshipsByKind);
+    public IReadOnlyDictionary<EntityKind, IReadOnlyList<Entity>> RelationshipsByKind => GroupByKind(structural: false);
 
     /// <summary>Non-structural related entities in insertion order within each kind group.</summary>
-    public IReadOnlyList<Entity> Relationships => _relationshipsByKind.Values.SelectMany(relationships => relationships).ToArray();
+    public IReadOnlyList<Entity> Relationships =>
+        _links.Where(link => !link.Structural).Select(link => link.Entity).ToArray();
 
     /// <summary>User rating capability when attached.</summary>
     public CapabilityRating? Rating => GetCapability<CapabilityRating>();
@@ -209,19 +210,38 @@ public abstract class Entity {
     }
 
     /// <summary>
+    /// Gets the attached capability of the requested type, attaching a fresh default
+    /// instance first when it is missing.
+    /// </summary>
+    /// <typeparam name="TCapability">Capability type to get or attach.</typeparam>
+    /// <returns>The existing or newly attached capability.</returns>
+    public TCapability GetOrAddCapability<TCapability>(Func<TCapability> factory)
+        where TCapability : EntityCapability {
+        ArgumentNullException.ThrowIfNull(factory);
+        var existing = GetCapability<TCapability>();
+        if (existing is not null) {
+            return existing;
+        }
+
+        var created = factory();
+        AddCapability(created);
+        return created;
+    }
+
+    /// <summary>
     /// Adds a structural child relationship.
     /// </summary>
     /// <param name="child">Child entity.</param>
     /// <param name="sortOrder">Optional child order.</param>
     public void AddChild(Entity child, int? sortOrder = null) {
         ArgumentNullException.ThrowIfNull(child);
-        if (_childrenByKind.Values.SelectMany(children => children).Any(existing => existing.Id == child.Id)) {
+        if (_links.Any(link => link.Structural && link.Entity.Id == child.Id)) {
             throw new ArgumentException($"Entity '{Id}' already has child '{child.Id}'.", nameof(child));
         }
 
         child.ParentEntityId = Id;
         child.SortOrder = sortOrder;
-        AddToKindMap(_childrenByKind, child);
+        _links.Add(new EntityLink(child, Structural: true));
     }
 
     /// <summary>
@@ -239,9 +259,9 @@ public abstract class Entity {
     /// <param name="kind">Entity kind to retrieve.</param>
     /// <returns>Matching child entities in insertion order.</returns>
     public IReadOnlyList<Entity> ChildrenOf(EntityKind kind) =>
-        _childrenByKind.TryGetValue(kind, out var children)
-            ? children.ToArray()
-            : [];
+        _links.Where(link => link.Structural && link.Entity.Kind == kind)
+            .Select(link => link.Entity)
+            .ToArray();
 
     /// <summary>
     /// Adds a non-structural relationship.
@@ -249,11 +269,11 @@ public abstract class Entity {
     /// <param name="entity">Related entity.</param>
     public void AddRelationship(Entity entity) {
         ArgumentNullException.ThrowIfNull(entity);
-        if (_relationshipsByKind.Values.SelectMany(relationships => relationships).Any(existing => existing.Id == entity.Id)) {
+        if (_links.Any(link => !link.Structural && link.Entity.Id == entity.Id)) {
             throw new ArgumentException($"Entity '{Id}' already has relationship '{entity.Id}'.", nameof(entity));
         }
 
-        AddToKindMap(_relationshipsByKind, entity);
+        _links.Add(new EntityLink(entity, Structural: false));
     }
 
     /// <summary>
@@ -271,21 +291,16 @@ public abstract class Entity {
     /// <param name="kind">Entity kind to retrieve.</param>
     /// <returns>Matching related entities in insertion order.</returns>
     public IReadOnlyList<Entity> RelationshipsOf(EntityKind kind) =>
-        _relationshipsByKind.TryGetValue(kind, out var relationships)
-            ? relationships.ToArray()
-            : [];
+        _links.Where(link => !link.Structural && link.Entity.Kind == kind)
+            .Select(link => link.Entity)
+            .ToArray();
 
-    private static void AddToKindMap(Dictionary<EntityKind, List<Entity>> map, Entity entity) {
-        if (!map.TryGetValue(entity.Kind, out var bucket)) {
-            bucket = [];
-            map.Add(entity.Kind, bucket);
-        }
+    private IReadOnlyDictionary<EntityKind, IReadOnlyList<Entity>> GroupByKind(bool structural) =>
+        _links.Where(link => link.Structural == structural)
+            .GroupBy(link => link.Entity.Kind)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<Entity>)group.Select(link => link.Entity).ToArray());
 
-        bucket.Add(entity);
-    }
-
-    private static IReadOnlyDictionary<EntityKind, IReadOnlyList<Entity>> Snapshot(Dictionary<EntityKind, List<Entity>> map) =>
-        map.ToDictionary(
-            pair => pair.Key,
-            pair => (IReadOnlyList<Entity>)pair.Value.ToArray());
+    private readonly record struct EntityLink(Entity Entity, bool Structural);
 }

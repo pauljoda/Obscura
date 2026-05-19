@@ -1,4 +1,3 @@
-using Obscura.Application.Entities;
 using Obscura.Contracts.Collections;
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.Media;
@@ -6,6 +5,7 @@ using Obscura.Contracts.Series;
 using Obscura.Contracts.System;
 using Obscura.Contracts.Taxonomy;
 using Obscura.Contracts.Videos;
+using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Entities;
 
@@ -57,11 +57,22 @@ public static class EntityEndpoints
         group.MapPatch("/{id:guid}/rating", async (
             Guid id,
             RatingUpdateRequest request,
-            EntityWriteUseCases entities,
+            EfEntityRepository repository,
             CancellationToken cancellationToken) =>
-            await ReturnWriteResultAsync(
-                id,
-                entities.SetRatingAsync(new SetEntityRatingCommand(id, request.Value), cancellationToken)))
+            await WriteAsync(repository, id, entity =>
+            {
+                var rating = entity.GetOrAddCapability(() => new CapabilityRating());
+                if (request.Value is { } value)
+                {
+                    rating.Rate(value);
+                }
+                else
+                {
+                    rating.Clear();
+                }
+
+                return true;
+            }, cancellationToken))
             .WithName("UpdateEntityRating")
             .Produces<EntityCard>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
@@ -69,11 +80,13 @@ public static class EntityEndpoints
         group.MapPatch("/{id:guid}/flags", async (
             Guid id,
             EntityFlagsUpdateRequest request,
-            EntityWriteUseCases entities,
+            EfEntityRepository repository,
             CancellationToken cancellationToken) =>
-            await ReturnWriteResultAsync(
-                id,
-                entities.UpdateFlagsAsync(new UpdateEntityFlagsCommand(id, request.IsFavorite, request.IsNsfw, request.IsOrganized), cancellationToken)))
+            await WriteAsync(repository, id, entity =>
+            {
+                entity.GetOrAddCapability(() => new CapabilityFlags()).Patch(request.IsFavorite, request.IsNsfw, request.IsOrganized);
+                return true;
+            }, cancellationToken))
             .WithName("UpdateEntityFlags")
             .Produces<EntityCard>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
@@ -81,11 +94,17 @@ public static class EntityEndpoints
         group.MapPatch("/{id:guid}/playback", async (
             Guid id,
             PlaybackUpdateRequest request,
-            EntityWriteUseCases entities,
+            EfEntityRepository repository,
             CancellationToken cancellationToken) =>
-            await ReturnWriteResultAsync(
-                id,
-                entities.UpdatePlaybackAsync(new UpdatePlaybackCommand(id, request.ResumeSeconds, request.DurationSeconds, request.Completed), cancellationToken)))
+            await WriteAsync(repository, id, entity =>
+            {
+                entity.GetOrAddCapability(() => new CapabilityPlayback()).Update(
+                    request.ResumeSeconds is null ? null : TimeSpan.FromSeconds(request.ResumeSeconds.Value),
+                    request.DurationSeconds is null ? null : TimeSpan.FromSeconds(request.DurationSeconds.Value),
+                    request.Completed,
+                    DateTimeOffset.UtcNow);
+                return true;
+            }, cancellationToken))
             .WithName("UpdateEntityPlayback")
             .Produces<EntityCard>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
@@ -93,11 +112,13 @@ public static class EntityEndpoints
         group.MapPost("/{id:guid}/markers", async (
             Guid id,
             EntityMarkerWriteRequest request,
-            EntityWriteUseCases entities,
+            EfEntityRepository repository,
             CancellationToken cancellationToken) =>
-            await ReturnWriteResultAsync(
-                id,
-                entities.CreateMarkerAsync(new CreateEntityMarkerCommand(id, request.Title, request.Seconds, request.EndSeconds), cancellationToken)))
+            await WriteAsync(repository, id, entity =>
+            {
+                entity.GetOrAddCapability(() => new CapabilityMarkers()).Add(request.Title, request.Seconds, request.EndSeconds);
+                return true;
+            }, cancellationToken))
             .WithName("CreateEntityMarker")
             .Produces<EntityCard>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
@@ -106,11 +127,11 @@ public static class EntityEndpoints
             Guid id,
             Guid markerId,
             EntityMarkerWriteRequest request,
-            EntityWriteUseCases entities,
+            EfEntityRepository repository,
             CancellationToken cancellationToken) =>
-            await ReturnWriteResultAsync(
-                id,
-                entities.UpdateMarkerAsync(new UpdateEntityMarkerCommand(id, markerId, request.Title, request.Seconds, request.EndSeconds), cancellationToken)))
+            await WriteAsync(repository, id, entity =>
+                entity.GetOrAddCapability(() => new CapabilityMarkers()).Update(markerId, request.Title, request.Seconds, request.EndSeconds),
+                cancellationToken))
             .WithName("UpdateEntityMarker")
             .Produces<EntityCard>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
@@ -118,11 +139,11 @@ public static class EntityEndpoints
         group.MapDelete("/{id:guid}/markers/{markerId:guid}", async (
             Guid id,
             Guid markerId,
-            EntityWriteUseCases entities,
+            EfEntityRepository repository,
             CancellationToken cancellationToken) =>
-            await ReturnWriteResultAsync(
-                id,
-                entities.DeleteMarkerAsync(new DeleteEntityMarkerCommand(id, markerId), cancellationToken)))
+            await WriteAsync(repository, id, entity =>
+                entity.GetOrAddCapability(() => new CapabilityMarkers()).Delete(markerId),
+                cancellationToken))
             .WithName("DeleteEntityMarker")
             .Produces<EntityCard>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
@@ -210,12 +231,20 @@ public static class EntityEndpoints
             : Results.Ok<object>(entity);
     }
 
-    private static async Task<IResult> ReturnWriteResultAsync(Guid id, Task<EntityCard?> resultTask)
+    private static async Task<IResult> WriteAsync(
+        EfEntityRepository repository,
+        Guid id,
+        Func<Entity, bool> mutate,
+        CancellationToken cancellationToken)
     {
-        var entity = await resultTask;
-        return entity is null
-            ? Results.NotFound(new ApiProblem("entity_not_found", $"Entity '{id}' was not found."))
-            : Results.Ok(entity);
+        var entity = await repository.FindAsync(id, cancellationToken);
+        if (entity is null || !mutate(entity))
+        {
+            return Results.NotFound(new ApiProblem("entity_not_found", $"Entity '{id}' was not found."));
+        }
+
+        await repository.SaveAsync(entity, cancellationToken);
+        return Results.Ok(EntityCardProjector.ToCard(entity));
     }
 
     private static bool TryGetKind(string? value, out string? kind, out IResult error)
