@@ -9,10 +9,24 @@ public sealed class CapabilityRating : EntityCapability {
     /// </summary>
     /// <param name="value">Optional zero-through-five rating value.</param>
     public CapabilityRating(int? value = null) {
-        Value = value is null ? null : new Rating(value.Value).Value;
+        Value = value is null ? null : Scale.Normalize(value.Value);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Obscura's shared zero-through-five rating scale and its normalization rule.
+    /// </summary>
+    public static class Scale {
+        /// <summary>Lowest rating value supported by Obscura.</summary>
+        public const int MinValue = 0;
+
+        /// <summary>Highest rating value supported by Obscura.</summary>
+        public const int MaxValue = 5;
+
+        /// <summary>Clamps a value onto the supported zero-through-five scale.</summary>
+        /// <param name="value">Raw rating value.</param>
+        /// <returns>The clamped rating value.</returns>
+        public static int Normalize(int value) => Math.Clamp(value, MinValue, MaxValue);
+    }
 
     /// <summary>Current normalized rating value, or null when unrated.</summary>
     public int? Value { get; private set; }
@@ -22,7 +36,7 @@ public sealed class CapabilityRating : EntityCapability {
     /// </summary>
     /// <param name="value">Rating value clamped onto the shared zero-through-five scale.</param>
     public void Rate(int value) {
-        Value = new Rating(value).Value;
+        Value = Scale.Normalize(value);
     }
 
     /// <summary>Clears the current rating.</summary>

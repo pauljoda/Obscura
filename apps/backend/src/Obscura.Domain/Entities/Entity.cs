@@ -128,7 +128,7 @@ public abstract class Entity {
     public CapabilitySubtitles? SubtitleCapability => GetCapability<CapabilitySubtitles>();
 
     /// <summary>Playback state when playback capability is attached.</summary>
-    public Playback? Playback => PlaybackCapability?.Value;
+    public CapabilityPlayback.State? Playback => PlaybackCapability?.Value;
 
     /// <summary>
     /// Updates the title while preserving entity identity.
@@ -186,7 +186,6 @@ public abstract class Entity {
             throw new ArgumentException($"Entity '{Id}' already has capability {capability.GetType().Name}.", nameof(capability));
         }
 
-        capability.AttachTo(this);
         _capabilities.Add(capability);
     }
 
@@ -202,7 +201,6 @@ public abstract class Entity {
             return false;
         }
 
-        capability.DetachFrom(this);
         return _capabilities.Remove(capability);
     }
 

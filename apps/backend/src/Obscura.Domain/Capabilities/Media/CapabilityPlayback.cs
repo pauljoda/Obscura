@@ -8,14 +8,30 @@ public sealed class CapabilityPlayback : EntityCapability {
     /// Creates a playback capability.
     /// </summary>
     /// <param name="value">Initial playback state.</param>
-    public CapabilityPlayback(Playback? value = null) {
-        Value = value ?? Playback.Empty;
+    public CapabilityPlayback(State? value = null) {
+        Value = value ?? State.Empty;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Single-user playback state for a time-based media entity.
+    /// </summary>
+    /// <param name="PlayCount">Number of completed or started play sessions recorded for the entity.</param>
+    /// <param name="PlayDuration">Total accumulated playback duration.</param>
+    /// <param name="ResumeTime">Position where playback should resume.</param>
+    /// <param name="LastPlayedAt">Timestamp of the most recent playback event.</param>
+    /// <param name="CompletedAt">Timestamp when the entity was completed, when applicable.</param>
+    public sealed record State(
+        int PlayCount,
+        TimeSpan PlayDuration,
+        TimeSpan ResumeTime,
+        DateTimeOffset? LastPlayedAt,
+        DateTimeOffset? CompletedAt) {
+        /// <summary>Empty playback state for media that has never been played.</summary>
+        public static State Empty { get; } = new(0, TimeSpan.Zero, TimeSpan.Zero, null, null);
+    }
 
     /// <summary>Single-user playback state.</summary>
-    public Playback Value { get; private set; }
+    public State Value { get; private set; }
 
     /// <summary>
     /// Records a playback event.
