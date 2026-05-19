@@ -202,7 +202,7 @@ public sealed class EntityMetadataApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplyProposalChildrenWithTargetEntityIdsRecursesThroughGenericGraph()
+    public async Task ApplyProposalChildrenWithTargetEntityIdsRecursesThroughGenericStructure()
     {
         await using var db = CreateContext();
         var parentId = Guid.Parse("55555555-5555-5555-5555-555555555555");
@@ -249,7 +249,7 @@ public sealed class EntityMetadataApplyServiceTests
                     TargetKind: "video-season",
                     TargetEntityId: childId,
                     Confidence: 1,
-                    MatchReason: "graph-child",
+                    MatchReason: "structural-child",
                     Patch: EmptyPatch() with
                     {
                         Title = "New Season",
@@ -264,7 +264,7 @@ public sealed class EntityMetadataApplyServiceTests
                             TargetKind: "video",
                             TargetEntityId: grandchildId,
                             Confidence: 1,
-                            MatchReason: "graph-child",
+                            MatchReason: "structural-child",
                             Patch: EmptyPatch() with
                             {
                                 Title = "New Episode",
@@ -343,7 +343,7 @@ public sealed class EntityMetadataApplyServiceTests
                     TargetKind: "video-season",
                     TargetEntityId: seasonId,
                     Confidence: 1,
-                    MatchReason: "graph-child",
+                    MatchReason: "structural-child",
                     Patch: EmptyPatch() with
                     {
                         Positions = new Dictionary<string, int> { ["seasonNumber"] = 3 }
@@ -357,7 +357,7 @@ public sealed class EntityMetadataApplyServiceTests
                             TargetKind: "video",
                             TargetEntityId: episodeId,
                             Confidence: 1,
-                            MatchReason: "graph-child",
+                            MatchReason: "structural-child",
                             Patch: EmptyPatch() with
                             {
                                 Positions = new Dictionary<string, int> { ["episodeNumber"] = 2 }
@@ -385,7 +385,7 @@ public sealed class EntityMetadataApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplyGraphChildCreditsDeduplicatesRepeatedPeople()
+    public async Task ApplyStructuralChildCreditsDeduplicatesRepeatedPeople()
     {
         await using var db = CreateContext();
         var seriesId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
@@ -422,7 +422,7 @@ public sealed class EntityMetadataApplyServiceTests
                     TargetKind: "video",
                     TargetEntityId: episodeId,
                     Confidence: 1,
-                    MatchReason: "graph-child",
+                    MatchReason: "structural-child",
                     Patch: EmptyPatch() with
                     {
                         Credits =
@@ -447,7 +447,7 @@ public sealed class EntityMetadataApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplyGraphChildArtworkDeduplicatesRepeatedLinkedPersonImages()
+    public async Task ApplyStructuralChildArtworkDeduplicatesRepeatedLinkedPersonImages()
     {
         await using var db = CreateContext();
         var seriesId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
@@ -502,7 +502,7 @@ public sealed class EntityMetadataApplyServiceTests
                     TargetKind: "video",
                     TargetEntityId: episodeId,
                     Confidence: 1,
-                    MatchReason: "graph-child",
+                    MatchReason: "structural-child",
                     Patch: EmptyPatch() with
                     {
                         Credits = [new CreditPatch("Returning Actor", "person", "Character", 0)]
@@ -569,7 +569,7 @@ public sealed class EntityMetadataApplyServiceTests
                     TargetKind: "video",
                     TargetEntityId: episodeId,
                     Confidence: 1,
-                    MatchReason: "graph-child",
+                    MatchReason: "structural-child",
                     Patch: EmptyPatch() with
                     {
                         Title = "Episode One",

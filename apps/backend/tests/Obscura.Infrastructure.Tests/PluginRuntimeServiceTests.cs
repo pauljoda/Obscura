@@ -256,8 +256,8 @@ public sealed class PluginRuntimeServiceTests : IDisposable
         var child = Assert.Single(response.Result!.Children);
         Assert.Equal(seasonId, child.TargetEntityId);
         Assert.Equal("video-season", child.TargetKind);
-        Assert.Equal(seriesId, executor.Requests[1].Graph?.Ancestors.Single().Id);
-        Assert.Equal(1, executor.Requests[1].Graph?.Positions["sortOrder"]);
+        Assert.Equal(seriesId, executor.Requests[1].StructuralContext?.Ancestors.Single().Id);
+        Assert.Equal(1, executor.Requests[1].StructuralContext?.Positions["sortOrder"]);
     }
 
     [Fact]
@@ -457,8 +457,8 @@ public sealed class PluginRuntimeServiceTests : IDisposable
                     $"tmdb:{request.Entity.Kind}:{request.Entity.Id}",
                     "tmdb",
                     request.Entity.Kind,
-                    request.Graph?.Ancestors.Count > 0 ? 0.9m : 1m,
-                    request.Graph?.Ancestors.Count > 0 ? "graph-child" : "title-search",
+                    request.StructuralContext?.Ancestors.Count > 0 ? 0.9m : 1m,
+                    request.StructuralContext?.Ancestors.Count > 0 ? "structural-child" : "title-search",
                     new EntityMetadataPatch(
                         $"{request.Entity.Title} identified",
                         null,

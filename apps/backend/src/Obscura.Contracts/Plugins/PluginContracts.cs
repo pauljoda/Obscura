@@ -111,6 +111,7 @@ public sealed record IdentifyMatchHints(
 /// <param name="Entity">Entity snapshot being identified.</param>
 /// <param name="Query">Optional user-provided query override.</param>
 /// <param name="Hints">ID-first lookup hints derived from existing entity metadata.</param>
+/// <param name="StructuralContext">Structural parent and position context for child-aware identify.</param>
 public sealed record IdentifyPluginRequest(
     int ProtocolVersion,
     string Action,
@@ -118,7 +119,7 @@ public sealed record IdentifyPluginRequest(
     IdentifyEntitySnapshot Entity,
     IdentifyQuery Query,
     IdentifyMatchHints Hints,
-    IdentifyGraphContext? Graph = null);
+    IdentifyStructuralContext? StructuralContext = null);
 
 /// <summary>
 /// Minimal entity snapshot passed to plugins.
@@ -130,11 +131,10 @@ public sealed record IdentifyEntitySnapshot(Guid Id, string Kind, string Title);
 
 /// <summary>
 /// Structural context for a plugin identify request.
-/// The Graph name is retained for plugin protocol compatibility; it is not a global entity graph abstraction.
 /// </summary>
 /// <param name="Ancestors">Structural ancestor entities from immediate parent outward.</param>
 /// <param name="Positions">Known generic ordering/position values for the current entity.</param>
-public sealed record IdentifyGraphContext(
+public sealed record IdentifyStructuralContext(
     IReadOnlyList<IdentifyEntitySnapshot> Ancestors,
     IReadOnlyDictionary<string, int> Positions);
 

@@ -635,9 +635,9 @@ public sealed class IdentifyPluginService
         }
 
         var hints = await _hints.ResolveAsync(entity.Id, descriptor.Manifest.Id, cancellationToken);
-        var positions = await ResolveGraphPositionsAsync(entity.Id, parentLink, cancellationToken);
-        var graph = ancestors.Count > 0 || positions.Count > 0
-            ? new IdentifyGraphContext(ancestors, positions)
+        var positions = await ResolveStructuralPositionsAsync(entity.Id, parentLink, cancellationToken);
+        var structuralContext = ancestors.Count > 0 || positions.Count > 0
+            ? new IdentifyStructuralContext(ancestors, positions)
             : null;
         var request = new IdentifyPluginRequest(
             ProtocolVersion: 2,
@@ -646,7 +646,7 @@ public sealed class IdentifyPluginService
             Entity: new IdentifyEntitySnapshot(entity.Id, entity.KindCode, entity.Title),
             Query: query ?? new IdentifyQuery(null, null, null),
             Hints: hints,
-            Graph: graph);
+            StructuralContext: structuralContext);
 
         var response = await _runner.IdentifyAsync(descriptor, request, cancellationToken);
         if (!response.Ok || response.Result is null)
@@ -655,7 +655,7 @@ public sealed class IdentifyPluginService
             return response;
         }
 
-        var proposal = await BuildGraphProposalAsync(
+        var proposal = await BuildStructuralProposalAsync(
             entity,
             response.Result,
             descriptor,
@@ -667,7 +667,7 @@ public sealed class IdentifyPluginService
         return response with { Result = proposal };
     }
 
-    private async Task<EntityMetadataProposal> BuildGraphProposalAsync(
+    private async Task<EntityMetadataProposal> BuildStructuralProposalAsync(
         EntityRow entity,
         EntityMetadataProposal providerProposal,
         PluginDescriptor descriptor,
@@ -676,7 +676,7 @@ public sealed class IdentifyPluginService
         HashSet<Guid> visited,
         CancellationToken cancellationToken)
     {
-        var existingChildren = await LoadGraphChildrenAsync(entity.Id, cancellationToken);
+        var existingChildren = await LoadStructuralChildrenAsync(entity.Id, cancellationToken);
         if (existingChildren.Count == 0)
         {
             return providerProposal with
@@ -693,7 +693,7 @@ public sealed class IdentifyPluginService
         var providerStructuralChildren = StructuralChildProposals(providerProposal);
         foreach (var child in existingChildren)
         {
-            var positions = await ResolveGraphPositionsAsync(child.Entity.Id, child.Link, cancellationToken);
+            var positions = await ResolveStructuralPositionsAsync(child.Entity.Id, child.Link, cancellationToken);
             var providerChild = providerStructuralChildren
                 .Where(candidate => IsKindCompatible(child.Entity.KindCode, candidate.TargetKind))
                 .Select(candidate => new
@@ -708,7 +708,7 @@ public sealed class IdentifyPluginService
             if (providerChild is not null)
             {
                 usedProviderChildren.Add(providerChild.Proposal.ProposalId);
-                structuralChildren.Add(await BuildGraphProposalAsync(
+                structuralChildren.Add(await BuildStructuralProposalAsync(
                     child.Entity,
                     providerChild.Proposal,
                     descriptor,
@@ -748,7 +748,7 @@ public sealed class IdentifyPluginService
         };
     }
 
-    private async Task<IReadOnlyList<GraphChild>> LoadGraphChildrenAsync(Guid parentEntityId, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<StructuralChild>> LoadStructuralChildrenAsync(Guid parentEntityId, CancellationToken cancellationToken)
     {
         var links = await _db.EntityChildLinks
             .AsNoTracking()
@@ -770,11 +770,11 @@ public sealed class IdentifyPluginService
             .OrderBy(link => link.SortOrder)
             .ThenBy(link => entities[link.ChildEntityId].CreatedAt)
             .ThenBy(link => link.ChildEntityId)
-            .Select(link => new GraphChild(link, entities[link.ChildEntityId]))
+            .Select(link => new StructuralChild(link, entities[link.ChildEntityId]))
             .ToArray();
     }
 
-    private async Task<IReadOnlyDictionary<string, int>> ResolveGraphPositionsAsync(
+    private async Task<IReadOnlyDictionary<string, int>> ResolveStructuralPositionsAsync(
         Guid entityId,
         EntityChildLinkRow? parentLink,
         CancellationToken cancellationToken)
@@ -871,7 +871,7 @@ public sealed class IdentifyPluginService
         return score;
     }
 
-    private sealed record GraphChild(EntityChildLinkRow Link, EntityRow Entity);
+    private sealed record StructuralChild(EntityChildLinkRow Link, EntityRow Entity);
 }
 
 /// <summary>

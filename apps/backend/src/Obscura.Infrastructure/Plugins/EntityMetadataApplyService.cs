@@ -141,7 +141,7 @@ public sealed class EntityMetadataApplyService
             await CascadeRelationshipImagesAsync(relationshipProposals, now, cancellationToken);
         }
 
-        await ApplyGraphChildrenAsync(StructuralChildProposals(proposal), now, cancellationToken);
+        await ApplyStructuralChildrenAsync(StructuralChildProposals(proposal), now, cancellationToken);
 
         entity.UpdatedAt = now;
         await _db.SaveChangesAsync(cancellationToken);
@@ -673,7 +673,7 @@ public sealed class EntityMetadataApplyService
     /// <summary>
     /// Applies cascade metadata patch fields to an existing child entity.
     /// </summary>
-    private async Task ApplyGraphChildrenAsync(
+    private async Task ApplyStructuralChildrenAsync(
         IReadOnlyList<EntityMetadataProposal> children,
         DateTimeOffset now,
         CancellationToken cancellationToken)
@@ -699,7 +699,7 @@ public sealed class EntityMetadataApplyService
                 await CascadeRelationshipImagesAsync(relationshipProposals, now, cancellationToken);
             }
 
-            await ApplyGraphChildrenAsync(StructuralChildProposals(child), now, cancellationToken);
+            await ApplyStructuralChildrenAsync(StructuralChildProposals(child), now, cancellationToken);
         }
     }
 

@@ -304,7 +304,7 @@ public sealed class CollectionRuleEngine(ObscuraDbContext db) : ICollectionRuleE
         };
     }
 
-    // ── Video series (graph walk: video -> season -> series) ──
+    // ── Video series (structural walk: video -> season -> series) ──
 
     private string? TranslateVideoSeries(CollectionRuleCondition condition, string kindCode, SqlBuildContext ctx) {
         if (kindCode != "video") return null;
@@ -333,7 +333,7 @@ public sealed class CollectionRuleEngine(ObscuraDbContext db) : ICollectionRuleE
         return TranslateScalar("gd.gallery_type", condition.Operator, condition.Value, ctx);
     }
 
-    // ── Child count (count generic graph children) ──
+    // ── Child count (count generic structural children) ──
 
     private string? TranslateChildCount(CollectionRuleCondition condition, string kindCode, SqlBuildContext ctx) {
         if (kindCode is not ("gallery" or "book")) return null;
