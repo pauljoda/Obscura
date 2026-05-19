@@ -84,6 +84,7 @@ docs/              — Architecture and design language docs
 - Runtime processes: .NET API/HTTP ingress, static Svelte frontend assets, and the .NET worker.
 - PostgreSQL 16 is the sole stateful dependency — used for application data and queue/job state.
 - Public HTTP contracts live in the .NET backend and are consumed by the generated Svelte client under `apps/web-svelte/src/lib/api/generated`.
+- Backend work must follow `docs/backend-architecture-contract.md`: Clean Architecture, DDD-lite domain behavior, CQRS-lite use cases, EF Core as infrastructure persistence, DTO API boundaries, and generated frontend clients.
 
 ## Key Architectural Decisions
 
@@ -93,6 +94,7 @@ docs/              — Architecture and design language docs
 4. **HLS streaming** — Videos are transcoded to HLS on demand via ffmpeg. Cached renditions are served by the .NET API.
 5. **Stash as import source** — Stash is a migration/import source, not the application schema. Imported data is normalized into Obscura-owned tables.
 6. **Typed contracts** — .NET contracts are the server source of truth. The frontend should prefer generated OpenAPI types; `@obscura/contracts` is frontend compatibility only.
+7. **No global EntityGraph** — Entity child and relationship links are EF persistence structures for bounded domain slices and read projections. Do not introduce a custom global graph service that loads or saves the whole application object network.
 
 ## Database
 

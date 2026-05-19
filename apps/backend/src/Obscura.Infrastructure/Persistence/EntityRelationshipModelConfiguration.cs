@@ -4,9 +4,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Persistence;
 
-internal static class EntityGraphModelConfiguration
+internal static class EntityRelationshipModelConfiguration
 {
-    public static void ConfigureEntityGraphModel(this ModelBuilder modelBuilder)
+    public static void ConfigureEntityRelationshipModel(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<EntityChildLinkRow>(entity =>
         {

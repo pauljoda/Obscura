@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 - Obscura v2 rebuilt the app around a .NET API, EF Core persistence, PostgreSQL, and a .NET worker, replacing the legacy server/runtime path with one backend-owned architecture.
-- The media library now uses a shared entity graph for videos, series, seasons, images, galleries, books, audio, people, studios, tags, and collections, giving every browse and detail page a common model.
+- The media library now uses EF-backed entity records with explicit child and relationship links for videos, series, seasons, images, galleries, books, audio, people, studios, tags, and collections, giving browse and detail pages a common model without a global graph abstraction.
 - Entity pages now load and display child and related items through a lighter relationship model, making large series, galleries, and collections faster to browse.
 - Playback now follows Jellyfin-compatible video routes for playback negotiation, direct streaming, adaptive HLS, trickplay image playlists, playback sessions, and watched-state updates.
 - The Svelte frontend now renders the v2 browse, dashboard, detail, identify, plugins, settings, and playback surfaces through shared Dark Room components instead of the older v1 UI patterns.
@@ -42,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Stale browse/detail API endpoints that depended on the removed projection layer were removed until the replacement `EntityRepository` API surface is rebuilt.
 
 ### Docs
+- Backend architecture guidance now documents the Clean Architecture, DDD-lite, CQRS-lite, EF Core, DTO, and generated-client contract for future Obscura work.
 - Repository instructions now keep changelog updates short, user-focused, and release-note-worthy.
 
 ## [0.22.0] - 2026-05-09

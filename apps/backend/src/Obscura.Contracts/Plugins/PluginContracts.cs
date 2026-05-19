@@ -129,7 +129,8 @@ public sealed record IdentifyPluginRequest(
 public sealed record IdentifyEntitySnapshot(Guid Id, string Kind, string Title);
 
 /// <summary>
-/// Generic graph context for a plugin identify request.
+/// Structural context for a plugin identify request.
+/// The Graph name is retained for plugin protocol compatibility; it is not a global entity graph abstraction.
 /// </summary>
 /// <param name="Ancestors">Structural ancestor entities from immediate parent outward.</param>
 /// <param name="Positions">Known generic ordering/position values for the current entity.</param>

@@ -13,6 +13,8 @@ Supporting services:
 
 ## Responsibility Boundaries
 
+The backend architecture contract lives in [backend-architecture-contract.md](backend-architecture-contract.md). New backend work should follow that document: Clean Architecture, DDD-lite domain objects, CQRS-lite use cases, EF Core as the infrastructure persistence adapter, DTO-based API boundaries, and OpenAPI-generated frontend clients.
+
 ### apps/web-svelte
 
 - user interface
@@ -54,26 +56,24 @@ Supporting services:
 
 ## Domain Direction
 
-The application schema is intentionally not a direct copy of stash.
+The application schema is intentionally not a direct copy of Stash and should not become a custom global entity graph.
 
-Core entities:
+Core library concepts:
 
-- `Asset`
-- `FileVariant`
-- `Gallery`
-- `Performer`
-- `Studio`
-- `Tag`
-- `Collection`
-- `Fingerprint`
-- `SourceMatch`
-- `JobRun`
-- `LibraryRoot`
+- videos, series, seasons, and episodes
+- images and galleries
+- books, volumes, chapters, and pages
+- audio libraries and tracks
+- people, studios, tags, and collections
+- fingerprints and provider source matches
+- job runs and library roots
 
 Key rules:
 
-- `Asset` is the primary library record.
+- Domain entities express library behavior and invariants.
 - Physical files should remain modelable independently from canonical asset identity.
+- EF Core persists entity records, capability/detail rows, child links, relationship links, media files, playback state, settings, and jobs.
+- Child and relationship links are persistence structures, not a global `EntityGraph` runtime.
 - Imported stash data is normalized into Obscura-owned records.
 - Provider provenance must be persisted for auditability and future provider expansion.
 

@@ -127,7 +127,7 @@ public sealed class ObscuraDbContext : DbContext
         modelBuilder.HasDefaultSchema("v2");
 
         modelBuilder.ConfigureBaseEntityModel();
-        modelBuilder.ConfigureEntityGraphModel();
+        modelBuilder.ConfigureEntityRelationshipModel();
         modelBuilder.ConfigureEntityAttachmentModel();
         modelBuilder.ConfigureExpandedV2Model();
 
