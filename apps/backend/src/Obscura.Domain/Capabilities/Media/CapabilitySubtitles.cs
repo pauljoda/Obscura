@@ -6,7 +6,7 @@ namespace Obscura.Domain.Capabilities;
 /// Mutable subtitle capability for subtitle or caption tracks.
 /// </summary>
 public sealed class CapabilitySubtitles(IEnumerable<CapabilitySubtitles.Item>? items = null)
-    : CollectionCapability<CapabilitySubtitles.Item>(items) {
+    : CollectionCapability<CapabilitySubtitles.Item, Guid>(items) {
     /// <summary>
     /// Describes a subtitle or caption track attached to a media entity.
     /// </summary>
@@ -28,7 +28,10 @@ public sealed class CapabilitySubtitles(IEnumerable<CapabilitySubtitles.Item>? i
         string StoragePath,
         string SourceFormat,
         string? SourcePath,
-        bool IsDefault);
+        bool IsDefault) : ICapabilityItem<Guid> {
+        /// <inheritdoc />
+        public Guid Key => Id;
+    }
 
     /// <summary>Adds a subtitle track and returns its identifier.</summary>
     public Guid Add(
@@ -44,9 +47,4 @@ public sealed class CapabilitySubtitles(IEnumerable<CapabilitySubtitles.Item>? i
         AddItem(item);
         return item.Id;
     }
-
-    /// <summary>Removes a subtitle track by identifier.</summary>
-    /// <param name="id">Subtitle track identifier.</param>
-    /// <returns>True when a track was removed.</returns>
-    public bool Remove(Guid id) => RemoveItems(item => item.Id == id) > 0;
 }

@@ -11,4 +11,7 @@ public sealed record EntityDate(
     string Code,
     string Value,
     DateOnly? SortableValue = null,
-    string? Precision = null);
+    string? Precision = null) : ICapabilityItem<string> {
+    /// <inheritdoc />
+    public string Key => Code;
+}
