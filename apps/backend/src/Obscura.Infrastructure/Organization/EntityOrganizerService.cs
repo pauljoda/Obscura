@@ -9,7 +9,7 @@ namespace Obscura.Infrastructure.Organization;
 /// <summary>
 /// Computes generic entity organization plans from source paths, structural parents, and entity-kind storage metadata.
 /// </summary>
-public sealed class EntityOrganizerService(ObscuraDbContext db) : IEntityOrganizer
+public sealed class EntityOrganizerService(ObscuraDbContext db)
 {
     private const string Ready = "ready";
     private const string Unchanged = "unchanged";
@@ -17,7 +17,9 @@ public sealed class EntityOrganizerService(ObscuraDbContext db) : IEntityOrganiz
     private const string Applied = "applied";
     private const string Failed = "failed";
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Builds a dry-run organization plan without moving files.
+    /// </summary>
     public async Task<OrganizePlanResult> PlanAsync(
         OrganizePlanQuery request,
         CancellationToken cancellationToken)
@@ -26,7 +28,9 @@ public sealed class EntityOrganizerService(ObscuraDbContext db) : IEntityOrganiz
         return new OrganizePlanResult(plan);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Applies a computable organization plan by moving source files or folders and updating source paths.
+    /// </summary>
     public async Task<OrganizeApplyResult> ApplyAsync(
         OrganizePlanQuery request,
         CancellationToken cancellationToken)

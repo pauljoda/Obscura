@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Text.Json.Nodes;
-using Obscura.Application.UserState;
 using Obscura.Contracts.System;
+using Obscura.Infrastructure.UserState;
 
 namespace Obscura.Api.Endpoints;
 
@@ -27,7 +27,7 @@ public static class UserStateEndpoints
             .WithSummary("Returns a non-blocking update-check status for the Svelte shell.");
 
         routes.MapGet("/api/playlist-session", async (
-            IUserStateService userState,
+            EfUserStateService userState,
             CancellationToken cancellationToken) =>
         {
             var valueJson = await userState.GetPlaylistSessionJsonAsync(cancellationToken);
@@ -41,7 +41,7 @@ public static class UserStateEndpoints
 
         routes.MapPut("/api/playlist-session", async (
             HttpRequest request,
-            IUserStateService userState,
+            EfUserStateService userState,
             CancellationToken cancellationToken) =>
         {
             JsonNode? node;
@@ -69,7 +69,7 @@ public static class UserStateEndpoints
             .WithSummary("Stores the current browser playlist session.");
 
         routes.MapDelete("/api/playlist-session", async (
-            IUserStateService userState,
+            EfUserStateService userState,
             CancellationToken cancellationToken) =>
         {
             await userState.ClearPlaylistSessionAsync(cancellationToken);

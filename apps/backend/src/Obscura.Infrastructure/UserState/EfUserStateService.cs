@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Obscura.Application.UserState;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
 
@@ -8,11 +7,13 @@ namespace Obscura.Infrastructure.UserState;
 /// <summary>
 /// EF-backed browser user-state store for the single-user UI shell.
 /// </summary>
-public sealed class EfUserStateService(ObscuraDbContext db) : IUserStateService
+public sealed class EfUserStateService(ObscuraDbContext db)
 {
     private const string PlaylistSessionKey = "ui:playlist-session";
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Gets the current playlist session JSON document, or null when none has been saved.
+    /// </summary>
     public async Task<string?> GetPlaylistSessionJsonAsync(CancellationToken cancellationToken)
     {
         var row = await db.UiPreferences.AsNoTracking()
@@ -21,7 +22,9 @@ public sealed class EfUserStateService(ObscuraDbContext db) : IUserStateService
         return string.IsNullOrWhiteSpace(row?.ValueJson) ? null : row.ValueJson;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Saves the current playlist session JSON document.
+    /// </summary>
     public async Task SavePlaylistSessionJsonAsync(string valueJson, CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
@@ -44,7 +47,9 @@ public sealed class EfUserStateService(ObscuraDbContext db) : IUserStateService
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Clears the saved playlist session document.
+    /// </summary>
     public async Task ClearPlaylistSessionAsync(CancellationToken cancellationToken)
     {
         var row = await db.UiPreferences.FindAsync([PlaylistSessionKey], cancellationToken);

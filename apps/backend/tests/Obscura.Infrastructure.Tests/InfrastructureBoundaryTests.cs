@@ -15,7 +15,15 @@ public sealed class InfrastructureBoundaryTests
             "Obscura.Infrastructure.Processes.IProcessExecutor",
             "Obscura.Application.Entities.EntityRepository",
             "Obscura.Application.Entities.IEntityReadUseCases",
-            "Obscura.Application.Entities.IEntityWriteUseCases"
+            "Obscura.Application.Entities.IEntityWriteUseCases",
+            "Obscura.Application.Organization.IEntityOrganizer",
+            "Obscura.Application.Plugins.IBulkIdentifySessions",
+            "Obscura.Application.Plugins.IIdentifyUseCases",
+            "Obscura.Application.Plugins.IPluginCatalogUseCases",
+            "Obscura.Application.UserState.IUserStateService",
+            "Obscura.Infrastructure.Plugins.ApplicationIdentifySessionStore",
+            "Obscura.Infrastructure.Plugins.IdentifyUseCases",
+            "Obscura.Infrastructure.Plugins.PluginCatalogUseCases"
         };
 
         Assert.All(
@@ -64,9 +72,6 @@ public sealed class InfrastructureBoundaryTests
         {
             var source = File.ReadAllText(file);
             Assert.DoesNotContain("ObscuraDbContext", source, StringComparison.Ordinal);
-            Assert.DoesNotContain("PluginCatalogService", source, StringComparison.Ordinal);
-            Assert.DoesNotContain("IdentifyPluginService", source, StringComparison.Ordinal);
-            Assert.DoesNotContain("IdentifySessionStore", source, StringComparison.Ordinal);
         });
     }
 

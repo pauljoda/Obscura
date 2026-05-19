@@ -573,7 +573,7 @@ public sealed class IdentifyPluginService
             return new IdentifyPluginResponse(false, null, $"Missing required plugin credentials: {string.Join(", ", missingAuth)}.");
         }
 
-        return await IdentifyEntityWithGraphAsync(
+        return await IdentifyEntityWithStructuralContextAsync(
             entity,
             descriptor,
             auth,
@@ -619,7 +619,7 @@ public sealed class IdentifyPluginService
         return supports.Contains("search") ? "search" : supports.FirstOrDefault() ?? "search";
     }
 
-    private async Task<IdentifyPluginResponse> IdentifyEntityWithGraphAsync(
+    private async Task<IdentifyPluginResponse> IdentifyEntityWithStructuralContextAsync(
         EntityRow entity,
         PluginDescriptor descriptor,
         IReadOnlyDictionary<string, string> auth,
@@ -724,7 +724,7 @@ public sealed class IdentifyPluginService
                 continue;
             }
 
-            var childResponse = await IdentifyEntityWithGraphAsync(
+            var childResponse = await IdentifyEntityWithStructuralContextAsync(
                 child.Entity,
                 descriptor,
                 auth,

@@ -169,7 +169,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task IdentifyTraversesGenericChildGraphWhenProviderSupportsChildKinds()
+    public async Task IdentifyTraversesGenericStructuralChildrenWhenProviderSupportsChildKinds()
     {
         var pluginDir = Path.Combine(_tempRoot, "tmdb");
         Directory.CreateDirectory(pluginDir);
@@ -239,7 +239,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
         });
         await db.SaveChangesAsync();
 
-        var executor = new GraphCapturingProcessExecutor();
+        var executor = new StructuralContextCapturingProcessExecutor();
         var catalog = new PluginCatalogService(db, new PluginCatalogOptions([_tempRoot], _tempRoot, "0.22.1-dev"));
         var service = new IdentifyPluginService(
             db,
@@ -435,7 +435,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
         }
     }
 
-    private sealed class GraphCapturingProcessExecutor : ProcessExecutor
+    private sealed class StructuralContextCapturingProcessExecutor : ProcessExecutor
     {
         public List<IdentifyPluginRequest> Requests { get; } = [];
 

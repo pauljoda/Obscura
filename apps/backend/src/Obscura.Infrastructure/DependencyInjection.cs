@@ -6,10 +6,7 @@ using Npgsql;
 using Obscura.Application.Jobs;
 using Obscura.Application.Jobs.Ports;
 using Obscura.Application.Migrations;
-using Obscura.Application.Organization;
-using Obscura.Application.Plugins;
 using Obscura.Application.Settings;
-using Obscura.Application.UserState;
 using Obscura.Application.Videos;
 using Obscura.Infrastructure.Backups;
 using Obscura.Infrastructure.Collections;
@@ -76,9 +73,7 @@ public static class DependencyInjection {
             new PluginArtworkServiceOptions(cacheDir),
             provider.GetService<HttpClient>()));
         services.AddScoped<IdentifyPluginService>();
-        services.AddScoped<IPluginCatalogUseCases, PluginCatalogUseCases>();
-        services.AddScoped<IIdentifyUseCases, IdentifyUseCases>();
-        services.AddSingleton<IBulkIdentifySessions, ApplicationIdentifySessionStore>();
+        services.AddSingleton<IdentifySessionStore>();
 
         services.AddSingleton<IFileDiscovery>(provider =>
             new FileDiscoveryAdapter(provider.GetRequiredService<FileDiscoveryService>()));
@@ -112,7 +107,7 @@ public static class DependencyInjection {
         services.AddScoped<EfEntityRepository>();
         services.AddScoped<EfEntityReadUseCases>();
         services.AddScoped<EntityWriteUseCases>();
-        services.AddScoped<IEntityOrganizer, EntityOrganizerService>();
+        services.AddScoped<EntityOrganizerService>();
         services.AddScoped<IVideoSourceService, VideoSourceService>();
         services.AddSingleton(new HlsAssetServiceOptions(
             cacheDir,
@@ -127,7 +122,7 @@ public static class DependencyInjection {
         services.AddScoped<IVideoSubtitleAssetService, VideoSubtitleAssetService>();
         services.AddScoped<IJobQueueService, JobQueueService>();
         services.AddScoped<ISettingsService, SettingsService>();
-        services.AddScoped<IUserStateService, EfUserStateService>();
+        services.AddScoped<EfUserStateService>();
 
         return services;
     }

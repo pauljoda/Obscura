@@ -1,6 +1,7 @@
 using Obscura.Api.Mapping;
 using Obscura.Application.Organization;
 using Obscura.Contracts.Organize;
+using Obscura.Infrastructure.Organization;
 
 namespace Obscura.Api.Endpoints;
 
@@ -14,7 +15,7 @@ public static class OrganizeEndpoints
         group.MapGet("/plan", async (
             Guid? entityId,
             Guid? rootId,
-            IEntityOrganizer organizer,
+            EntityOrganizerService organizer,
             CancellationToken cancellationToken) =>
             Results.Ok((await organizer.PlanAsync(new OrganizePlanQuery(entityId, rootId), cancellationToken)).ToContract()))
             .WithName("GetOrganizePlan")
@@ -23,7 +24,7 @@ public static class OrganizeEndpoints
 
         group.MapPost("/apply", async (
             OrganizePlanRequest request,
-            IEntityOrganizer organizer,
+            EntityOrganizerService organizer,
             CancellationToken cancellationToken) =>
             Results.Ok((await organizer.ApplyAsync(request.ToApplication(), cancellationToken)).ToContract()))
             .WithName("ApplyOrganizePlan")

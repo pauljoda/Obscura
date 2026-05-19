@@ -131,14 +131,14 @@ The acceptable shape is:
 - `EntityChildLinkRow` and `EntityRelationshipLinkRow` are persistence tables, not an application-wide object graph.
 - `EfEntityRepository` may hydrate a bounded entity slice for a write use case, then save that slice with EF.
 - Browse/detail endpoints should prefer EF projections to DTOs instead of hydrating broad domain graphs.
-- Public plugin protocol names that currently say `Graph`, such as `IdentifyGraphContext`, are compatibility terms for structural context and should not be expanded into a global entity graph.
+- Public plugin protocol names should use structural-context terminology, not graph terminology.
 
 ## Current Audit
 
 ### Already Aligned
 
 - `Obscura.Domain` is persistence-ignorant and has behavior-bearing entity methods.
-- `Obscura.Application.Entities.EntityRepository` is a port, and `Obscura.Infrastructure.Entities.EfEntityRepository` is the EF implementation.
+- `Obscura.Infrastructure.Entities.EfEntityRepository` hydrates bounded domain slices directly; there is no one-to-one Application repository interface.
 - `ObscuraDbContext` is the EF persistence boundary and owns row sets, mappings, and migrations.
 - API contracts live in `Obscura.Contracts` rather than in domain classes.
 - Child and relationship data is stored in explicit EF tables, which can support projections without inventing a separate graph runtime.
@@ -149,7 +149,7 @@ The acceptable shape is:
 - Keep "graph" terminology out of new internal infrastructure names. Prefer "entity relationships", "structural children", "relationship links", or "entity slices".
 - Do not make `EfEntityRepository.SaveAsync` the universal write path for every table. It should remain a bounded domain-slice persistence adapter. Media scanning, playback, queues, collections, and settings can use specific application handlers and EF persistence services.
 - For read APIs, build DTO projections from EF with `AsNoTracking` instead of hydrating domain entities only to map them back to DTOs.
-- When plugin protocol compatibility requires `IdentifyGraphContext`, document it as structural context and plan a versioned rename only if the plugin protocol changes.
+- Do not reintroduce plugin protocol fields or internal method names that say `Graph`; use `StructuralContext`, structural children, and relationship terminology.
 
 ## Definition of Done
 

@@ -1,6 +1,6 @@
-using Obscura.Application.Plugins;
 using Obscura.Contracts.Plugins;
 using Obscura.Contracts.System;
+using Obscura.Infrastructure.Plugins;
 
 namespace Obscura.Api.Endpoints;
 
@@ -10,7 +10,7 @@ public static class PluginEndpoints {
             .WithTags("Plugins");
 
         group.MapGet("/", async (
-            IPluginCatalogUseCases plugins,
+            PluginCatalogService plugins,
             CancellationToken cancellationToken) =>
             Results.Ok(await plugins.ListProvidersAsync(cancellationToken)))
             .WithName("ListPlugins")
@@ -19,7 +19,7 @@ public static class PluginEndpoints {
 
         group.MapPost("/{provider}", async (
             string provider,
-            IPluginCatalogUseCases plugins,
+            PluginCatalogService plugins,
             CancellationToken cancellationToken) => {
                 var result = await plugins.InstallAsync(provider, cancellationToken);
                 return result is null
@@ -33,7 +33,7 @@ public static class PluginEndpoints {
 
         group.MapDelete("/{provider}", async (
             string provider,
-            IPluginCatalogUseCases plugins,
+            PluginCatalogService plugins,
             CancellationToken cancellationToken) =>
             await plugins.RemoveAsync(provider, cancellationToken)
                 ? Results.NoContent()
@@ -46,7 +46,7 @@ public static class PluginEndpoints {
         group.MapPut("/{provider}/auth", async (
             string provider,
             PluginAuthUpdateRequest request,
-            IPluginCatalogUseCases plugins,
+            PluginCatalogService plugins,
             CancellationToken cancellationToken) =>
             await plugins.SaveAuthAsync(provider, request.Values, cancellationToken)
                 ? Results.NoContent()
@@ -67,7 +67,7 @@ public static class IdentifyEndpoints {
 
         group.MapGet("/providers", async (
             string? kind,
-            IIdentifyUseCases identify,
+            IdentifyPluginService identify,
             CancellationToken cancellationToken) =>
             Results.Ok(await identify.ListProvidersAsync(kind, cancellationToken)))
             .WithName("ListIdentifyProviders")
@@ -77,7 +77,7 @@ public static class IdentifyEndpoints {
         group.MapPost("/entities/{entityId:guid}", async (
             Guid entityId,
             IdentifyEntityRequest request,
-            IIdentifyUseCases identify,
+            IdentifyPluginService identify,
             CancellationToken cancellationToken) => {
                 var response = await identify.IdentifyAsync(entityId, request.Provider, request.Query, cancellationToken);
                 return response.Ok
@@ -92,7 +92,7 @@ public static class IdentifyEndpoints {
         group.MapPost("/entities/{entityId:guid}/apply", async (
             Guid entityId,
             ApplyIdentifyProposalRequest request,
-            IIdentifyUseCases identify,
+            IdentifyPluginService identify,
             CancellationToken cancellationToken) => {
                 var applied = await identify.ApplyAsync(
                     entityId,
@@ -113,7 +113,7 @@ public static class IdentifyEndpoints {
 
         group.MapPost("/bulk", (
             IdentifyBulkStartRequest request,
-            IBulkIdentifySessions sessions,
+            IdentifySessionStore sessions,
             IServiceScopeFactory scopes,
             CancellationToken cancellationToken) => {
                 if (request.EntityIds.Count == 0) {
@@ -123,11 +123,11 @@ public static class IdentifyEndpoints {
                 var session = sessions.Create(request.EntityIds, request.Provider);
                 _ = Task.Run(async () => {
                     using var scope = scopes.CreateScope();
-                    var identify = scope.ServiceProvider.GetRequiredService<IIdentifyUseCases>();
-                    var results = new List<IdentifyBulkResultResult>();
+                    var identify = scope.ServiceProvider.GetRequiredService<IdentifyPluginService>();
+                    var results = new List<IdentifyBulkResult>();
                     foreach (var entityId in request.EntityIds) {
                         var response = await identify.IdentifyAsync(entityId, request.Provider, request.Query, CancellationToken.None);
-                        results.Add(new IdentifyBulkResultResult(entityId, response));
+                        results.Add(new IdentifyBulkResult(entityId, response));
                     }
 
                     sessions.Complete(session.Id, results);
@@ -137,12 +137,12 @@ public static class IdentifyEndpoints {
             })
         .WithName("StartBulkIdentify")
         .WithSummary("Starts a transient in-memory bulk identify review session.")
-        .Produces<IdentifyBulkSessionResult>(StatusCodes.Status202Accepted)
+        .Produces<IdentifyBulkSession>(StatusCodes.Status202Accepted)
         .Produces<ApiProblem>(StatusCodes.Status400BadRequest);
 
         group.MapGet("/bulk/{sessionId:guid}", (
             Guid sessionId,
-            IBulkIdentifySessions sessions) => {
+            IdentifySessionStore sessions) => {
                 var session = sessions.Get(sessionId);
                 return session is null
                     ? Results.NotFound(new ApiProblem("identify_session_not_found", $"Identify session '{sessionId}' was not found."))
@@ -150,12 +150,12 @@ public static class IdentifyEndpoints {
             })
         .WithName("GetBulkIdentifySession")
         .WithSummary("Gets transient bulk identify session status and results.")
-        .Produces<IdentifyBulkSessionResult>()
+        .Produces<IdentifyBulkSession>()
         .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
         group.MapDelete("/bulk/{sessionId:guid}", (
             Guid sessionId,
-            IBulkIdentifySessions sessions) =>
+            IdentifySessionStore sessions) =>
         sessions.Close(sessionId)
             ? Results.NoContent()
             : Results.NotFound(new ApiProblem("identify_session_not_found", $"Identify session '{sessionId}' was not found.")))
