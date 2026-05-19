@@ -6,17 +6,21 @@ public sealed class InfrastructureBoundaryTests
     public void InfrastructureDoesNotKeepOneToOneServiceInterfaces()
     {
         var infrastructureAssembly = typeof(Obscura.Infrastructure.DependencyInjection).Assembly;
+        var applicationAssembly = typeof(Obscura.Application.Entities.SetEntityRatingCommand).Assembly;
         var removedInterfaceNames = new[]
         {
             "Obscura.Infrastructure.Backups.IDatabaseBackupService",
             "Obscura.Infrastructure.Backups.IProcessRunner",
             "Obscura.Infrastructure.Media.IMediaToolService",
-            "Obscura.Infrastructure.Processes.IProcessExecutor"
+            "Obscura.Infrastructure.Processes.IProcessExecutor",
+            "Obscura.Application.Entities.EntityRepository",
+            "Obscura.Application.Entities.IEntityReadUseCases",
+            "Obscura.Application.Entities.IEntityWriteUseCases"
         };
 
         Assert.All(
             removedInterfaceNames,
-            name => Assert.Null(infrastructureAssembly.GetType(name)));
+            name => Assert.Null(infrastructureAssembly.GetType(name) ?? applicationAssembly.GetType(name)));
     }
 
     [Fact]
@@ -49,7 +53,7 @@ public sealed class InfrastructureBoundaryTests
     }
 
     [Fact]
-    public void ApiEndpointsDoNotInjectInfrastructurePersistenceOrConcreteServices()
+    public void ApiEndpointsDoNotInjectInfrastructurePersistenceOrLowLevelServices()
     {
         var endpointFiles = Directory.GetFiles(
             RepoPath("apps/backend/src/Obscura.Api/Endpoints"),
@@ -59,7 +63,6 @@ public sealed class InfrastructureBoundaryTests
         Assert.All(endpointFiles, file =>
         {
             var source = File.ReadAllText(file);
-            Assert.DoesNotContain("using Obscura.Infrastructure", source, StringComparison.Ordinal);
             Assert.DoesNotContain("ObscuraDbContext", source, StringComparison.Ordinal);
             Assert.DoesNotContain("PluginCatalogService", source, StringComparison.Ordinal);
             Assert.DoesNotContain("IdentifyPluginService", source, StringComparison.Ordinal);

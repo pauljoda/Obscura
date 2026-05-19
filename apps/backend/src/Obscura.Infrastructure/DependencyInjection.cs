@@ -11,7 +11,6 @@ using Obscura.Application.Plugins;
 using Obscura.Application.Settings;
 using Obscura.Application.UserState;
 using Obscura.Application.Videos;
-using Obscura.Application.Entities;
 using Obscura.Infrastructure.Backups;
 using Obscura.Infrastructure.Collections;
 using Obscura.Infrastructure.Database;
@@ -110,9 +109,9 @@ public static class DependencyInjection {
                 provider.GetRequiredService<NpgsqlDataSource>(),
                 provider.GetRequiredService<AssetPathService>().CacheRoot,
                 provider.GetRequiredService<ILogger<LegacyAssetNormalizationService>>()));
-        services.AddScoped<EntityRepository, EfEntityRepository>();
-        services.AddScoped<IEntityReadUseCases, EfEntityReadUseCases>();
-        services.AddScoped<IEntityWriteUseCases, EntityWriteUseCases>();
+        services.AddScoped<EfEntityRepository>();
+        services.AddScoped<EfEntityReadUseCases>();
+        services.AddScoped<EntityWriteUseCases>();
         services.AddScoped<IEntityOrganizer, EntityOrganizerService>();
         services.AddScoped<IVideoSourceService, VideoSourceService>();
         services.AddSingleton(new HlsAssetServiceOptions(

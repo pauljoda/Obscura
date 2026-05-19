@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Obscura.Application.Entities;
 using Obscura.Contracts.Collections;
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.Media;
@@ -15,10 +14,13 @@ namespace Obscura.Infrastructure.Entities;
 /// <summary>
 /// EF-projected read model for entity browse and detail API routes.
 /// </summary>
-public sealed class EfEntityReadUseCases(ObscuraDbContext db) : IEntityReadUseCases
+public sealed class EfEntityReadUseCases(ObscuraDbContext db)
 {
     private const int PageSize = 60;
 
+    /// <summary>
+    /// Lists active entities as thumbnail read models, optionally scoped by kind, search text, NSFW visibility, and cursor.
+    /// </summary>
     public async Task<object> ListAsync(
         string? kind,
         string? query,
@@ -69,9 +71,15 @@ public sealed class EfEntityReadUseCases(ObscuraDbContext db) : IEntityReadUseCa
         return new EntityListResponse(thumbnails, nextCursor);
     }
 
+    /// <summary>
+    /// Gets one active entity as the shared entity card read model.
+    /// </summary>
     public async Task<object?> GetAsync(Guid id, CancellationToken cancellationToken) =>
         await ProjectCardAsync(id, cancellationToken);
 
+    /// <summary>
+    /// Gets thumbnails for the requested identifiers while preserving the caller's requested order.
+    /// </summary>
     public async Task<object> GetThumbnailsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken)
     {
         var rows = await db.Entities.AsNoTracking()
@@ -82,6 +90,9 @@ public sealed class EfEntityReadUseCases(ObscuraDbContext db) : IEntityReadUseCa
         return new EntityThumbnailBatchResponse(ids.Where(byId.ContainsKey).Select(id => byId[id]).ToArray());
     }
 
+    /// <summary>
+    /// Gets one active entity as its kind-specific detail contract.
+    /// </summary>
     public async Task<object?> GetDetailAsync(Guid id, string kind, CancellationToken cancellationToken)
     {
         var card = await ProjectCardAsync(id, cancellationToken);

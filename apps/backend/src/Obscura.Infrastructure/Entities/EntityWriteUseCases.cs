@@ -7,9 +7,12 @@ namespace Obscura.Infrastructure.Entities;
 /// Domain-led entity state write use cases backed by the EF entity repository.
 /// </summary>
 public sealed class EntityWriteUseCases(
-    EntityRepository entities,
-    IEntityReadUseCases reads) : IEntityWriteUseCases
+    EfEntityRepository entities,
+    EfEntityReadUseCases reads)
 {
+    /// <summary>
+    /// Sets or clears the user rating for one entity and returns the refreshed read model.
+    /// </summary>
     public async Task<object?> SetRatingAsync(SetEntityRatingCommand command, CancellationToken cancellationToken)
     {
         var entity = await entities.FindAsync(command.EntityId, cancellationToken);
@@ -37,6 +40,9 @@ public sealed class EntityWriteUseCases(
         return await reads.GetAsync(entity.Id, cancellationToken);
     }
 
+    /// <summary>
+    /// Applies a sparse boolean flag update and returns the refreshed read model.
+    /// </summary>
     public async Task<object?> UpdateFlagsAsync(UpdateEntityFlagsCommand command, CancellationToken cancellationToken)
     {
         var entity = await entities.FindAsync(command.EntityId, cancellationToken);
@@ -56,6 +62,9 @@ public sealed class EntityWriteUseCases(
         return await reads.GetAsync(entity.Id, cancellationToken);
     }
 
+    /// <summary>
+    /// Records playback state for one entity and returns the refreshed read model.
+    /// </summary>
     public async Task<object?> UpdatePlaybackAsync(UpdatePlaybackCommand command, CancellationToken cancellationToken)
     {
         var entity = await entities.FindAsync(command.EntityId, cancellationToken);
@@ -79,6 +88,9 @@ public sealed class EntityWriteUseCases(
         return await reads.GetAsync(entity.Id, cancellationToken);
     }
 
+    /// <summary>
+    /// Creates a timeline marker for one entity and returns the refreshed read model.
+    /// </summary>
     public async Task<object?> CreateMarkerAsync(CreateEntityMarkerCommand command, CancellationToken cancellationToken)
     {
         var entity = await entities.FindAsync(command.EntityId, cancellationToken);
@@ -98,6 +110,9 @@ public sealed class EntityWriteUseCases(
         return await reads.GetAsync(entity.Id, cancellationToken);
     }
 
+    /// <summary>
+    /// Updates an existing timeline marker and returns the refreshed read model.
+    /// </summary>
     public async Task<object?> UpdateMarkerAsync(UpdateEntityMarkerCommand command, CancellationToken cancellationToken)
     {
         var entity = await entities.FindAsync(command.EntityId, cancellationToken);
@@ -115,6 +130,9 @@ public sealed class EntityWriteUseCases(
         return await reads.GetAsync(entity.Id, cancellationToken);
     }
 
+    /// <summary>
+    /// Deletes an existing timeline marker and returns the refreshed read model.
+    /// </summary>
     public async Task<object?> DeleteMarkerAsync(DeleteEntityMarkerCommand command, CancellationToken cancellationToken)
     {
         var entity = await entities.FindAsync(command.EntityId, cancellationToken);

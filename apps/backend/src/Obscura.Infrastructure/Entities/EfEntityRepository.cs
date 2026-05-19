@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
-using Obscura.Application.Entities;
 using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Media;
@@ -12,13 +11,15 @@ using Obscura.Infrastructure.Persistence.Entities;
 namespace Obscura.Infrastructure.Entities;
 
 /// <summary>
-/// EF-backed implementation of <see cref="EntityRepository"/> that hydrates domain entities from row storage.
+/// EF-backed repository that hydrates domain entities from row storage.
 /// </summary>
-public sealed class EfEntityRepository(ObscuraDbContext db) : EntityRepository {
+public sealed class EfEntityRepository(ObscuraDbContext db) {
     private const string RelatedRelationshipCode = "related";
     private const string CreditsRelationshipCode = "credits";
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Finds an active entity and hydrates its domain relationships plus mutable state capabilities.
+    /// </summary>
     public async Task<Entity?> FindAsync(Guid id, CancellationToken cancellationToken) {
         var row = await db.Entities.AsNoTracking()
             .FirstOrDefaultAsync(entity => entity.Id == id && entity.DeletedAt == null, cancellationToken);
@@ -30,18 +31,24 @@ public sealed class EfEntityRepository(ObscuraDbContext db) : EntityRepository {
         return await HydrateAsync(row, context, cancellationToken);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Finds an active entity and returns it only when it matches the requested concrete domain type.
+    /// </summary>
     public async Task<TEntity?> FindAsync<TEntity>(Guid id, CancellationToken cancellationToken)
         where TEntity : Entity =>
         await FindAsync(id, cancellationToken) is TEntity entity ? entity : null;
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Finds a required active entity of the requested concrete domain type.
+    /// </summary>
     public async Task<TEntity> RequireAsync<TEntity>(Guid id, CancellationToken cancellationToken)
         where TEntity : Entity =>
         await FindAsync<TEntity>(id, cancellationToken)
             ?? throw new InvalidOperationException($"Entity '{id}' was not found as {typeof(TEntity).Name}.");
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Persists one hydrated domain entity slice, including structural links, relationships, and mutable capabilities.
+    /// </summary>
     public async Task SaveAsync(Entity entity, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(entity);
         var visited = new HashSet<Guid>();

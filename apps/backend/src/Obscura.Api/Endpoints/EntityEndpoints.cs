@@ -7,6 +7,7 @@ using Obscura.Contracts.System;
 using Obscura.Contracts.Taxonomy;
 using Obscura.Contracts.Videos;
 using Obscura.Domain.Entities;
+using Obscura.Infrastructure.Entities;
 
 namespace Obscura.Api.Endpoints;
 
@@ -22,7 +23,7 @@ public static class EntityEndpoints
             string? cursor,
             bool? hideNsfw,
             HttpContext httpContext,
-            IEntityReadUseCases entities,
+            EfEntityReadUseCases entities,
             CancellationToken cancellationToken) =>
         {
             if (!TryGetKind(httpContext.Request.Query["kind"].ToString(), out var kind, out var error))
@@ -38,7 +39,7 @@ public static class EntityEndpoints
 
         group.MapGet("/{id:guid}", async (
             Guid id,
-            IEntityReadUseCases entities,
+            EfEntityReadUseCases entities,
             CancellationToken cancellationToken) =>
             await GetEntityAsync(id, entities, cancellationToken))
             .WithName("GetEntity")
@@ -47,7 +48,7 @@ public static class EntityEndpoints
 
         group.MapPost("/thumbnails", async (
             EntityThumbnailBatchRequest request,
-            IEntityReadUseCases entities,
+            EfEntityReadUseCases entities,
             CancellationToken cancellationToken) =>
             Results.Ok(await entities.GetThumbnailsAsync(request.Ids, cancellationToken)))
             .WithName("GetEntityThumbnails")
@@ -56,7 +57,7 @@ public static class EntityEndpoints
         group.MapPatch("/{id:guid}/rating", async (
             Guid id,
             RatingUpdateRequest request,
-            IEntityWriteUseCases entities,
+            EntityWriteUseCases entities,
             CancellationToken cancellationToken) =>
             await ReturnWriteResultAsync(
                 id,
@@ -68,7 +69,7 @@ public static class EntityEndpoints
         group.MapPatch("/{id:guid}/flags", async (
             Guid id,
             EntityFlagsUpdateRequest request,
-            IEntityWriteUseCases entities,
+            EntityWriteUseCases entities,
             CancellationToken cancellationToken) =>
             await ReturnWriteResultAsync(
                 id,
@@ -80,7 +81,7 @@ public static class EntityEndpoints
         group.MapPatch("/{id:guid}/playback", async (
             Guid id,
             PlaybackUpdateRequest request,
-            IEntityWriteUseCases entities,
+            EntityWriteUseCases entities,
             CancellationToken cancellationToken) =>
             await ReturnWriteResultAsync(
                 id,
@@ -92,7 +93,7 @@ public static class EntityEndpoints
         group.MapPost("/{id:guid}/markers", async (
             Guid id,
             EntityMarkerWriteRequest request,
-            IEntityWriteUseCases entities,
+            EntityWriteUseCases entities,
             CancellationToken cancellationToken) =>
             await ReturnWriteResultAsync(
                 id,
@@ -105,7 +106,7 @@ public static class EntityEndpoints
             Guid id,
             Guid markerId,
             EntityMarkerWriteRequest request,
-            IEntityWriteUseCases entities,
+            EntityWriteUseCases entities,
             CancellationToken cancellationToken) =>
             await ReturnWriteResultAsync(
                 id,
@@ -117,7 +118,7 @@ public static class EntityEndpoints
         group.MapDelete("/{id:guid}/markers/{markerId:guid}", async (
             Guid id,
             Guid markerId,
-            IEntityWriteUseCases entities,
+            EntityWriteUseCases entities,
             CancellationToken cancellationToken) =>
             await ReturnWriteResultAsync(
                 id,
@@ -131,7 +132,7 @@ public static class EntityEndpoints
         routes.MapGet("/api/series/{id:guid}/seasons/{seasonId:guid}", async (
             Guid id,
             Guid seasonId,
-            IEntityReadUseCases entities,
+            EfEntityReadUseCases entities,
             CancellationToken cancellationToken) =>
             await GetKindDetailAsync(seasonId, "season", entities, cancellationToken))
             .WithTags("Series")
@@ -168,7 +169,7 @@ public static class EntityEndpoints
             string? query,
             string? cursor,
             bool? hideNsfw,
-            IEntityReadUseCases entities,
+            EfEntityReadUseCases entities,
             CancellationToken cancellationToken) =>
             Results.Ok(await entities.ListAsync(kind, query, cursor, hideNsfw, cancellationToken)))
             .WithName(listName)
@@ -176,7 +177,7 @@ public static class EntityEndpoints
 
         group.MapGet("/{id:guid}", async (
             Guid id,
-            IEntityReadUseCases entities,
+            EfEntityReadUseCases entities,
             CancellationToken cancellationToken) =>
             await GetKindDetailAsync(id, kind, entities, cancellationToken))
             .WithName(detailName)
@@ -188,7 +189,7 @@ public static class EntityEndpoints
 
     private static async Task<IResult> GetEntityAsync(
         Guid id,
-        IEntityReadUseCases entities,
+        EfEntityReadUseCases entities,
         CancellationToken cancellationToken)
     {
         var entity = await entities.GetAsync(id, cancellationToken);
@@ -200,7 +201,7 @@ public static class EntityEndpoints
     private static async Task<IResult> GetKindDetailAsync(
         Guid id,
         string kind,
-        IEntityReadUseCases entities,
+        EfEntityReadUseCases entities,
         CancellationToken cancellationToken)
     {
         var entity = await entities.GetDetailAsync(id, kind, cancellationToken);
