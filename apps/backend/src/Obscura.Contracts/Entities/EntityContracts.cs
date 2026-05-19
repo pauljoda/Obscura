@@ -6,21 +6,6 @@ namespace Obscura.Contracts.Entities;
 /// <param name="Value">Rating value from 0 through 5, or null when no rating exists.</param>
 public sealed record Rating(int? Value);
 
-/// <summary>
-/// API-facing external URL attached to an entity.
-/// </summary>
-/// <param name="Url">Absolute external URL.</param>
-/// <param name="Label">Optional display label.</param>
-public sealed record EntityUrl(string Url, string? Label);
-
-/// <summary>
-/// API-facing provider identifier attached to an entity.
-/// </summary>
-/// <param name="Provider">Provider code that owns the identifier.</param>
-/// <param name="Value">Provider-specific identifier value.</param>
-/// <param name="Url">Optional provider URL for direct navigation.</param>
-public sealed record EntityExternalId(string Provider, string Value, string? Url);
-
 /// <summary>Credit metadata exposed by detail routes that need character or role labels.</summary>
 /// <param name="PersonId">Referenced person entity identifier.</param>
 /// <param name="Role">Provider or domain role code, when known.</param>

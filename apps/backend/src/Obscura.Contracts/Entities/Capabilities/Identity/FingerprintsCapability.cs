@@ -1,3 +1,5 @@
+using EntityFingerprint = Obscura.Domain.Capabilities.EntityFingerprint;
+
 namespace Obscura.Contracts.Entities;
 
 /// <summary>API-facing fingerprint capability.</summary>

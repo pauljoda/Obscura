@@ -1,3 +1,5 @@
+using EntityFile = Obscura.Domain.Capabilities.EntityFile;
+
 namespace Obscura.Contracts.Entities;
 
 /// <summary>API-facing file capability.</summary>

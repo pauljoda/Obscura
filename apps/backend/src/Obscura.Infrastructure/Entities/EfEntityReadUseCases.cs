@@ -221,7 +221,7 @@ public sealed class EfEntityReadUseCases(ObscuraDbContext db)
         var markers = await db.EntityMarkers.AsNoTracking().Where(row => ids.Contains(row.EntityId)).OrderBy(row => row.Seconds).ToArrayAsync(cancellationToken);
         foreach (var group in markers.GroupBy(row => row.EntityId))
         {
-            result[group.Key].Add(new MarkersCapability(group.Select(row => new EntityMarker(row.Id, row.Title, row.Seconds, row.EndSeconds)).ToArray()));
+            result[group.Key].Add(new MarkersCapability(group.Select(row => new Obscura.Domain.Capabilities.EntityMarker(row.Id, row.Title, row.Seconds, row.EndSeconds)).ToArray()));
         }
 
         var technical = await db.EntityTechnical.AsNoTracking().Where(row => ids.Contains(row.EntityId)).ToArrayAsync(cancellationToken);
@@ -235,14 +235,14 @@ public sealed class EfEntityReadUseCases(ObscuraDbContext db)
         {
             var imageAssets = group
                 .Where(file => file.Role is EntityFileRole.Thumbnail or EntityFileRole.Poster or EntityFileRole.Backdrop or EntityFileRole.Cover)
-                .Select(file => new EntityImageAsset(file.Role.ToCode(), file.Path, file.MimeType))
+                .Select(file => new Obscura.Domain.Capabilities.EntityImageAsset(file.Role, file.Path, file.MimeType))
                 .ToArray();
             if (imageAssets.Length > 0)
             {
                 result[group.Key].Add(new ImagesCapability([], imageAssets, imageAssets.First().Path, imageAssets.First().Path));
             }
 
-            result[group.Key].Add(new FilesCapability(group.Select(file => new Obscura.Contracts.Entities.EntityFile(file.Role.ToCode(), file.Path, file.MimeType)).ToArray()));
+            result[group.Key].Add(new FilesCapability(group.Select(file => new Obscura.Domain.Capabilities.EntityFile(file.Role, file.Path, file.MimeType)).ToArray()));
         }
 
         return result.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<EntityCapability>)pair.Value);

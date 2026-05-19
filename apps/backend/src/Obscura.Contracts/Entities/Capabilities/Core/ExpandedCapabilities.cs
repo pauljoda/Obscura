@@ -1,31 +1,11 @@
+using EntityMarker = Obscura.Domain.Capabilities.EntityMarker;
+using EntitySubtitle = Obscura.Domain.Capabilities.EntitySubtitle;
+using EntityStat = Obscura.Domain.Capabilities.EntityStat;
+using EntityDate = Obscura.Domain.Capabilities.EntityDate;
+using EntitySource = Obscura.Domain.Capabilities.EntitySource;
+using EntityPosition = Obscura.Domain.Capabilities.EntityPosition;
+
 namespace Obscura.Contracts.Entities;
-
-/// <summary>API-facing marker attached to an entity.</summary>
-public sealed record EntityMarker(Guid Id, string Title, double Seconds, double? EndSeconds);
-
-/// <summary>API-facing subtitle or caption track attached to an entity.</summary>
-public sealed record EntitySubtitle(
-    Guid Id,
-    string Language,
-    string? Label,
-    string Format,
-    string Source,
-    string StoragePath,
-    string? SourceFormat,
-    string? SourcePath,
-    bool IsDefault);
-
-/// <summary>API-facing named statistic attached to an entity.</summary>
-public sealed record EntityStat(string Code, int Value);
-
-/// <summary>API-facing named date attached to an entity.</summary>
-public sealed record EntityDate(string Code, string Value, DateOnly? SortableValue, string? Precision);
-
-/// <summary>API-facing source provenance value attached to an entity.</summary>
-public sealed record EntitySource(string Code, string Value);
-
-/// <summary>API-facing structural position value attached to an entity.</summary>
-public sealed record EntityPosition(string Code, int Value, string? Label);
 
 /// <summary>API-facing marker capability.</summary>
 public sealed record MarkersCapability(IReadOnlyList<EntityMarker> Items) : EntityCapability;

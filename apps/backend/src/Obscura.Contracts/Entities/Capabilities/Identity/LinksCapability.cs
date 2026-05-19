@@ -1,3 +1,6 @@
+using EntityUrl = Obscura.Domain.Capabilities.EntityUrl;
+using EntityExternalId = Obscura.Domain.Capabilities.EntityExternalId;
+
 namespace Obscura.Contracts.Entities;
 
 /// <summary>API-facing external link capability.</summary>

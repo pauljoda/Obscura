@@ -1,5 +1,6 @@
 using Obscura.Api;
 using Obscura.Api.Endpoints;
+using Obscura.Api.Serialization;
 using Obscura.Application;
 using Obscura.Contracts.System;
 using Obscura.Infrastructure;
@@ -24,6 +25,8 @@ var cacheDir = ResolvePath(builder.Configuration["OBSCURA_CACHE_DIR"] ??
     builder.Configuration["Obscura:CacheDir"] ??
     Path.Combine(dataDir, "cache"), builder.Environment.ContentRootPath);
 
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new CodecJsonConverterFactory()));
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 builder.Services.AddCors(options => {

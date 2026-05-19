@@ -1,3 +1,5 @@
+using EntityCounter = Obscura.Domain.Capabilities.EntityCounter;
+
 namespace Obscura.Contracts.Entities;
 
 /// <summary>API-facing counter capability.</summary>

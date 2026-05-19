@@ -1,3 +1,5 @@
+using EntityImageAsset = Obscura.Domain.Capabilities.EntityImageAsset;
+
 namespace Obscura.Contracts.Entities;
 
 /// <summary>API-facing shared artwork capability.</summary>
