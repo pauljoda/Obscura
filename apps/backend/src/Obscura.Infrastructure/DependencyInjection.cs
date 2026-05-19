@@ -111,6 +111,7 @@ public static class DependencyInjection {
                 provider.GetRequiredService<AssetPathService>().CacheRoot,
                 provider.GetRequiredService<ILogger<LegacyAssetNormalizationService>>()));
         services.AddScoped<EntityRepository, EfEntityRepository>();
+        services.AddScoped<IEntityReadUseCases, EfEntityReadUseCases>();
         services.AddScoped<IEntityOrganizer, EntityOrganizerService>();
         services.AddScoped<IVideoSourceService, VideoSourceService>();
         services.AddSingleton(new HlsAssetServiceOptions(
