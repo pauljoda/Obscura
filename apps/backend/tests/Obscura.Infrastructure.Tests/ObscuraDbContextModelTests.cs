@@ -20,7 +20,6 @@ public sealed class ObscuraDbContextModelTests
     [InlineData(typeof(EntityFlagRow), "entity_flags")]
     [InlineData(typeof(EntityDescriptionRow), "entity_descriptions")]
     [InlineData(typeof(EntityRelationshipLinkRow), "entity_relationship_links")]
-    [InlineData(typeof(EntityAliasRow), "entity_aliases")]
     [InlineData(typeof(EntityPlaybackRow), "entity_playback")]
     [InlineData(typeof(EntityStatRow), "entity_stats")]
     [InlineData(typeof(EntityDateRow), "entity_dates")]

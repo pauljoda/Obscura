@@ -36,7 +36,6 @@ public sealed class VideoSeries : Entity {
     protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
         new CapabilityRating(),
-        new CapabilityImages(),
         new CapabilityLinks(),
         new CapabilityFlags(),
         new CapabilityFiles(),
@@ -71,7 +70,6 @@ public sealed class VideoSeason : Entity {
 
     protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
-        new CapabilityImages(),
         new CapabilityDescription(),
         new CapabilityDates(),
         new CapabilitySource(),

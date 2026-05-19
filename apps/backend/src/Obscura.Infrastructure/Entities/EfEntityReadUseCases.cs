@@ -118,8 +118,8 @@ public sealed class EfEntityReadUseCases(ObscuraDbContext db, EfEntityRepository
         return kind switch
         {
             "video" => new VideoDetail(card.Id, card.Kind, card.Title, card.ParentEntityId, card.SortOrder, card.Capabilities, card.ChildrenByKind, card.Relationships, creditMetadata, (entity as Video)?.SubtitlesExtractedAt),
-            "series" => new VideoSeriesDetail(card.Id, card.Kind, card.Title, card.ParentEntityId, card.SortOrder, card.Capabilities, card.ChildrenByKind, card.Relationships, creditMetadata),
-            "season" => new VideoSeasonDetail(card.Id, card.Kind, card.Title, card.ParentEntityId, card.SortOrder, card.Capabilities, card.ChildrenByKind, card.Relationships),
+            "video-series" => new VideoSeriesDetail(card.Id, card.Kind, card.Title, card.ParentEntityId, card.SortOrder, card.Capabilities, card.ChildrenByKind, card.Relationships, creditMetadata),
+            "video-season" => new VideoSeasonDetail(card.Id, card.Kind, card.Title, card.ParentEntityId, card.SortOrder, card.Capabilities, card.ChildrenByKind, card.Relationships),
             "image" => new ImageDetail(card.Id, card.Kind, card.Title, card.ParentEntityId, card.SortOrder, card.Capabilities, card.ChildrenByKind, card.Relationships),
             "gallery" when entity is Gallery gallery => new GalleryDetail(card.Id, card.Kind, card.Title, card.ParentEntityId, card.SortOrder, card.Capabilities, card.ChildrenByKind, card.Relationships, creditMetadata, gallery.GalleryType.ToCode(), gallery.CoverImageId),
             "book" when entity is Book book => new BookDetail(card.Id, card.Kind, card.Title, card.ParentEntityId, card.SortOrder, card.Capabilities, card.ChildrenByKind, card.Relationships, book.BookType.ToCode(), book.CoverPageId),

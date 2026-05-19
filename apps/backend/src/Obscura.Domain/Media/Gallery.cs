@@ -25,7 +25,6 @@ public sealed class Gallery : Entity {
     protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
         new CapabilityRating(),
-        new CapabilityImages(),
         new CapabilityLinks(),
         new CapabilityFlags(),
         new CapabilityFiles()

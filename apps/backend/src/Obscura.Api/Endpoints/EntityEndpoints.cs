@@ -149,13 +149,13 @@ public static class EntityEndpoints
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
         routes.MapEntityKindRoutes("/api/videos", "video", "Videos", "ListVideos", "GetVideo", typeof(VideoListResponse), typeof(VideoDetail));
-        routes.MapEntityKindRoutes("/api/series", "series", "Series", "ListVideoSeries", "GetVideoSeries", typeof(VideoSeriesListResponse), typeof(VideoSeriesDetail));
+        routes.MapEntityKindRoutes("/api/series", "video-series", "Series", "ListVideoSeries", "GetVideoSeries", typeof(VideoSeriesListResponse), typeof(VideoSeriesDetail));
         routes.MapGet("/api/series/{id:guid}/seasons/{seasonId:guid}", async (
             Guid id,
             Guid seasonId,
             EfEntityReadUseCases entities,
             CancellationToken cancellationToken) =>
-            await GetKindDetailAsync(seasonId, "season", entities, cancellationToken))
+            await GetKindDetailAsync(seasonId, "video-season", entities, cancellationToken))
             .WithTags("Series")
             .WithName("GetVideoSeason")
             .Produces<VideoSeasonDetail>()

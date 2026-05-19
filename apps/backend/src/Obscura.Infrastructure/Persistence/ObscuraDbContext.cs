@@ -30,7 +30,6 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<EntityRelationshipLinkRow> EntityRelationshipLinks => Set<EntityRelationshipLinkRow>();
 
-    public DbSet<EntityAliasRow> EntityAliases => Set<EntityAliasRow>();
 
     public DbSet<EntityChildLinkRow> EntityChildLinks => Set<EntityChildLinkRow>();
 

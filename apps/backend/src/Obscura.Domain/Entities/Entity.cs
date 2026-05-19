@@ -88,9 +88,6 @@ public abstract class Entity {
     /// <summary>Description capability when attached.</summary>
     public CapabilityDescription? Description => GetCapability<CapabilityDescription>();
 
-    /// <summary>Image capability when attached.</summary>
-    public CapabilityImages? Images => GetCapability<CapabilityImages>();
-
     /// <summary>File capability when attached.</summary>
     public CapabilityFiles? Files => GetCapability<CapabilityFiles>();
 

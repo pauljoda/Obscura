@@ -7,9 +7,6 @@ public enum CapabilityKind {
     /// <summary>User rating state.</summary>
     Rating,
 
-    /// <summary>Card and detail artwork state.</summary>
-    Images,
-
     /// <summary>User-facing description text.</summary>
     Description,
 

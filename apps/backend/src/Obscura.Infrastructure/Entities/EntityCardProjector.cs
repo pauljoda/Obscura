@@ -3,7 +3,6 @@ using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Media;
 using ContractCapability = Obscura.Contracts.Entities.EntityCapability;
-using ContractRating = Obscura.Contracts.Entities.Rating;
 
 namespace Obscura.Infrastructure.Entities;
 
@@ -42,7 +41,7 @@ public static class EntityCardProjector
 
         if (entity.Rating is { } rating)
         {
-            capabilities.Add(new RatingCapability(new ContractRating(rating.Value)));
+            capabilities.Add(new RatingCapability(rating.Value));
         }
 
         if (entity.Flags is { } flags)

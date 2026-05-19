@@ -1,11 +1,5 @@
 namespace Obscura.Contracts.Entities;
 
-/// <summary>
-/// API-facing rating capability payload.
-/// </summary>
-/// <param name="Value">Rating value from 0 through 5, or null when no rating exists.</param>
-public sealed record Rating(int? Value);
-
 /// <summary>Credit metadata exposed by detail routes that need character or role labels.</summary>
 /// <param name="PersonId">Referenced person entity identifier.</param>
 /// <param name="Role">Provider or domain role code, when known.</param>

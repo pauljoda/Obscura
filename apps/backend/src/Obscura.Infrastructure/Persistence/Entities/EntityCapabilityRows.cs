@@ -2,16 +2,6 @@ using Obscura.Domain.Entities;
 
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class EntityAliasRow
-{
-    public Guid Id { get; set; }
-    public Guid EntityId { get; set; }
-    public string Value { get; set; } = string.Empty;
-    public string? AliasType { get; set; }
-    public int SortOrder { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
-}
-
 public sealed class EntityDescriptionRow
 {
     public Guid EntityId { get; set; }

@@ -15,7 +15,6 @@ public sealed class BookVolume : Entity {
 
     protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
-        new CapabilityImages(),
         new CapabilityFiles(),
         new CapabilityStats(),
         new CapabilitySource(),
@@ -37,7 +36,6 @@ public sealed class BookChapter : Entity {
 
     protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
-        new CapabilityImages(),
         new CapabilityFiles(),
         new CapabilityFingerprints(),
         new CapabilityStats(),
@@ -58,7 +56,6 @@ public sealed class BookPage : Entity {
 
     protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
-        new CapabilityImages(),
         new CapabilityFiles(),
         new CapabilityFingerprints(),
         new CapabilityTechnical(),

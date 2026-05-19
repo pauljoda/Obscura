@@ -8,20 +8,6 @@ internal static partial class ExpandedV2ModelConfiguration
 {
     private static void ConfigureEntityCapabilities(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<EntityAliasRow>(entity =>
-        {
-            entity.ToTable("entity_aliases");
-            entity.HasKey(row => row.Id);
-            entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
-            entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.Value).HasColumnName("value").HasMaxLength(512).IsRequired();
-            entity.Property(row => row.AliasType).HasColumnName("alias_type").HasMaxLength(64);
-            entity.Property(row => row.SortOrder).HasColumnName("sort_order");
-            entity.Property(row => row.CreatedAt).HasColumnName("created_at");
-            entity.HasIndex(row => new { row.EntityId, row.Value }).IsUnique();
-            entity.HasOne<EntityRow>().WithMany().HasForeignKey(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
-        });
-
         modelBuilder.Entity<EntityDescriptionRow>(entity =>
         {
             entity.ToTable("entity_descriptions");
