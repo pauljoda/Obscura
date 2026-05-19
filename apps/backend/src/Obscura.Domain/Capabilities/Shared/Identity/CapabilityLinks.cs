@@ -9,7 +9,6 @@ public sealed class CapabilityLinks : EntityCapability {
         ExternalIds = externalIds?.ToArray() ?? [];
     }
 
-    public override CapabilityKind Kind => CapabilityKind.Links;
     public IReadOnlyList<EntityUrl> Urls { get; private set; }
     public IReadOnlyList<EntityExternalId> ExternalIds { get; private set; }
 }

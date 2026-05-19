@@ -43,7 +43,7 @@ public sealed class EntityCapabilityTests {
             subtitlesExtractedAt: null,
             capabilities: [new CapabilityRating(1), new CapabilityRating(2)]));
 
-        Assert.Contains(nameof(CapabilityKind.Rating), ex.Message);
+        Assert.Contains(nameof(CapabilityRating), ex.Message);
     }
 
     [Fact]

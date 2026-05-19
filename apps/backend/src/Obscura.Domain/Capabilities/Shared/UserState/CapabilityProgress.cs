@@ -25,7 +25,6 @@ public sealed class CapabilityProgress : EntityCapability {
     }
 
     /// <inheritdoc />
-    public override CapabilityKind Kind => CapabilityKind.Progress;
 
     public Guid? CurrentEntityId { get; private set; }
     public string Unit { get; private set; }

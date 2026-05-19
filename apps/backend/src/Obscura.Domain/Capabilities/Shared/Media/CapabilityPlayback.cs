@@ -13,7 +13,6 @@ public sealed class CapabilityPlayback : EntityCapability {
     }
 
     /// <inheritdoc />
-    public override CapabilityKind Kind => CapabilityKind.Playback;
 
     /// <summary>Single-user playback state.</summary>
     public Playback Value { get; private set; }

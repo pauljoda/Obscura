@@ -10,7 +10,6 @@ public sealed class CapabilityLifetime : EntityCapability {
         Label = label;
     }
 
-    public override CapabilityKind Kind => CapabilityKind.Lifetime;
     public EntityDate? Start { get; private set; }
     public EntityDate? End { get; private set; }
     public string? Label { get; private set; }

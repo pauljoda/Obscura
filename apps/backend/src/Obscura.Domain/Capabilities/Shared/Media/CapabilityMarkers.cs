@@ -8,7 +8,6 @@ public sealed class CapabilityMarkers : EntityCapability {
         Items = items?.ToArray() ?? [];
     }
 
-    public override CapabilityKind Kind => CapabilityKind.Markers;
     public IReadOnlyList<EntityMarker> Items { get; private set; }
 
     /// <summary>

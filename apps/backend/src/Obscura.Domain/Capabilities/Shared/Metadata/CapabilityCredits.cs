@@ -9,7 +9,6 @@ public sealed class CapabilityCredits : EntityCapability {
     private readonly List<EntityCredit> _credits = [];
 
     /// <inheritdoc />
-    public override CapabilityKind Kind => CapabilityKind.Credits;
 
     /// <summary>Credits attached to the entity in insertion order.</summary>
     public IReadOnlyList<EntityCredit> Credits => _credits.ToArray();

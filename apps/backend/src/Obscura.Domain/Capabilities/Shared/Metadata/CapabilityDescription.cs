@@ -13,7 +13,6 @@ public sealed class CapabilityDescription : EntityCapability {
     }
 
     /// <inheritdoc />
-    public override CapabilityKind Kind => CapabilityKind.Description;
 
     /// <summary>User-facing description text.</summary>
     public string Value { get; private set; }

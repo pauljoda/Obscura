@@ -13,7 +13,6 @@ public sealed class CapabilityRating : EntityCapability {
     }
 
     /// <inheritdoc />
-    public override CapabilityKind Kind => CapabilityKind.Rating;
 
     /// <summary>Current normalized rating value, or null when unrated.</summary>
     public int? Value { get; private set; }

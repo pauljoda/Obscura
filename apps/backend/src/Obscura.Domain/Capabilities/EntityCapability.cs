@@ -6,9 +6,6 @@ namespace Obscura.Domain.Capabilities;
 /// Base class for every mutable behavior module that can be attached to an entity.
 /// </summary>
 public abstract class EntityCapability {
-    /// <summary>Typed capability kind used for lookup and duplicate prevention.</summary>
-    public abstract CapabilityKind Kind { get; }
-
     /// <summary>Entity this capability is currently attached to, or null when detached.</summary>
     public Entity? Entity { get; private set; }
 
@@ -20,7 +17,7 @@ public abstract class EntityCapability {
     internal void AttachTo(Entity entity) {
         ArgumentNullException.ThrowIfNull(entity);
         if (Entity is not null && !ReferenceEquals(Entity, entity)) {
-            throw new InvalidOperationException($"Capability {Kind} is already attached to entity '{Entity.Id}'.");
+            throw new InvalidOperationException($"Capability {GetType().Name} is already attached to entity '{Entity.Id}'.");
         }
 
         Entity = entity;

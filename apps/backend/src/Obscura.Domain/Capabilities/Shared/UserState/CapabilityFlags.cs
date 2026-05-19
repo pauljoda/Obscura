@@ -10,7 +10,6 @@ public sealed class CapabilityFlags : EntityCapability {
         IsOrganized = isOrganized;
     }
 
-    public override CapabilityKind Kind => CapabilityKind.Flags;
     public bool? IsFavorite { get; private set; }
     public bool? IsNsfw { get; private set; }
     public bool? IsOrganized { get; private set; }

@@ -5,7 +5,6 @@ namespace Obscura.Domain.Capabilities;
 /// </summary>
 public sealed class CapabilityTechnical : EntityCapability {
     /// <inheritdoc />
-    public override CapabilityKind Kind => CapabilityKind.Technical;
 
     /// <summary>Media duration when known.</summary>
     public TimeSpan? Duration { get; set; }

@@ -15,7 +15,6 @@ public sealed class CapabilityClassification : EntityCapability {
     }
 
     /// <inheritdoc />
-    public override CapabilityKind Kind => CapabilityKind.Classification;
 
     /// <summary>Classification value, such as a content rating or certification.</summary>
     public string? Value { get; private set; }

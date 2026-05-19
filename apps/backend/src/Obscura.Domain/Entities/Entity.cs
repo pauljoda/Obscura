@@ -179,11 +179,11 @@ public abstract class Entity {
     /// Attaches a capability instance to this entity.
     /// </summary>
     /// <param name="capability">Capability instance to attach.</param>
-    /// <exception cref="ArgumentException">Thrown when this entity already has a capability of the same kind.</exception>
+    /// <exception cref="ArgumentException">Thrown when this entity already has a capability of the same concrete type.</exception>
     public void AddCapability(EntityCapability capability) {
         ArgumentNullException.ThrowIfNull(capability);
-        if (_capabilities.Any(existing => existing.Kind == capability.Kind)) {
-            throw new ArgumentException($"Entity '{Id}' already has capability {capability.Kind}.", nameof(capability));
+        if (_capabilities.Any(existing => existing.GetType() == capability.GetType())) {
+            throw new ArgumentException($"Entity '{Id}' already has capability {capability.GetType().Name}.", nameof(capability));
         }
 
         capability.AttachTo(this);
