@@ -8,4 +8,5 @@
 export type ListPeopleParams = {
 query?: string;
 cursor?: string;
+hideNsfw?: boolean;
 };

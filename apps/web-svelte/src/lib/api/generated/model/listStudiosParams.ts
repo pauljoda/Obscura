@@ -8,4 +8,5 @@
 export type ListStudiosParams = {
 query?: string;
 cursor?: string;
+hideNsfw?: boolean;
 };

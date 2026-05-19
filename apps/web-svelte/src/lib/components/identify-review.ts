@@ -78,8 +78,8 @@ export function relationshipTitlesFromEntityThumbnails(
 ): IdentifyRelationshipTitles {
   const byId = new Map(thumbnails.map((thumbnail) => [thumbnail.id, thumbnail.title]));
   return {
-    tags: titlesForRelationship(entity, byId, "tags", "tag"),
-    credits: titlesForRelationship(entity, byId, "cast", "person"),
+    tags: titlesForRelationship(entity, byId, "tag"),
+    credits: titlesForRelationship(entity, byId, "person"),
   };
 }
 
@@ -198,13 +198,12 @@ function entries(record: Record<string, string | number>): string[] {
 function titlesForRelationship(
   entity: Pick<EntityCard, "relationships">,
   byId: Map<string, string>,
-  code: string,
   kind: string,
 ): string[] {
   return (entity.relationships ?? [])
-    .filter((group) => group.code === code && group.kind === kind)
-    .flatMap((group) => group.entityIds)
-    .map((id) => byId.get(id))
+    .filter((group) => group.kind === kind)
+    .flatMap((group) => group.entities)
+    .map((thumbnail) => byId.get(thumbnail.id) ?? thumbnail.title)
     .filter((title): title is string => Boolean(title));
 }
 

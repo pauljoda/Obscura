@@ -449,7 +449,7 @@
 
   async function hydrateRelationshipTitles(entity: V2EntityDetailCard) {
     if (relationshipTitlesByEntityId[entity.id]) return;
-    const ids = entity.relationships.flatMap((group) => group.entityIds);
+    const ids = entity.relationships.flatMap((group) => group.entities.map((relationship) => relationship.id));
     if (ids.length === 0) {
       relationshipTitlesByEntityId = {
         ...relationshipTitlesByEntityId,

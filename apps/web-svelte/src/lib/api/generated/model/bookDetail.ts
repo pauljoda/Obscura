@@ -5,8 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapability } from './entityCapability';
-import type { EntityChildGroup } from './entityChildGroup';
-import type { EntityRelationshipGroup } from './entityRelationshipGroup';
+import type { EntityGroup } from './entityGroup';
 
 export interface BookDetail {
   id: string;
@@ -20,8 +19,8 @@ export interface BookDetail {
      */
   sortOrder: number | string | null;
   capabilities: EntityCapability[];
-  childrenByKind: EntityChildGroup[];
-  relationships: EntityRelationshipGroup[];
+  childrenByKind: EntityGroup[];
+  relationships: EntityGroup[];
   bookType: string;
   /** @nullable */
   coverPageId: string | null;

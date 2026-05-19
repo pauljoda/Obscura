@@ -8,4 +8,5 @@
 export type ListBooksParams = {
 query?: string;
 cursor?: string;
+hideNsfw?: boolean;
 };

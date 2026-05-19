@@ -5,9 +5,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface EntityRelationshipGroup {
-  code: string;
-  kind: string;
-  label: string;
-  entityIds: string[];
-}
+export type ListVideoSeriesParams = {
+query?: string;
+cursor?: string;
+hideNsfw?: boolean;
+};

@@ -1,8 +1,8 @@
-import type { EntityChildGroup, EntityRelationshipGroup } from "$lib/api/generated/model";
+import type { EntityGroup } from "$lib/api/generated/model";
 import type { EntityKindCode, RelationshipCode } from "./v2-codes";
 
 export interface EntityChildGroupSource {
-  childrenByKind?: EntityChildGroup[] | null;
+  childrenByKind?: EntityGroup[] | null;
 }
 
 export function getChildIds(
@@ -10,15 +10,15 @@ export function getChildIds(
   kind: EntityKindCode,
 ): string[] {
   const group = entity?.childrenByKind?.find((candidate) => candidate.kind === kind);
-  return group?.entityIds ?? [];
+  return group?.entities.map((child) => child.id) ?? [];
 }
 
 export function getAllChildIds(entity: EntityChildGroupSource | null | undefined): string[] {
-  return (entity?.childrenByKind ?? []).flatMap((group) => group.entityIds);
+  return (entity?.childrenByKind ?? []).flatMap((group) => group.entities.map((child) => child.id));
 }
 
 export interface EntityRelationshipGroupSource {
-  relationships?: EntityRelationshipGroup[] | null;
+  relationships?: EntityGroup[] | null;
 }
 
 export function getRelationshipIds(
@@ -27,13 +27,13 @@ export function getRelationshipIds(
   kind?: EntityKindCode,
 ): string[] {
   return (entity?.relationships ?? [])
-    .filter((group) => group.code === code && (!kind || group.kind === kind))
-    .flatMap((group) => group.entityIds);
+    .filter((group) => !kind || group.kind === kind)
+    .flatMap((group) => group.entities.map((relationship) => relationship.id));
 }
 
 export function getRelationships(
   entity: EntityRelationshipGroupSource | null | undefined,
   kind: EntityKindCode,
-): EntityRelationshipGroup[] {
+): EntityGroup[] {
   return (entity?.relationships ?? []).filter((group) => group.kind === kind);
 }

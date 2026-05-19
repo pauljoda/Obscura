@@ -8,4 +8,5 @@
 export type ListCollectionsParams = {
 query?: string;
 cursor?: string;
+hideNsfw?: boolean;
 };

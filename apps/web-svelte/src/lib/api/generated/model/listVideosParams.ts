@@ -5,7 +5,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface EntityChildGroup {
-  kind: string;
-  entityIds: string[];
-}
+export type ListVideosParams = {
+query?: string;
+cursor?: string;
+hideNsfw?: boolean;
+};

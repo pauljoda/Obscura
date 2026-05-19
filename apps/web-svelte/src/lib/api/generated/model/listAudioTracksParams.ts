@@ -8,4 +8,5 @@
 export type ListAudioTracksParams = {
 query?: string;
 cursor?: string;
+hideNsfw?: boolean;
 };

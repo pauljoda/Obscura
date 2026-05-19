@@ -1,19 +1,19 @@
 import {
   listEntities,
   listJobs,
-  listSeries,
+  listVideoSeries,
   listVideos,
   updateEntityFlags,
   updateEntityRating,
   getSettings,
-  getSeries,
+  getVideoSeries,
   getVideo,
   getImage,
-  getGallerie,
+  getGallery,
   getBook,
-  getAudioLibrarie,
+  getAudioLibrary,
   getAudioTrack,
-  getPeople,
+  getPerson,
   getStudio,
   getTag,
   getCollection,
@@ -29,7 +29,7 @@ import {
   listBooks,
   listGalleries,
   listImages,
-  getSeriesSeason,
+  getVideoSeason,
 } from "./generated/obscura-v2";
 import type {
   AudioLibraryDetail,
@@ -39,9 +39,8 @@ import type {
   CollectionListResponse,
   EntityCapability,
   EntityCard,
-  EntityChildGroup,
+  EntityGroup,
   EntityListResponse,
-  EntityRelationshipGroup,
   EntityThumbnail,
   EntityThumbnailBatchResponse,
   GalleryDetail,
@@ -74,8 +73,8 @@ export type V2Rating = Rating;
 export type V2EntityCapability = EntityCapability;
 export type V2EntityCard = EntityThumbnail;
 export type V2EntityDetailCard = EntityCard;
-export type V2EntityChildGroup = EntityChildGroup;
-export type V2EntityRelationshipGroup = EntityRelationshipGroup;
+export type V2EntityChildGroup = EntityGroup;
+export type V2EntityRelationshipGroup = EntityGroup;
 export type V2EntityThumbnail = EntityThumbnail;
 export type V2EntityListResponse = EntityListResponse;
 export type V2VideoListResponse = VideoListResponse;
@@ -226,7 +225,7 @@ export async function fetchV2EntityThumbnails(
 export function fetchV2Videos(
   options?: V2RequestOptions,
 ): Promise<V2VideoListResponse> {
-  return listVideos({ signal: options?.signal }).then((response) => response.data);
+  return listVideos(undefined, { signal: options?.signal }).then((response) => response.data);
 }
 
 export function fetchV2Video(
@@ -292,14 +291,14 @@ export async function markJellyfinUserPlayedItem(
 export function fetchV2SeriesList(
   options?: V2RequestOptions,
 ): Promise<V2VideoSeriesListResponse> {
-  return listSeries({ signal: options?.signal }).then((response) => response.data);
+  return listVideoSeries(undefined, { signal: options?.signal }).then((response) => response.data);
 }
 
 export function fetchV2Series(
   id: string,
   options?: V2RequestOptions,
 ): Promise<V2VideoSeriesDetail> {
-  return getSeries(id, { signal: options?.signal }).then((response) => {
+  return getVideoSeries(id, { signal: options?.signal }).then((response) => {
     if (response.status !== 200) {
       throw new Error(response.data.message);
     }
@@ -313,7 +312,7 @@ export function fetchV2Season(
   seasonId: string,
   options?: V2RequestOptions,
 ): Promise<V2VideoSeasonDetail> {
-  return getSeriesSeason(seriesId, seasonId, { signal: options?.signal }).then((response) => {
+  return getVideoSeason(seriesId, seasonId, { signal: options?.signal }).then((response) => {
     if (response.status !== 200) {
       throw new Error(response.data.message);
     }
@@ -350,7 +349,7 @@ export function fetchV2Image(id: string, options?: V2RequestOptions): Promise<V2
 }
 
 export function fetchV2Gallery(id: string, options?: V2RequestOptions): Promise<V2GalleryDetail> {
-  return getGallerie(id, { signal: options?.signal }).then((response) => {
+  return getGallery(id, { signal: options?.signal }).then((response) => {
     if (response.status !== 200) throw new Error(response.data.message);
     return response.data;
   });
@@ -364,7 +363,7 @@ export function fetchV2Book(id: string, options?: V2RequestOptions): Promise<V2B
 }
 
 export function fetchV2AudioLibrary(id: string, options?: V2RequestOptions): Promise<V2AudioLibraryDetail> {
-  return getAudioLibrarie(id, { signal: options?.signal }).then((response) => {
+  return getAudioLibrary(id, { signal: options?.signal }).then((response) => {
     if (response.status !== 200) throw new Error(response.data.message);
     return response.data;
   });
@@ -378,7 +377,7 @@ export function fetchV2AudioTrack(id: string, options?: V2RequestOptions): Promi
 }
 
 export function fetchV2Person(id: string, options?: V2RequestOptions): Promise<V2PersonDetail> {
-  return getPeople(id, { signal: options?.signal }).then((response) => {
+  return getPerson(id, { signal: options?.signal }).then((response) => {
     if (response.status !== 200) throw new Error(response.data.message);
     return response.data;
   });

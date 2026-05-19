@@ -18,9 +18,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The C# domain model was intentionally reset around abstract entities and mutable typed capabilities, creating a breaking foundation for the next EF/API integration pass.
 - Domain persistence now starts from an application-level `EntityRepository`, keeping entities persistence-ignorant while EF hydrates short-lived domain slices.
 - Entity API contracts now model child and relationship groups as labeled arrays of entity thumbnails instead of domain/entity-reference records.
+- Browse, detail, thumbnail, rating, flag, playback, and marker routes are back on the .NET API and now read through EF projections while writes save domain entity state.
+- Plugin identify requests now use `structuralContext` instead of the old `graph` field, so community v2 plugins must update to the new structural-context protocol.
 
 ### Added
 - High-level v2 implementation summary for the rebuilt Obscura architecture, media model, playback pipeline, and UI surfaces.
+- EF-projected browse/detail APIs for videos, series, seasons, images, galleries, books, audio libraries/tracks, people, studios, tags, collections, and generic entity lists.
 
 ### Changed
 - The v2 development data model was simplified around generic entity children, relationships, and thumbnail projections; rescanning/importing v1 data is required.
@@ -28,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Domain entities now use a breaking object-oriented model with enum entity kinds and attached mutable capabilities instead of registry/string capability lookups.
 - Entity children and relationships now group by `EntityKind`, and video credits now live in a mutable typed credits capability.
 - Child and relationship API payloads now share one grouped entity shape with `kind`, `label`, and `entities` fields.
+- Plugin identify protocol context was renamed from `graph` / `IdentifyGraphContext` to `structuralContext` / `IdentifyStructuralContext`.
 
 ### Fixed
 - Backend startup no longer reports pending EF model changes from entity-kind seed metadata drift.
@@ -36,11 +40,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Identify apply no longer fails on titles whose full credits include the same person in multiple roles, such as cast plus writer or creator.
 - Identify review no longer marks existing relationship tags as new or navigates away when clicking selectable cast thumbnails.
 - Local v2 reset now keeps required entity-kind metadata so legacy migration tests can run cleanly.
+- Entity rating, flags, playback resume/completion, and timeline marker writes now persist through domain behavior and EF repository saves.
 
 ### Removed
 - Historical v1-era release note detail was pruned from the changelog; git history remains the complete record.
 - The stale API projection service layer was removed from Application/Infrastructure while the new domain-first persistence slice is established.
-- Stale browse/detail API endpoints that depended on the removed projection layer were removed until the replacement `EntityRepository` API surface is rebuilt.
 
 ### Docs
 - Backend architecture guidance now documents the Clean Architecture, DDD-lite, CQRS-lite, EF Core, DTO, and generated-client contract for future Obscura work.

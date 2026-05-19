@@ -8,4 +8,5 @@
 export type ListTagsParams = {
 query?: string;
 cursor?: string;
+hideNsfw?: boolean;
 };

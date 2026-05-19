@@ -5,9 +5,8 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapability } from './entityCapability';
-import type { EntityChildGroup } from './entityChildGroup';
 import type { EntityCreditMetadata } from './entityCreditMetadata';
-import type { EntityRelationshipGroup } from './entityRelationshipGroup';
+import type { EntityGroup } from './entityGroup';
 
 export interface GalleryDetail {
   id: string;
@@ -21,8 +20,8 @@ export interface GalleryDetail {
      */
   sortOrder: number | string | null;
   capabilities: EntityCapability[];
-  childrenByKind: EntityChildGroup[];
-  relationships: EntityRelationshipGroup[];
+  childrenByKind: EntityGroup[];
+  relationships: EntityGroup[];
   creditMetadata: EntityCreditMetadata[];
   galleryType: string;
   /** @nullable */

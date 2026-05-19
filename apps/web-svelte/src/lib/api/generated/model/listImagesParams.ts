@@ -8,4 +8,5 @@
 export type ListImagesParams = {
 query?: string;
 cursor?: string;
+hideNsfw?: boolean;
 };

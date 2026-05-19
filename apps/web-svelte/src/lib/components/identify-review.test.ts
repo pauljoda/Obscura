@@ -76,8 +76,8 @@ describe("identify review helpers", () => {
     const titles = relationshipTitlesFromEntityThumbnails(
       {
         relationships: [
-          { code: "tags", kind: "tag", label: "Tags", entityIds: ["tag-comedy", "tag-drama"] },
-          { code: "cast", kind: "person", label: "Cast", entityIds: ["person-tim"] },
+          { kind: "tag", label: "Tags", entities: [thumbnail("tag-comedy", "tag", "COMEDY"), thumbnail("tag-drama", "tag", "Drama")] },
+          { kind: "person", label: "Cast", entities: [thumbnail("person-tim", "person", "Tim Robinson")] },
         ],
       },
       [
