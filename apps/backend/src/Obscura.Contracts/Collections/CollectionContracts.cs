@@ -44,4 +44,4 @@ public sealed record CollectionDetail(
     Guid? CoverItemId = null,
     TimeSpan? SlideshowDuration = null,
     bool? SlideshowAutoAdvance = null,
-    DateTimeOffset? LastRefreshedAt = null);
+    DateTimeOffset? LastRefreshedAt = null) : IEntityCard;

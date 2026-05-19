@@ -21,7 +21,7 @@ public sealed class EfEntityReadUseCases(ObscuraDbContext db)
     /// <summary>
     /// Lists active entities as thumbnail read models, optionally scoped by kind, search text, NSFW visibility, and cursor.
     /// </summary>
-    public async Task<object> ListAsync(
+    public async Task<EntityListResponse> ListAsync(
         string? kind,
         string? query,
         string? cursor,
@@ -74,13 +74,13 @@ public sealed class EfEntityReadUseCases(ObscuraDbContext db)
     /// <summary>
     /// Gets one active entity as the shared entity card read model.
     /// </summary>
-    public async Task<object?> GetAsync(Guid id, CancellationToken cancellationToken) =>
+    public async Task<EntityCard?> GetAsync(Guid id, CancellationToken cancellationToken) =>
         await ProjectCardAsync(id, cancellationToken);
 
     /// <summary>
     /// Gets thumbnails for the requested identifiers while preserving the caller's requested order.
     /// </summary>
-    public async Task<object> GetThumbnailsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken)
+    public async Task<EntityThumbnailBatchResponse> GetThumbnailsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken)
     {
         var rows = await db.Entities.AsNoTracking()
             .Where(entity => ids.Contains(entity.Id) && entity.DeletedAt == null)
@@ -93,7 +93,7 @@ public sealed class EfEntityReadUseCases(ObscuraDbContext db)
     /// <summary>
     /// Gets one active entity as its kind-specific detail contract.
     /// </summary>
-    public async Task<object?> GetDetailAsync(Guid id, string kind, CancellationToken cancellationToken)
+    public async Task<IEntityCard?> GetDetailAsync(Guid id, string kind, CancellationToken cancellationToken)
     {
         var card = await ProjectCardAsync(id, cancellationToken);
         if (card is null || !card.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase))

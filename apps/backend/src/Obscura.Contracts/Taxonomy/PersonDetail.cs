@@ -47,4 +47,4 @@ public sealed record PersonDetail(
     string? Tattoos,
     string? Piercings,
     int? CareerStart,
-    int? CareerEnd);
+    int? CareerEnd) : IEntityCard;

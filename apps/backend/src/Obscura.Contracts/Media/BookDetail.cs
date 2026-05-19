@@ -23,4 +23,4 @@ public sealed record BookDetail(
     IReadOnlyList<EntityGroup> ChildrenByKind,
     IReadOnlyList<EntityGroup> Relationships,
     string BookType,
-    Guid? CoverPageId);
+    Guid? CoverPageId) : IEntityCard;

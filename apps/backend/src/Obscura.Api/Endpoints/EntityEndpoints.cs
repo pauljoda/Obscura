@@ -207,10 +207,10 @@ public static class EntityEndpoints
         var entity = await entities.GetDetailAsync(id, kind, cancellationToken);
         return entity is null
             ? Results.NotFound(new ApiProblem("entity_not_found", $"Entity '{id}' was not found."))
-            : Results.Ok(entity);
+            : Results.Ok<object>(entity);
     }
 
-    private static async Task<IResult> ReturnWriteResultAsync(Guid id, Task<object?> resultTask)
+    private static async Task<IResult> ReturnWriteResultAsync(Guid id, Task<EntityCard?> resultTask)
     {
         var entity = await resultTask;
         return entity is null

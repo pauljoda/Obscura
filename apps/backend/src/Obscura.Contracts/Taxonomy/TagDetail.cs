@@ -21,4 +21,4 @@ public sealed record TagDetail(
     IReadOnlyList<EntityCapability> Capabilities,
     IReadOnlyList<EntityGroup> ChildrenByKind,
     IReadOnlyList<EntityGroup> Relationships,
-    bool IgnoreAutoTag);
+    bool IgnoreAutoTag) : IEntityCard;

@@ -34,4 +34,4 @@ public sealed record VideoDetail(
     IReadOnlyList<EntityGroup> ChildrenByKind,
     IReadOnlyList<EntityGroup> Relationships,
     IReadOnlyList<EntityCreditMetadata> CreditMetadata,
-    DateTimeOffset? SubtitlesExtractedAt);
+    DateTimeOffset? SubtitlesExtractedAt) : IEntityCard;

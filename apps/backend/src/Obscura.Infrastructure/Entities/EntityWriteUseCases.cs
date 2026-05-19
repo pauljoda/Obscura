@@ -1,4 +1,5 @@
 using Obscura.Application.Entities;
+using Obscura.Contracts.Entities;
 using Obscura.Domain.Capabilities;
 
 namespace Obscura.Infrastructure.Entities;
@@ -13,7 +14,7 @@ public sealed class EntityWriteUseCases(
     /// <summary>
     /// Sets or clears the user rating for one entity and returns the refreshed read model.
     /// </summary>
-    public async Task<object?> SetRatingAsync(SetEntityRatingCommand command, CancellationToken cancellationToken)
+    public async Task<EntityCard?> SetRatingAsync(SetEntityRatingCommand command, CancellationToken cancellationToken)
     {
         var entity = await entities.FindAsync(command.EntityId, cancellationToken);
         if (entity is null)
@@ -43,7 +44,7 @@ public sealed class EntityWriteUseCases(
     /// <summary>
     /// Applies a sparse boolean flag update and returns the refreshed read model.
     /// </summary>
-    public async Task<object?> UpdateFlagsAsync(UpdateEntityFlagsCommand command, CancellationToken cancellationToken)
+    public async Task<EntityCard?> UpdateFlagsAsync(UpdateEntityFlagsCommand command, CancellationToken cancellationToken)
     {
         var entity = await entities.FindAsync(command.EntityId, cancellationToken);
         if (entity is null)
@@ -65,7 +66,7 @@ public sealed class EntityWriteUseCases(
     /// <summary>
     /// Records playback state for one entity and returns the refreshed read model.
     /// </summary>
-    public async Task<object?> UpdatePlaybackAsync(UpdatePlaybackCommand command, CancellationToken cancellationToken)
+    public async Task<EntityCard?> UpdatePlaybackAsync(UpdatePlaybackCommand command, CancellationToken cancellationToken)
     {
         var entity = await entities.FindAsync(command.EntityId, cancellationToken);
         if (entity is null)
@@ -91,7 +92,7 @@ public sealed class EntityWriteUseCases(
     /// <summary>
     /// Creates a timeline marker for one entity and returns the refreshed read model.
     /// </summary>
-    public async Task<object?> CreateMarkerAsync(CreateEntityMarkerCommand command, CancellationToken cancellationToken)
+    public async Task<EntityCard?> CreateMarkerAsync(CreateEntityMarkerCommand command, CancellationToken cancellationToken)
     {
         var entity = await entities.FindAsync(command.EntityId, cancellationToken);
         if (entity is null)
@@ -113,7 +114,7 @@ public sealed class EntityWriteUseCases(
     /// <summary>
     /// Updates an existing timeline marker and returns the refreshed read model.
     /// </summary>
-    public async Task<object?> UpdateMarkerAsync(UpdateEntityMarkerCommand command, CancellationToken cancellationToken)
+    public async Task<EntityCard?> UpdateMarkerAsync(UpdateEntityMarkerCommand command, CancellationToken cancellationToken)
     {
         var entity = await entities.FindAsync(command.EntityId, cancellationToken);
         if (entity is null)
@@ -133,7 +134,7 @@ public sealed class EntityWriteUseCases(
     /// <summary>
     /// Deletes an existing timeline marker and returns the refreshed read model.
     /// </summary>
-    public async Task<object?> DeleteMarkerAsync(DeleteEntityMarkerCommand command, CancellationToken cancellationToken)
+    public async Task<EntityCard?> DeleteMarkerAsync(DeleteEntityMarkerCommand command, CancellationToken cancellationToken)
     {
         var entity = await entities.FindAsync(command.EntityId, cancellationToken);
         if (entity is null)

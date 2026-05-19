@@ -63,6 +63,38 @@ public sealed record EntityThumbnailBatchRequest(IReadOnlyList<Guid> Ids);
 public sealed record EntityThumbnailBatchResponse(IReadOnlyList<EntityThumbnail> Items);
 
 /// <summary>
+/// Shared shape implemented by every entity card and kind-specific detail contract.
+/// Carries the fields common to all entities so detail routes can be returned as a single
+/// strongly typed contract instead of <see cref="object"/>.
+/// </summary>
+public interface IEntityCard
+{
+    /// <summary>Global entity identifier.</summary>
+    Guid Id { get; }
+
+    /// <summary>Entity kind code.</summary>
+    string Kind { get; }
+
+    /// <summary>Primary display title.</summary>
+    string Title { get; }
+
+    /// <summary>Structural parent entity identifier, or null for root and virtual collection children.</summary>
+    Guid? ParentEntityId { get; }
+
+    /// <summary>Optional structural order under the parent entity.</summary>
+    int? SortOrder { get; }
+
+    /// <summary>Shared capabilities already projected for the card.</summary>
+    IReadOnlyList<EntityCapability> Capabilities { get; }
+
+    /// <summary>Generic child groups keyed by entity kind.</summary>
+    IReadOnlyList<EntityGroup> ChildrenByKind { get; }
+
+    /// <summary>Generic non-structural relationship groups keyed by entity kind.</summary>
+    IReadOnlyList<EntityGroup> Relationships { get; }
+}
+
+/// <summary>
 /// Normalized card/detail shape used across media, taxonomy, and collection routes.
 /// </summary>
 /// <param name="Id">Global entity identifier.</param>
@@ -81,7 +113,7 @@ public sealed record EntityCard(
     int? SortOrder,
     IReadOnlyList<EntityCapability> Capabilities,
     IReadOnlyList<EntityGroup> ChildrenByKind,
-    IReadOnlyList<EntityGroup> Relationships);
+    IReadOnlyList<EntityGroup> Relationships) : IEntityCard;
 
 /// <summary>
 /// Cursor-paged entity list response.

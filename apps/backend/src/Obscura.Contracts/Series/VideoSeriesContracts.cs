@@ -32,7 +32,7 @@ public sealed record VideoSeriesDetail(
     IReadOnlyList<EntityCapability> Capabilities,
     IReadOnlyList<EntityGroup> ChildrenByKind,
     IReadOnlyList<EntityGroup> Relationships,
-    IReadOnlyList<EntityCreditMetadata> CreditMetadata);
+    IReadOnlyList<EntityCreditMetadata> CreditMetadata) : IEntityCard;
 
 /// <summary>
 /// API-facing video-season detail shape with ordered episode videos.
@@ -53,4 +53,4 @@ public sealed record VideoSeasonDetail(
     int? SortOrder,
     IReadOnlyList<EntityCapability> Capabilities,
     IReadOnlyList<EntityGroup> ChildrenByKind,
-    IReadOnlyList<EntityGroup> Relationships);
+    IReadOnlyList<EntityGroup> Relationships) : IEntityCard;

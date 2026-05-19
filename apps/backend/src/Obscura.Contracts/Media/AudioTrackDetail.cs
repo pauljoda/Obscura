@@ -23,4 +23,4 @@ public sealed record AudioTrackDetail(
     IReadOnlyList<EntityGroup> ChildrenByKind,
     IReadOnlyList<EntityGroup> Relationships,
     string? EmbeddedArtist,
-    string? EmbeddedAlbum);
+    string? EmbeddedAlbum) : IEntityCard;

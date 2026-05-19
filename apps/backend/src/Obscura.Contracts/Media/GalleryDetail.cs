@@ -25,4 +25,4 @@ public sealed record GalleryDetail(
     IReadOnlyList<EntityGroup> Relationships,
     IReadOnlyList<EntityCreditMetadata> CreditMetadata,
     string GalleryType,
-    Guid? CoverImageId);
+    Guid? CoverImageId) : IEntityCard;

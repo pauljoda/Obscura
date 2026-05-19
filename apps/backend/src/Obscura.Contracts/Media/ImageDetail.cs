@@ -19,4 +19,4 @@ public sealed record ImageDetail(
     int? SortOrder,
     IReadOnlyList<EntityCapability> Capabilities,
     IReadOnlyList<EntityGroup> ChildrenByKind,
-    IReadOnlyList<EntityGroup> Relationships);
+    IReadOnlyList<EntityGroup> Relationships) : IEntityCard;
