@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Child and relationship API payloads now share one grouped entity shape with `kind`, `label`, and `entities` fields.
 
 ### Fixed
+- Backend startup no longer reports pending EF model changes from entity-kind seed metadata drift.
 - Series, season, video, gallery, collection, and audio detail pages now show their migrated child items and relationships again.
 - Identify cascade review now applies nested season and episode selections while preserving credit and studio pictures from related entity proposals.
 - Identify apply no longer fails on titles whose full credits include the same person in multiple roles, such as cast plus writer or creator.
