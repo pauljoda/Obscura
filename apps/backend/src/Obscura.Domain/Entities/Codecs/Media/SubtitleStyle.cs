@@ -5,20 +5,10 @@ namespace Obscura.Domain.Entities;
 /// </summary>
 public enum SubtitleStyle {
     /// <summary>Obscura's styled subtitle presentation.</summary>
+    [Code("stylized")]
     Stylized,
 
     /// <summary>Plain browser-like subtitle presentation.</summary>
+    [Code("plain")]
     Plain
-}
-
-/// <summary>
-/// Codec for subtitle rendering style codes.
-/// </summary>
-public sealed class SubtitleStyleCodec : EnumCodec<SubtitleStyle> {
-    public SubtitleStyleCodec()
-        : base(new Dictionary<SubtitleStyle, string> {
-            [SubtitleStyle.Stylized] = "stylized",
-            [SubtitleStyle.Plain] = "plain"
-        }) {
-    }
 }

@@ -5,56 +5,46 @@ namespace Obscura.Domain.Entities;
 /// </summary>
 public enum EntityFileRole {
     /// <summary>Original playable or readable source file.</summary>
+    [Code("source")]
     Source,
 
     /// <summary>Small generated thumbnail image.</summary>
+    [Code("thumbnail")]
     Thumbnail,
 
     /// <summary>Primary poster or cover artwork.</summary>
+    [Code("poster")]
     Poster,
 
     /// <summary>Wide background artwork.</summary>
+    [Code("backdrop")]
     Backdrop,
 
     /// <summary>Brand or title-logo artwork.</summary>
+    [Code("logo")]
     Logo,
 
     /// <summary>Short preview clip or representative media file.</summary>
+    [Code("preview")]
     Preview,
 
     /// <summary>Sprite sheet used for timeline previews.</summary>
+    [Code("sprite")]
     Sprite,
 
     /// <summary>Trickplay asset used during seeking.</summary>
+    [Code("trickplay")]
     Trickplay,
 
     /// <summary>Audio waveform image or data asset.</summary>
+    [Code("waveform")]
     Waveform,
 
     /// <summary>Book, gallery, or audio cover image.</summary>
+    [Code("cover")]
     Cover,
 
     /// <summary>HLS manifest or segment asset.</summary>
+    [Code("hls")]
     Hls
-}
-
-/// <summary>
-/// Codec for entity file role codes.
-/// </summary>
-public sealed class EntityFileRoleCodec : EnumCodec<EntityFileRole> {
-    public EntityFileRoleCodec()
-        : base(new Dictionary<EntityFileRole, string> {
-            [EntityFileRole.Source] = "source",
-            [EntityFileRole.Thumbnail] = "thumbnail",
-            [EntityFileRole.Poster] = "poster",
-            [EntityFileRole.Backdrop] = "backdrop",
-            [EntityFileRole.Logo] = "logo",
-            [EntityFileRole.Preview] = "preview",
-            [EntityFileRole.Sprite] = "sprite",
-            [EntityFileRole.Trickplay] = "trickplay",
-            [EntityFileRole.Waveform] = "waveform",
-            [EntityFileRole.Cover] = "cover",
-            [EntityFileRole.Hls] = "hls"
-        }) {
-    }
 }

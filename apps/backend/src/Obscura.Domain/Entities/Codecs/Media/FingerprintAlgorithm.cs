@@ -5,24 +5,14 @@ namespace Obscura.Domain.Entities;
 /// </summary>
 public enum FingerprintAlgorithm {
     /// <summary>Standard MD5 content hash.</summary>
+    [Code("md5")]
     Md5,
 
     /// <summary>OpenSubtitles hash — fast size+sample-based fingerprint.</summary>
+    [Code("oshash")]
     Oshash,
 
     /// <summary>Perceptual hash for visual similarity matching.</summary>
+    [Code("phash")]
     Phash
-}
-
-/// <summary>
-/// Codec for fingerprint algorithm codes.
-/// </summary>
-public sealed class FingerprintAlgorithmCodec : EnumCodec<FingerprintAlgorithm> {
-    public FingerprintAlgorithmCodec()
-        : base(new Dictionary<FingerprintAlgorithm, string> {
-            [FingerprintAlgorithm.Md5] = "md5",
-            [FingerprintAlgorithm.Oshash] = "oshash",
-            [FingerprintAlgorithm.Phash] = "phash"
-        }) {
-    }
 }

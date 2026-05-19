@@ -5,20 +5,10 @@ namespace Obscura.Domain.Entities;
 /// </summary>
 public enum ReaderMode {
     /// <summary>One page or spread at a time.</summary>
+    [Code("paged")]
     Paged,
 
     /// <summary>Continuous vertical reading for long-strip comics and similar formats.</summary>
+    [Code("webtoon")]
     Webtoon
-}
-
-/// <summary>
-/// Codec for book reader layout codes.
-/// </summary>
-public sealed class ReaderModeCodec : EnumCodec<ReaderMode> {
-    public ReaderModeCodec()
-        : base(new Dictionary<ReaderMode, string> {
-            [ReaderMode.Paged] = "paged",
-            [ReaderMode.Webtoon] = "webtoon"
-        }) {
-    }
 }

@@ -5,20 +5,10 @@ namespace Obscura.Domain.Entities;
 /// </summary>
 public enum CollectionItemSource {
     /// <summary>The user explicitly added the item.</summary>
+    [Code("manual")]
     Manual,
 
     /// <summary>A collection rule selected the item.</summary>
+    [Code("dynamic")]
     Dynamic
-}
-
-/// <summary>
-/// Codec for collection item source codes.
-/// </summary>
-public sealed class CollectionItemSourceCodec : EnumCodec<CollectionItemSource> {
-    public CollectionItemSourceCodec()
-        : base(new Dictionary<CollectionItemSource, string> {
-            [CollectionItemSource.Manual] = "manual",
-            [CollectionItemSource.Dynamic] = "dynamic"
-        }) {
-    }
 }

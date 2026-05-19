@@ -5,28 +5,18 @@ namespace Obscura.Domain.Entities;
 /// </summary>
 public enum BookType {
     /// <summary>Default book-shaped item when no narrower category is known.</summary>
+    [Code("book")]
     Book,
 
     /// <summary>Sequential art or comic archive content.</summary>
+    [Code("comic")]
     Comic,
 
     /// <summary>Manga content, usually read with manga-specific ordering or layout affordances.</summary>
+    [Code("manga")]
     Manga,
 
     /// <summary>Long-form prose content.</summary>
+    [Code("novel")]
     Novel
-}
-
-/// <summary>
-/// Codec for book category codes stored in rows and exposed through contracts.
-/// </summary>
-public sealed class BookTypeCodec : EnumCodec<BookType> {
-    public BookTypeCodec()
-        : base(new Dictionary<BookType, string> {
-            [BookType.Book] = "book",
-            [BookType.Comic] = "comic",
-            [BookType.Manga] = "manga",
-            [BookType.Novel] = "novel"
-        }) {
-    }
 }

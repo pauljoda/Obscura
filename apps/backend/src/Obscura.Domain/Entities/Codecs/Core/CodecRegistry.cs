@@ -1,44 +1,44 @@
-using Obscura.Domain.Registries;
+using System.Collections.Concurrent;
+using System.Reflection;
 
 namespace Obscura.Domain.Entities;
 
 /// <summary>
-/// Discovers and exposes codecs for closed-set enum values.
+/// Resolves the single <see cref="EnumCodec{TValue}"/> for any enum that declares
+/// its codes with <see cref="CodeAttribute"/>. There is no reflection-discovered
+/// registry of codec classes — the codec builds itself from the enum.
 /// </summary>
-public sealed class CodecRegistry : AbstractRegistry<ICodec, Type> {
-    private static readonly CodecRegistry Registry = new();
-
-    private CodecRegistry()
-        : base(typeof(CodecRegistry).Assembly, codec => codec.ValueType) {
-    }
+public static class CodecRegistry {
+    private static readonly ConcurrentDictionary<Type, ICodec> Cache = new();
 
     /// <summary>
-    /// Gets the codec for a closed-set enum type.
+    /// Gets the codec for a code-bearing enum type.
     /// </summary>
     /// <typeparam name="TValue">Enum value type to encode or decode.</typeparam>
-    /// <returns>Registered codec for the enum type.</returns>
+    /// <returns>The codec for the enum type.</returns>
     public static ICodec<TValue> Get<TValue>()
-        where TValue : struct, Enum {
-        if (Registry.TryGetKey(typeof(TValue), out var codec) && codec is ICodec<TValue> typedCodec) {
-            return typedCodec;
-        }
-
-        throw new InvalidOperationException($"No codec is registered for {typeof(TValue).Name}.");
-    }
+        where TValue : struct, Enum =>
+        (ICodec<TValue>)Cache.GetOrAdd(typeof(TValue), static _ => new EnumCodec<TValue>());
 
     /// <summary>
-    /// Attempts to resolve the codec registered for a runtime enum type.
+    /// Attempts to resolve the codec for a runtime enum type, succeeding only when
+    /// the type is an enum whose members all declare a <see cref="CodeAttribute"/>.
     /// </summary>
     /// <param name="valueType">Enum type to resolve a codec for.</param>
-    /// <param name="codec">Resolved codec when one is registered.</param>
-    /// <returns><see langword="true" /> when a codec is registered for the type; otherwise <see langword="false" />.</returns>
+    /// <param name="codec">Resolved codec when the type opts in to codec support.</param>
+    /// <returns><see langword="true" /> when a codec is available; otherwise <see langword="false" />.</returns>
     public static bool TryGet(Type valueType, out ICodec? codec) {
-        if (Registry.TryGetKey(valueType, out var resolved)) {
-            codec = resolved;
+        if (valueType.IsEnum && IsCodeable(valueType)) {
+            codec = Cache.GetOrAdd(valueType, static type =>
+                (ICodec)Activator.CreateInstance(typeof(EnumCodec<>).MakeGenericType(type))!);
             return true;
         }
 
         codec = null;
         return false;
     }
+
+    private static bool IsCodeable(Type enumType) =>
+        enumType.GetFields(BindingFlags.Public | BindingFlags.Static)
+            .All(field => field.GetCustomAttribute<CodeAttribute>() is not null);
 }

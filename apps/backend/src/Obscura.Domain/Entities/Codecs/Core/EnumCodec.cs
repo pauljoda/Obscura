@@ -1,46 +1,33 @@
+using System.Reflection;
+
 namespace Obscura.Domain.Entities;
 
 /// <summary>
-/// Base implementation for enum codecs backed by explicit value-to-code mappings.
+/// The single codec for any enum whose members declare their stable code with
+/// <see cref="CodeAttribute"/>. The mapping builds itself from the attributes, so
+/// there are no per-enum codec classes and no parallel dictionary to maintain.
+/// Construction fails fast if a member is missing a code or two members share one.
 /// </summary>
 /// <typeparam name="TValue">Closed-set enum type handled by the codec.</typeparam>
-public abstract class EnumCodec<TValue> : ICodec<TValue>
+public sealed class EnumCodec<TValue> : ICodec<TValue>
     where TValue : struct, Enum {
-    private readonly IReadOnlyDictionary<TValue, string> _encode;
-    private readonly IReadOnlyDictionary<string, TValue> _decode;
-
-    /// <summary>
-    /// Creates a codec from the supplied enum mappings.
-    /// </summary>
-    /// <param name="codes">Complete enum-to-code map for the closed set.</param>
-    protected EnumCodec(IReadOnlyDictionary<TValue, string> codes) {
-        _encode = codes;
-        _decode = codes.ToDictionary(
-            pair => Normalize(pair.Value),
-            pair => pair.Key,
-            StringComparer.OrdinalIgnoreCase);
-    }
+    private static readonly IReadOnlyDictionary<TValue, string> EncodeMap = BuildEncodeMap();
+    private static readonly IReadOnlyDictionary<string, TValue> DecodeMap = BuildDecodeMap();
 
     /// <inheritdoc />
     public Type ValueType => typeof(TValue);
 
     /// <inheritdoc />
-    public string Encode(TValue value) {
-        if (_encode.TryGetValue(value, out var code)) {
-            return code;
-        }
-
-        throw new ArgumentOutOfRangeException(nameof(value), value, $"Unsupported {typeof(TValue).Name} value.");
-    }
+    public string Encode(TValue value) =>
+        EncodeMap.TryGetValue(value, out var code)
+            ? code
+            : throw new ArgumentOutOfRangeException(nameof(value), value, $"Unsupported {typeof(TValue).Name} value.");
 
     /// <inheritdoc />
-    public TValue Decode(string code) {
-        if (TryDecode(code, out var value)) {
-            return value;
-        }
-
-        throw new ArgumentOutOfRangeException(nameof(code), code, $"Unsupported {typeof(TValue).Name} code.");
-    }
+    public TValue Decode(string code) =>
+        TryDecode(code, out var value)
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(code), code, $"Unsupported {typeof(TValue).Name} code.");
 
     /// <inheritdoc />
     public bool TryDecode(string code, out TValue value) {
@@ -49,20 +36,50 @@ public abstract class EnumCodec<TValue> : ICodec<TValue>
             return false;
         }
 
-        return _decode.TryGetValue(Normalize(code), out value);
+        return DecodeMap.TryGetValue(Normalize(code), out value);
     }
 
     /// <inheritdoc />
-    public string EncodeObject(object value) {
-        if (value is TValue typedValue) {
-            return Encode(typedValue);
-        }
-
-        throw new ArgumentException($"Expected {typeof(TValue).Name}.", nameof(value));
-    }
+    public string EncodeObject(object value) =>
+        value is TValue typedValue
+            ? Encode(typedValue)
+            : throw new ArgumentException($"Expected {typeof(TValue).Name}.", nameof(value));
 
     /// <inheritdoc />
     public object DecodeObject(string code) => Decode(code);
+
+    /// <summary>
+    /// True when every member of <typeparamref name="TValue" /> declares a
+    /// <see cref="CodeAttribute"/>, i.e. the enum opts in to codec support.
+    /// </summary>
+    public static bool IsCodeable() =>
+        typeof(TValue).GetFields(BindingFlags.Public | BindingFlags.Static)
+            .All(field => field.GetCustomAttribute<CodeAttribute>() is not null);
+
+    private static Dictionary<TValue, string> BuildEncodeMap() {
+        var map = new Dictionary<TValue, string>();
+        foreach (var field in typeof(TValue).GetFields(BindingFlags.Public | BindingFlags.Static)) {
+            var attribute = field.GetCustomAttribute<CodeAttribute>()
+                ?? throw new InvalidOperationException(
+                    $"Enum member {typeof(TValue).Name}.{field.Name} is missing a [Code] attribute.");
+            map[(TValue)field.GetValue(null)!] = attribute.Code;
+        }
+
+        return map;
+    }
+
+    private static Dictionary<string, TValue> BuildDecodeMap() {
+        var map = new Dictionary<string, TValue>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (value, code) in EncodeMap) {
+            var normalized = Normalize(code);
+            if (!map.TryAdd(normalized, value)) {
+                throw new InvalidOperationException(
+                    $"Duplicate code '{code}' declared on {typeof(TValue).Name}.");
+            }
+        }
+
+        return map;
+    }
 
     private static string Normalize(string code) => code.Trim().ToLowerInvariant();
 }

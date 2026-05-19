@@ -5,32 +5,22 @@ namespace Obscura.Domain.Entities;
 /// </summary>
 public enum EntityStorageShape {
     /// <summary>Entity has no direct filesystem storage representation.</summary>
+    [Code("none")]
     None,
 
     /// <summary>Entity owns a directory under its parent.</summary>
+    [Code("folder")]
     Folder,
 
     /// <summary>Entity is represented by a regular file.</summary>
+    [Code("file")]
     File,
 
     /// <summary>Entity is represented by an archive file.</summary>
+    [Code("archive")]
     Archive,
 
     /// <summary>Entity is an addressable item inside an archive and is not moved independently.</summary>
+    [Code("archive-entry")]
     ArchiveEntry
-}
-
-/// <summary>
-/// Codec for persisting entity storage-shape codes.
-/// </summary>
-public sealed class EntityStorageShapeCodec : EnumCodec<EntityStorageShape> {
-    public EntityStorageShapeCodec()
-        : base(new Dictionary<EntityStorageShape, string> {
-            [EntityStorageShape.None] = "none",
-            [EntityStorageShape.Folder] = "folder",
-            [EntityStorageShape.File] = "file",
-            [EntityStorageShape.Archive] = "archive",
-            [EntityStorageShape.ArchiveEntry] = "archive-entry"
-        }) {
-    }
 }

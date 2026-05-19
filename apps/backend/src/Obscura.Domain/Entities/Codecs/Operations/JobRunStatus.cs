@@ -5,32 +5,22 @@ namespace Obscura.Domain.Entities;
 /// </summary>
 public enum JobRunStatus {
     /// <summary>Job is waiting to be claimed by a worker.</summary>
+    [Code("queued")]
     Queued,
 
     /// <summary>Job has been claimed and is currently running.</summary>
+    [Code("running")]
     Running,
 
     /// <summary>Job finished successfully.</summary>
+    [Code("completed")]
     Completed,
 
     /// <summary>Job exhausted retry rules or failed permanently.</summary>
+    [Code("failed")]
     Failed,
 
     /// <summary>Job was cancelled before completion.</summary>
+    [Code("cancelled")]
     Cancelled
-}
-
-/// <summary>
-/// Codec for queue job lifecycle status codes.
-/// </summary>
-public sealed class JobRunStatusCodec : EnumCodec<JobRunStatus> {
-    public JobRunStatusCodec()
-        : base(new Dictionary<JobRunStatus, string> {
-            [JobRunStatus.Queued] = "queued",
-            [JobRunStatus.Running] = "running",
-            [JobRunStatus.Completed] = "completed",
-            [JobRunStatus.Failed] = "failed",
-            [JobRunStatus.Cancelled] = "cancelled"
-        }) {
-    }
 }
