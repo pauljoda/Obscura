@@ -107,6 +107,60 @@ public sealed class EfEntityRepositoryTests {
     }
 
     [Fact]
+    public async Task SaveThenFindRoundTripsEveryPersistedCapabilityWithoutLoss() {
+        await using var db = CreateContext();
+        var id = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        var video = new Video(id, "Faithful", subtitlesExtractedAt: null);
+
+        Set(video, new CapabilityDescription("A noir mystery"));
+        Set(video, new CapabilityTechnical { Width = 1920, Height = 1080, Codec = "h264" });
+        Set(video, new CapabilityFiles([new EntityFile(EntityFileRole.Source, "/media/v.mp4", "video/mp4")]));
+        Set(video, new CapabilityStats([new EntityStat("scenes", 12)]));
+        Set(video, new CapabilityCounters([new EntityCounter("plays", 3)]));
+        Set(video, new CapabilityDates([new EntityDate("released", "2020-01-01", new DateOnly(2020, 1, 1), "day")]));
+        Set(video, new CapabilitySource([new EntitySource("stash", "abc")]));
+        Set(video, new CapabilityPosition([new EntityPosition("episode", 5, "E5")]));
+        Set(video, new CapabilityLinks(
+            [new EntityUrl("https://example.test", "Example")],
+            [new EntityExternalId("tmdb", "42", "https://tmdb.test/42")]));
+        Set(video, new CapabilitySubtitles([new EntitySubtitle(
+            Guid.NewGuid(), "en", "English", "srt", EntitySubtitleSource.Embedded, "/s/en.srt", "srt", null, true)]));
+        Set(video, new CapabilityFingerprints([new EntityFingerprint(FingerprintAlgorithm.Md5, "deadbeef")]));
+        Set(video, new CapabilityClassification("R", "MPAA"));
+        Set(video, new CapabilityProgress(currentEntityId: null, unit: "chapter", index: 4, total: 10, mode: "paged", updatedAt: DateTimeOffset.UtcNow));
+
+        var repository = new EfEntityRepository(db);
+        await repository.SaveAsync(video, CancellationToken.None);
+
+        var loaded = await repository.RequireAsync<Video>(id, CancellationToken.None);
+
+        Assert.Equal("A noir mystery", loaded.Description!.Value);
+        Assert.Equal(1920, loaded.Technical!.Width);
+        Assert.Equal("h264", loaded.Technical!.Codec);
+        Assert.Equal(EntityFileRole.Source, Assert.Single(loaded.Files!.Items).Role);
+        Assert.Equal(12, Assert.Single(loaded.Stats!.Items).Value);
+        Assert.Equal(3, Assert.Single(loaded.GetCapability<CapabilityCounters>()!.Items).Value);
+        Assert.Equal("released", Assert.Single(loaded.Dates!.Items).Code);
+        Assert.Equal("abc", Assert.Single(loaded.Source!.Items).Value);
+        Assert.Equal("E5", Assert.Single(loaded.Position!.Items).Label);
+        var links = loaded.GetCapability<CapabilityLinks>()!;
+        Assert.Equal("https://example.test", Assert.Single(links.Urls).Url);
+        Assert.Equal("tmdb", Assert.Single(links.ExternalIds).Provider);
+        Assert.Equal("en", Assert.Single(loaded.SubtitleCapability!.Items).Language);
+        Assert.Equal(FingerprintAlgorithm.Md5, Assert.Single(loaded.GetCapability<CapabilityFingerprints>()!.Items).Algorithm);
+        Assert.Equal("R", loaded.Classification!.Value);
+        Assert.Equal(4, loaded.Progress!.Index);
+        Assert.Equal(10, loaded.Progress!.Total);
+    }
+
+    private static void Set(Entity entity, EntityCapability capability) {
+        var remove = typeof(Entity).GetMethod(nameof(Entity.RemoveCapability))!
+            .MakeGenericMethod(capability.GetType());
+        remove.Invoke(entity, null);
+        entity.AddCapability(capability);
+    }
+
+    [Fact]
     public async Task MissingOptionalAndRequiredLoadsUseDifferentPaths() {
         await using var db = CreateContext();
         var repository = new EfEntityRepository(db);

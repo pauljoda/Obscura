@@ -72,6 +72,7 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
         await HydrateFlagsAsync(entity, cancellationToken);
         await HydratePlaybackAsync(entity, cancellationToken);
         await HydrateMarkersAsync(entity, cancellationToken);
+        await HydrateCapabilitiesAsync(entity, cancellationToken);
         return entity;
     }
 
@@ -176,6 +177,122 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
 
         entity.RemoveCapability<CapabilityMarkers>();
         entity.AddCapability(new CapabilityMarkers(rows.Select(row => new EntityMarker(row.Id, row.Title, row.Seconds, row.EndSeconds)).ToArray()));
+    }
+
+    private async Task HydrateCapabilitiesAsync(Entity entity, CancellationToken cancellationToken) {
+        var id = entity.Id;
+
+        var description = await db.EntityDescriptions.AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+        if (description is not null) {
+            Replace(entity, new CapabilityDescription(description.Value));
+        }
+
+        var technical = await db.EntityTechnical.AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+        if (technical is not null) {
+            Replace(entity, new CapabilityTechnical {
+                Duration = technical.DurationSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null,
+                Width = technical.Width,
+                Height = technical.Height,
+                FrameRate = technical.FrameRate,
+                BitRate = technical.BitRate,
+                SampleRate = technical.SampleRate,
+                Channels = technical.Channels,
+                Codec = technical.Codec,
+                Container = technical.Container,
+                Format = technical.Format
+            });
+        }
+
+        var classification = await db.EntityClassifications.AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+        if (classification is not null) {
+            Replace(entity, new CapabilityClassification(classification.Value, classification.System));
+        }
+
+        var progress = await db.EntityProgress.AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+        if (progress is not null) {
+            Replace(entity, new CapabilityProgress(
+                progress.CurrentEntityId,
+                progress.Unit,
+                progress.Index,
+                progress.Total,
+                progress.Mode,
+                progress.CompletedAt,
+                progress.UpdatedAt));
+        }
+
+        var urls = await db.EntityUrls.AsNoTracking()
+            .Where(row => row.EntityId == id).OrderBy(row => row.SortOrder).ToArrayAsync(cancellationToken);
+        var externalIds = await db.EntityExternalIds.AsNoTracking()
+            .Where(row => row.EntityId == id).ToArrayAsync(cancellationToken);
+        if (urls.Length > 0 || externalIds.Length > 0) {
+            Replace(entity, new CapabilityLinks(
+                urls.Select(row => new EntityUrl(row.Url, row.Label)).ToArray(),
+                externalIds.Select(row => new EntityExternalId(row.Provider, row.Value, row.Url)).ToArray()));
+        }
+
+        var files = await db.EntityFiles.AsNoTracking()
+            .Where(row => row.EntityId == id).OrderBy(row => row.CreatedAt).ToArrayAsync(cancellationToken);
+        if (files.Length > 0) {
+            Replace(entity, new CapabilityFiles(
+                files.Select(row => new EntityFile(row.Role, row.Path, row.MimeType)).ToArray()));
+        }
+
+        var subtitles = await db.EntitySubtitles.AsNoTracking()
+            .Where(row => row.EntityId == id).OrderBy(row => row.CreatedAt).ToArrayAsync(cancellationToken);
+        if (subtitles.Length > 0) {
+            Replace(entity, new CapabilitySubtitles(subtitles.Select(row => new EntitySubtitle(
+                row.Id, row.Language, row.Label, row.Format, row.Source,
+                row.StoragePath, row.SourceFormat, row.SourcePath, row.IsDefault)).ToArray()));
+        }
+
+        var fingerprints = await db.EntityFileFingerprints.AsNoTracking()
+            .Where(row => row.EntityId == id).OrderBy(row => row.CreatedAt).ToArrayAsync(cancellationToken);
+        if (fingerprints.Length > 0) {
+            Replace(entity, new CapabilityFingerprints(
+                fingerprints.Select(row => new EntityFingerprint(row.Algorithm, row.Value)).ToArray()));
+        }
+
+        var stats = await db.EntityStats.AsNoTracking()
+            .Where(row => row.EntityId == id).OrderBy(row => row.Code).ToArrayAsync(cancellationToken);
+        if (stats.Length > 0) {
+            Replace(entity, new CapabilityStats(stats.Select(row => new EntityStat(row.Code, row.Value)).ToArray()));
+        }
+
+        var counters = await db.EntityCounters.AsNoTracking()
+            .Where(row => row.EntityId == id).OrderBy(row => row.Code).ToArrayAsync(cancellationToken);
+        if (counters.Length > 0) {
+            Replace(entity, new CapabilityCounters(counters.Select(row => new EntityCounter(row.Code, row.Value)).ToArray()));
+        }
+
+        var dates = await db.EntityDates.AsNoTracking()
+            .Where(row => row.EntityId == id).OrderBy(row => row.Code).ToArrayAsync(cancellationToken);
+        if (dates.Length > 0) {
+            Replace(entity, new CapabilityDates(dates.Select(row =>
+                new EntityDate(row.Code, row.Value, row.SortableValue, row.Precision)).ToArray()));
+        }
+
+        var sources = await db.EntitySources.AsNoTracking()
+            .Where(row => row.EntityId == id).OrderBy(row => row.Code).ToArrayAsync(cancellationToken);
+        if (sources.Length > 0) {
+            Replace(entity, new CapabilitySource(sources.Select(row => new EntitySource(row.Code, row.Value)).ToArray()));
+        }
+
+        var positions = await db.EntityPositions.AsNoTracking()
+            .Where(row => row.EntityId == id).OrderBy(row => row.Code).ToArrayAsync(cancellationToken);
+        if (positions.Length > 0) {
+            Replace(entity, new CapabilityPosition(positions.Select(row =>
+                new EntityPosition(row.Code, row.Value, row.Label)).ToArray()));
+        }
+    }
+
+    private static void Replace<TCapability>(Entity entity, TCapability capability)
+        where TCapability : EntityCapability {
+        entity.RemoveCapability<TCapability>();
+        entity.AddCapability(capability);
     }
 
     private async Task SaveEntityAsync(Entity entity, ISet<Guid> visited, CancellationToken cancellationToken) {
@@ -336,7 +453,140 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
                 });
             }
         }
+
+        await SaveCapabilitiesAsync(entity, cancellationToken);
     }
+
+    private async Task SaveCapabilitiesAsync(Entity entity, CancellationToken cancellationToken) {
+        var id = entity.Id;
+        db.EntityDescriptions.RemoveRange(db.EntityDescriptions.Where(r => r.EntityId == id));
+        db.EntityTechnical.RemoveRange(db.EntityTechnical.Where(r => r.EntityId == id));
+        db.EntityClassifications.RemoveRange(db.EntityClassifications.Where(r => r.EntityId == id));
+        db.EntityProgress.RemoveRange(db.EntityProgress.Where(r => r.EntityId == id));
+        db.EntityUrls.RemoveRange(db.EntityUrls.Where(r => r.EntityId == id));
+        db.EntityExternalIds.RemoveRange(db.EntityExternalIds.Where(r => r.EntityId == id));
+        db.EntityFiles.RemoveRange(db.EntityFiles.Where(r => r.EntityId == id));
+        db.EntitySubtitles.RemoveRange(db.EntitySubtitles.Where(r => r.EntityId == id));
+        db.EntityFileFingerprints.RemoveRange(db.EntityFileFingerprints.Where(r => r.EntityId == id));
+        db.EntityStats.RemoveRange(db.EntityStats.Where(r => r.EntityId == id));
+        db.EntityCounters.RemoveRange(db.EntityCounters.Where(r => r.EntityId == id));
+        db.EntityDates.RemoveRange(db.EntityDates.Where(r => r.EntityId == id));
+        db.EntitySources.RemoveRange(db.EntitySources.Where(r => r.EntityId == id));
+        db.EntityPositions.RemoveRange(db.EntityPositions.Where(r => r.EntityId == id));
+        await db.SaveChangesAsync(cancellationToken);
+
+        var now = DateTimeOffset.UtcNow;
+
+        if (entity.Description is { } description && !string.IsNullOrEmpty(description.Value)) {
+            db.EntityDescriptions.Add(new EntityDescriptionRow { EntityId = id, Value = description.Value, UpdatedAt = now });
+        }
+
+        if (entity.Technical is { } technical && HasTechnicalData(technical)) {
+            db.EntityTechnical.Add(new EntityTechnicalRow {
+                EntityId = id,
+                DurationSeconds = technical.Duration?.TotalSeconds,
+                Width = technical.Width,
+                Height = technical.Height,
+                FrameRate = technical.FrameRate,
+                BitRate = technical.BitRate,
+                SampleRate = technical.SampleRate,
+                Channels = technical.Channels,
+                Codec = technical.Codec,
+                Container = technical.Container,
+                Format = technical.Format,
+                UpdatedAt = now
+            });
+        }
+
+        if (entity.Classification is { } classification && (classification.Value is not null || classification.System is not null)) {
+            db.EntityClassifications.Add(new EntityClassificationRow {
+                EntityId = id, Value = classification.Value, System = classification.System, UpdatedAt = now
+            });
+        }
+
+        if (entity.Progress is { } progress &&
+            (progress.UpdatedAt is not null || progress.CurrentEntityId is not null || progress.Index != 0 || progress.Total != 0)) {
+            db.EntityProgress.Add(new EntityProgressRow {
+                EntityId = id,
+                CurrentEntityId = progress.CurrentEntityId,
+                Unit = progress.Unit,
+                Index = progress.Index,
+                Total = progress.Total,
+                Mode = progress.Mode,
+                CompletedAt = progress.CompletedAt,
+                UpdatedAt = progress.UpdatedAt ?? now
+            });
+        }
+
+        if (entity.GetCapability<CapabilityLinks>() is { } links) {
+            var order = 0;
+            foreach (var url in links.Urls) {
+                db.EntityUrls.Add(new EntityUrlRow {
+                    Id = Guid.NewGuid(), EntityId = id, Url = url.Url, Label = url.Label, SortOrder = order++, CreatedAt = now
+                });
+            }
+
+            foreach (var externalId in links.ExternalIds) {
+                db.EntityExternalIds.Add(new EntityExternalIdRow {
+                    Id = Guid.NewGuid(), EntityId = id, Provider = externalId.Provider,
+                    Value = externalId.Value, Url = externalId.Url, CreatedAt = now, UpdatedAt = now
+                });
+            }
+        }
+
+        foreach (var file in entity.Files?.Items ?? []) {
+            db.EntityFiles.Add(new EntityFileRow {
+                Id = Guid.NewGuid(), EntityId = id, Role = file.Role, Path = file.Path,
+                MimeType = file.MimeType, CreatedAt = now, UpdatedAt = now
+            });
+        }
+
+        foreach (var subtitle in entity.SubtitleCapability?.Items ?? []) {
+            db.EntitySubtitles.Add(new EntitySubtitleRow {
+                Id = subtitle.Id == Guid.Empty ? Guid.NewGuid() : subtitle.Id,
+                EntityId = id, Language = subtitle.Language, Label = subtitle.Label, Format = subtitle.Format,
+                Source = subtitle.Source, StoragePath = subtitle.StoragePath, SourceFormat = subtitle.SourceFormat,
+                SourcePath = subtitle.SourcePath, IsDefault = subtitle.IsDefault, CreatedAt = now
+            });
+        }
+
+        foreach (var fingerprint in entity.GetCapability<CapabilityFingerprints>()?.Items ?? []) {
+            db.EntityFileFingerprints.Add(new EntityFileFingerprintRow {
+                Id = Guid.NewGuid(), EntityId = id, Algorithm = fingerprint.Algorithm, Value = fingerprint.Value, CreatedAt = now
+            });
+        }
+
+        foreach (var stat in entity.Stats?.Items ?? []) {
+            db.EntityStats.Add(new EntityStatRow { EntityId = id, Code = stat.Code, Value = stat.Value, UpdatedAt = now });
+        }
+
+        foreach (var counter in entity.GetCapability<CapabilityCounters>()?.Items ?? []) {
+            db.EntityCounters.Add(new EntityCounterRow { EntityId = id, Code = counter.Code, Value = counter.Value, UpdatedAt = now });
+        }
+
+        foreach (var date in entity.Dates?.Items ?? []) {
+            db.EntityDates.Add(new EntityDateRow {
+                EntityId = id, Code = date.Code, Value = date.Value,
+                SortableValue = date.SortableValue, Precision = date.Precision, UpdatedAt = now
+            });
+        }
+
+        foreach (var source in entity.Source?.Items ?? []) {
+            db.EntitySources.Add(new EntitySourceRow { EntityId = id, Code = source.Code, Value = source.Value, UpdatedAt = now });
+        }
+
+        foreach (var position in entity.Position?.Items ?? []) {
+            db.EntityPositions.Add(new EntityPositionRow {
+                EntityId = id, Code = position.Code, Value = position.Value, Label = position.Label, UpdatedAt = now
+            });
+        }
+    }
+
+    private static bool HasTechnicalData(CapabilityTechnical technical) =>
+        technical.Duration is not null || technical.Width is not null || technical.Height is not null ||
+        technical.FrameRate is not null || technical.BitRate is not null || technical.SampleRate is not null ||
+        technical.Channels is not null || technical.Codec is not null || technical.Container is not null ||
+        technical.Format is not null;
 
     private async Task UpsertEntityRowAsync(Entity entity, CancellationToken cancellationToken) {
         var row = await db.Entities.FindAsync([entity.Id], cancellationToken);
