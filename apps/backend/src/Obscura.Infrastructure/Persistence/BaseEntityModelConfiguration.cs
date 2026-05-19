@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence.Entities;
 
@@ -14,19 +13,11 @@ internal static class BaseEntityModelConfiguration {
             entity.Property(row => row.DisplayName).HasColumnName("display_name").HasMaxLength(128).IsRequired();
             entity.Property(row => row.Category).HasColumnName("category").HasMaxLength(64).IsRequired();
             entity.Property(row => row.StorageShape).HasColumnName("storage_shape").HasMaxLength(64).IsRequired();
-            entity.Property(row => row.IsLeaf).HasColumnName("is_leaf");
-            entity.Property(row => row.AllowedChildKindCodesJson).HasColumnName("allowed_child_kind_codes").HasColumnType("jsonb").IsRequired();
-            entity.HasData(EntityKindRegistry.All.Select(kind => {
-                var metadata = EntityKindMetadataRegistry.Require(kind.Value);
-
-                return new EntityKindRow {
-                    Code = kind.Code,
-                    DisplayName = kind.DisplayName,
-                    Category = kind.Category.ToString(),
-                    StorageShape = metadata.StorageShape.ToCode(),
-                    IsLeaf = metadata.AllowedChildKinds.Count == 0,
-                    AllowedChildKindCodesJson = JsonSerializer.Serialize(metadata.AllowedChildKinds.Select(EntityKindRegistry.ToCode).ToArray())
-                };
+            entity.HasData(EntityKindRegistry.All.Select(kind => new EntityKindRow {
+                Code = kind.Code,
+                DisplayName = kind.DisplayName,
+                Category = kind.Category.ToString(),
+                StorageShape = kind.StorageShape.ToCode()
             }));
         });
 

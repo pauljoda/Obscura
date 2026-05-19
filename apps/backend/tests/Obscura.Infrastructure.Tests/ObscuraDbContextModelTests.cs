@@ -194,7 +194,6 @@ public sealed class ObscuraDbContextModelTests
 
         Assert.Equal(EntityStorageShape.File.ToCode(), videoSeed[nameof(EntityKindRow.StorageShape)]);
         Assert.Equal(EntityStorageShape.Folder.ToCode(), seriesSeed[nameof(EntityKindRow.StorageShape)]);
-        Assert.Contains(EntityKindRegistry.VideoSeason.Code, (string)seriesSeed[nameof(EntityKindRow.AllowedChildKindCodesJson)]!);
     }
 
     [Fact]

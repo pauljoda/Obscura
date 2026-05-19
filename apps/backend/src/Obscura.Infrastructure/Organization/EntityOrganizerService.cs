@@ -138,8 +138,7 @@ public sealed class EntityOrganizerService(ObscuraDbContext db)
             return null;
         }
 
-        var metadata = EntityKindMetadataRegistry.Require(kind);
-        var storageShape = metadata.StorageShape;
+        var storageShape = EntityKindRegistry.Describe(kind).StorageShape;
         var sourcePath = Normalize(sourceFile.Path);
         if (storageShape is EntityStorageShape.None or EntityStorageShape.ArchiveEntry)
         {
@@ -186,14 +185,14 @@ public sealed class EntityOrganizerService(ObscuraDbContext db)
             entityById.TryGetValue(parentId, out var parent) &&
             EntityKindRegistry.TryGet(parent.KindCode, out var parentKind))
         {
-            var parentMetadata = EntityKindMetadataRegistry.Require(parentKind);
+            var parentStorageShape = EntityKindRegistry.Describe(parentKind).StorageShape;
             var parentItem = BuildItem(parentId, entityById, sourceByEntityId, rootPaths, memo);
             if (parentItem is null)
             {
                 return null;
             }
 
-            return parentMetadata.StorageShape == EntityStorageShape.Folder
+            return parentStorageShape == EntityStorageShape.Folder
                 ? parentItem.TargetPath
                 : Path.GetDirectoryName(parentItem.TargetPath);
         }

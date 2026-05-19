@@ -231,7 +231,7 @@ public abstract class Entity {
     /// <returns>Matching child entities in insertion order.</returns>
     public IReadOnlyList<TEntity> ChildrenOf<TEntity>()
         where TEntity : Entity =>
-        ChildrenOf(EntityKindCatalog.Require(typeof(TEntity))).OfType<TEntity>().ToArray();
+        ChildrenOf(EntityKindRegistry.RequireType(typeof(TEntity))).OfType<TEntity>().ToArray();
 
     /// <summary>
     /// Gets structural children by entity kind.
@@ -263,7 +263,7 @@ public abstract class Entity {
     /// <returns>Matching related entities in insertion order.</returns>
     public IReadOnlyList<TEntity> RelationshipsOf<TEntity>()
         where TEntity : Entity =>
-        RelationshipsOf(EntityKindCatalog.Require(typeof(TEntity))).OfType<TEntity>().ToArray();
+        RelationshipsOf(EntityKindRegistry.RequireType(typeof(TEntity))).OfType<TEntity>().ToArray();
 
     /// <summary>
     /// Gets non-structural relationships by entity kind.

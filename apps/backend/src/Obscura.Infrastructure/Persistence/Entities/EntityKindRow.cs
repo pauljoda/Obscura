@@ -9,8 +9,4 @@ public sealed class EntityKindRow
     public string Category { get; set; } = string.Empty;
 
     public string StorageShape { get; set; } = string.Empty;
-
-    public bool IsLeaf { get; set; }
-
-    public string AllowedChildKindCodesJson { get; set; } = "[]";
 }

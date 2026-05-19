@@ -25,7 +25,7 @@ public sealed class TypedEntityModelTests {
     public void ConcreteEntitiesInheritTheSharedAbstractEntityRoot(Type aggregateType, EntityKind kind) {
         Assert.True(typeof(Entity).IsAssignableFrom(aggregateType));
         Assert.True(typeof(Entity).IsAbstract);
-        Assert.Equal(kind, EntityKindCatalog.Require(aggregateType));
+        Assert.Equal(kind, EntityKindRegistry.RequireType(aggregateType));
     }
 
     [Fact]
