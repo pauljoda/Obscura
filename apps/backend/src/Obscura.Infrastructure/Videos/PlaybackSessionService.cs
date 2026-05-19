@@ -1,6 +1,5 @@
 using Obscura.Application.Entities;
 using Obscura.Application.Videos;
-using Obscura.Contracts.Playback;
 using Obscura.Domain.Capabilities;
 
 namespace Obscura.Infrastructure.Videos;
@@ -17,12 +16,12 @@ public sealed class PlaybackSessionService : IPlaybackSessionService {
         _transcodes = transcodes;
     }
 
-    public Task StartAsync(PlaybackSessionRequest request, CancellationToken cancellationToken) {
+    public Task StartAsync(PlaybackSessionCommand request, CancellationToken cancellationToken) {
         RegisterOrPing(request);
         return Task.CompletedTask;
     }
 
-    public async Task ProgressAsync(PlaybackSessionRequest request, CancellationToken cancellationToken) {
+    public async Task ProgressAsync(PlaybackSessionCommand request, CancellationToken cancellationToken) {
         RegisterOrPing(request);
         if (request.ItemId != Guid.Empty && request.PositionTicks is >= 0) {
             await UpdatePlaybackAsync(
@@ -33,12 +32,12 @@ public sealed class PlaybackSessionService : IPlaybackSessionService {
         }
     }
 
-    public Task PingAsync(PlaybackSessionRequest request, CancellationToken cancellationToken) {
+    public Task PingAsync(PlaybackSessionCommand request, CancellationToken cancellationToken) {
         RegisterOrPing(request);
         return Task.CompletedTask;
     }
 
-    public async Task StopAsync(PlaybackSessionRequest request, CancellationToken cancellationToken) {
+    public async Task StopAsync(PlaybackSessionCommand request, CancellationToken cancellationToken) {
         if (request.ItemId != Guid.Empty) {
             await UpdatePlaybackAsync(
                 request.ItemId,
@@ -52,16 +51,16 @@ public sealed class PlaybackSessionService : IPlaybackSessionService {
         }
     }
 
-    public async Task<UserItemData?> MarkPlayedAsync(Guid itemId, CancellationToken cancellationToken) {
+    public async Task<UserItemDataResult?> MarkPlayedAsync(Guid itemId, CancellationToken cancellationToken) {
         return await UpdatePlaybackAsync(itemId, TimeSpan.Zero, completed: true, cancellationToken) is null
             ? null
-            : new UserItemData(Played: true, PlaybackPositionTicks: 0);
+            : new UserItemDataResult(Played: true, PlaybackPositionTicks: 0);
     }
 
-    public async Task<UserItemData?> MarkUnplayedAsync(Guid itemId, CancellationToken cancellationToken) {
+    public async Task<UserItemDataResult?> MarkUnplayedAsync(Guid itemId, CancellationToken cancellationToken) {
         return await UpdatePlaybackAsync(itemId, TimeSpan.Zero, completed: false, cancellationToken) is null
             ? null
-            : new UserItemData(Played: false, PlaybackPositionTicks: 0);
+            : new UserItemDataResult(Played: false, PlaybackPositionTicks: 0);
     }
 
     private async Task<Obscura.Domain.Entities.Entity?> UpdatePlaybackAsync(
@@ -85,7 +84,7 @@ public sealed class PlaybackSessionService : IPlaybackSessionService {
         return entity;
     }
 
-    private void RegisterOrPing(PlaybackSessionRequest request) {
+    private void RegisterOrPing(PlaybackSessionCommand request) {
         if (string.IsNullOrWhiteSpace(request.PlaySessionId)) {
             return;
         }

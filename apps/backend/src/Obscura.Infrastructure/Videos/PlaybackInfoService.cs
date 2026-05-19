@@ -1,6 +1,5 @@
 using Obscura.Application.Settings;
 using Obscura.Application.Videos;
-using Obscura.Contracts.Playback;
 
 namespace Obscura.Infrastructure.Videos;
 
@@ -37,9 +36,9 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
     }
 
     /// <inheritdoc />
-    public async Task<PlaybackInfoResponse?> GetPlaybackInfoAsync(
+    public async Task<PlaybackInfoResult?> GetPlaybackInfoAsync(
         Guid itemId,
-        PlaybackInfoRequest? request,
+        PlaybackInfoQuery? request,
         CancellationToken cancellationToken)
     {
         var source = await _sources.GetSourceAsync(itemId, cancellationToken);
@@ -65,7 +64,7 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
             ? null
             : (await _settings.GetLibraryConfigAsync(cancellationToken)).Settings.AudioPreferredLanguages;
         var selectedAudioStream = SelectAudioStream(source, request?.AudioStreamIndex, preferredAudioLanguages);
-        var sourceInfo = new MediaSourceInfo(
+        var sourceInfo = new MediaSourceInfoResult(
             mediaSourceId,
             source.Path,
             "File",
@@ -83,10 +82,10 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
             transcodingAllowed && !directPlayAllowed ? "ts" : null,
             BuildStreams(source, selectedAudioStream?.StreamIndex),
             transcodingAllowed && !directPlayAllowed
-                ? new TranscodingInfo("ts", "h264", "aac", "hls", IsVideoDirect: false, IsAudioDirect: false)
+                ? new TranscodingInfoResult("ts", "h264", "aac", "hls", IsVideoDirect: false, IsAudioDirect: false)
                 : null);
 
-        return new PlaybackInfoResponse(playSessionId, [sourceInfo]);
+        return new PlaybackInfoResult(playSessionId, [sourceInfo]);
     }
 
     private static string BuildTranscodingUrl(
@@ -210,7 +209,7 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
             pair.Value.Any(alias => alias.Equals(token, StringComparison.OrdinalIgnoreCase))).Key ?? token;
     }
 
-    private static IReadOnlyList<MediaStreamInfo> BuildStreams(
+    private static IReadOnlyList<MediaStreamInfoResult> BuildStreams(
         VideoSourceFile source,
         int? selectedAudioStreamIndex)
     {
@@ -218,7 +217,7 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
         {
             return source.Streams
                 .OrderBy(stream => stream.StreamIndex)
-                .Select(stream => new MediaStreamInfo(
+                .Select(stream => new MediaStreamInfoResult(
                     stream.StreamIndex,
                     stream.Type,
                     stream.Codec,
@@ -235,7 +234,7 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
                 .ToList();
         }
 
-        var videoStream = new MediaStreamInfo(
+        var videoStream = new MediaStreamInfoResult(
             0,
             "Video",
             source.VideoCodec ?? CodecFromContentType(source.ContentType),
@@ -254,7 +253,7 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
             return [videoStream];
         }
 
-        var audioStream = new MediaStreamInfo(
+        var audioStream = new MediaStreamInfoResult(
             1,
             "Audio",
             source.AudioCodec,

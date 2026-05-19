@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Obscura.Application.Settings;
-using Obscura.Contracts.Settings;
 using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
@@ -17,13 +16,13 @@ public sealed class SettingsService : ISettingsService
         _db = db;
     }
 
-    public async Task<SettingsResponse> GetAsync(CancellationToken cancellationToken)
+    public async Task<SettingsResult> GetAsync(CancellationToken cancellationToken)
     {
         var row = await EnsureRowAsync(cancellationToken);
         return ToContract(row);
     }
 
-    public async Task<SettingsResponse> UpdateAsync(SettingsUpdateRequest request, CancellationToken cancellationToken)
+    public async Task<SettingsResult> UpdateAsync(SettingsUpdate request, CancellationToken cancellationToken)
     {
         var row = await EnsureRowAsync(cancellationToken);
 
@@ -43,21 +42,21 @@ public sealed class SettingsService : ISettingsService
         return ToContract(row);
     }
 
-    public async Task<LibraryConfigResponse> GetLibraryConfigAsync(CancellationToken cancellationToken)
+    public async Task<LibraryConfigResult> GetLibraryConfigAsync(CancellationToken cancellationToken)
     {
         var settings = await EnsureRowAsync(cancellationToken);
         var roots = await _db.LibraryRoots
             .AsNoTracking()
             .OrderBy(root => root.Label)
             .ThenBy(root => root.Path)
-            .Select(root => ToContract(root))
+            .Select(root => ToResult(root))
             .ToArrayAsync(cancellationToken);
 
-        return new LibraryConfigResponse(ToLibrarySettings(settings), roots);
+        return new LibraryConfigResult(ToLibrarySettings(settings), roots);
     }
 
-    public async Task<LibrarySettings> UpdateLibrarySettingsAsync(
-        LibrarySettingsUpdateRequest request,
+    public async Task<LibrarySettingsResult> UpdateLibrarySettingsAsync(
+        LibrarySettingsUpdate request,
         CancellationToken cancellationToken)
     {
         var row = await EnsureRowAsync(cancellationToken);
@@ -108,7 +107,7 @@ public sealed class SettingsService : ISettingsService
         return ToLibrarySettings(row);
     }
 
-    public Task<LibraryBrowseResponse> BrowseLibraryPathAsync(
+    public Task<LibraryBrowseResult> BrowseLibraryPathAsync(
         string? path,
         CancellationToken cancellationToken)
     {
@@ -125,17 +124,17 @@ public sealed class SettingsService : ISettingsService
         var directories = directory.EnumerateDirectories()
             .Where(child => !child.Attributes.HasFlag(FileAttributes.Hidden))
             .OrderBy(child => child.Name)
-            .Select(child => new LibraryBrowseEntry(child.Name, child.FullName))
+            .Select(child => new LibraryBrowseEntryResult(child.Name, child.FullName))
             .ToArray();
 
-        return Task.FromResult(new LibraryBrowseResponse(
+        return Task.FromResult(new LibraryBrowseResult(
             directory.FullName,
             directory.Parent?.FullName,
             directories));
     }
 
-    public async Task<LibraryRoot> CreateLibraryRootAsync(
-        LibraryRootCreateRequest request,
+    public async Task<LibraryRootResult> CreateLibraryRootAsync(
+        LibraryRootCreate request,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Path);
@@ -168,12 +167,12 @@ public sealed class SettingsService : ISettingsService
         _db.LibraryRoots.Add(row);
         await _db.SaveChangesAsync(cancellationToken);
 
-        return ToContract(row);
+        return ToResult(row);
     }
 
-    public async Task<LibraryRoot?> UpdateLibraryRootAsync(
+    public async Task<LibraryRootResult?> UpdateLibraryRootAsync(
         Guid id,
-        LibraryRootUpdateRequest request,
+        LibraryRootUpdate request,
         CancellationToken cancellationToken)
     {
         var row = await _db.LibraryRoots.FindAsync([id], cancellationToken);
@@ -195,7 +194,7 @@ public sealed class SettingsService : ISettingsService
         row.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
 
-        return ToContract(row);
+        return ToResult(row);
     }
 
     public async Task<bool> DeleteLibraryRootAsync(Guid id, CancellationToken cancellationToken)
@@ -237,16 +236,16 @@ public sealed class SettingsService : ISettingsService
         return row;
     }
 
-    private static SettingsResponse ToContract(LibrarySettingsRow row)
+    private static SettingsResult ToContract(LibrarySettingsRow row)
     {
-        return new SettingsResponse(
+        return new SettingsResult(
             HideNsfw: row.HideNsfw,
             EnableCastControls: row.ShowCastControls);
     }
 
-    private static LibrarySettings ToLibrarySettings(LibrarySettingsRow row)
+    private static LibrarySettingsResult ToLibrarySettings(LibrarySettingsRow row)
     {
-        return new LibrarySettings(
+        return new LibrarySettingsResult(
             row.Id,
             row.AutoScanEnabled,
             row.ScanIntervalMinutes,
@@ -284,9 +283,9 @@ public sealed class SettingsService : ISettingsService
         return string.IsNullOrWhiteSpace(trimmed) ? fallback : trimmed;
     }
 
-    private static LibraryRoot ToContract(LibraryRootRow row)
+    private static LibraryRootResult ToResult(LibraryRootRow row)
     {
-        return new LibraryRoot(
+        return new LibraryRootResult(
             row.Id,
             row.Path,
             row.Label,

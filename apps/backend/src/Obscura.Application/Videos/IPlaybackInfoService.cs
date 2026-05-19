@@ -1,5 +1,3 @@
-using Obscura.Contracts.Playback;
-
 namespace Obscura.Application.Videos;
 
 /// <summary>
@@ -14,8 +12,8 @@ public interface IPlaybackInfoService
     /// <param name="request">Optional client playback constraints.</param>
     /// <param name="cancellationToken">Token used to cancel negotiation.</param>
     /// <returns>Playable media source information, or null when the item cannot be found.</returns>
-    Task<PlaybackInfoResponse?> GetPlaybackInfoAsync(
+    Task<PlaybackInfoResult?> GetPlaybackInfoAsync(
         Guid itemId,
-        PlaybackInfoRequest? request,
+        PlaybackInfoQuery? request,
         CancellationToken cancellationToken);
 }

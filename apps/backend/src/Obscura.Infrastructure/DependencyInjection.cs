@@ -6,7 +6,10 @@ using Npgsql;
 using Obscura.Application.Jobs;
 using Obscura.Application.Jobs.Ports;
 using Obscura.Application.Migrations;
+using Obscura.Application.Organization;
+using Obscura.Application.Plugins;
 using Obscura.Application.Settings;
+using Obscura.Application.UserState;
 using Obscura.Application.Videos;
 using Obscura.Application.Entities;
 using Obscura.Infrastructure.Backups;
@@ -25,8 +28,8 @@ using Obscura.Infrastructure.Processes;
 using Obscura.Infrastructure.Queue;
 using Obscura.Infrastructure.Settings;
 using Obscura.Infrastructure.Upgrades;
+using Obscura.Infrastructure.UserState;
 using Obscura.Infrastructure.Videos;
-using Obscura.Application.Organization;
 
 namespace Obscura.Infrastructure;
 
@@ -67,7 +70,6 @@ public static class DependencyInjection {
             cacheDir,
             ResolveCurrentVersion(configuration, pathBase)));
         services.AddSingleton<DotnetPluginProcessRunner>();
-        services.AddSingleton<IdentifySessionStore>();
         services.AddScoped<PluginCatalogService>();
         services.AddScoped<IdentifyMatchHintResolver>();
         services.AddScoped(provider => new EntityMetadataApplyService(
@@ -75,6 +77,9 @@ public static class DependencyInjection {
             new PluginArtworkServiceOptions(cacheDir),
             provider.GetService<HttpClient>()));
         services.AddScoped<IdentifyPluginService>();
+        services.AddScoped<IPluginCatalogUseCases, PluginCatalogUseCases>();
+        services.AddScoped<IIdentifyUseCases, IdentifyUseCases>();
+        services.AddSingleton<IBulkIdentifySessions, ApplicationIdentifySessionStore>();
 
         services.AddSingleton<IFileDiscovery>(provider =>
             new FileDiscoveryAdapter(provider.GetRequiredService<FileDiscoveryService>()));
@@ -121,6 +126,7 @@ public static class DependencyInjection {
         services.AddScoped<IVideoSubtitleAssetService, VideoSubtitleAssetService>();
         services.AddScoped<IJobQueueService, JobQueueService>();
         services.AddScoped<ISettingsService, SettingsService>();
+        services.AddScoped<IUserStateService, EfUserStateService>();
 
         return services;
     }

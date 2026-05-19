@@ -1,16 +1,12 @@
 using System.Reflection;
 using System.Text.Json.Nodes;
-using Microsoft.EntityFrameworkCore;
+using Obscura.Application.UserState;
 using Obscura.Contracts.System;
-using Obscura.Infrastructure.Persistence;
-using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Api.Endpoints;
 
 public static class UserStateEndpoints
 {
-    private const string PlaylistSessionKey = "ui:playlist-session";
-
     public static IEndpointRouteBuilder MapUserStateEndpoints(this IEndpointRouteBuilder routes)
     {
         routes.MapGet("/api/update-check", () =>
@@ -31,14 +27,12 @@ public static class UserStateEndpoints
             .WithSummary("Returns a non-blocking update-check status for the Svelte shell.");
 
         routes.MapGet("/api/playlist-session", async (
-            ObscuraDbContext db,
+            IUserStateService userState,
             CancellationToken cancellationToken) =>
         {
-            var row = await db.UiPreferences.AsNoTracking()
-                .FirstOrDefaultAsync(pref => pref.Key == PlaylistSessionKey, cancellationToken);
-
+            var valueJson = await userState.GetPlaylistSessionJsonAsync(cancellationToken);
             return Results.Text(
-                row is null || string.IsNullOrWhiteSpace(row.ValueJson) ? "null" : row.ValueJson,
+                string.IsNullOrWhiteSpace(valueJson) ? "null" : valueJson,
                 "application/json");
         })
             .WithName("GetPlaylistSession")
@@ -47,7 +41,7 @@ public static class UserStateEndpoints
 
         routes.MapPut("/api/playlist-session", async (
             HttpRequest request,
-            ObscuraDbContext db,
+            IUserStateService userState,
             CancellationToken cancellationToken) =>
         {
             JsonNode? node;
@@ -67,23 +61,7 @@ public static class UserStateEndpoints
 
             session["updatedAt"] = DateTimeOffset.UtcNow;
             var valueJson = session.ToJsonString();
-            var row = await db.UiPreferences.FindAsync([PlaylistSessionKey], cancellationToken);
-            if (row is null)
-            {
-                db.UiPreferences.Add(new UiPreferenceRow
-                {
-                    Key = PlaylistSessionKey,
-                    ValueJson = valueJson,
-                    UpdatedAt = DateTimeOffset.UtcNow
-                });
-            }
-            else
-            {
-                row.ValueJson = valueJson;
-                row.UpdatedAt = DateTimeOffset.UtcNow;
-            }
-
-            await db.SaveChangesAsync(cancellationToken);
+            await userState.SavePlaylistSessionJsonAsync(valueJson, cancellationToken);
             return Results.Text(valueJson, "application/json");
         })
             .WithName("PutPlaylistSession")
@@ -91,16 +69,10 @@ public static class UserStateEndpoints
             .WithSummary("Stores the current browser playlist session.");
 
         routes.MapDelete("/api/playlist-session", async (
-            ObscuraDbContext db,
+            IUserStateService userState,
             CancellationToken cancellationToken) =>
         {
-            var row = await db.UiPreferences.FindAsync([PlaylistSessionKey], cancellationToken);
-            if (row is not null)
-            {
-                db.UiPreferences.Remove(row);
-                await db.SaveChangesAsync(cancellationToken);
-            }
-
+            await userState.ClearPlaylistSessionAsync(cancellationToken);
             return Results.Ok(new { ok = true });
         })
             .WithName("DeletePlaylistSession")

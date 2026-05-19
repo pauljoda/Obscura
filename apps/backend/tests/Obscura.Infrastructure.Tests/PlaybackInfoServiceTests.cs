@@ -1,6 +1,4 @@
 using Obscura.Application.Videos;
-using Obscura.Contracts.Playback;
-using Obscura.Contracts.Settings;
 using Obscura.Infrastructure.Videos;
 using Obscura.Application.Settings;
 
@@ -29,7 +27,7 @@ public sealed class PlaybackInfoServiceTests
                 ])),
             new TranscodeSessionService());
 
-        var info = await service.GetPlaybackInfoAsync(videoId, new PlaybackInfoRequest
+        var info = await service.GetPlaybackInfoAsync(videoId, new PlaybackInfoQuery
         {
             AudioStreamIndex = 1,
             EnableDirectPlay = true,
@@ -69,7 +67,7 @@ public sealed class PlaybackInfoServiceTests
             new TranscodeSessionService(),
             new FakeSettingsService("en,eng,en-US"));
 
-        var info = await service.GetPlaybackInfoAsync(videoId, new PlaybackInfoRequest
+        var info = await service.GetPlaybackInfoAsync(videoId, new PlaybackInfoQuery
         {
             EnableDirectPlay = true,
             EnableDirectStream = true,
@@ -106,38 +104,38 @@ public sealed class PlaybackInfoServiceTests
             _audioPreferredLanguages = audioPreferredLanguages;
         }
 
-        public Task<SettingsResponse> GetAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(new SettingsResponse(false, true));
+        public Task<SettingsResult> GetAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new SettingsResult(false, true));
 
-        public Task<SettingsResponse> UpdateAsync(SettingsUpdateRequest request, CancellationToken cancellationToken) =>
-            Task.FromResult(new SettingsResponse(request.HideNsfw ?? false, request.EnableCastControls ?? true));
+        public Task<SettingsResult> UpdateAsync(SettingsUpdate request, CancellationToken cancellationToken) =>
+            Task.FromResult(new SettingsResult(request.HideNsfw ?? false, request.EnableCastControls ?? true));
 
-        public Task<LibraryConfigResponse> GetLibraryConfigAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(new LibraryConfigResponse(SampleSettings(), []));
+        public Task<LibraryConfigResult> GetLibraryConfigAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new LibraryConfigResult(SampleSettings(), []));
 
-        public Task<LibrarySettings> UpdateLibrarySettingsAsync(
-            LibrarySettingsUpdateRequest request,
+        public Task<LibrarySettingsResult> UpdateLibrarySettingsAsync(
+            LibrarySettingsUpdate request,
             CancellationToken cancellationToken) =>
             Task.FromResult(SampleSettings());
 
-        public Task<LibraryBrowseResponse> BrowseLibraryPathAsync(string? path, CancellationToken cancellationToken) =>
-            Task.FromResult(new LibraryBrowseResponse(path ?? "/media", "/", []));
+        public Task<LibraryBrowseResult> BrowseLibraryPathAsync(string? path, CancellationToken cancellationToken) =>
+            Task.FromResult(new LibraryBrowseResult(path ?? "/media", "/", []));
 
-        public Task<LibraryRoot> CreateLibraryRootAsync(
-            LibraryRootCreateRequest request,
+        public Task<LibraryRootResult> CreateLibraryRootAsync(
+            LibraryRootCreate request,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
-        public Task<LibraryRoot?> UpdateLibraryRootAsync(
+        public Task<LibraryRootResult?> UpdateLibraryRootAsync(
             Guid id,
-            LibraryRootUpdateRequest request,
+            LibraryRootUpdate request,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<bool> DeleteLibraryRootAsync(Guid id, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
-        private LibrarySettings SampleSettings() =>
+        private LibrarySettingsResult SampleSettings() =>
             new(
                 Guid.Parse("56565656-5656-5656-5656-565656565656"),
                 false,

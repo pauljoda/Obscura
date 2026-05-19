@@ -1,4 +1,3 @@
-using Obscura.Contracts.Jobs;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Application.Jobs;
@@ -23,14 +22,14 @@ public sealed class JobService
     /// Lists recent job runs for the operations dashboard.
     /// </summary>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>API-ready job list response.</returns>
-    public async Task<JobListResponse> ListAsync(CancellationToken cancellationToken)
+    /// <returns>Application job list result.</returns>
+    public async Task<JobListResult> ListAsync(CancellationToken cancellationToken)
     {
-        var items = (await _queue.ListAsync(cancellationToken)).Select(ToContract).ToArray();
+        var items = (await _queue.ListAsync(cancellationToken)).Select(ToResult).ToArray();
         var counts = (await _queue.GetQueueCountsAsync(cancellationToken))
-            .Select(c => new JobQueueCountDto(c.TypeCode, c.StatusCode, c.Count))
+            .Select(c => new JobQueueCountResult(c.TypeCode, c.StatusCode, c.Count))
             .ToArray();
-        return new JobListResponse(items, counts);
+        return new JobListResult(items, counts);
     }
 
     /// <summary>
@@ -38,11 +37,11 @@ public sealed class JobService
     /// </summary>
     /// <param name="type">Typed job operation supplied by the API boundary.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>API-ready create response for the queued job.</returns>
-    public async Task<JobCreateResponse> CreateAsync(JobType type, CancellationToken cancellationToken)
+    /// <returns>Application create result for the queued job.</returns>
+    public async Task<JobCreateResult> CreateAsync(JobType type, CancellationToken cancellationToken)
     {
         var job = await _queue.EnqueueAsync(type, cancellationToken);
-        return new JobCreateResponse(ToContract(job));
+        return new JobCreateResult(ToResult(job));
     }
 
     /// <summary>
@@ -51,10 +50,10 @@ public sealed class JobService
     /// <param name="type">Optional job type scope.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>Count of jobs marked cancelled.</returns>
-    public async Task<JobCancelResponse> CancelAsync(JobType? type, CancellationToken cancellationToken)
+    public async Task<JobCancelResult> CancelAsync(JobType? type, CancellationToken cancellationToken)
     {
         var cancelled = await _queue.CancelAsync(type, cancellationToken);
-        return new JobCancelResponse(cancelled);
+        return new JobCancelResult(cancelled);
     }
 
     /// <summary>
@@ -63,10 +62,10 @@ public sealed class JobService
     /// <param name="id">Job run identifier.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>Response with a one-or-zero cancellation count.</returns>
-    public async Task<JobCancelResponse> CancelRunAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<JobCancelResult> CancelRunAsync(Guid id, CancellationToken cancellationToken)
     {
         var cancelled = await _queue.CancelRunAsync(id, cancellationToken);
-        return new JobCancelResponse(cancelled ? 1 : 0);
+        return new JobCancelResult(cancelled ? 1 : 0);
     }
 
     /// <summary>
@@ -75,15 +74,15 @@ public sealed class JobService
     /// <param name="type">Optional job type scope.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>Count of failed jobs cleared.</returns>
-    public async Task<JobFailureClearResponse> ClearFailuresAsync(
+    public async Task<JobFailureClearResult> ClearFailuresAsync(
         JobType? type,
         CancellationToken cancellationToken)
     {
         var cleared = await _queue.ClearFailuresAsync(type, cancellationToken);
-        return new JobFailureClearResponse(cleared);
+        return new JobFailureClearResult(cleared);
     }
 
-    private static JobRun ToContract(JobRunSnapshot job) =>
+    private static JobRunResult ToResult(JobRunSnapshot job) =>
         new(
             job.Id,
             job.Type.ToCode(),

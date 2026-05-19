@@ -208,16 +208,57 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
 
     private sealed class FakePlaybackInfoService : IPlaybackInfoService
     {
-        private readonly PlaybackInfoResponse? _response;
+        private readonly PlaybackInfoResult? _response;
 
         public FakePlaybackInfoService(PlaybackInfoResponse? response)
         {
-            _response = response;
+            _response = response is null
+                ? null
+                : new PlaybackInfoResult(
+                    response.PlaySessionId,
+                    response.MediaSources.Select(source => new MediaSourceInfoResult(
+                        source.Id,
+                        source.Path,
+                        source.Protocol,
+                        source.Container,
+                        source.Size,
+                        source.Name,
+                        source.RunTimeTicks,
+                        source.SupportsDirectPlay,
+                        source.SupportsDirectStream,
+                        source.SupportsTranscoding,
+                        source.TranscodingUrl,
+                        source.TranscodingSubProtocol,
+                        source.TranscodingContainer,
+                        source.MediaStreams.Select(stream => new MediaStreamInfoResult(
+                            stream.Index,
+                            stream.Type,
+                            stream.Codec,
+                            stream.Language,
+                            stream.DisplayTitle,
+                            stream.Width,
+                            stream.Height,
+                            stream.AverageFrameRate,
+                            stream.BitRate,
+                            stream.SampleRate,
+                            stream.Channels,
+                            stream.IsDefault,
+                            stream.IsForced)).ToArray(),
+                        source.TranscodingInfo is null
+                            ? null
+                            : new TranscodingInfoResult(
+                                source.TranscodingInfo.Container,
+                                source.TranscodingInfo.VideoCodec,
+                                source.TranscodingInfo.AudioCodec,
+                                source.TranscodingInfo.Protocol,
+                                source.TranscodingInfo.IsVideoDirect,
+                                source.TranscodingInfo.IsAudioDirect))).ToArray(),
+                    response.ErrorCode);
         }
 
-        public Task<PlaybackInfoResponse?> GetPlaybackInfoAsync(
+        public Task<PlaybackInfoResult?> GetPlaybackInfoAsync(
             Guid itemId,
-            PlaybackInfoRequest? request,
+            PlaybackInfoQuery? request,
             CancellationToken cancellationToken) =>
             Task.FromResult(itemId == VideoId ? _response : null);
     }
@@ -266,25 +307,25 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
 
     private sealed class RecordingPlaybackSessionService : IPlaybackSessionService
     {
-        public PlaybackSessionRequest? LastProgress { get; private set; }
+        public PlaybackSessionCommand? LastProgress { get; private set; }
 
-        public Task StartAsync(PlaybackSessionRequest request, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task StartAsync(PlaybackSessionCommand request, CancellationToken cancellationToken) => Task.CompletedTask;
 
-        public Task ProgressAsync(PlaybackSessionRequest request, CancellationToken cancellationToken)
+        public Task ProgressAsync(PlaybackSessionCommand request, CancellationToken cancellationToken)
         {
             LastProgress = request;
             return Task.CompletedTask;
         }
 
-        public Task PingAsync(PlaybackSessionRequest request, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task PingAsync(PlaybackSessionCommand request, CancellationToken cancellationToken) => Task.CompletedTask;
 
-        public Task StopAsync(PlaybackSessionRequest request, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task StopAsync(PlaybackSessionCommand request, CancellationToken cancellationToken) => Task.CompletedTask;
 
-        public Task<UserItemData?> MarkPlayedAsync(Guid itemId, CancellationToken cancellationToken) =>
-            Task.FromResult<UserItemData?>(new UserItemData(true));
+        public Task<UserItemDataResult?> MarkPlayedAsync(Guid itemId, CancellationToken cancellationToken) =>
+            Task.FromResult<UserItemDataResult?>(new UserItemDataResult(true));
 
-        public Task<UserItemData?> MarkUnplayedAsync(Guid itemId, CancellationToken cancellationToken) =>
-            Task.FromResult<UserItemData?>(new UserItemData(false));
+        public Task<UserItemDataResult?> MarkUnplayedAsync(Guid itemId, CancellationToken cancellationToken) =>
+            Task.FromResult<UserItemDataResult?>(new UserItemDataResult(false));
     }
 
     private sealed class FakeVideoSourceService : IVideoSourceService

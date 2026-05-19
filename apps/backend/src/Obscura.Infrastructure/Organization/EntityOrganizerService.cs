@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Obscura.Application.Organization;
-using Obscura.Contracts.Organize;
 using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
@@ -19,17 +18,17 @@ public sealed class EntityOrganizerService(ObscuraDbContext db) : IEntityOrganiz
     private const string Failed = "failed";
 
     /// <inheritdoc />
-    public async Task<OrganizePlanResponse> PlanAsync(
-        OrganizePlanRequest request,
+    public async Task<OrganizePlanResult> PlanAsync(
+        OrganizePlanQuery request,
         CancellationToken cancellationToken)
     {
         var plan = await BuildPlanAsync(request, cancellationToken);
-        return new OrganizePlanResponse(plan);
+        return new OrganizePlanResult(plan);
     }
 
     /// <inheritdoc />
-    public async Task<OrganizeApplyResponse> ApplyAsync(
-        OrganizePlanRequest request,
+    public async Task<OrganizeApplyResult> ApplyAsync(
+        OrganizePlanQuery request,
         CancellationToken cancellationToken)
     {
         var plan = await BuildPlanAsync(request, cancellationToken);
@@ -38,7 +37,7 @@ public sealed class EntityOrganizerService(ObscuraDbContext db) : IEntityOrganiz
             .Select(item => item.SourcePath)
             .OrderBy(path => path.Length)
             .ToArray();
-        var results = new List<OrganizePlanItem>(plan.Count);
+        var results = new List<OrganizePlanItemResult>(plan.Count);
         var applied = 0;
 
         foreach (var item in plan)
@@ -77,11 +76,11 @@ public sealed class EntityOrganizerService(ObscuraDbContext db) : IEntityOrganiz
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        return new OrganizeApplyResponse(results, applied, results.Count - applied);
+        return new OrganizeApplyResult(results, applied, results.Count - applied);
     }
 
-    private async Task<IReadOnlyList<OrganizePlanItem>> BuildPlanAsync(
-        OrganizePlanRequest request,
+    private async Task<IReadOnlyList<OrganizePlanItemResult>> BuildPlanAsync(
+        OrganizePlanQuery request,
         CancellationToken cancellationToken)
     {
         var roots = await db.LibraryRoots.AsNoTracking()
@@ -106,21 +105,21 @@ public sealed class EntityOrganizerService(ObscuraDbContext db) : IEntityOrganiz
         var sourceByEntityId = sourceFiles
             .GroupBy(file => file.EntityId)
             .ToDictionary(group => group.Key, group => group.OrderBy(file => file.CreatedAt).First());
-        var memo = new Dictionary<Guid, OrganizePlanItem?>();
+        var memo = new Dictionary<Guid, OrganizePlanItemResult?>();
 
         return entities
             .Select(entity => BuildItem(entity.Id, entityById, sourceByEntityId, rootPaths, memo))
-            .OfType<OrganizePlanItem>()
+            .OfType<OrganizePlanItemResult>()
             .OrderBy(item => item.SourcePath, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
-    private static OrganizePlanItem? BuildItem(
+    private static OrganizePlanItemResult? BuildItem(
         Guid entityId,
         IReadOnlyDictionary<Guid, EntityRow> entityById,
         IReadOnlyDictionary<Guid, EntityFileRow> sourceByEntityId,
         IReadOnlyList<(Guid Id, string Path)> rootPaths,
-        IDictionary<Guid, OrganizePlanItem?> memo)
+        IDictionary<Guid, OrganizePlanItemResult?> memo)
     {
         if (memo.TryGetValue(entityId, out var cached))
         {
@@ -177,7 +176,7 @@ public sealed class EntityOrganizerService(ObscuraDbContext db) : IEntityOrganiz
         IReadOnlyDictionary<Guid, EntityRow> entityById,
         IReadOnlyDictionary<Guid, EntityFileRow> sourceByEntityId,
         IReadOnlyList<(Guid Id, string Path)> rootPaths,
-        IDictionary<Guid, OrganizePlanItem?> memo)
+        IDictionary<Guid, OrganizePlanItemResult?> memo)
     {
         if (entity.ParentEntityId is { } parentId &&
             entityById.TryGetValue(parentId, out var parent) &&
@@ -205,7 +204,7 @@ public sealed class EntityOrganizerService(ObscuraDbContext db) : IEntityOrganiz
         return root.Path;
     }
 
-    private static OrganizePlanItem NewItem(
+    private static OrganizePlanItemResult NewItem(
         EntityRow entity,
         EntityStorageShape storageShape,
         string sourcePath,

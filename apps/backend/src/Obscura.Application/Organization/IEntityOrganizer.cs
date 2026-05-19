@@ -1,5 +1,3 @@
-using Obscura.Contracts.Organize;
-
 namespace Obscura.Application.Organization;
 
 /// <summary>
@@ -13,8 +11,8 @@ public interface IEntityOrganizer
     /// <param name="request">Optional entity or library-root scope.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>Planned operations for source-backed entities.</returns>
-    Task<OrganizePlanResponse> PlanAsync(
-        OrganizePlanRequest request,
+    Task<OrganizePlanResult> PlanAsync(
+        OrganizePlanQuery request,
         CancellationToken cancellationToken);
 
     /// <summary>
@@ -23,7 +21,7 @@ public interface IEntityOrganizer
     /// <param name="request">Optional entity or library-root scope.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>Final operation statuses after apply.</returns>
-    Task<OrganizeApplyResponse> ApplyAsync(
-        OrganizePlanRequest request,
+    Task<OrganizeApplyResult> ApplyAsync(
+        OrganizePlanQuery request,
         CancellationToken cancellationToken);
 }

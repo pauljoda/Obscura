@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Obscura.Api.Mapping;
 using Obscura.Application.Jobs;
 using Obscura.Application.Jobs.Ports;
 using Obscura.Contracts.Jobs;
@@ -14,7 +15,7 @@ public static class JobEndpoints {
         group.MapGet("/", async (
             JobService jobs,
             CancellationToken cancellationToken) =>
-            await jobs.ListAsync(cancellationToken))
+            (await jobs.ListAsync(cancellationToken)).ToContract())
             .WithName("ListJobs")
             .WithSummary("Lists Obscura background job runs for the operations dashboard.");
 
@@ -24,7 +25,7 @@ public static class JobEndpoints {
             CancellationToken cancellationToken) => {
                 var response = await jobs.CreateAsync(type.Value, cancellationToken);
 
-                return Results.Accepted($"/api/jobs/{response.Job.Id}", response);
+                return Results.Accepted($"/api/jobs/{response.Job.Id}", response.ToContract());
             })
             .WithName("CreateJob")
             .WithSummary("Queues a background job run.");
@@ -37,7 +38,7 @@ public static class JobEndpoints {
                     return Results.BadRequest(new { message = $"Unknown job type '{type}'." });
                 }
 
-                return Results.Ok(await jobs.CancelAsync(jobType, cancellationToken));
+                return Results.Ok((await jobs.CancelAsync(jobType, cancellationToken)).ToContract());
             })
             .WithName("CancelJobs")
             .WithSummary("Cancels queued or running job runs.");
@@ -46,7 +47,7 @@ public static class JobEndpoints {
             Guid id,
             JobService jobs,
             CancellationToken cancellationToken) =>
-            Results.Ok(await jobs.CancelRunAsync(id, cancellationToken)))
+            Results.Ok((await jobs.CancelRunAsync(id, cancellationToken)).ToContract()))
             .WithName("CancelJobRun")
             .WithSummary("Cancels one queued or running job run.");
 
@@ -58,7 +59,7 @@ public static class JobEndpoints {
                     return Results.BadRequest(new { message = $"Unknown job type '{type}'." });
                 }
 
-                return Results.Ok(await jobs.ClearFailuresAsync(jobType, cancellationToken));
+                return Results.Ok((await jobs.ClearFailuresAsync(jobType, cancellationToken)).ToContract());
             })
             .WithName("ClearJobFailures")
             .WithSummary("Clears failed job runs from the operations dashboard.");

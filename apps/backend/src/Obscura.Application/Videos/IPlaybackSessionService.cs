@@ -1,5 +1,3 @@
-using Obscura.Contracts.Playback;
-
 namespace Obscura.Application.Videos;
 
 /// <summary>
@@ -7,15 +5,15 @@ namespace Obscura.Application.Videos;
 /// </summary>
 public interface IPlaybackSessionService
 {
-    Task StartAsync(PlaybackSessionRequest request, CancellationToken cancellationToken);
+    Task StartAsync(PlaybackSessionCommand request, CancellationToken cancellationToken);
 
-    Task ProgressAsync(PlaybackSessionRequest request, CancellationToken cancellationToken);
+    Task ProgressAsync(PlaybackSessionCommand request, CancellationToken cancellationToken);
 
-    Task PingAsync(PlaybackSessionRequest request, CancellationToken cancellationToken);
+    Task PingAsync(PlaybackSessionCommand request, CancellationToken cancellationToken);
 
-    Task StopAsync(PlaybackSessionRequest request, CancellationToken cancellationToken);
+    Task StopAsync(PlaybackSessionCommand request, CancellationToken cancellationToken);
 
-    Task<UserItemData?> MarkPlayedAsync(Guid itemId, CancellationToken cancellationToken);
+    Task<UserItemDataResult?> MarkPlayedAsync(Guid itemId, CancellationToken cancellationToken);
 
-    Task<UserItemData?> MarkUnplayedAsync(Guid itemId, CancellationToken cancellationToken);
+    Task<UserItemDataResult?> MarkUnplayedAsync(Guid itemId, CancellationToken cancellationToken);
 }

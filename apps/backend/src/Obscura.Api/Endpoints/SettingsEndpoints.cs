@@ -1,4 +1,5 @@
 using Obscura.Application.Settings;
+using Obscura.Api.Mapping;
 using Obscura.Contracts.Settings;
 
 namespace Obscura.Api.Endpoints;
@@ -13,7 +14,7 @@ public static class SettingsEndpoints
         group.MapGet("/", (
             ISettingsService settings,
             CancellationToken cancellationToken) =>
-            settings.GetAsync(cancellationToken))
+            settings.GetAsync(cancellationToken).ContinueWith(task => task.Result.ToContract(), cancellationToken))
             .WithName("GetSettings")
             .WithSummary("Gets application settings.");
 
@@ -21,14 +22,14 @@ public static class SettingsEndpoints
             SettingsUpdateRequest request,
             ISettingsService settings,
             CancellationToken cancellationToken) =>
-            settings.UpdateAsync(request, cancellationToken))
+            settings.UpdateAsync(request.ToApplication(), cancellationToken).ContinueWith(task => task.Result.ToContract(), cancellationToken))
             .WithName("UpdateSettings")
             .WithSummary("Updates application settings.");
 
         group.MapGet("/library", (
             ISettingsService settings,
             CancellationToken cancellationToken) =>
-            settings.GetLibraryConfigAsync(cancellationToken))
+            settings.GetLibraryConfigAsync(cancellationToken).ContinueWith(task => task.Result.ToContract(), cancellationToken))
             .WithName("GetLibraryConfig")
             .WithSummary("Gets settings and watched roots for the migrated settings page.");
 
@@ -36,7 +37,7 @@ public static class SettingsEndpoints
             LibrarySettingsUpdateRequest request,
             ISettingsService settings,
             CancellationToken cancellationToken) =>
-            settings.UpdateLibrarySettingsAsync(request, cancellationToken))
+            settings.UpdateLibrarySettingsAsync(request.ToApplication(), cancellationToken).ContinueWith(task => task.Result.ToContract(), cancellationToken))
             .WithName("UpdateLibrarySettings")
             .WithSummary("Updates settings from the migrated settings page.");
 
@@ -44,7 +45,7 @@ public static class SettingsEndpoints
             string? path,
             ISettingsService settings,
             CancellationToken cancellationToken) =>
-            settings.BrowseLibraryPathAsync(path, cancellationToken))
+            settings.BrowseLibraryPathAsync(path, cancellationToken).ContinueWith(task => task.Result.ToContract(), cancellationToken))
             .WithTags("Settings")
             .WithName("BrowseLibraryPath")
             .WithSummary("Browses local directories for watched-root selection.");
@@ -53,7 +54,7 @@ public static class SettingsEndpoints
             LibraryRootCreateRequest request,
             ISettingsService settings,
             CancellationToken cancellationToken) =>
-            settings.CreateLibraryRootAsync(request, cancellationToken))
+            settings.CreateLibraryRootAsync(request.ToApplication(), cancellationToken).ContinueWith(task => task.Result.ToContract(), cancellationToken))
             .WithTags("Settings")
             .WithName("CreateLibraryRoot")
             .WithSummary("Adds a watched media root.");
@@ -64,8 +65,8 @@ public static class SettingsEndpoints
             ISettingsService settings,
             CancellationToken cancellationToken) =>
         {
-            var root = await settings.UpdateLibraryRootAsync(id, request, cancellationToken);
-            return root is null ? Results.NotFound() : Results.Ok(root);
+            var root = await settings.UpdateLibraryRootAsync(id, request.ToApplication(), cancellationToken);
+            return root is null ? Results.NotFound() : Results.Ok(root.ToContract());
         })
             .WithTags("Settings")
             .WithName("UpdateLibraryRoot")

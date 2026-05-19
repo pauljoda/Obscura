@@ -1,3 +1,4 @@
+using Obscura.Api.Mapping;
 using Obscura.Application.Organization;
 using Obscura.Contracts.Organize;
 
@@ -15,7 +16,7 @@ public static class OrganizeEndpoints
             Guid? rootId,
             IEntityOrganizer organizer,
             CancellationToken cancellationToken) =>
-            Results.Ok(await organizer.PlanAsync(new OrganizePlanRequest(entityId, rootId), cancellationToken)))
+            Results.Ok((await organizer.PlanAsync(new OrganizePlanQuery(entityId, rootId), cancellationToken)).ToContract()))
             .WithName("GetOrganizePlan")
             .WithSummary("Computes a dry-run entity organization plan from generic storage metadata.")
             .Produces<OrganizePlanResponse>();
@@ -24,7 +25,7 @@ public static class OrganizeEndpoints
             OrganizePlanRequest request,
             IEntityOrganizer organizer,
             CancellationToken cancellationToken) =>
-            Results.Ok(await organizer.ApplyAsync(request, cancellationToken)))
+            Results.Ok((await organizer.ApplyAsync(request.ToApplication(), cancellationToken)).ToContract()))
             .WithName("ApplyOrganizePlan")
             .WithSummary("Applies an entity organization plan by moving source files or folders.")
             .Produces<OrganizeApplyResponse>();

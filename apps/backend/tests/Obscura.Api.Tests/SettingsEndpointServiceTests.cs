@@ -69,27 +69,27 @@ public sealed class SettingsEndpointServiceTests
         private static readonly Guid SettingsId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         private static readonly Guid RootId = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
-        public Task<SettingsResponse> GetAsync(CancellationToken cancellationToken)
+        public Task<SettingsResult> GetAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult(new SettingsResponse(false, true));
+            return Task.FromResult(new SettingsResult(false, true));
         }
 
-        public Task<SettingsResponse> UpdateAsync(SettingsUpdateRequest request, CancellationToken cancellationToken)
+        public Task<SettingsResult> UpdateAsync(SettingsUpdate request, CancellationToken cancellationToken)
         {
-            return Task.FromResult(new SettingsResponse(
+            return Task.FromResult(new SettingsResult(
                 request.HideNsfw ?? false,
                 request.EnableCastControls ?? true));
         }
 
-        public Task<LibraryConfigResponse> GetLibraryConfigAsync(CancellationToken cancellationToken)
+        public Task<LibraryConfigResult> GetLibraryConfigAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult(new LibraryConfigResponse(
+            return Task.FromResult(new LibraryConfigResult(
                 SampleSettings(),
                 [SampleRoot()]));
         }
 
-        public Task<LibrarySettings> UpdateLibrarySettingsAsync(
-            LibrarySettingsUpdateRequest request,
+        public Task<LibrarySettingsResult> UpdateLibrarySettingsAsync(
+            LibrarySettingsUpdate request,
             CancellationToken cancellationToken)
         {
             return Task.FromResult(SampleSettings() with
@@ -98,18 +98,18 @@ public sealed class SettingsEndpointServiceTests
             });
         }
 
-        public Task<LibraryBrowseResponse> BrowseLibraryPathAsync(
+        public Task<LibraryBrowseResult> BrowseLibraryPathAsync(
             string? path,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult(new LibraryBrowseResponse(
+            return Task.FromResult(new LibraryBrowseResult(
                 path ?? "/media",
                 "/",
-                [new LibraryBrowseEntry("videos", "/media/videos")]));
+                [new LibraryBrowseEntryResult("videos", "/media/videos")]));
         }
 
-        public Task<LibraryRoot> CreateLibraryRootAsync(
-            LibraryRootCreateRequest request,
+        public Task<LibraryRootResult> CreateLibraryRootAsync(
+            LibraryRootCreate request,
             CancellationToken cancellationToken)
         {
             return Task.FromResult(SampleRoot() with
@@ -119,12 +119,12 @@ public sealed class SettingsEndpointServiceTests
             });
         }
 
-        public Task<LibraryRoot?> UpdateLibraryRootAsync(
+        public Task<LibraryRootResult?> UpdateLibraryRootAsync(
             Guid id,
-            LibraryRootUpdateRequest request,
+            LibraryRootUpdate request,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult<LibraryRoot?>(SampleRoot());
+            return Task.FromResult<LibraryRootResult?>(SampleRoot());
         }
 
         public Task<bool> DeleteLibraryRootAsync(Guid id, CancellationToken cancellationToken)
@@ -132,9 +132,9 @@ public sealed class SettingsEndpointServiceTests
             return Task.FromResult(true);
         }
 
-        private static LibrarySettings SampleSettings()
+        private static LibrarySettingsResult SampleSettings()
         {
-            return new LibrarySettings(
+            return new LibrarySettingsResult(
                 SettingsId,
                 false,
                 60,
@@ -166,9 +166,9 @@ public sealed class SettingsEndpointServiceTests
                 DateTimeOffset.UnixEpoch);
         }
 
-        private static LibraryRoot SampleRoot()
+        private static LibraryRootResult SampleRoot()
         {
-            return new LibraryRoot(
+            return new LibraryRootResult(
                 RootId,
                 "/media/videos",
                 "Videos",
