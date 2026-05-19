@@ -53,6 +53,79 @@ public static class EntityEndpoints
             .WithName("GetEntityThumbnails")
             .Produces<EntityThumbnailBatchResponse>();
 
+        group.MapPatch("/{id:guid}/rating", async (
+            Guid id,
+            RatingUpdateRequest request,
+            IEntityWriteUseCases entities,
+            CancellationToken cancellationToken) =>
+            await ReturnWriteResultAsync(
+                id,
+                entities.SetRatingAsync(new SetEntityRatingCommand(id, request.Value), cancellationToken)))
+            .WithName("UpdateEntityRating")
+            .Produces<EntityCard>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
+
+        group.MapPatch("/{id:guid}/flags", async (
+            Guid id,
+            EntityFlagsUpdateRequest request,
+            IEntityWriteUseCases entities,
+            CancellationToken cancellationToken) =>
+            await ReturnWriteResultAsync(
+                id,
+                entities.UpdateFlagsAsync(new UpdateEntityFlagsCommand(id, request.IsFavorite, request.IsNsfw, request.IsOrganized), cancellationToken)))
+            .WithName("UpdateEntityFlags")
+            .Produces<EntityCard>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
+
+        group.MapPatch("/{id:guid}/playback", async (
+            Guid id,
+            PlaybackUpdateRequest request,
+            IEntityWriteUseCases entities,
+            CancellationToken cancellationToken) =>
+            await ReturnWriteResultAsync(
+                id,
+                entities.UpdatePlaybackAsync(new UpdatePlaybackCommand(id, request.ResumeSeconds, request.DurationSeconds, request.Completed), cancellationToken)))
+            .WithName("UpdateEntityPlayback")
+            .Produces<EntityCard>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
+
+        group.MapPost("/{id:guid}/markers", async (
+            Guid id,
+            EntityMarkerWriteRequest request,
+            IEntityWriteUseCases entities,
+            CancellationToken cancellationToken) =>
+            await ReturnWriteResultAsync(
+                id,
+                entities.CreateMarkerAsync(new CreateEntityMarkerCommand(id, request.Title, request.Seconds, request.EndSeconds), cancellationToken)))
+            .WithName("CreateEntityMarker")
+            .Produces<EntityCard>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
+
+        group.MapPatch("/{id:guid}/markers/{markerId:guid}", async (
+            Guid id,
+            Guid markerId,
+            EntityMarkerWriteRequest request,
+            IEntityWriteUseCases entities,
+            CancellationToken cancellationToken) =>
+            await ReturnWriteResultAsync(
+                id,
+                entities.UpdateMarkerAsync(new UpdateEntityMarkerCommand(id, markerId, request.Title, request.Seconds, request.EndSeconds), cancellationToken)))
+            .WithName("UpdateEntityMarker")
+            .Produces<EntityCard>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
+
+        group.MapDelete("/{id:guid}/markers/{markerId:guid}", async (
+            Guid id,
+            Guid markerId,
+            IEntityWriteUseCases entities,
+            CancellationToken cancellationToken) =>
+            await ReturnWriteResultAsync(
+                id,
+                entities.DeleteMarkerAsync(new DeleteEntityMarkerCommand(id, markerId), cancellationToken)))
+            .WithName("DeleteEntityMarker")
+            .Produces<EntityCard>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
+
         routes.MapEntityKindRoutes("/api/videos", "video", "Videos", "ListVideos", "GetVideo", typeof(VideoListResponse), typeof(VideoDetail));
         routes.MapEntityKindRoutes("/api/series", "series", "Series", "ListVideoSeries", "GetVideoSeries", typeof(VideoSeriesListResponse), typeof(VideoSeriesDetail));
         routes.MapGet("/api/series/{id:guid}/seasons/{seasonId:guid}", async (
@@ -131,6 +204,14 @@ public static class EntityEndpoints
         CancellationToken cancellationToken)
     {
         var entity = await entities.GetDetailAsync(id, kind, cancellationToken);
+        return entity is null
+            ? Results.NotFound(new ApiProblem("entity_not_found", $"Entity '{id}' was not found."))
+            : Results.Ok(entity);
+    }
+
+    private static async Task<IResult> ReturnWriteResultAsync(Guid id, Task<object?> resultTask)
+    {
+        var entity = await resultTask;
         return entity is null
             ? Results.NotFound(new ApiProblem("entity_not_found", $"Entity '{id}' was not found."))
             : Results.Ok(entity);

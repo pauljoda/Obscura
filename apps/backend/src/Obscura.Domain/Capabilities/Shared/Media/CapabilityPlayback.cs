@@ -31,4 +31,30 @@ public sealed class CapabilityPlayback : EntityCapability {
             CompletedAt = null
         };
     }
+
+    /// <summary>
+    /// Applies a sparse playback update from UI or player events.
+    /// </summary>
+    public void Update(TimeSpan? resumeTime, TimeSpan? duration, bool? completed, DateTimeOffset updatedAt) {
+        var nextResume = resumeTime is null
+            ? Value.ResumeTime
+            : resumeTime.Value < TimeSpan.Zero ? TimeSpan.Zero : resumeTime.Value;
+        var addedDuration = duration is null || duration.Value < TimeSpan.Zero
+            ? TimeSpan.Zero
+            : duration.Value;
+
+        Value = Value with {
+            PlayCount = Value.PlayCount == 0 && (resumeTime is not null || duration is not null || completed == true)
+                ? 1
+                : Value.PlayCount,
+            PlayDuration = Value.PlayDuration + addedDuration,
+            ResumeTime = nextResume,
+            LastPlayedAt = updatedAt,
+            CompletedAt = completed switch {
+                true => updatedAt,
+                false => null,
+                _ => Value.CompletedAt
+            }
+        };
+    }
 }

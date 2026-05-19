@@ -81,6 +81,9 @@ public abstract class Entity {
     /// <summary>User rating capability when attached.</summary>
     public CapabilityRating? Rating => GetCapability<CapabilityRating>();
 
+    /// <summary>User-facing boolean flag capability when attached.</summary>
+    public CapabilityFlags? Flags => GetCapability<CapabilityFlags>();
+
     /// <summary>Description capability when attached.</summary>
     public CapabilityDescription? Description => GetCapability<CapabilityDescription>();
 
@@ -120,11 +123,14 @@ public abstract class Entity {
     /// <summary>Marker capability when attached.</summary>
     public CapabilityMarkers? MarkerCapability => GetCapability<CapabilityMarkers>();
 
+    /// <summary>Playback capability when attached.</summary>
+    public CapabilityPlayback? PlaybackCapability => GetCapability<CapabilityPlayback>();
+
     /// <summary>Subtitle capability when attached.</summary>
     public CapabilitySubtitles? SubtitleCapability => GetCapability<CapabilitySubtitles>();
 
     /// <summary>Playback state when playback capability is attached.</summary>
-    public Playback? Playback => GetCapability<CapabilityPlayback>()?.Value;
+    public Playback? Playback => PlaybackCapability?.Value;
 
     /// <summary>
     /// Updates the title while preserving entity identity.

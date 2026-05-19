@@ -62,6 +62,9 @@ public sealed class EfEntityRepository(ObscuraDbContext db) : EntityRepository {
         await HydrateChildrenAsync(entity, context, cancellationToken);
         await HydrateRelationshipsAsync(entity, context, cancellationToken);
         await HydrateRatingAsync(entity, cancellationToken);
+        await HydrateFlagsAsync(entity, cancellationToken);
+        await HydratePlaybackAsync(entity, cancellationToken);
+        await HydrateMarkersAsync(entity, cancellationToken);
         return entity;
     }
 
@@ -122,6 +125,50 @@ public sealed class EfEntityRepository(ObscuraDbContext db) : EntityRepository {
         if (rating is not null && entity.Rating is not null) {
             entity.Rating.Rate(rating.Value);
         }
+    }
+
+    private async Task HydrateFlagsAsync(Entity entity, CancellationToken cancellationToken) {
+        var row = await db.EntityFlags.AsNoTracking()
+            .FirstOrDefaultAsync(flag => flag.EntityId == entity.Id, cancellationToken);
+        if (row is null) {
+            return;
+        }
+
+        var flags = entity.Flags ?? new CapabilityFlags();
+        if (entity.Flags is null) {
+            entity.AddCapability(flags);
+        }
+
+        flags.Patch(row.IsFavorite, row.IsNsfw, row.IsOrganized);
+    }
+
+    private async Task HydratePlaybackAsync(Entity entity, CancellationToken cancellationToken) {
+        var row = await db.EntityPlayback.AsNoTracking()
+            .FirstOrDefaultAsync(playback => playback.EntityId == entity.Id, cancellationToken);
+        if (row is null) {
+            return;
+        }
+
+        entity.RemoveCapability<CapabilityPlayback>();
+        entity.AddCapability(new CapabilityPlayback(new Playback(
+            row.PlayCount,
+            TimeSpan.FromSeconds(row.PlayDurationSeconds),
+            TimeSpan.FromSeconds(row.ResumeSeconds),
+            row.LastPlayedAt,
+            row.CompletedAt)));
+    }
+
+    private async Task HydrateMarkersAsync(Entity entity, CancellationToken cancellationToken) {
+        var rows = await db.EntityMarkers.AsNoTracking()
+            .Where(marker => marker.EntityId == entity.Id)
+            .OrderBy(marker => marker.Seconds)
+            .ToArrayAsync(cancellationToken);
+        if (rows.Length == 0) {
+            return;
+        }
+
+        entity.RemoveCapability<CapabilityMarkers>();
+        entity.AddCapability(new CapabilityMarkers(rows.Select(row => new EntityMarker(row.Id, row.Title, row.Seconds, row.EndSeconds)).ToArray()));
     }
 
     private async Task SaveEntityAsync(Entity entity, ISet<Guid> visited, CancellationToken cancellationToken) {
@@ -204,6 +251,82 @@ public sealed class EfEntityRepository(ObscuraDbContext db) : EntityRepository {
             } else {
                 row.Value = rating;
                 row.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+        } else {
+            var row = await db.EntityRatings.FindAsync([entity.Id], cancellationToken);
+            if (row is not null) {
+                db.EntityRatings.Remove(row);
+            }
+        }
+
+        if (entity.Flags is { } flags) {
+            var row = await db.EntityFlags.FindAsync([entity.Id], cancellationToken);
+            if (row is null) {
+                db.EntityFlags.Add(new EntityFlagRow {
+                    EntityId = entity.Id,
+                    IsFavorite = flags.IsFavorite ?? false,
+                    IsNsfw = flags.IsNsfw ?? false,
+                    IsOrganized = flags.IsOrganized ?? false,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                });
+            } else {
+                row.IsFavorite = flags.IsFavorite ?? false;
+                row.IsNsfw = flags.IsNsfw ?? false;
+                row.IsOrganized = flags.IsOrganized ?? false;
+                row.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+        }
+
+        if (entity.PlaybackCapability is { Value: { } playback }) {
+            var row = await db.EntityPlayback.FindAsync([entity.Id], cancellationToken);
+            if (row is null) {
+                db.EntityPlayback.Add(new EntityPlaybackRow {
+                    EntityId = entity.Id,
+                    PlayCount = playback.PlayCount,
+                    PlayDurationSeconds = playback.PlayDuration.TotalSeconds,
+                    ResumeSeconds = playback.ResumeTime.TotalSeconds,
+                    LastPlayedAt = playback.LastPlayedAt,
+                    CompletedAt = playback.CompletedAt,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                });
+            } else {
+                row.PlayCount = playback.PlayCount;
+                row.PlayDurationSeconds = playback.PlayDuration.TotalSeconds;
+                row.ResumeSeconds = playback.ResumeTime.TotalSeconds;
+                row.LastPlayedAt = playback.LastPlayedAt;
+                row.CompletedAt = playback.CompletedAt;
+                row.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+        }
+
+        if (entity.MarkerCapability is { } markers) {
+            var existing = await db.EntityMarkers
+                .Where(marker => marker.EntityId == entity.Id)
+                .ToArrayAsync(cancellationToken);
+            var byId = existing.ToDictionary(marker => marker.Id);
+            var markerIds = markers.Items.Select(marker => marker.Id).ToHashSet();
+            foreach (var stale in existing.Where(marker => !markerIds.Contains(marker.Id))) {
+                db.EntityMarkers.Remove(stale);
+            }
+
+            foreach (var marker in markers.Items) {
+                if (byId.TryGetValue(marker.Id, out var row)) {
+                    row.Title = marker.Title;
+                    row.Seconds = marker.Seconds;
+                    row.EndSeconds = marker.EndSeconds;
+                    row.UpdatedAt = DateTimeOffset.UtcNow;
+                    continue;
+                }
+
+                db.EntityMarkers.Add(new EntityMarkerRow {
+                    Id = marker.Id,
+                    EntityId = entity.Id,
+                    Title = marker.Title,
+                    Seconds = marker.Seconds,
+                    EndSeconds = marker.EndSeconds,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                });
             }
         }
     }
