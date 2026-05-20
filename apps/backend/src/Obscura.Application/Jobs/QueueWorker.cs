@@ -117,7 +117,7 @@ public sealed class QueueWorker(
         try
         {
             await using var scope = scopeFactory.CreateAsyncScope();
-            var settings = scope.ServiceProvider.GetService<ISettingsService>();
+            var settings = scope.ServiceProvider.GetService<SettingsService>();
             if (settings is not null)
             {
                 var config = await settings.GetLibraryConfigAsync(cancellationToken);

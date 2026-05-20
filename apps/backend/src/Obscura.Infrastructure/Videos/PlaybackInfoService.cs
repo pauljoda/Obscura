@@ -23,12 +23,12 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
 
     private readonly IVideoSourceService _sources;
     private readonly ITranscodeSessionService _transcodes;
-    private readonly ISettingsService? _settings;
+    private readonly SettingsService? _settings;
 
     public PlaybackInfoService(
         IVideoSourceService sources,
         ITranscodeSessionService transcodes,
-        ISettingsService? settings = null)
+        SettingsService? settings = null)
     {
         _sources = sources;
         _transcodes = transcodes;

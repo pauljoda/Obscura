@@ -16,6 +16,10 @@ public sealed record SettingsUpdate(
 
 /// <summary>
 /// Application settings values used by the library settings page.
+/// <see cref="HideNsfw"/> is carried alongside the rest of the library settings record so the
+/// Application layer can read and write the persisted state in one round-trip; the shell
+/// settings endpoint exposes it on <see cref="SettingsResult"/> while the library settings
+/// page does not surface it as a separately editable field.
 /// </summary>
 public sealed record LibrarySettingsResult(
     Guid Id,
@@ -45,6 +49,7 @@ public sealed record LibrarySettingsResult(
     string HlsTranscoderProfile,
     string HlsFfmpegPath,
     string HlsVaapiDevice,
+    bool HideNsfw,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 

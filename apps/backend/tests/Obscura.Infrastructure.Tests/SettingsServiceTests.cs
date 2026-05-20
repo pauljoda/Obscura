@@ -11,7 +11,7 @@ public sealed class SettingsServiceTests
     public async Task GetCreatesDefaultRowWhenFreshStartHasNotPreservedSettings()
     {
         await using var db = CreateContext();
-        var service = new SettingsService(db);
+        var service = new SettingsService(new EfSettingsPersistence(db));
 
         var settings = await service.GetAsync(CancellationToken.None);
 
@@ -24,7 +24,7 @@ public sealed class SettingsServiceTests
     public async Task UpdatePersistsSettingsToV2LibrarySettings()
     {
         await using var db = CreateContext();
-        var service = new SettingsService(db);
+        var service = new SettingsService(new EfSettingsPersistence(db));
 
         await service.UpdateAsync(new SettingsUpdate(true, false), CancellationToken.None);
         var settings = await service.GetAsync(CancellationToken.None);
@@ -37,7 +37,7 @@ public sealed class SettingsServiceTests
     public async Task UpdateLibrarySettingsPersistsPreferredAudioLanguages()
     {
         await using var db = CreateContext();
-        var service = new SettingsService(db);
+        var service = new SettingsService(new EfSettingsPersistence(db));
 
         var settings = await service.UpdateLibrarySettingsAsync(
             new LibrarySettingsUpdate(
@@ -54,7 +54,7 @@ public sealed class SettingsServiceTests
     public async Task UpdateLibrarySettingsPersistsHlsTranscoderSettings()
     {
         await using var db = CreateContext();
-        var service = new SettingsService(db);
+        var service = new SettingsService(new EfSettingsPersistence(db));
 
         var settings = await service.UpdateLibrarySettingsAsync(
             new LibrarySettingsUpdate(

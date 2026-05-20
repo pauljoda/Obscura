@@ -65,7 +65,7 @@ public sealed class PlaybackInfoServiceTests
                     new(2, "Audio", "aac", null, "English - Stereo", null, null, null, null, 48000, 2, false, false)
                 ])),
             new TranscodeSessionService(),
-            new FakeSettingsService("en,eng,en-US"));
+            new SettingsService(new FakeSettingsPersistence("en,eng,en-US")));
 
         var info = await service.GetPlaybackInfoAsync(videoId, new PlaybackInfoQuery
         {
@@ -95,41 +95,31 @@ public sealed class PlaybackInfoServiceTests
             Task.FromResult(id == _source.EntityId ? _source : null);
     }
 
-    private sealed class FakeSettingsService : ISettingsService
+    private sealed class FakeSettingsPersistence : ISettingsPersistence
     {
         private readonly string _audioPreferredLanguages;
 
-        public FakeSettingsService(string audioPreferredLanguages)
+        public FakeSettingsPersistence(string audioPreferredLanguages)
         {
             _audioPreferredLanguages = audioPreferredLanguages;
         }
 
-        public Task<SettingsResult> GetAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(new SettingsResult(false, true));
-
-        public Task<SettingsResult> UpdateAsync(SettingsUpdate request, CancellationToken cancellationToken) =>
-            Task.FromResult(new SettingsResult(request.HideNsfw ?? false, request.EnableCastControls ?? true));
-
-        public Task<LibraryConfigResult> GetLibraryConfigAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(new LibraryConfigResult(SampleSettings(), []));
-
-        public Task<LibrarySettingsResult> UpdateLibrarySettingsAsync(
-            LibrarySettingsUpdate request,
-            CancellationToken cancellationToken) =>
+        public Task<LibrarySettingsResult> GetLibrarySettingsAsync(CancellationToken cancellationToken) =>
             Task.FromResult(SampleSettings());
 
-        public Task<LibraryBrowseResult> BrowseLibraryPathAsync(string? path, CancellationToken cancellationToken) =>
-            Task.FromResult(new LibraryBrowseResult(path ?? "/media", "/", []));
+        public Task<LibrarySettingsResult> SaveLibrarySettingsAsync(LibrarySettingsResult state, CancellationToken cancellationToken) =>
+            Task.FromResult(state);
 
-        public Task<LibraryRootResult> CreateLibraryRootAsync(
-            LibraryRootCreate request,
-            CancellationToken cancellationToken) =>
+        public Task<IReadOnlyList<LibraryRootResult>> ListLibraryRootsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<LibraryRootResult>>([]);
+
+        public Task<LibraryRootResult?> GetLibraryRootAsync(Guid id, CancellationToken cancellationToken) =>
+            Task.FromResult<LibraryRootResult?>(null);
+
+        public Task<LibraryRootResult> AddLibraryRootAsync(LibraryRootResult state, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
-        public Task<LibraryRootResult?> UpdateLibraryRootAsync(
-            Guid id,
-            LibraryRootUpdate request,
-            CancellationToken cancellationToken) =>
+        public Task<LibraryRootResult> SaveLibraryRootAsync(LibraryRootResult state, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<bool> DeleteLibraryRootAsync(Guid id, CancellationToken cancellationToken) =>
@@ -164,6 +154,7 @@ public sealed class PlaybackInfoServiceTests
                 "Software",
                 "ffmpeg",
                 "/dev/dri/renderD128",
+                false,
                 DateTimeOffset.UnixEpoch,
                 DateTimeOffset.UnixEpoch);
     }

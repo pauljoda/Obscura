@@ -99,7 +99,7 @@ public static class DependencyInjection {
         services.AddScoped<ITrickplayService, TrickplayService>();
         services.AddScoped<IVideoSubtitleAssetService, VideoSubtitleAssetService>();
         services.AddScoped<IJobQueueService, JobQueueService>();
-        services.AddScoped<ISettingsService, SettingsService>();
+        services.AddScoped<ISettingsPersistence, EfSettingsPersistence>();
         services.AddScoped<EfUserStateService>();
 
         return services;

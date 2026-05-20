@@ -17,7 +17,7 @@ public sealed class SettingsEndpointServiceTests
             {
                 builder.ConfigureServices(services =>
                 {
-                    services.AddScoped<ISettingsService, FakeSettingsService>();
+                    services.AddScoped<ISettingsPersistence, FakeSettingsPersistence>();
                 });
             });
         using var client = factory.CreateClient();
@@ -42,7 +42,7 @@ public sealed class SettingsEndpointServiceTests
             {
                 builder.ConfigureServices(services =>
                 {
-                    services.AddScoped<ISettingsService, FakeSettingsService>();
+                    services.AddScoped<ISettingsPersistence, FakeSettingsPersistence>();
                 });
             });
         using var client = factory.CreateClient();
@@ -64,77 +64,46 @@ public sealed class SettingsEndpointServiceTests
         Assert.True(root.IsSuccessStatusCode);
     }
 
-    private sealed class FakeSettingsService : ISettingsService
+    private sealed class FakeSettingsPersistence : ISettingsPersistence
     {
         private static readonly Guid SettingsId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         private static readonly Guid RootId = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
-        public Task<SettingsResult> GetAsync(CancellationToken cancellationToken)
+        private LibrarySettingsResult _settings = SampleSettings();
+        private readonly Dictionary<Guid, LibraryRootResult> _roots = new() { [RootId] = SampleRoot() };
+
+        public Task<LibrarySettingsResult> GetLibrarySettingsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(_settings);
+
+        public Task<LibrarySettingsResult> SaveLibrarySettingsAsync(LibrarySettingsResult state, CancellationToken cancellationToken)
         {
-            return Task.FromResult(new SettingsResult(false, true));
+            _settings = state with { UpdatedAt = DateTimeOffset.UtcNow };
+            return Task.FromResult(_settings);
         }
 
-        public Task<SettingsResult> UpdateAsync(SettingsUpdate request, CancellationToken cancellationToken)
+        public Task<IReadOnlyList<LibraryRootResult>> ListLibraryRootsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<LibraryRootResult>>(_roots.Values.ToArray());
+
+        public Task<LibraryRootResult?> GetLibraryRootAsync(Guid id, CancellationToken cancellationToken) =>
+            Task.FromResult<LibraryRootResult?>(_roots.GetValueOrDefault(id));
+
+        public Task<LibraryRootResult> AddLibraryRootAsync(LibraryRootResult state, CancellationToken cancellationToken)
         {
-            return Task.FromResult(new SettingsResult(
-                request.HideNsfw ?? false,
-                request.EnableCastControls ?? true));
+            _roots[state.Id] = state;
+            return Task.FromResult(state);
         }
 
-        public Task<LibraryConfigResult> GetLibraryConfigAsync(CancellationToken cancellationToken)
+        public Task<LibraryRootResult> SaveLibraryRootAsync(LibraryRootResult state, CancellationToken cancellationToken)
         {
-            return Task.FromResult(new LibraryConfigResult(
-                SampleSettings(),
-                [SampleRoot()]));
+            _roots[state.Id] = state;
+            return Task.FromResult(state);
         }
 
-        public Task<LibrarySettingsResult> UpdateLibrarySettingsAsync(
-            LibrarySettingsUpdate request,
-            CancellationToken cancellationToken)
-        {
-            return Task.FromResult(SampleSettings() with
-            {
-                ScanIntervalMinutes = request.ScanIntervalMinutes ?? 60
-            });
-        }
+        public Task<bool> DeleteLibraryRootAsync(Guid id, CancellationToken cancellationToken) =>
+            Task.FromResult(_roots.Remove(id));
 
-        public Task<LibraryBrowseResult> BrowseLibraryPathAsync(
-            string? path,
-            CancellationToken cancellationToken)
-        {
-            return Task.FromResult(new LibraryBrowseResult(
-                path ?? "/media",
-                "/",
-                [new LibraryBrowseEntryResult("videos", "/media/videos")]));
-        }
-
-        public Task<LibraryRootResult> CreateLibraryRootAsync(
-            LibraryRootCreate request,
-            CancellationToken cancellationToken)
-        {
-            return Task.FromResult(SampleRoot() with
-            {
-                Path = request.Path,
-                Label = request.Label ?? "Videos"
-            });
-        }
-
-        public Task<LibraryRootResult?> UpdateLibraryRootAsync(
-            Guid id,
-            LibraryRootUpdate request,
-            CancellationToken cancellationToken)
-        {
-            return Task.FromResult<LibraryRootResult?>(SampleRoot());
-        }
-
-        public Task<bool> DeleteLibraryRootAsync(Guid id, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(true);
-        }
-
-        private static LibrarySettingsResult SampleSettings()
-        {
-            return new LibrarySettingsResult(
+        private static LibrarySettingsResult SampleSettings() =>
+            new(
                 SettingsId,
                 false,
                 60,
@@ -162,13 +131,12 @@ public sealed class SettingsEndpointServiceTests
                 "Software",
                 "ffmpeg",
                 "/dev/dri/renderD128",
+                false,
                 DateTimeOffset.UnixEpoch,
                 DateTimeOffset.UnixEpoch);
-        }
 
-        private static LibraryRootResult SampleRoot()
-        {
-            return new LibraryRootResult(
+        private static LibraryRootResult SampleRoot() =>
+            new(
                 RootId,
                 "/media/videos",
                 "Videos",
@@ -182,6 +150,5 @@ public sealed class SettingsEndpointServiceTests
                 null,
                 DateTimeOffset.UnixEpoch,
                 DateTimeOffset.UnixEpoch);
-        }
     }
 }

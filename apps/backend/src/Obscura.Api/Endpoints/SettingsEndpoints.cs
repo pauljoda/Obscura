@@ -12,7 +12,7 @@ public static class SettingsEndpoints
             .WithTags("Settings");
 
         group.MapGet("/", (
-            ISettingsService settings,
+            SettingsService settings,
             CancellationToken cancellationToken) =>
             settings.GetAsync(cancellationToken).ContinueWith(task => task.Result.ToContract(), cancellationToken))
             .WithName("GetSettings")
@@ -20,14 +20,14 @@ public static class SettingsEndpoints
 
         group.MapPatch("/", (
             SettingsUpdateRequest request,
-            ISettingsService settings,
+            SettingsService settings,
             CancellationToken cancellationToken) =>
             settings.UpdateAsync(request.ToApplication(), cancellationToken).ContinueWith(task => task.Result.ToContract(), cancellationToken))
             .WithName("UpdateSettings")
             .WithSummary("Updates application settings.");
 
         group.MapGet("/library", (
-            ISettingsService settings,
+            SettingsService settings,
             CancellationToken cancellationToken) =>
             settings.GetLibraryConfigAsync(cancellationToken).ContinueWith(task => task.Result.ToContract(), cancellationToken))
             .WithName("GetLibraryConfig")
@@ -35,7 +35,7 @@ public static class SettingsEndpoints
 
         group.MapPut("/library", (
             LibrarySettingsUpdateRequest request,
-            ISettingsService settings,
+            SettingsService settings,
             CancellationToken cancellationToken) =>
             settings.UpdateLibrarySettingsAsync(request.ToApplication(), cancellationToken).ContinueWith(task => task.Result.ToContract(), cancellationToken))
             .WithName("UpdateLibrarySettings")
@@ -43,7 +43,7 @@ public static class SettingsEndpoints
 
         routes.MapGet("/api/libraries/browse", (
             string? path,
-            ISettingsService settings,
+            SettingsService settings,
             CancellationToken cancellationToken) =>
             settings.BrowseLibraryPathAsync(path, cancellationToken).ContinueWith(task => task.Result.ToContract(), cancellationToken))
             .WithTags("Settings")
@@ -52,7 +52,7 @@ public static class SettingsEndpoints
 
         routes.MapPost("/api/libraries", (
             LibraryRootCreateRequest request,
-            ISettingsService settings,
+            SettingsService settings,
             CancellationToken cancellationToken) =>
             settings.CreateLibraryRootAsync(request.ToApplication(), cancellationToken).ContinueWith(task => task.Result.ToContract(), cancellationToken))
             .WithTags("Settings")
@@ -62,7 +62,7 @@ public static class SettingsEndpoints
         routes.MapPatch("/api/libraries/{id:guid}", async (
             Guid id,
             LibraryRootUpdateRequest request,
-            ISettingsService settings,
+            SettingsService settings,
             CancellationToken cancellationToken) =>
         {
             var root = await settings.UpdateLibraryRootAsync(id, request.ToApplication(), cancellationToken);
@@ -74,7 +74,7 @@ public static class SettingsEndpoints
 
         routes.MapDelete("/api/libraries/{id:guid}", async (
             Guid id,
-            ISettingsService settings,
+            SettingsService settings,
             CancellationToken cancellationToken) =>
         {
             var deleted = await settings.DeleteLibraryRootAsync(id, cancellationToken);

@@ -42,7 +42,7 @@ public sealed class JobScheduler(
     private async Task ScheduleRecurringScansAsync(CancellationToken cancellationToken)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
-        var settings = scope.ServiceProvider.GetRequiredService<ISettingsService>();
+        var settings = scope.ServiceProvider.GetRequiredService<SettingsService>();
         var queue = scope.ServiceProvider.GetRequiredService<IJobQueueService>();
 
         var config = await settings.GetLibraryConfigAsync(cancellationToken);
