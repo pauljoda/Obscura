@@ -17,7 +17,6 @@ public sealed class Collection : Entity {
         TimeSpan? slideshowDuration = null,
         bool slideshowAutoAdvance = false,
         DateTimeOffset? lastRefreshedAt = null,
-        IEnumerable<Entity>? items = null,
         IEnumerable<EntityCapability>? capabilities = null)
         : base(id, title, capabilities) {
         Mode = mode;
@@ -27,7 +26,6 @@ public sealed class Collection : Entity {
         SlideshowDuration = slideshowDuration ?? TimeSpan.FromSeconds(5);
         SlideshowAutoAdvance = slideshowAutoAdvance;
         LastRefreshedAt = lastRefreshedAt;
-        Items = (items ?? []).ToArray();
     }
 
     public override EntityKind Kind => EntityKind.Collection;
@@ -38,7 +36,6 @@ public sealed class Collection : Entity {
     public TimeSpan SlideshowDuration { get; private set; }
     public bool SlideshowAutoAdvance { get; private set; }
     public DateTimeOffset? LastRefreshedAt { get; private set; }
-    public IReadOnlyList<Entity> Items { get; private set; }
 
     protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
