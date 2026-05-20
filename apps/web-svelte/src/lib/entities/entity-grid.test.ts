@@ -21,7 +21,7 @@ function flags(isNsfw = false): EntityCapability {
 function rating(value: number): EntityCapability {
   return {
     kind: "rating",
-    value: { value },
+    value,
   };
 }
 

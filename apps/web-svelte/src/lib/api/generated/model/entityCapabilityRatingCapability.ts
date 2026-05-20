@@ -5,9 +5,12 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapabilityRatingCapabilityKind } from './entityCapabilityRatingCapabilityKind';
-import type { Rating } from './rating';
 
 export interface EntityCapabilityRatingCapability {
   kind: EntityCapabilityRatingCapabilityKind;
-  value: null | Rating;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  value: number | string | null;
 }

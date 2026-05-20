@@ -44,7 +44,6 @@
     "studio",
     "credits",
     "dates",
-    "counters",
     "stats",
     "positions",
     "classification",
@@ -60,7 +59,6 @@
     studio: "Studio",
     credits: "Credits",
     dates: "Dates",
-    counters: "Counters",
     stats: "Stats",
     positions: "Positions",
     classification: "Classification",
@@ -302,7 +300,6 @@
     if (field === "studio") return patch.studio ?? "";
     if (field === "credits") return patch.credits.map((credit) => credit.character ? `${credit.name} as ${credit.character}` : credit.name).join(", ");
     if (field === "dates") return entries(patch.dates).join(", ");
-    if (field === "counters") return entries(patch.counters).join(", ");
     if (field === "stats") return entries(patch.stats).join(", ");
     if (field === "positions") return entries(patch.positions).join(", ");
     if (field === "classification") return patch.classification ?? "";

@@ -4,10 +4,10 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { CapabilityFilesItem } from './capabilityFilesItem';
 import type { EntityCapabilityFilesCapabilityKind } from './entityCapabilityFilesCapabilityKind';
-import type { EntityFile } from './entityFile';
 
 export interface EntityCapabilityFilesCapability {
   kind: EntityCapabilityFilesCapabilityKind;
-  items: EntityFile[];
+  items: CapabilityFilesItem[];
 }

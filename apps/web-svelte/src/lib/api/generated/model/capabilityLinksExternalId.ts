@@ -5,7 +5,9 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface EntitySource {
-  code: string;
+export interface CapabilityLinksExternalId {
+  provider: string;
   value: string;
+  /** @nullable */
+  url: string | null;
 }

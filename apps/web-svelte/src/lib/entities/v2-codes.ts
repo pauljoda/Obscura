@@ -27,7 +27,6 @@ export const ENTITY_KINDS = Object.values(ENTITY_KIND) as EntityKindCode[];
 /** V2 capability discriminator codes from the generated OpenAPI union. */
 export const CAPABILITY_KIND = {
   classification: "classification",
-  counters: "counters",
   dates: "dates",
   description: "description",
   files: "files",

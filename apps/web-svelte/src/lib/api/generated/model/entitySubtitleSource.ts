@@ -5,8 +5,4 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface EntityUrl {
-  url: string;
-  /** @nullable */
-  label: string | null;
-}
+export interface EntitySubtitleSource {}

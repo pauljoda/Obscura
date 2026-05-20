@@ -4,12 +4,12 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { CapabilityLinksExternalId } from './capabilityLinksExternalId';
+import type { CapabilityLinksUrl } from './capabilityLinksUrl';
 import type { EntityCapabilityLinksCapabilityKind } from './entityCapabilityLinksCapabilityKind';
-import type { EntityExternalId } from './entityExternalId';
-import type { EntityUrl } from './entityUrl';
 
 export interface EntityCapabilityLinksCapability {
   kind: EntityCapabilityLinksCapabilityKind;
-  urls: EntityUrl[];
-  externalIds: EntityExternalId[];
+  urls: CapabilityLinksUrl[];
+  externalIds: CapabilityLinksExternalId[];
 }

@@ -121,7 +121,6 @@ function proposal(
       studio: null,
       credits: options.credits ?? [],
       dates: {},
-      counters: {},
       stats: {},
       positions: {},
       classification: null,

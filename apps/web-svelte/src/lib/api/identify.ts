@@ -65,7 +65,6 @@ export interface EntityMetadataPatch {
   studio?: string | null;
   credits: CreditPatch[];
   dates: Record<string, string>;
-  counters: Record<string, number>;
   stats: Record<string, number>;
   positions: Record<string, number>;
   classification?: string | null;

@@ -26,8 +26,6 @@ export interface PersonDetail {
   /** @nullable */
   gender: string | null;
   /** @nullable */
-  birthdate: string | null;
-  /** @nullable */
   country: string | null;
   /** @nullable */
   ethnicity: string | null;
@@ -51,14 +49,4 @@ export interface PersonDetail {
   tattoos: string | null;
   /** @nullable */
   piercings: string | null;
-  /**
-     * @nullable
-     * @pattern ^-?(?:0|[1-9]\d*)$
-     */
-  careerStart: number | string | null;
-  /**
-     * @nullable
-     * @pattern ^-?(?:0|[1-9]\d*)$
-     */
-  careerEnd: number | string | null;
 }

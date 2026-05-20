@@ -47,7 +47,6 @@ import type {
   JobRun,
   MediaListResponse,
   PersonDetail,
-  Rating,
   SettingsResponse,
   StudioDetail,
   TagDetail,
@@ -65,7 +64,6 @@ import type {
   LibrarySettingsDto,
 } from "@obscura/contracts";
 
-export type V2Rating = Rating;
 export type V2EntityCapability = EntityCapability;
 export type V2EntityCard = EntityThumbnail;
 export type V2EntityDetailCard = EntityCard;

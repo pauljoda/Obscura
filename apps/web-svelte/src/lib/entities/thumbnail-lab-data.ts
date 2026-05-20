@@ -71,7 +71,7 @@ function sequence(
 function rating(value: number): EntityCapability {
   return {
     kind: "rating",
-    value: { value },
+    value,
   };
 }
 

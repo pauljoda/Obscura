@@ -89,7 +89,7 @@ export function extractVideoPlayerProps(
       selected: defaultAudioStreamIndex === stream.Index,
     })),
     subtitleTracks: (subtitles?.items ?? []).map((s) =>
-      mapEntitySubtitle(videoId, s),
+      mapEntitySubtitle(videoId, { ...s, source: String(s.source) }),
     ),
   };
 }
@@ -135,7 +135,7 @@ function mapEntitySubtitle(
     format: string;
     source: string;
     storagePath: string;
-    sourceFormat: string | null;
+    sourceFormat: string;
     sourcePath: string | null;
     isDefault: boolean;
   },
@@ -222,15 +222,6 @@ function parseDotnetTimeSpan(value: string | null | undefined): number {
   const seconds = parseInt(match[4], 10);
   const frac = match[5] ? parseFloat(`0.${match[5]}`) : 0;
   return days * 86400 + hours * 3600 + minutes * 60 + seconds + frac;
-}
-
-export function getCounterValue(
-  capabilities: EntityCapability[],
-  code: string,
-): number {
-  const counters = getCapability(capabilities, CAPABILITY_KIND.counters);
-  const counter = counters?.items.find((c) => c.code === code);
-  return counter ? Number(counter.value) : 0;
 }
 
 export interface PlaybackState {

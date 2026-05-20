@@ -81,7 +81,6 @@
     studio: "Studio",
     credits: "Credits",
     dates: "Dates",
-    counters: "Counters",
     stats: "Stats",
     positions: "Positions",
     classification: "Classification",
@@ -112,7 +111,7 @@
   let lightboxGroup = $state<string | null>(null);
   let modalBodyElement = $state<HTMLDivElement | null>(null);
 
-  const scalarFieldKeys = ["title", "description", "externalIds", "urls", "dates", "counters", "stats", "positions", "classification"];
+  const scalarFieldKeys = ["title", "description", "externalIds", "urls", "dates", "stats", "positions", "classification"];
   const activeProposal = $derived.by(() => {
     if (!proposal) return null;
     const activeId = reviewPath.at(-1) ?? proposal.proposalId;
@@ -482,7 +481,6 @@
     if (field === "studio") return patch.studio ?? "";
     if (field === "credits") return patch.credits.length > 0 ? `${patch.credits.length} credit${patch.credits.length === 1 ? "" : "s"}` : "";
     if (field === "dates") return entries(patch.dates).join(", ");
-    if (field === "counters") return entries(patch.counters).join(", ");
     if (field === "stats") return entries(patch.stats).join(", ");
     if (field === "positions") return entries(patch.positions).join(", ");
     if (field === "classification") return patch.classification ?? "";
@@ -650,7 +648,6 @@
     if (child.patch.studio) count++;
     count += child.patch.credits.length;
     count += Object.keys(child.patch.dates).length;
-    count += Object.keys(child.patch.counters).length;
     count += Object.keys(child.patch.stats).length;
     count += Object.keys(child.patch.positions).length;
     if (child.patch.classification) count++;

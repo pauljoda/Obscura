@@ -5,10 +5,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface EntityPosition {
-  code: string;
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  value: number | string;
+export interface CapabilityLinksUrl {
+  value: string;
   /** @nullable */
   label: string | null;
 }

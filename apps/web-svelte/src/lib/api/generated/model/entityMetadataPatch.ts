@@ -5,7 +5,6 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { CreditPatch } from './creditPatch';
-import type { EntityMetadataPatchCounters } from './entityMetadataPatchCounters';
 import type { EntityMetadataPatchDates } from './entityMetadataPatchDates';
 import type { EntityMetadataPatchExternalIds } from './entityMetadataPatchExternalIds';
 import type { EntityMetadataPatchPositions } from './entityMetadataPatchPositions';
@@ -23,7 +22,6 @@ export interface EntityMetadataPatch {
   studio: string | null;
   credits: CreditPatch[];
   dates: EntityMetadataPatchDates;
-  counters: EntityMetadataPatchCounters;
   stats: EntityMetadataPatchStats;
   positions: EntityMetadataPatchPositions;
   /** @nullable */

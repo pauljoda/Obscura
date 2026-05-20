@@ -18,7 +18,6 @@ const fieldKeys = [
   "studio",
   "credits",
   "dates",
-  "counters",
   "stats",
   "positions",
   "classification",
@@ -151,7 +150,6 @@ function patchForSelectedFields(
     studio: fields.studio ? patch.studio : null,
     credits: fields.credits ? credits : [],
     dates: fields.dates ? patch.dates : {},
-    counters: fields.counters ? patch.counters : {},
     stats: fields.stats ? patch.stats : {},
     positions: fields.positions ? patch.positions : {},
     classification: fields.classification ? patch.classification : null,
@@ -183,7 +181,6 @@ function fieldValue(result: EntityMetadataProposal, field: string): string {
   if (field === "studio") return patch.studio ?? "";
   if (field === "credits") return patch.credits.length > 0 ? `${patch.credits.length}` : "";
   if (field === "dates") return entries(patch.dates).join(", ");
-  if (field === "counters") return entries(patch.counters).join(", ");
   if (field === "stats") return entries(patch.stats).join(", ");
   if (field === "positions") return entries(patch.positions).join(", ");
   if (field === "classification") return patch.classification ?? "";

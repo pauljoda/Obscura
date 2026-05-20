@@ -42,7 +42,7 @@ const ember = "#7b4a24";
 const graphite = "#1f2226";
 
 function rating(value: number): EntityCapability {
-  return { kind: "rating", value: { value } };
+  return { kind: "rating", value };
 }
 
 function flags(options: { isNsfw?: boolean; isFavorite?: boolean; isOrganized?: boolean } = {}): EntityCapability {
@@ -90,9 +90,6 @@ function stats(items: Array<{ code: string; value: number }>): EntityCapability 
   return { kind: "stats", items };
 }
 
-function counters(items: Array<{ code: string; value: number }>): EntityCapability {
-  return { kind: "counters", items };
-}
 
 function technical(options: {
   duration?: string;
@@ -143,7 +140,7 @@ function links(
 ): EntityCapability {
   return {
     kind: "links",
-    urls: urls.map((u) => ({ url: u.url, label: u.label ?? null })),
+    urls: urls.map((u) => ({ value: u.url, label: u.label ?? null })),
     externalIds: externalIds.map((e) => ({ provider: e.provider, value: e.value, url: e.url ?? null })),
   };
 }
@@ -181,7 +178,7 @@ function subtitles(items: Array<{ id: string; language: string; label?: string; 
       format: s.format,
       source: s.source,
       storagePath: `/data/subtitles/${s.id}.${s.format}`,
-      sourceFormat: null,
+      sourceFormat: s.format,
       sourcePath: null,
       isDefault: s.isDefault ?? false,
     })),
@@ -290,10 +287,6 @@ export const detailLabRows: EntityDetailLabRow[] = [
             stats([
               { code: "views", value: 1842 },
               { code: "play-count", value: 47 },
-            ]),
-            counters([
-              { code: "downloads", value: 312 },
-              { code: "bookmarks", value: 28 },
             ]),
             technical({
               duration: "00:09:56.40",
@@ -407,7 +400,6 @@ export const detailLabRows: EntityDetailLabRow[] = [
           flags({ isFavorite: false, isOrganized: true }),
           tags(["landscape", "alps", "photography", "nature", "hdr"]),
           stats([{ code: "images", value: 42 }]),
-          counters([{ code: "downloads", value: 156 }]),
           dates([
             { code: "captured", value: "2025-06 to 2026-02", precision: "month" },
             { code: "added", value: "2026-03-10", sortableValue: "2026-03-10" },

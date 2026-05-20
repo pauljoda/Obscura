@@ -4,17 +4,17 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { EntitySubtitleSource } from './entitySubtitleSource';
 
-export interface EntitySubtitle {
+export interface CapabilitySubtitlesItem {
   id: string;
   language: string;
   /** @nullable */
   label: string | null;
   format: string;
-  source: string;
+  source: EntitySubtitleSource;
   storagePath: string;
-  /** @nullable */
-  sourceFormat: string | null;
+  sourceFormat: string;
   /** @nullable */
   sourcePath: string | null;
   isDefault: boolean;

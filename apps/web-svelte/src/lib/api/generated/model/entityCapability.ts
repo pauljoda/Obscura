@@ -5,7 +5,6 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapabilityClassificationCapability } from './entityCapabilityClassificationCapability';
-import type { EntityCapabilityCountersCapability } from './entityCapabilityCountersCapability';
 import type { EntityCapabilityDatesCapability } from './entityCapabilityDatesCapability';
 import type { EntityCapabilityDescriptionCapability } from './entityCapabilityDescriptionCapability';
 import type { EntityCapabilityFilesCapability } from './entityCapabilityFilesCapability';
@@ -24,4 +23,4 @@ import type { EntityCapabilityStatsCapability } from './entityCapabilityStatsCap
 import type { EntityCapabilitySubtitlesCapability } from './entityCapabilitySubtitlesCapability';
 import type { EntityCapabilityTechnicalCapability } from './entityCapabilityTechnicalCapability';
 
-export type EntityCapability = EntityCapabilityRatingCapability | EntityCapabilityImagesCapability | EntityCapabilityDescriptionCapability | EntityCapabilityLinksCapability | EntityCapabilityFlagsCapability | EntityCapabilityFilesCapability | EntityCapabilityCountersCapability | EntityCapabilityFingerprintsCapability | EntityCapabilityMarkersCapability | EntityCapabilitySubtitlesCapability | EntityCapabilityStatsCapability | EntityCapabilityDatesCapability | EntityCapabilityLifetimeCapability | EntityCapabilityTechnicalCapability | EntityCapabilitySourceCapability | EntityCapabilityProgressCapability | EntityCapabilityPositionCapability | EntityCapabilityClassificationCapability | EntityCapabilityPlaybackCapability;
+export type EntityCapability = EntityCapabilityRatingCapability | EntityCapabilityImagesCapability | EntityCapabilityDescriptionCapability | EntityCapabilityLinksCapability | EntityCapabilityFlagsCapability | EntityCapabilityFilesCapability | EntityCapabilityFingerprintsCapability | EntityCapabilityMarkersCapability | EntityCapabilitySubtitlesCapability | EntityCapabilityStatsCapability | EntityCapabilityDatesCapability | EntityCapabilityLifetimeCapability | EntityCapabilityTechnicalCapability | EntityCapabilitySourceCapability | EntityCapabilityProgressCapability | EntityCapabilityPositionCapability | EntityCapabilityClassificationCapability | EntityCapabilityPlaybackCapability;

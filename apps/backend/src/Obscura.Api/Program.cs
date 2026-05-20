@@ -27,7 +27,23 @@ var cacheDir = ResolvePath(builder.Configuration["OBSCURA_CACHE_DIR"] ??
 
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new CodecJsonConverterFactory()));
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options => {
+    // Nested types like CapabilitySource.Item share the simple name "Item"
+    // with siblings in other capabilities. Use the declaring chain so each
+    // nested record gets a unique OpenAPI schema id.
+    options.CreateSchemaReferenceId = type => {
+        if (type.Type is { IsNested: true } nested) {
+            var declaring = nested.DeclaringType;
+            var prefix = string.Empty;
+            while (declaring is not null) {
+                prefix = declaring.Name + prefix;
+                declaring = declaring.DeclaringType;
+            }
+            return prefix + nested.Name;
+        }
+        return Microsoft.AspNetCore.OpenApi.OpenApiOptions.CreateDefaultSchemaReferenceId(type);
+    };
+});
 builder.Services.AddHealthChecks();
 builder.Services.AddCors(options => {
     options.AddPolicy("ObscuraDevCors", policy => {

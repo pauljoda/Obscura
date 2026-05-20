@@ -6,8 +6,8 @@
  */
 import type { EntityFileRole } from './entityFileRole';
 
-export interface EntityImageAsset {
-  kind: EntityFileRole;
+export interface CapabilityFilesItem {
+  role: EntityFileRole;
   path: string;
   /** @nullable */
   mimeType: string | null;

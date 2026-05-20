@@ -173,9 +173,10 @@ function previewAssets(entity: EntityGridSourceEntity, roles: string[]): EntityT
 
   const results: EntityThumbnailAsset[] = [];
   for (const item of images.items) {
-    if (!roles.includes(item.kind)) continue;
-    if (item.kind === ENTITY_FILE_ROLE.trickplay) continue;
-    results.push(assetFromPath(item.path, entity.title, item.kind));
+    const role = String(item.kind);
+    if (!roles.includes(role)) continue;
+    if (role === ENTITY_FILE_ROLE.trickplay) continue;
+    results.push(assetFromPath(item.path, entity.title, role));
   }
   return results;
 }
@@ -449,7 +450,7 @@ export function buildCapabilityFilterOptions(cards: EntityThumbnailCard[]): Enti
           }
           break;
         case CAPABILITY_KIND.rating: {
-          const ratingValue = numberValue(capability.value?.value);
+          const ratingValue = numberValue(capability.value);
           if (ratingValue && ratingValue > 0) {
             addOption(options, { id: "rating:any", label: "Rated", capabilityKind: CAPABILITY_KIND.rating });
             for (const value of [1, 2, 3, 4, 5]) {
@@ -467,7 +468,7 @@ export function buildCapabilityFilterOptions(cards: EntityThumbnailCard[]): Enti
           break;
         }
         case CAPABILITY_KIND.images:
-          for (const role of new Set(capability.items.map((item) => item.kind))) {
+          for (const role of new Set(capability.items.map((item) => String(item.kind)))) {
             addOption(options, {
               id: `images:${role}`,
               label: `Has ${role} image`,

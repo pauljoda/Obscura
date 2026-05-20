@@ -5,7 +5,6 @@ import type {
   EntityCapabilityImagesCapability,
   EntityCapabilityRatingCapability,
   EntityCapabilityTechnicalCapability,
-  Rating,
 } from "$lib/api/generated/model";
 
 export type EntityCapabilityKind = EntityCapability["kind"];
@@ -53,7 +52,7 @@ export function getFlagsCapability(
 }
 
 export function getRatingValue(capabilities: EntityCapability[]): number {
-  const value = getRatingCapability(capabilities)?.value?.value;
+  const value = getRatingCapability(capabilities)?.value;
   return typeof value === "number" ? value : Number(value ?? 0);
 }
 
@@ -77,12 +76,11 @@ export function withRatingCapability(
   capabilities: EntityCapability[],
   value: number | null,
 ): EntityCapability[] {
-  const rating: Rating | null = value == null ? null : { value };
   return capabilities.map((capability) =>
     capability.kind === "rating"
       ? {
           ...capability,
-          value: rating,
+          value,
         }
       : capability,
   );

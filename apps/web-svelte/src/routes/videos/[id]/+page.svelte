@@ -135,7 +135,7 @@
       id: "playback",
       label: "Playback",
       icon: Play,
-      hidden: (card?.counters.length ?? 0) === 0 && !playbackState,
+      hidden: !playbackState,
     },
     {
       id: "source",
@@ -741,26 +741,18 @@
             </div>
           {/if}
         {:else if section.id === "playback"}
-          {#if card.counters.length > 0 || playbackState}
+          {#if playbackState}
             <div class="tab-data-list">
-              {#if playbackState}
+              <div class="tab-data-row">
+                <span>Play Count</span>
+                <strong>{playbackState.playCount}</strong>
+              </div>
+              {#if playbackState.resumeSeconds > 0}
                 <div class="tab-data-row">
-                  <span>Play Count</span>
-                  <strong>{playbackState.playCount}</strong>
+                  <span>Resume</span>
+                  <strong>{formatTimestamp(playbackState.resumeSeconds)}</strong>
                 </div>
-                {#if playbackState.resumeSeconds > 0}
-                  <div class="tab-data-row">
-                    <span>Resume</span>
-                    <strong>{formatTimestamp(playbackState.resumeSeconds)}</strong>
-                  </div>
-                {/if}
               {/if}
-              {#each card.counters as row (row.code)}
-                <div class="tab-data-row">
-                  <span>{row.label}</span>
-                  <strong>{row.value}</strong>
-                </div>
-              {/each}
             </div>
           {/if}
         {:else if section.id === "source"}

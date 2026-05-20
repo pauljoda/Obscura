@@ -5,8 +5,4 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface EntityStat {
-  code: string;
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  value: number | string;
-}
+export interface FingerprintAlgorithm {}

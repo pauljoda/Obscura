@@ -5,4 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type EntityMetadataPatchCounters = {[key: string]: number | string};
+export interface CapabilitySourceItem {
+  code: string;
+  value: string;
+}

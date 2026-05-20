@@ -5,9 +5,4 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface EntityFile {
-  role: string;
-  path: string;
-  /** @nullable */
-  mimeType: string | null;
-}
+export interface EntityFileRole {}

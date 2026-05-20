@@ -8,15 +8,15 @@ import {
   type EntityCapabilityKind,
 } from "$lib/api/capabilities";
 import type {
+  CapabilityFingerprintsItem as EntityFingerprint,
+  CapabilityLinksExternalId as EntityExternalId,
+  CapabilityLinksUrl as EntityUrl,
+  CapabilityMarkersItem as EntityMarker,
+  CapabilitySourceItem as EntitySource,
+  CapabilitySubtitlesItem as EntitySubtitle,
   EntityCapability,
   EntityCard,
   EntityDate,
-  EntityExternalId,
-  EntityFingerprint,
-  EntityMarker,
-  EntitySource,
-  EntitySubtitle,
-  EntityUrl,
 } from "$lib/api/generated/model";
 import { CAPABILITY_KIND, ENTITY_FILE_ROLE } from "./v2-codes";
 import { getEntityKindLabel } from "./entity-grid";
@@ -175,7 +175,6 @@ export interface EntityDetailCardFull extends EntityDetailCard {
   positions: EntityDetailPosition[];
   classification: EntityDetailClassification | null;
   sources: EntitySource[];
-  counters: EntityDetailStat[];
 }
 
 function numberValue(value: number | string | null | undefined): number | null {
@@ -235,7 +234,7 @@ function resolveHero(capabilities: EntityCapability[]): EntityDetailHero | null 
       item.kind === ENTITY_FILE_ROLE.hero ||
       item.kind === ENTITY_FILE_ROLE.banner,
   );
-  if (coverItem) return { src: coverItem.path, alt: coverItem.kind };
+  if (coverItem) return { src: coverItem.path, alt: String(coverItem.kind) };
   return null;
 }
 
@@ -245,7 +244,7 @@ function resolvePoster(capabilities: EntityCapability[]): EntityDetailPoster | n
   const posterItem = images.items.find(
     (item) => item.kind === ENTITY_FILE_ROLE.poster || item.kind === ENTITY_FILE_ROLE.thumbnail,
   );
-  if (posterItem) return { src: posterItem.path, alt: posterItem.kind };
+  if (posterItem) return { src: posterItem.path, alt: String(posterItem.kind) };
   if (images.coverUrl) return { src: images.coverUrl, alt: "Cover" };
   if (images.thumbnailUrl) return { src: images.thumbnailUrl, alt: "Thumbnail" };
   return null;
@@ -295,7 +294,7 @@ function resolveLinks(capabilities: EntityCapability[]): EntityDetailLink[] {
   if (!linksCap) return [];
   const result: EntityDetailLink[] = [];
   for (const url of linksCap.urls) {
-    result.push({ label: url.label ?? url.url, url: url.url });
+    result.push({ label: url.label ?? url.value, url: url.value });
   }
   for (const ext of linksCap.externalIds) {
     result.push({ label: `${ext.provider}: ${ext.value}`, url: ext.url, provider: ext.provider });
@@ -327,7 +326,7 @@ function resolveSubtitles(capabilities: EntityCapability[]): EntityDetailSubtitl
     language: item.language,
     label: item.label,
     format: item.format,
-    source: item.source,
+    source: String(item.source),
     isDefault: item.isDefault,
   }));
 }
@@ -370,7 +369,6 @@ export function entityCardToDetailCard(entity: EntityCard): EntityDetailCardFull
   ] as EntityCapabilityKind[];
 
   const statsCap = getCapability(capabilities, CAPABILITY_KIND.stats);
-  const countersCap = getCapability(capabilities, CAPABILITY_KIND.counters);
   const datesCap = getCapability(capabilities, CAPABILITY_KIND.dates);
   const filesCap = getCapability(capabilities, CAPABILITY_KIND.files);
   const fingerprintsCap = getCapability(capabilities, CAPABILITY_KIND.fingerprints);
@@ -400,12 +398,12 @@ export function entityCardToDetailCard(entity: EntityCard): EntityDetailCardFull
       code: item.code,
       label: formatDateCode(item.code),
       value: item.value,
-      sortable: item.sortableValue,
+      sortable: item.sortableValue ?? null,
     })),
     technical: resolveTechnical(capabilities),
     links: resolveLinks(capabilities),
     files: (filesCap?.items ?? []).map((item) => ({
-      role: item.role,
+      role: String(item.role),
       path: item.path,
       mimeType: item.mimeType,
     })),
@@ -418,11 +416,6 @@ export function entityCardToDetailCard(entity: EntityCard): EntityDetailCardFull
       ? { value: classificationCap.value, system: classificationCap.system }
       : null,
     sources: sourcesCap?.items ?? [],
-    counters: (countersCap?.items ?? []).map((item) => ({
-      code: item.code,
-      label: formatStatCode(item.code),
-      value: String(item.value),
-    })),
     presentCapabilities,
   };
 }
@@ -449,7 +442,7 @@ export function presentSections(card: EntityDetailCard | EntityDetailCardFull): 
   const full = card as EntityDetailCardFull;
   if (full.studio) sections.push("studio");
   if (full.credits?.length > 0) sections.push("credits");
-  if ((full.stats?.length ?? 0) > 0 || (full.counters?.length ?? 0) > 0) sections.push("stats");
+  if ((full.stats?.length ?? 0) > 0) sections.push("stats");
   if (full.dates?.length > 0) sections.push("dates");
   if (full.technical?.length > 0) sections.push("technical");
   if (full.fingerprints?.length > 0) sections.push("fingerprints");

@@ -4,10 +4,10 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { CapabilitySubtitlesItem } from './capabilitySubtitlesItem';
 import type { EntityCapabilitySubtitlesCapabilityKind } from './entityCapabilitySubtitlesCapabilityKind';
-import type { EntitySubtitle } from './entitySubtitle';
 
 export interface EntityCapabilitySubtitlesCapability {
   kind: EntityCapabilitySubtitlesCapabilityKind;
-  items: EntitySubtitle[];
+  items: CapabilitySubtitlesItem[];
 }

@@ -5,11 +5,10 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface EntityDate {
+export interface CapabilityPositionItem {
   code: string;
-  value: string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  value: number | string;
   /** @nullable */
-  sortableValue?: string | null;
-  /** @nullable */
-  precision?: string | null;
+  label?: string | null;
 }
