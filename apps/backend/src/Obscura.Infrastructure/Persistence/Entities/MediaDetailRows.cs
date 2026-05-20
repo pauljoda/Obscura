@@ -15,11 +15,6 @@ public sealed class GalleryDetailRow
     public Guid? CoverImageEntityId { get; set; }
 }
 
-public sealed class ImageDetailRow
-{
-    public Guid EntityId { get; set; }
-}
-
 public sealed class BookDetailRow
 {
     public Guid EntityId { get; set; }
@@ -27,25 +22,10 @@ public sealed class BookDetailRow
     public Guid? CoverPageEntityId { get; set; }
 }
 
-public sealed class BookVolumeDetailRow
-{
-    public Guid EntityId { get; set; }
-}
-
 public sealed class BookChapterDetailRow
 {
     public Guid EntityId { get; set; }
     public Guid? CoverPageEntityId { get; set; }
-}
-
-public sealed class BookPageDetailRow
-{
-    public Guid EntityId { get; set; }
-}
-
-public sealed class AudioLibraryDetailRow
-{
-    public Guid EntityId { get; set; }
 }
 
 public sealed class AudioTrackDetailRow

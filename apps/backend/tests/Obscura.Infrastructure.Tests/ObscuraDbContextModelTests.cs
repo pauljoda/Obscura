@@ -35,12 +35,8 @@ public sealed class ObscuraDbContextModelTests
     [InlineData(typeof(VideoDetailRow), "video_details")]
     [InlineData(typeof(VideoSeriesDetailRow), "video_series_details")]
     [InlineData(typeof(GalleryDetailRow), "gallery_details")]
-    [InlineData(typeof(ImageDetailRow), "image_details")]
     [InlineData(typeof(BookDetailRow), "book_details")]
-    [InlineData(typeof(BookVolumeDetailRow), "book_volume_details")]
     [InlineData(typeof(BookChapterDetailRow), "book_chapter_details")]
-    [InlineData(typeof(BookPageDetailRow), "book_page_details")]
-    [InlineData(typeof(AudioLibraryDetailRow), "audio_library_details")]
     [InlineData(typeof(AudioTrackDetailRow), "audio_track_details")]
     [InlineData(typeof(PersonDetailRow), "person_details")]
     [InlineData(typeof(StudioDetailRow), "studio_details")]
@@ -148,12 +144,8 @@ public sealed class ObscuraDbContextModelTests
     }
 
     [Theory]
-    [InlineData(typeof(AudioLibraryDetailRow), "parent_library_entity_id")]
-    [InlineData(typeof(BookVolumeDetailRow), "book_entity_id")]
     [InlineData(typeof(BookChapterDetailRow), "book_entity_id")]
     [InlineData(typeof(BookChapterDetailRow), "volume_entity_id")]
-    [InlineData(typeof(BookPageDetailRow), "book_entity_id")]
-    [InlineData(typeof(BookPageDetailRow), "chapter_entity_id")]
     [InlineData(typeof(StudioDetailRow), "parent_studio_entity_id")]
     [InlineData(typeof(TagDetailRow), "parent_tag_entity_id")]
     public void DetailRowsDoNotKeepParentSpecificRelationshipColumns(Type entityType, string columnName)

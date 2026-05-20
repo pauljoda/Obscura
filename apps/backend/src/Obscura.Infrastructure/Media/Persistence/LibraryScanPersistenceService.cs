@@ -115,7 +115,6 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         var id = Guid.NewGuid();
 
         db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.Image.Code, Title = title, ParentEntityId = galleryEntityId, SortOrder = galleryEntityId is null ? null : sortOrder, CreatedAt = now, UpdatedAt = now });
-        db.ImageDetails.Add(new ImageDetailRow { EntityId = id });
         db.EntityFiles.Add(new EntityFileRow
         {
             Id = Guid.NewGuid(), EntityId = id, Role = EntityFileRole.Source,
@@ -225,7 +224,6 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         var id = Guid.NewGuid();
 
         db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.AudioLibrary.Code, Title = title, CreatedAt = now, UpdatedAt = now });
-        db.AudioLibraryDetails.Add(new AudioLibraryDetailRow { EntityId = id });
         db.EntityFiles.Add(new EntityFileRow
         {
             Id = Guid.NewGuid(), EntityId = id, Role = EntityFileRole.Source,
@@ -330,7 +328,6 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         var id = Guid.NewGuid();
 
         db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.BookPage.Code, Title = title, ParentEntityId = chapterEntityId, SortOrder = sortOrder, CreatedAt = now, UpdatedAt = now });
-        db.BookPageDetails.Add(new BookPageDetailRow { EntityId = id });
         db.EntityFiles.Add(new EntityFileRow
         {
             Id = Guid.NewGuid(), EntityId = id, Role = EntityFileRole.Source,

@@ -73,17 +73,9 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<GalleryDetailRow> GalleryDetails => Set<GalleryDetailRow>();
 
-    public DbSet<ImageDetailRow> ImageDetails => Set<ImageDetailRow>();
-
     public DbSet<BookDetailRow> BookDetails => Set<BookDetailRow>();
 
-    public DbSet<BookVolumeDetailRow> BookVolumeDetails => Set<BookVolumeDetailRow>();
-
     public DbSet<BookChapterDetailRow> BookChapterDetails => Set<BookChapterDetailRow>();
-
-    public DbSet<BookPageDetailRow> BookPageDetails => Set<BookPageDetailRow>();
-
-    public DbSet<AudioLibraryDetailRow> AudioLibraryDetails => Set<AudioLibraryDetailRow>();
 
     public DbSet<AudioTrackDetailRow> AudioTrackDetails => Set<AudioTrackDetailRow>();
 

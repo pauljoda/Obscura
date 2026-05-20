@@ -51,6 +51,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Historical v1-era release note detail was pruned from the changelog; git history remains the complete record.
 - The stale API projection service layer was removed from Application/Infrastructure while the new domain-first persistence slice is established.
 - Temporary v2 upgrade-gate, fresh-start, backup, and legacy import endpoints/jobs/UI were removed from the app.
+- The empty `image_details`, `book_volume_details`, `book_page_details`, and `audio_library_details` placeholder tables were dropped now that no entity carries kind-specific columns for those storage shapes.
 
 ### Docs
 - Backend architecture guidance now documents the Clean Architecture, DDD-lite, CQRS-lite, EF Core, DTO, and generated-client contract for future Obscura work.

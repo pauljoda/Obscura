@@ -30,14 +30,6 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<GalleryDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<ImageDetailRow>(entity =>
-        {
-            entity.ToTable("image_details");
-            entity.HasKey(row => row.EntityId);
-            entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.HasOne<EntityRow>().WithOne().HasForeignKey<ImageDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
-        });
-
         ConfigureBooks(modelBuilder);
         ConfigureAudio(modelBuilder);
     }
@@ -57,14 +49,6 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<BookDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<BookVolumeDetailRow>(entity =>
-        {
-            entity.ToTable("book_volume_details");
-            entity.HasKey(row => row.EntityId);
-            entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.HasOne<EntityRow>().WithOne().HasForeignKey<BookVolumeDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
-        });
-
         modelBuilder.Entity<BookChapterDetailRow>(entity =>
         {
             entity.ToTable("book_chapter_details");
@@ -74,25 +58,10 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<BookChapterDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<BookPageDetailRow>(entity =>
-        {
-            entity.ToTable("book_page_details");
-            entity.HasKey(row => row.EntityId);
-            entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.HasOne<EntityRow>().WithOne().HasForeignKey<BookPageDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
-        });
     }
 
     private static void ConfigureAudio(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<AudioLibraryDetailRow>(entity =>
-        {
-            entity.ToTable("audio_library_details");
-            entity.HasKey(row => row.EntityId);
-            entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.HasOne<EntityRow>().WithOne().HasForeignKey<AudioLibraryDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
-        });
-
         modelBuilder.Entity<AudioTrackDetailRow>(entity =>
         {
             entity.ToTable("audio_track_details");
