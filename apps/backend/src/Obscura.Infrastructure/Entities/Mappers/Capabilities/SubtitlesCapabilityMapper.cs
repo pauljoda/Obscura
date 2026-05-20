@@ -12,6 +12,10 @@ internal sealed class SubtitlesCapabilityMapper(ObscuraDbContext db) : IEntityCa
             .Where(r => r.EntityId == entity.Id)
             .OrderBy(r => r.CreatedAt)
             .ToArrayAsync(cancellationToken);
+        rows = rows
+            .Where(r => Path.IsPathRooted(r.StoragePath) && File.Exists(r.StoragePath))
+            .ToArray();
+
         if (rows.Length == 0) {
             return;
         }

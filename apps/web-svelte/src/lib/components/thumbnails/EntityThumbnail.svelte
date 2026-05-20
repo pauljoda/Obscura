@@ -101,7 +101,8 @@
         img.src = hover.spriteUrl;
       }
       spriteFrames = await loadTrickplayFrames(hover.vttUrl);
-    } catch {
+    } catch (err) {
+      console.warn("Failed to load thumbnail trickplay frames", err);
       spriteError = true;
     }
   }
@@ -134,6 +135,7 @@
 
   function handlePointerMove(event: PointerEvent) {
     updatePointerRatio(event);
+    void ensureSpriteLoaded();
   }
 
   function handleFocus() {

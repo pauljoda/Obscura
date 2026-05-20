@@ -51,6 +51,158 @@ public sealed class LibraryScanPersistenceServiceTests {
     }
 
     [Fact]
+    public async Task DownstreamNeedsSubtitleExtractionWhenStoredSubtitleFileIsMissing() {
+        await using var db = CreateContext();
+        var videoId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        SeedVideo(db, videoId);
+        db.VideoDetails.Add(new VideoDetailRow {
+            EntityId = videoId,
+            SubtitlesExtractedAt = DateTimeOffset.UtcNow
+        });
+        db.EntitySubtitles.Add(new EntitySubtitleRow {
+            Id = Guid.NewGuid(),
+            EntityId = videoId,
+            Language = "eng",
+            Format = "vtt",
+            Source = EntitySubtitleSource.Embedded,
+            StoragePath = "/tmp/obscura/missing-subtitle.vtt",
+            SourceFormat = "vtt",
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var service = new LibraryScanPersistenceService(db);
+        var needs = await service.CheckDownstreamNeedsBatchAsync([videoId], CancellationToken.None);
+
+        Assert.True(needs[videoId].NeedsSubtitleExtraction);
+    }
+
+    [Fact]
+    public async Task UpsertSubtitleRefreshesExistingStreamInsteadOfDuplicatingIt() {
+        await using var db = CreateContext();
+        var videoId = Guid.Parse("44444444-4444-4444-4444-444444444444");
+        var subtitleId = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        SeedVideo(db, videoId);
+        db.EntitySubtitles.Add(new EntitySubtitleRow {
+            Id = subtitleId,
+            EntityId = videoId,
+            Language = "eng",
+            Format = "vtt",
+            Source = EntitySubtitleSource.Embedded,
+            StoragePath = "/tmp/obscura/stale.vtt",
+            SourceFormat = "vtt",
+            SourcePath = "3",
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var service = new LibraryScanPersistenceService(db);
+        await service.UpsertSubtitleAsync(
+            videoId,
+            "eng",
+            "SDH",
+            "vtt",
+            EntitySubtitleSource.Embedded,
+            "/data/cache/videos/444/subtitles/embedded-eng-3.vtt",
+            "vtt",
+            3,
+            CancellationToken.None);
+
+        var subtitle = Assert.Single(db.EntitySubtitles.Where(row => row.EntityId == videoId));
+        Assert.Equal(subtitleId, subtitle.Id);
+        Assert.Equal("/data/cache/videos/444/subtitles/embedded-eng-3.vtt", subtitle.StoragePath);
+        Assert.Equal("SDH", subtitle.Label);
+    }
+
+    [Fact]
+    public async Task UpsertSubtitleRefreshesLegacyLanguageRowWhenStoredFileIsMissing() {
+        await using var db = CreateContext();
+        var videoId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+        var subtitleId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        SeedVideo(db, videoId);
+        db.EntitySubtitles.Add(new EntitySubtitleRow {
+            Id = subtitleId,
+            EntityId = videoId,
+            Language = "eng",
+            Format = "vtt",
+            Source = EntitySubtitleSource.Embedded,
+            StoragePath = "/tmp/obscura/stale.vtt",
+            SourceFormat = "vtt",
+            SourcePath = null,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var service = new LibraryScanPersistenceService(db);
+        await service.UpsertSubtitleAsync(
+            videoId,
+            "eng",
+            "SDH",
+            "vtt",
+            EntitySubtitleSource.Embedded,
+            "/data/cache/videos/666/subtitles/embedded-eng-3.vtt",
+            "vtt",
+            3,
+            CancellationToken.None);
+
+        var subtitle = Assert.Single(db.EntitySubtitles.Where(row => row.EntityId == videoId));
+        Assert.Equal(subtitleId, subtitle.Id);
+        Assert.Equal("/data/cache/videos/666/subtitles/embedded-eng-3.vtt", subtitle.StoragePath);
+        Assert.Equal("3", subtitle.SourcePath);
+    }
+
+    [Fact]
+    public async Task UpsertSubtitleRemovesMissingLegacyConflictBeforeNormalizingStreamLanguage() {
+        await using var db = CreateContext();
+        var videoId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        var legacyId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+        var streamId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        SeedVideo(db, videoId);
+        db.EntitySubtitles.AddRange(
+            new EntitySubtitleRow {
+                Id = legacyId,
+                EntityId = videoId,
+                Language = "eng",
+                Format = "vtt",
+                Source = EntitySubtitleSource.Embedded,
+                StoragePath = "/tmp/obscura/stale.vtt",
+                SourceFormat = "vtt",
+                SourcePath = null,
+                CreatedAt = DateTimeOffset.UtcNow
+            },
+            new EntitySubtitleRow {
+                Id = streamId,
+                EntityId = videoId,
+                Language = "eng.3",
+                Format = "vtt",
+                Source = EntitySubtitleSource.Embedded,
+                StoragePath = "/tmp/obscura/url-shaped.vtt",
+                SourceFormat = "subrip",
+                SourcePath = "3",
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+        await db.SaveChangesAsync();
+
+        var service = new LibraryScanPersistenceService(db);
+        await service.UpsertSubtitleAsync(
+            videoId,
+            "eng",
+            "SDH",
+            "vtt",
+            EntitySubtitleSource.Embedded,
+            "/data/cache/videos/888/subtitles/embedded-eng-3.vtt",
+            "subrip",
+            3,
+            CancellationToken.None);
+
+        var subtitle = Assert.Single(db.EntitySubtitles.Where(row => row.EntityId == videoId));
+        Assert.Equal(streamId, subtitle.Id);
+        Assert.Equal("eng", subtitle.Language);
+        Assert.Equal("/data/cache/videos/888/subtitles/embedded-eng-3.vtt", subtitle.StoragePath);
+        Assert.Equal("3", subtitle.SourcePath);
+    }
+
+    [Fact]
     public async Task UpsertVideosBatchMaterializesSeasonHierarchyAndReusesMigratedSeries() {
         await using var db = CreateContext();
         var seriesId = Guid.Parse("11111111-1111-1111-1111-111111111111");

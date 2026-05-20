@@ -133,9 +133,19 @@ public sealed class EfEntityReadService : IEntityReadService {
         var coverByEntity = covers
             .GroupBy(file => file.EntityId)
             .ToDictionary(group => group.Key, group => group.First().Path);
+        var hoverFiles = await _db.EntityFiles.AsNoTracking()
+            .Where(file => ids.Contains(file.EntityId) && file.Role == EntityFileRole.Trickplay)
+            .Where(file => file.Path.EndsWith(".m3u8") || file.Path.EndsWith(".vtt"))
+            .OrderByDescending(file => file.Path.EndsWith(".m3u8"))
+            .ThenBy(file => file.CreatedAt)
+            .ToArrayAsync(cancellationToken);
+        var hoverByEntity = hoverFiles
+            .GroupBy(file => file.EntityId)
+            .ToDictionary(group => group.Key, group => group.First().Path);
 
         return rows.Select(row => {
             flags.TryGetValue(row.Id, out var flag);
+            var hoverUrl = hoverByEntity.GetValueOrDefault(row.Id);
             return new EntityThumbnail(
                 row.Id,
                 row.KindCode,
@@ -143,8 +153,8 @@ public sealed class EfEntityReadService : IEntityReadService {
                 row.ParentEntityId,
                 row.SortOrder,
                 coverByEntity.GetValueOrDefault(row.Id),
-                "none",
-                null,
+                hoverUrl is null ? "none" : "sprite",
+                hoverUrl,
                 [],
                 ratings.GetValueOrDefault(row.Id),
                 flag?.IsFavorite ?? false,

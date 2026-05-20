@@ -769,10 +769,21 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
             .Select(t => t.EntityId)
             .ToListAsync(cancellationToken)).ToHashSet();
 
-        var hasSubtitles = (await db.VideoDetails.AsNoTracking()
+        var subtitlesExtracted = (await db.VideoDetails.AsNoTracking()
             .Where(v => ids.Contains(v.EntityId) && v.SubtitlesExtractedAt != null)
             .Select(v => v.EntityId)
             .ToListAsync(cancellationToken)).ToHashSet();
+        var subtitleRows = await db.EntitySubtitles.AsNoTracking()
+            .Where(subtitle => ids.Contains(subtitle.EntityId))
+            .Select(subtitle => new { subtitle.EntityId, subtitle.StoragePath })
+            .ToListAsync(cancellationToken);
+        var subtitlesByEntity = subtitleRows
+            .GroupBy(subtitle => subtitle.EntityId)
+            .ToDictionary(group => group.Key, group => group.ToArray());
+        var hasUsableSubtitleState = subtitlesExtracted
+            .Where(id => !subtitlesByEntity.TryGetValue(id, out var rows) ||
+                rows.All(row => File.Exists(row.StoragePath)))
+            .ToHashSet();
 
         var result = new Dictionary<Guid, DownstreamNeeds>(ids.Count);
         foreach (var id in ids) {
@@ -781,7 +792,7 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
                 NeedsFingerprint: !hasFingerprint.Contains(id),
                 NeedsPreview: !hasThumbnail.Contains(id),
                 NeedsTrickplay: !hasTrickplay.Contains(id),
-                NeedsSubtitleExtraction: !hasSubtitles.Contains(id));
+                NeedsSubtitleExtraction: !hasUsableSubtitleState.Contains(id));
         }
 
         return result;
@@ -1011,12 +1022,50 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
     public async Task UpsertSubtitleAsync(Guid entityId, string language, string? label, string format,
         EntitySubtitleSource source, string storagePath, string sourceFormat, int streamIndex, CancellationToken cancellationToken) {
         var langKey = language;
+        var streamKey = streamIndex.ToString();
+
+        var streamMatch = await db.EntitySubtitles
+            .FirstOrDefaultAsync(s => s.EntityId == entityId && s.Source == source
+                && s.SourcePath == streamKey, cancellationToken);
+        if (streamMatch is not null) {
+            if (!string.Equals(streamMatch.Language, langKey, StringComparison.Ordinal)) {
+                var legacyConflict = await db.EntitySubtitles
+                    .FirstOrDefaultAsync(s => s.EntityId == entityId && s.Source == source
+                        && s.Language == langKey && s.Id != streamMatch.Id, cancellationToken);
+
+                if (legacyConflict is not null &&
+                    string.IsNullOrWhiteSpace(legacyConflict.SourcePath) &&
+                    !File.Exists(legacyConflict.StoragePath)) {
+                    db.EntitySubtitles.Remove(legacyConflict);
+                } else if (legacyConflict is not null) {
+                    langKey = streamMatch.Language;
+                }
+            }
+
+            streamMatch.Language = langKey;
+            streamMatch.Label = label;
+            streamMatch.Format = format;
+            streamMatch.StoragePath = storagePath;
+            streamMatch.SourceFormat = sourceFormat;
+            await db.SaveChangesAsync(cancellationToken);
+            return;
+        }
 
         var existing = await db.EntitySubtitles
             .FirstOrDefaultAsync(s => s.EntityId == entityId && s.Language == langKey
                 && s.Source == source, cancellationToken);
 
         if (existing is not null) {
+            if (string.IsNullOrWhiteSpace(existing.SourcePath) && !File.Exists(existing.StoragePath)) {
+                existing.Label = label;
+                existing.Format = format;
+                existing.StoragePath = storagePath;
+                existing.SourceFormat = sourceFormat;
+                existing.SourcePath = streamKey;
+                await db.SaveChangesAsync(cancellationToken);
+                return;
+            }
+
             langKey = $"{language}.{streamIndex}";
             var duplicate = await db.EntitySubtitles
                 .AnyAsync(s => s.EntityId == entityId && s.Language == langKey
@@ -1034,7 +1083,7 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
             Source = source,
             StoragePath = storagePath,
             SourceFormat = sourceFormat,
-            SourcePath = streamIndex.ToString(),
+            SourcePath = streamKey,
             CreatedAt = DateTimeOffset.UtcNow
         });
 

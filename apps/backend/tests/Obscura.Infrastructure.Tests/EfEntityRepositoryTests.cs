@@ -111,8 +111,9 @@ public sealed class EfEntityRepositoryTests {
         Set(video, new CapabilityLinks(
             [new CapabilityLinks.Url("https://example.test", "Example")],
             [new CapabilityLinks.ExternalId("tmdb", "42", "https://tmdb.test/42")]));
+        var subtitlePath = Path.GetTempFileName();
         Set(video, new CapabilitySubtitles([new CapabilitySubtitles.Item(
-            Guid.NewGuid(), "en", "English", "srt", EntitySubtitleSource.Embedded, "/s/en.srt", "srt", null, true)]));
+            Guid.NewGuid(), "en", "English", "srt", EntitySubtitleSource.Embedded, subtitlePath, "srt", null, true)]));
         Set(video, new CapabilityFingerprints([new CapabilityFingerprints.Item(FingerprintAlgorithm.Md5, "deadbeef")]));
         Set(video, new CapabilityClassification("R", "MPAA"));
         Set(video, new CapabilityProgress(currentEntityId: null, unit: "chapter", index: 4, total: 10, mode: "paged", updatedAt: DateTimeOffset.UtcNow));
@@ -138,6 +139,35 @@ public sealed class EfEntityRepositoryTests {
         Assert.Equal("R", loaded.Classification!.Value);
         Assert.Equal(4, loaded.Progress!.Index);
         Assert.Equal(10, loaded.Progress!.Total);
+
+        File.Delete(subtitlePath);
+    }
+
+    [Fact]
+    public async Task FindAsyncDoesNotHydrateMissingSubtitleFiles() {
+        await using var db = CreateContext();
+        var id = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        SeedEntity(db, id, EntityKind.Video, "Missing subtitle");
+        db.VideoDetails.Add(new VideoDetailRow {
+            EntityId = id
+        });
+        db.EntitySubtitles.Add(new EntitySubtitleRow {
+            Id = Guid.NewGuid(),
+            EntityId = id,
+            Language = "en",
+            Label = "English",
+            Format = "vtt",
+            Source = EntitySubtitleSource.Embedded,
+            StoragePath = "/tmp/obscura/missing-subtitle.vtt",
+            SourceFormat = "vtt",
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var repository = new EfEntityRepository(db, EntityMappers.Kinds(db), EntityMappers.Capabilities(db));
+        var loaded = await repository.RequireAsync<Video>(id, CancellationToken.None);
+
+        Assert.Empty(loaded.SubtitleCapability!.Items);
     }
 
     [Fact]

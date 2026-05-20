@@ -48,9 +48,8 @@ public sealed class ExtractSubtitlesJobHandler(
             var matchingStream = streams.FirstOrDefault(s => s.StreamIndex.ToString() == indexStr);
             var label = matchingStream?.Title;
 
-            var subtitleFileName = Path.GetFileName(path);
             await Persistence.UpsertSubtitleAsync(entityId, language, label, "vtt",
-                EntitySubtitleSource.Embedded, assets.SubtitleUrl(entityId, subtitleFileName), matchingStream?.CodecName ?? "unknown", streamIndex, cancellationToken);
+                EntitySubtitleSource.Embedded, path, matchingStream?.CodecName ?? "unknown", streamIndex, cancellationToken);
         }
 
         await Persistence.MarkSubtitlesExtractedAsync(entityId, cancellationToken);

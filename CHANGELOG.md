@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Reads and writes now flow through one faithful domain entity and a single projection, so detail pages, ratings, flags, playback, markers, and all other capabilities stay consistent across the app.
 - The legacy "counters" concept was removed: scraped numeric metadata (runtime, vote counts, and similar) now lives in entity stats, and structural counts are derived from child items instead of being stored. Community identify plugins must send `stats` instead of `counters`, and you should rescan your library roots.
 - Entity hierarchy storage now uses each entity's parent pointer directly instead of a separate child-link table, reducing duplicated structure and preserving existing structural links during migration.
+- Video subtitles and thumbnail previews now recover from stale generated media cache entries, so rescans can rebuild missing subtitle files and browse thumbnails can use trickplay hover previews again.
 
 ### Added
 - High-level v2 implementation summary for the rebuilt Obscura architecture, media model, playback pipeline, and UI surfaces.
@@ -48,6 +49,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Identify review no longer marks existing relationship tags as new or navigates away when clicking selectable cast thumbnails.
 - Local v2 reset now keeps required entity-kind metadata so legacy migration tests can run cleanly.
 - Entity rating, flags, playback resume/completion, and timeline marker writes now persist through domain behavior and EF repository saves.
+- Video browse thumbnails now advertise generated trickplay playlists to the frontend, restoring hover preview scrubbing on grid cards.
+- Missing generated subtitle files now cause videos to be queued for subtitle extraction again, and re-extraction refreshes the existing subtitle track instead of adding a duplicate stale entry.
 
 ### Removed
 - Historical v1-era release note detail was pruned from the changelog; git history remains the complete record.
