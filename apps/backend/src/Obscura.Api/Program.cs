@@ -1,7 +1,9 @@
+using System.Text.Json.Serialization.Metadata;
 using Obscura.Api;
 using Obscura.Api.Endpoints;
 using Obscura.Api.Serialization;
 using Obscura.Application;
+using Obscura.Contracts.Entities;
 using Obscura.Contracts.System;
 using Obscura.Infrastructure;
 using Obscura.Infrastructure.Persistence;
@@ -25,8 +27,11 @@ var cacheDir = ResolvePath(builder.Configuration["OBSCURA_CACHE_DIR"] ??
     builder.Configuration["Obscura:CacheDir"] ??
     Path.Combine(dataDir, "cache"), builder.Environment.ContentRootPath);
 
-builder.Services.ConfigureHttpJsonOptions(options =>
-    options.SerializerOptions.Converters.Add(new CodecJsonConverterFactory()));
+builder.Services.ConfigureHttpJsonOptions(options => {
+    options.SerializerOptions.Converters.Add(new CodecJsonConverterFactory());
+    options.SerializerOptions.TypeInfoResolver = (options.SerializerOptions.TypeInfoResolver ?? new DefaultJsonTypeInfoResolver())
+        .WithAddedModifier(CapabilityPolymorphism.ConfigureEntityCapabilityPolymorphism);
+});
 builder.Services.AddOpenApi(options => {
     // Nested types like CapabilitySource.Item share the simple name "Item"
     // with siblings in other capabilities. Use the declaring chain so each

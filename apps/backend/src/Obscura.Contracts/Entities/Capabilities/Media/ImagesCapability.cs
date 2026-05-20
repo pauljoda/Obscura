@@ -7,6 +7,7 @@ namespace Obscura.Contracts.Entities;
 /// <param name="Items">Actual image or generated visual assets attached to this entity.</param>
 /// <param name="ThumbnailUrl">Small artwork URL for cards and rows.</param>
 /// <param name="CoverUrl">Large artwork URL for detail surfaces.</param>
+[CapabilityKind("images")]
 public sealed record ImagesCapability(
     IReadOnlyList<string> SupportedKinds,
     IReadOnlyList<EntityImageAsset> Items,

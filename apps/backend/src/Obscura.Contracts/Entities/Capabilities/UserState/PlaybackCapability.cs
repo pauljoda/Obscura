@@ -10,6 +10,7 @@ namespace Obscura.Contracts.Entities;
 /// <param name="ResumeSeconds">Position in seconds where playback should resume.</param>
 /// <param name="LastPlayedAt">Timestamp of the most recent playback event.</param>
 /// <param name="CompletedAt">Timestamp when the entity was fully watched, if applicable.</param>
+[CapabilityKind("playback")]
 public sealed record PlaybackCapability(
     int PlayCount,
     double PlayDurationSeconds,
