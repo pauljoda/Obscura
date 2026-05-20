@@ -12,6 +12,7 @@ using Obscura.Application.Videos;
 using Obscura.Infrastructure.Collections;
 using Obscura.Infrastructure.Database;
 using Obscura.Infrastructure.Entities;
+using Obscura.Infrastructure.Entities.Mappers;
 using Obscura.Infrastructure.Media.Adapters;
 using Obscura.Infrastructure.Media.Persistence;
 using Obscura.Infrastructure.Media.Processing;
@@ -84,6 +85,7 @@ public static class DependencyInjection {
             new MaintenancePersistenceService(provider.GetRequiredService<ObscuraDbContext>(), dataDir));
         services.AddScoped<ICollectionRuleEngine, CollectionRuleEngine>();
         services.AddScoped<ICollectionRefreshPersistence, CollectionRefreshPersistenceService>();
+        RegisterEntityMappers(services);
         services.AddScoped<EfEntityRepository>();
         services.AddScoped<IEntityWriteRepository>(provider => provider.GetRequiredService<EfEntityRepository>());
         services.AddScoped<IEntityReadService, EfEntityReadService>();
@@ -105,6 +107,21 @@ public static class DependencyInjection {
         services.AddScoped<IUserStatePersistence, EfUserStatePersistence>();
 
         return services;
+    }
+
+    private static void RegisterEntityMappers(IServiceCollection services) {
+        var assembly = typeof(IEntityKindMapper).Assembly;
+        var mapperInterfaces = new[] { typeof(IEntityKindMapper), typeof(IEntityCapabilityMapper) };
+        var implementations = assembly.GetTypes()
+            .Where(type => type is { IsClass: true, IsAbstract: false });
+
+        foreach (var type in implementations) {
+            foreach (var contract in mapperInterfaces) {
+                if (contract.IsAssignableFrom(type)) {
+                    services.AddScoped(contract, type);
+                }
+            }
+        }
     }
 
     private static string NormalizePath(string path, string basePath) =>

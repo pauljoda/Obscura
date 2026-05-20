@@ -4,6 +4,7 @@ using Obscura.Domain.Entities;
 using Obscura.Domain.Media;
 using Obscura.Domain.Taxonomy;
 using Obscura.Infrastructure.Entities;
+using Obscura.Infrastructure.Entities.Mappers;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
 
@@ -59,7 +60,7 @@ public sealed class EfEntityRepositoryTests {
             });
         await db.SaveChangesAsync();
 
-        var repository = new EfEntityRepository(db);
+        var repository = new EfEntityRepository(db, EntityMappers.Kinds(db), EntityMappers.Capabilities(db));
         var series = await repository.RequireAsync<VideoSeries>(seriesId, CancellationToken.None);
 
         Assert.Equal(EntityKind.VideoSeries, series.Kind);
@@ -84,7 +85,7 @@ public sealed class EfEntityRepositoryTests {
         series.AddRelationship(tag);
         series.Credits!.Add(person, CreditRole.Actor, "Detective");
 
-        var repository = new EfEntityRepository(db);
+        var repository = new EfEntityRepository(db, EntityMappers.Kinds(db), EntityMappers.Capabilities(db));
         await repository.SaveAsync(series, CancellationToken.None);
 
         Assert.Equal("video-series", Assert.Single(db.Entities.Where(row => row.Id == series.Id)).KindCode);
@@ -128,7 +129,7 @@ public sealed class EfEntityRepositoryTests {
         Set(video, new CapabilityClassification("R", "MPAA"));
         Set(video, new CapabilityProgress(currentEntityId: null, unit: "chapter", index: 4, total: 10, mode: "paged", updatedAt: DateTimeOffset.UtcNow));
 
-        var repository = new EfEntityRepository(db);
+        var repository = new EfEntityRepository(db, EntityMappers.Kinds(db), EntityMappers.Capabilities(db));
         await repository.SaveAsync(video, CancellationToken.None);
 
         var loaded = await repository.RequireAsync<Video>(id, CancellationToken.None);
@@ -154,7 +155,7 @@ public sealed class EfEntityRepositoryTests {
     [Fact]
     public async Task SaveThenFindRoundTripsKindSpecificDetail() {
         await using var db = CreateContext();
-        var repository = new EfEntityRepository(db);
+        var repository = new EfEntityRepository(db, EntityMappers.Kinds(db), EntityMappers.Capabilities(db));
         var cover = Guid.Parse("12121212-1212-1212-1212-121212121212");
         var refreshed = DateTimeOffset.UtcNow;
 
@@ -210,7 +211,7 @@ public sealed class EfEntityRepositoryTests {
     [Fact]
     public async Task MissingOptionalAndRequiredLoadsUseDifferentPaths() {
         await using var db = CreateContext();
-        var repository = new EfEntityRepository(db);
+        var repository = new EfEntityRepository(db, EntityMappers.Kinds(db), EntityMappers.Capabilities(db));
         var id = Guid.Parse("99999999-9999-9999-9999-999999999999");
 
         Assert.Null(await repository.FindAsync<Video>(id, CancellationToken.None));

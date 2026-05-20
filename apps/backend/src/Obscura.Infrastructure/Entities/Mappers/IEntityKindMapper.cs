@@ -1,0 +1,28 @@
+using Obscura.Domain.Entities;
+using Obscura.Infrastructure.Persistence.Entities;
+
+namespace Obscura.Infrastructure.Entities.Mappers;
+
+/// <summary>
+/// Per-kind persistence mapper. One implementation per <see cref="EntityKind"/> owns the
+/// concrete domain constructor wiring and per-kind detail row read/write so
+/// <see cref="EfEntityRepository"/> can stay a coordinator over a discovered set of
+/// mappers. Adding a new kind means adding one mapper next to the row, not editing the
+/// repository.
+/// </summary>
+public interface IEntityKindMapper {
+    /// <summary>Entity kind handled by this mapper.</summary>
+    EntityKind Kind { get; }
+
+    /// <summary>
+    /// Builds the concrete <see cref="Entity"/> for this kind from the loaded
+    /// <paramref name="row"/>, reading any kind-specific detail row as needed.
+    /// </summary>
+    Task<Entity> ConstructAsync(EntityRow row, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Writes the kind-specific detail row(s) for <paramref name="entity"/>. No-op when
+    /// the kind has no detail table.
+    /// </summary>
+    Task PersistDetailAsync(Entity entity, CancellationToken cancellationToken);
+}
