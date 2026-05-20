@@ -81,13 +81,8 @@ public sealed class EntityMetadataApplyServiceTests
         var seasonId = Guid.Parse("33333333-3333-3333-3333-333333333333");
         var episodeId = Guid.Parse("44444444-4444-4444-4444-444444444444");
         SeedEntity(db, seriesId, "video-series", "Old Series");
-        SeedEntity(db, seasonId, "video-season", "Old Season");
+        SeedEntity(db, seasonId, "video-season", "Old Season", parentEntityId: seriesId, sortOrder: 1);
         SeedEntity(db, episodeId, "video", "Old Episode");
-        db.VideoSeasonDetails.Add(new VideoSeasonDetailRow
-        {
-            EntityId = seasonId,
-            SeasonNumber = 1
-        });
         db.EntityChildLinks.AddRange(
             new EntityChildLinkRow
             {
@@ -298,11 +293,6 @@ public sealed class EntityMetadataApplyServiceTests
         SeedEntity(db, seriesId, "video-series", "Series");
         SeedEntity(db, seasonId, "video-season", "Season", parentEntityId: seriesId, sortOrder: 1);
         SeedEntity(db, episodeId, "video", "Episode", parentEntityId: seasonId, sortOrder: 1);
-        db.VideoSeasonDetails.Add(new VideoSeasonDetailRow
-        {
-            EntityId = seasonId,
-            SeasonNumber = 1
-        });
         db.EntityChildLinks.AddRange(
             new EntityChildLinkRow
             {
@@ -373,7 +363,6 @@ public sealed class EntityMetadataApplyServiceTests
 
         Assert.Equal(3, (await db.Entities.FindAsync([seasonId]))?.SortOrder);
         Assert.Equal(2, (await db.Entities.FindAsync([episodeId]))?.SortOrder);
-        Assert.Equal(3, (await db.VideoSeasonDetails.FindAsync([seasonId]))?.SeasonNumber);
         Assert.Equal(3, (await db.EntityChildLinks.FindAsync([seriesId, seasonId, "video-season"]))?.SortOrder);
         Assert.Equal(2, (await db.EntityChildLinks.FindAsync([seasonId, episodeId, "video"]))?.SortOrder);
         Assert.Equal(3, (await db.EntityPositions.FindAsync([seasonId, "season"]))?.Value);

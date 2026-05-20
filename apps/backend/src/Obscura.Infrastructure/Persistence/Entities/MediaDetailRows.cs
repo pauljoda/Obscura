@@ -8,12 +8,6 @@ public sealed class VideoSeriesDetailRow
     public string? Status { get; set; }
 }
 
-public sealed class VideoSeasonDetailRow
-{
-    public Guid EntityId { get; set; }
-    public int SeasonNumber { get; set; }
-}
-
 public sealed class GalleryDetailRow
 {
     public Guid EntityId { get; set; }

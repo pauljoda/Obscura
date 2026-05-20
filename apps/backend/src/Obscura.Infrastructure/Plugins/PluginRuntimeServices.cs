@@ -794,10 +794,10 @@ public sealed class IdentifyPluginService
             positions[row.Code] = row.Value;
         }
 
-        var seasonNumber = await _db.VideoSeasonDetails
+        var seasonNumber = await _db.Entities
             .AsNoTracking()
-            .Where(row => row.EntityId == entityId)
-            .Select(row => (int?)row.SeasonNumber)
+            .Where(row => row.Id == entityId && row.KindCode == EntityKindRegistry.VideoSeason.Code)
+            .Select(row => row.SortOrder)
             .FirstOrDefaultAsync(cancellationToken);
         if (seasonNumber is { } value)
         {

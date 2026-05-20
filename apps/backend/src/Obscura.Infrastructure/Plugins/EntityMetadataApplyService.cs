@@ -442,16 +442,6 @@ public sealed class EntityMetadataApplyService
         entity.SortOrder = sortOrder.Value;
         entity.UpdatedAt = now;
 
-        if (entity.KindCode.Equals(EntityKindRegistry.VideoSeason.Code, StringComparison.OrdinalIgnoreCase) &&
-            positions.TryGetValue("season", out var seasonNumber))
-        {
-            var detail = await _db.VideoSeasonDetails.FindAsync([entity.Id], cancellationToken);
-            if (detail is not null)
-            {
-                detail.SeasonNumber = seasonNumber;
-            }
-        }
-
         if (entity.ParentEntityId is null)
         {
             return;

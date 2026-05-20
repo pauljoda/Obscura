@@ -340,7 +340,6 @@ public sealed class PluginRuntimeServiceTests : IDisposable
                 IsStructural = true,
                 CreatedAt = now
             });
-        db.VideoSeasonDetails.Add(new VideoSeasonDetailRow { EntityId = seasonId, SeasonNumber = 1 });
         await db.SaveChangesAsync();
 
         var executor = new FullTreeProcessExecutor();

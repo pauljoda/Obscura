@@ -604,29 +604,21 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
             return cachedSeasonId;
         }
 
-        var localSeasonId = (
-            from link in db.EntityChildLinks.Local
-            join detail in db.VideoSeasonDetails.Local on link.ChildEntityId equals detail.EntityId
-            where link.ParentEntityId == seriesId
-                  && link.ChildKindCode == EntityKindRegistry.VideoSeason.Code
-                  && detail.SeasonNumber == season.SeasonNumber
-            select detail.EntityId).FirstOrDefault();
-        var storedSeasonId = localSeasonId == Guid.Empty
-            ? await (
-                from link in db.EntityChildLinks
-                join detail in db.VideoSeasonDetails on link.ChildEntityId equals detail.EntityId
-                where link.ParentEntityId == seriesId
-                      && link.ChildKindCode == EntityKindRegistry.VideoSeason.Code
-                      && detail.SeasonNumber == season.SeasonNumber
-                select detail.EntityId).FirstOrDefaultAsync(cancellationToken)
-            : localSeasonId;
-        var existingDetail = storedSeasonId == Guid.Empty
-            ? null
-            : db.VideoSeasonDetails.Local.FirstOrDefault(row => row.EntityId == storedSeasonId)
-              ?? await db.VideoSeasonDetails.FirstOrDefaultAsync(row => row.EntityId == storedSeasonId, cancellationToken);
-        var seasonId = existingDetail?.EntityId ?? Guid.NewGuid();
+        var localSeasonId = db.Entities.Local
+            .Where(entity => entity.ParentEntityId == seriesId
+                && entity.KindCode == EntityKindRegistry.VideoSeason.Code
+                && entity.SortOrder == season.SeasonNumber)
+            .Select(entity => entity.Id)
+            .FirstOrDefault();
+        var existingSeasonRow = localSeasonId != Guid.Empty
+            ? db.Entities.Local.FirstOrDefault(entity => entity.Id == localSeasonId)
+            : await db.Entities.FirstOrDefaultAsync(entity =>
+                entity.ParentEntityId == seriesId
+                && entity.KindCode == EntityKindRegistry.VideoSeason.Code
+                && entity.SortOrder == season.SeasonNumber, cancellationToken);
+        var seasonId = existingSeasonRow?.Id ?? Guid.NewGuid();
 
-        if (existingDetail is null)
+        if (existingSeasonRow is null)
         {
             db.Entities.Add(new EntityRow
             {
@@ -638,22 +630,13 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
                 CreatedAt = now,
                 UpdatedAt = now
             });
-            db.VideoSeasonDetails.Add(new VideoSeasonDetailRow
-            {
-                EntityId = seasonId,
-                SeasonNumber = season.SeasonNumber
-            });
         }
         else
         {
-            var tracked = await db.Entities.FindAsync([seasonId], cancellationToken);
-            if (tracked is not null)
-            {
-                tracked.Title = season.Title;
-                tracked.ParentEntityId = seriesId;
-                tracked.SortOrder = season.SeasonNumber;
-                tracked.UpdatedAt = now;
-            }
+            existingSeasonRow.Title = season.Title;
+            existingSeasonRow.ParentEntityId = seriesId;
+            existingSeasonRow.SortOrder = season.SeasonNumber;
+            existingSeasonRow.UpdatedAt = now;
         }
 
         await EnsureEntityFileAsync(seasonId, EntityFileRole.Source, season.FolderPath, sizeBytes: null, now, cancellationToken);

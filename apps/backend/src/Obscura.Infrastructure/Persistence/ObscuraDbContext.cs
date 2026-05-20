@@ -71,8 +71,6 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<VideoSeriesDetailRow> VideoSeriesDetails => Set<VideoSeriesDetailRow>();
 
-    public DbSet<VideoSeasonDetailRow> VideoSeasonDetails => Set<VideoSeasonDetailRow>();
-
     public DbSet<GalleryDetailRow> GalleryDetails => Set<GalleryDetailRow>();
 
     public DbSet<ImageDetailRow> ImageDetails => Set<ImageDetailRow>();

@@ -17,15 +17,6 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<VideoSeriesDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<VideoSeasonDetailRow>(entity =>
-        {
-            entity.ToTable("video_season_details");
-            entity.HasKey(row => row.EntityId);
-            entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.Property(row => row.SeasonNumber).HasColumnName("season_number");
-            entity.HasOne<EntityRow>().WithOne().HasForeignKey<VideoSeasonDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
-        });
-
         modelBuilder.Entity<GalleryDetailRow>(entity =>
         {
             entity.ToTable("gallery_details");

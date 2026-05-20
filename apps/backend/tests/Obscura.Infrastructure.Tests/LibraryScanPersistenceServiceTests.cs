@@ -103,9 +103,7 @@ public sealed class LibraryScanPersistenceServiceTests
         Assert.Equal(4, Assert.Single(db.EntityRatings.Where(rating => rating.EntityId == seriesId)).Value);
 
         var season = Assert.Single(db.Entities.Where(entity => entity.KindCode == EntityKindRegistry.VideoSeason.Code));
-        var seasonDetail = Assert.Single(db.VideoSeasonDetails);
-        Assert.Equal(season.Id, seasonDetail.EntityId);
-        Assert.Equal(1, seasonDetail.SeasonNumber);
+        Assert.Equal(1, season.SortOrder);
 
         Assert.DoesNotContain(db.EntityChildLinks, link =>
             link.ParentEntityId == seriesId &&

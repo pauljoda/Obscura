@@ -34,7 +34,6 @@ public sealed class ObscuraDbContextModelTests
     [InlineData(typeof(EntityFileFingerprintRow), "entity_file_fingerprints")]
     [InlineData(typeof(VideoDetailRow), "video_details")]
     [InlineData(typeof(VideoSeriesDetailRow), "video_series_details")]
-    [InlineData(typeof(VideoSeasonDetailRow), "video_season_details")]
     [InlineData(typeof(GalleryDetailRow), "gallery_details")]
     [InlineData(typeof(ImageDetailRow), "image_details")]
     [InlineData(typeof(BookDetailRow), "book_details")]
@@ -149,7 +148,6 @@ public sealed class ObscuraDbContextModelTests
     }
 
     [Theory]
-    [InlineData(typeof(VideoSeasonDetailRow), "series_entity_id")]
     [InlineData(typeof(AudioLibraryDetailRow), "parent_library_entity_id")]
     [InlineData(typeof(BookVolumeDetailRow), "book_entity_id")]
     [InlineData(typeof(BookChapterDetailRow), "book_entity_id")]
