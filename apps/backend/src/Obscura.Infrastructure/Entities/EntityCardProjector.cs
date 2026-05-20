@@ -16,15 +16,16 @@ public static class EntityCardProjector
 {
     /// <summary>Projects a hydrated domain entity to the shared entity card contract.</summary>
     public static EntityCard ToCard(Entity entity) =>
-        new(
-            entity.Id,
-            EntityKindRegistry.ToCode(entity.Kind),
-            entity.Title,
-            entity.ParentEntityId,
-            entity.SortOrder,
-            MapCapabilities(entity),
-            ToGroups(entity.ChildrenByKind),
-            ToGroups(entity.RelationshipsByKind));
+        new() {
+            Id = entity.Id,
+            Kind = EntityKindRegistry.ToCode(entity.Kind),
+            Title = entity.Title,
+            ParentEntityId = entity.ParentEntityId,
+            SortOrder = entity.SortOrder,
+            Capabilities = MapCapabilities(entity),
+            ChildrenByKind = ToGroups(entity.ChildrenByKind),
+            Relationships = ToGroups(entity.RelationshipsByKind),
+        };
 
     /// <summary>Projects the credited people exposed on detail routes.</summary>
     public static IReadOnlyList<EntityCreditMetadata> CreditMetadata(Entity entity) =>

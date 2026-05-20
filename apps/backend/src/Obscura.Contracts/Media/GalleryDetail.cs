@@ -5,24 +5,13 @@ namespace Obscura.Contracts.Media;
 /// <summary>
 /// API-facing detail shape for an image gallery.
 /// </summary>
-/// <param name="Id">Gallery entity identifier.</param>
-/// <param name="Kind">Entity kind code.</param>
-/// <param name="Title">Gallery title.</param>
-/// <param name="ParentEntityId">Structural parent entity identifier, when this gallery is nested.</param>
-/// <param name="Capabilities">Shared entity capabilities projected for the gallery.</param>
-/// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
-/// <param name="CreditMetadata">Relationship edge metadata for credited people shown on detail pages.</param>
-/// <param name="GalleryType">Gallery storage shape.</param>
-/// <param name="CoverImageId">Selected cover image entity, when one is set.</param>
-public sealed record GalleryDetail(
-    Guid Id,
-    string Kind,
-    string Title,
-    Guid? ParentEntityId,
-    int? SortOrder,
-    IReadOnlyList<EntityCapability> Capabilities,
-    IReadOnlyList<EntityGroup> ChildrenByKind,
-    IReadOnlyList<EntityGroup> Relationships,
-    IReadOnlyList<EntityCreditMetadata> CreditMetadata,
-    string GalleryType,
-    Guid? CoverImageId) : IEntityCard;
+public sealed record GalleryDetail : EntityDetail {
+    /// <summary>Relationship edge metadata for credited people shown on detail pages.</summary>
+    public required IReadOnlyList<EntityCreditMetadata> CreditMetadata { get; init; }
+
+    /// <summary>Gallery storage shape.</summary>
+    public required string GalleryType { get; init; }
+
+    /// <summary>Selected cover image entity, when one is set.</summary>
+    public required Guid? CoverImageId { get; init; }
+}

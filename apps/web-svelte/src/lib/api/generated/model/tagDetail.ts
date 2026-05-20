@@ -8,6 +8,7 @@ import type { EntityCapability } from './entityCapability';
 import type { EntityGroup } from './entityGroup';
 
 export interface TagDetail {
+  ignoreAutoTag: boolean;
   id: string;
   kind: string;
   title: string;
@@ -21,5 +22,4 @@ export interface TagDetail {
   capabilities: EntityCapability[];
   childrenByKind: EntityGroup[];
   relationships: EntityGroup[];
-  ignoreAutoTag: boolean;
 }

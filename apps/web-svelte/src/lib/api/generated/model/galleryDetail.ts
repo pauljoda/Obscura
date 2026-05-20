@@ -9,6 +9,10 @@ import type { EntityCreditMetadata } from './entityCreditMetadata';
 import type { EntityGroup } from './entityGroup';
 
 export interface GalleryDetail {
+  creditMetadata: EntityCreditMetadata[];
+  galleryType: string;
+  /** @nullable */
+  coverImageId: string | null;
   id: string;
   kind: string;
   title: string;
@@ -22,8 +26,4 @@ export interface GalleryDetail {
   capabilities: EntityCapability[];
   childrenByKind: EntityGroup[];
   relationships: EntityGroup[];
-  creditMetadata: EntityCreditMetadata[];
-  galleryType: string;
-  /** @nullable */
-  coverImageId: string | null;
 }

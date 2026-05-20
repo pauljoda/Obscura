@@ -8,6 +8,9 @@ import type { EntityCapability } from './entityCapability';
 import type { EntityGroup } from './entityGroup';
 
 export interface BookDetail {
+  bookType: string;
+  /** @nullable */
+  coverPageId: string | null;
   id: string;
   kind: string;
   title: string;
@@ -21,7 +24,4 @@ export interface BookDetail {
   capabilities: EntityCapability[];
   childrenByKind: EntityGroup[];
   relationships: EntityGroup[];
-  bookType: string;
-  /** @nullable */
-  coverPageId: string | null;
 }

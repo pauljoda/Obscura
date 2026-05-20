@@ -39,25 +39,41 @@ public interface IEntityCard
 }
 
 /// <summary>
-/// Normalized card/detail shape used across media, taxonomy, and collection routes.
+/// Abstract base for every entity detail contract. Owns the cross-cutting envelope so
+/// concrete <c>*Detail</c> records only declare their kind-specific extras.
+/// Serializes flat — derived properties merge with the base properties on the wire.
 /// </summary>
-/// <param name="Id">Global entity identifier.</param>
-/// <param name="Kind">Entity kind code.</param>
-/// <param name="Title">Primary display title.</param>
-/// <param name="ParentEntityId">Structural parent entity identifier, or null for root and virtual collection children.</param>
-/// <param name="SortOrder">Optional structural order under the parent entity.</param>
-/// <param name="Capabilities">Shared capabilities already projected for the card.</param>
-/// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
-/// <param name="Relationships">Generic non-structural relationship groups keyed by entity kind.</param>
-public sealed record EntityCard(
-    Guid Id,
-    string Kind,
-    string Title,
-    Guid? ParentEntityId,
-    int? SortOrder,
-    IReadOnlyList<EntityCapability> Capabilities,
-    IReadOnlyList<EntityGroup> ChildrenByKind,
-    IReadOnlyList<EntityGroup> Relationships) : IEntityCard;
+public abstract record EntityDetail : IEntityCard {
+    /// <inheritdoc />
+    public required Guid Id { get; init; }
+
+    /// <inheritdoc />
+    public required string Kind { get; init; }
+
+    /// <inheritdoc />
+    public required string Title { get; init; }
+
+    /// <inheritdoc />
+    public required Guid? ParentEntityId { get; init; }
+
+    /// <inheritdoc />
+    public required int? SortOrder { get; init; }
+
+    /// <inheritdoc />
+    public required IReadOnlyList<EntityCapability> Capabilities { get; init; }
+
+    /// <inheritdoc />
+    public required IReadOnlyList<EntityGroup> ChildrenByKind { get; init; }
+
+    /// <inheritdoc />
+    public required IReadOnlyList<EntityGroup> Relationships { get; init; }
+}
+
+/// <summary>
+/// Normalized card/detail shape used across media, taxonomy, and collection routes
+/// when a route returns the shared envelope with no kind-specific extras.
+/// </summary>
+public sealed record EntityCard : EntityDetail;
 
 /// <summary>
 /// Cursor-paged entity list response.

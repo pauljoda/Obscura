@@ -9,6 +9,9 @@ import type { EntityCreditMetadata } from './entityCreditMetadata';
 import type { EntityGroup } from './entityGroup';
 
 export interface VideoDetail {
+  creditMetadata: EntityCreditMetadata[];
+  /** @nullable */
+  subtitlesExtractedAt: string | null;
   id: string;
   kind: string;
   title: string;
@@ -22,7 +25,4 @@ export interface VideoDetail {
   capabilities: EntityCapability[];
   childrenByKind: EntityGroup[];
   relationships: EntityGroup[];
-  creditMetadata: EntityCreditMetadata[];
-  /** @nullable */
-  subtitlesExtractedAt: string | null;
 }

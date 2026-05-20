@@ -8,19 +8,6 @@ import type { EntityCapability } from './entityCapability';
 import type { EntityGroup } from './entityGroup';
 
 export interface PersonDetail {
-  id: string;
-  kind: string;
-  title: string;
-  /** @nullable */
-  parentEntityId: string | null;
-  /**
-     * @nullable
-     * @pattern ^-?(?:0|[1-9]\d*)$
-     */
-  sortOrder: number | string | null;
-  capabilities: EntityCapability[];
-  childrenByKind: EntityGroup[];
-  relationships: EntityGroup[];
   /** @nullable */
   disambiguation: string | null;
   /** @nullable */
@@ -49,4 +36,17 @@ export interface PersonDetail {
   tattoos: string | null;
   /** @nullable */
   piercings: string | null;
+  id: string;
+  kind: string;
+  title: string;
+  /** @nullable */
+  parentEntityId: string | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  sortOrder: number | string | null;
+  capabilities: EntityCapability[];
+  childrenByKind: EntityGroup[];
+  relationships: EntityGroup[];
 }

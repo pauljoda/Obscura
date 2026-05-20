@@ -8,6 +8,23 @@ import type { EntityCapability } from './entityCapability';
 import type { EntityGroup } from './entityGroup';
 
 export interface CollectionDetail {
+  /** @nullable */
+  mode: string | null;
+  /** @nullable */
+  ruleTreeJson: string | null;
+  /** @nullable */
+  coverMode: string | null;
+  /** @nullable */
+  coverItemId: string | null;
+  /**
+     * @nullable
+     * @pattern ^-?(\d+\.)?\d{2}:\d{2}:\d{2}(\.\d{1,7})?$
+     */
+  slideshowDuration: string | null;
+  /** @nullable */
+  slideshowAutoAdvance: boolean | null;
+  /** @nullable */
+  lastRefreshedAt: string | null;
   id: string;
   kind: string;
   title: string;
@@ -21,21 +38,4 @@ export interface CollectionDetail {
   capabilities: EntityCapability[];
   childrenByKind: EntityGroup[];
   relationships: EntityGroup[];
-  /** @nullable */
-  mode?: string | null;
-  /** @nullable */
-  ruleTreeJson?: string | null;
-  /** @nullable */
-  coverMode?: string | null;
-  /** @nullable */
-  coverItemId?: string | null;
-  /**
-     * @nullable
-     * @pattern ^-?(\d+\.)?\d{2}:\d{2}:\d{2}(\.\d{1,7})?$
-     */
-  slideshowDuration?: string | null;
-  /** @nullable */
-  slideshowAutoAdvance?: boolean | null;
-  /** @nullable */
-  lastRefreshedAt?: string | null;
 }

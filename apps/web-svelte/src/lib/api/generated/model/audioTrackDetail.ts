@@ -8,6 +8,10 @@ import type { EntityCapability } from './entityCapability';
 import type { EntityGroup } from './entityGroup';
 
 export interface AudioTrackDetail {
+  /** @nullable */
+  embeddedArtist: string | null;
+  /** @nullable */
+  embeddedAlbum: string | null;
   id: string;
   kind: string;
   title: string;
@@ -21,8 +25,4 @@ export interface AudioTrackDetail {
   capabilities: EntityCapability[];
   childrenByKind: EntityGroup[];
   relationships: EntityGroup[];
-  /** @nullable */
-  embeddedArtist: string | null;
-  /** @nullable */
-  embeddedAlbum: string | null;
 }
