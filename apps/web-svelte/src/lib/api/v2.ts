@@ -1,9 +1,28 @@
 import {
+  backfillFingerprints,
+  browseLibraryPath,
+  cancelJobRun,
+  cancelJobs,
+  clearJobFailures,
+  createEntityMarker as createEntityMarkerRequest,
+  createJob,
+  createLibraryRoot as createLibraryRootRequest,
+  deleteEntityMarker as deleteEntityMarkerRequest,
+  deleteJellyfinUserPlayedItem,
+  deleteLibraryRoot as deleteLibraryRootRequest,
   listEntities,
   listJobs,
   listVideoSeries,
   listVideos,
+  postJellyfinSessionPing,
+  postJellyfinSessionPlaying,
+  postJellyfinSessionProgress as postJellyfinSessionProgressRequest,
+  postJellyfinSessionStopped,
+  postJellyfinUserPlayedItem,
+  rebuildPreviews,
   updateEntityFlags,
+  updateEntityMarker as updateEntityMarkerRequest,
+  updateEntityPlayback as updateEntityPlaybackRequest,
   updateEntityRating,
   getSettings,
   getVideoSeries,
@@ -18,6 +37,7 @@ import {
   getTag,
   getCollection,
   getEntityThumbnails,
+  getLibraryConfig,
   listPeople,
   listStudios,
   listTags,
@@ -28,6 +48,8 @@ import {
   listGalleries,
   listImages,
   getVideoSeason,
+  updateLibraryRoot as updateLibraryRootRequest,
+  updateLibrarySettings,
 } from "./generated/obscura-v2";
 import type {
   AudioLibraryDetail,
@@ -44,7 +66,12 @@ import type {
   ImageDetail,
   JobListResponse,
   JobRun,
+  LibraryBrowseResponse,
+  LibraryRoot,
+  LibrarySettings,
   PersonDetail,
+  PlaybackSessionRequest,
+  PlaybackUpdateRequest,
   SettingsResponse,
   StudioDetail,
   TagDetail,
@@ -52,12 +79,7 @@ import type {
   VideoSeriesDetail,
   VideoSeasonDetail,
 } from "./generated/model";
-import { jellyfinApiPath, v2ApiPath } from "./orval-fetch";
-import type {
-  LibraryBrowseDto,
-  LibraryRootDto,
-  LibrarySettingsDto,
-} from "@obscura/contracts";
+import { jellyfinApiPath } from "./orval-fetch";
 
 export type V2EntityCapability = EntityCapability;
 export type V2EntityCard = EntityThumbnail;
@@ -109,11 +131,22 @@ export interface V2EntityReference {
   title: string;
   thumbnailUrl?: string | null;
 }
-export type V2LibrarySettings = LibrarySettingsDto & {
-  audioPreferredLanguages: string;
+type NumericLibrarySettingsFields =
+  | "scanIntervalMinutes"
+  | "trickplayIntervalSeconds"
+  | "previewClipDurationSeconds"
+  | "thumbnailQuality"
+  | "trickplayQuality"
+  | "backgroundWorkerConcurrency"
+  | "subtitleFontScale"
+  | "subtitlePositionPercent"
+  | "subtitleOpacity";
+
+export type V2LibrarySettings = Omit<LibrarySettings, NumericLibrarySettingsFields> & {
+  [K in NumericLibrarySettingsFields]: number;
 };
-export type V2LibraryRoot = LibraryRootDto;
-export type V2LibraryBrowse = LibraryBrowseDto;
+export type V2LibraryRoot = LibraryRoot;
+export type V2LibraryBrowse = LibraryBrowseResponse;
 export interface V2LibraryConfigResponse {
   settings: V2LibrarySettings;
   roots: V2LibraryRoot[];
@@ -184,6 +217,36 @@ export interface V2RequestOptions {
   signal?: AbortSignal;
 }
 
+type GeneratedResponse<T> = {
+  data: T;
+  status: number;
+};
+
+function problemMessage(data: unknown): string | null {
+  if (data && typeof data === "object") {
+    const record = data as Record<string, unknown>;
+    if (typeof record.message === "string") return record.message;
+    if (typeof record.error === "string") return record.error;
+    if (typeof record.detail === "string") return record.detail;
+    if (typeof record.title === "string") return record.title;
+  }
+
+  if (typeof data === "string" && data.trim()) return data;
+  return null;
+}
+
+function unwrapGenerated<T>(
+  response: GeneratedResponse<T>,
+  fallback: string,
+  okStatuses: readonly number[] = [200],
+): T {
+  if (!okStatuses.includes(response.status)) {
+    throw new Error(problemMessage(response.data) ?? fallback);
+  }
+
+  return response.data;
+}
+
 export function fetchV2Entities(
   params?: { kind?: string; query?: string; cursor?: string; hideNsfw?: boolean },
   options?: V2RequestOptions,
@@ -250,14 +313,19 @@ export async function postJellyfinSessionProgress(
   request: JellyfinPlaybackSessionRequest,
   options?: V2RequestOptions,
 ): Promise<void> {
-  const response = await fetch(jellyfinApiPath(`/Sessions/${path}`), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(request),
-    signal: options?.signal,
-  });
-  if (!response.ok) {
-    throw new Error(await response.text() || `Session ${response.status}`);
+  const payload = request as PlaybackSessionRequest;
+  switch (path) {
+    case "Playing":
+      await postJellyfinSessionPlaying(payload, { signal: options?.signal });
+      return;
+    case "Playing/Progress":
+      await postJellyfinSessionProgressRequest(payload, { signal: options?.signal });
+      return;
+    case "Playing/Ping":
+      await postJellyfinSessionPing(payload, { signal: options?.signal });
+      return;
+    case "Playing/Stopped":
+      await postJellyfinSessionStopped(payload, { signal: options?.signal });
   }
 }
 
@@ -266,12 +334,10 @@ export async function markJellyfinUserPlayedItem(
   played: boolean,
   options?: V2RequestOptions,
 ): Promise<void> {
-  const response = await fetch(jellyfinApiPath(`/UserPlayedItems/${itemId}`), {
-    method: played ? "POST" : "DELETE",
-    signal: options?.signal,
-  });
-  if (!response.ok) {
-    throw new Error(await response.text() || `UserPlayedItems ${response.status}`);
+  if (played) {
+    await postJellyfinUserPlayedItem(itemId, { signal: options?.signal });
+  } else {
+    await deleteJellyfinUserPlayedItem(itemId, { signal: options?.signal });
   }
 }
 
@@ -430,19 +496,15 @@ export async function updateV2EntityPlayback(
   payload: { resumeSeconds?: number | null; durationSeconds?: number | null; completed?: boolean | null },
   options?: V2RequestOptions,
 ): Promise<V2EntityCard> {
-  const response = await fetch(v2ApiPath(`/entities/${id}/playback`), {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-    signal: options?.signal,
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Failed to update playback for ${id}`);
-  }
-
-  return (await response.json()) as V2EntityCard;
+  const response = await updateEntityPlaybackRequest(
+    id,
+    payload as PlaybackUpdateRequest,
+    { signal: options?.signal },
+  );
+  return unwrapGenerated(
+    response as unknown as GeneratedResponse<EntityCard>,
+    `Failed to update playback for ${id}`,
+  ) as unknown as V2EntityCard;
 }
 
 export interface V2EntityMarkerWriteRequest {
@@ -458,20 +520,34 @@ async function writeV2EntityMarker(
   payload?: V2EntityMarkerWriteRequest,
   options?: V2RequestOptions,
 ): Promise<V2EntityCard> {
-  const markerPath = markerId ? `/${encodeURIComponent(markerId)}` : "";
-  const response = await fetch(v2ApiPath(`/entities/${encodeURIComponent(id)}/markers${markerPath}`), {
-    method,
-    headers: payload ? { "Content-Type": "application/json" } : undefined,
-    body: payload ? JSON.stringify(payload) : undefined,
-    signal: options?.signal,
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Failed to ${method.toLowerCase()} marker for ${id}`);
+  const requestOptions = { signal: options?.signal };
+  const fallback = `Failed to ${method.toLowerCase()} marker for ${id}`;
+  const markerPayload = payload
+    ? {
+        ...payload,
+        endSeconds: payload.endSeconds ?? null,
+      }
+    : undefined;
+  if (method === "POST" && payload) {
+    return unwrapGenerated(
+      await createEntityMarkerRequest(id, markerPayload!, requestOptions) as unknown as GeneratedResponse<EntityCard>,
+      fallback,
+    ) as unknown as V2EntityCard;
+  }
+  if (method === "PATCH" && markerId && payload) {
+    return unwrapGenerated(
+      await updateEntityMarkerRequest(id, markerId, markerPayload!, requestOptions) as unknown as GeneratedResponse<EntityCard>,
+      fallback,
+    ) as unknown as V2EntityCard;
+  }
+  if (method === "DELETE" && markerId) {
+    return unwrapGenerated(
+      await deleteEntityMarkerRequest(id, markerId, requestOptions) as unknown as GeneratedResponse<EntityCard>,
+      fallback,
+    ) as unknown as V2EntityCard;
   }
 
-  return (await response.json()) as V2EntityCard;
+  throw new Error(fallback);
 }
 
 export function createV2EntityMarker(
@@ -507,64 +583,45 @@ export async function createV2Job(
   type: string,
   options?: V2RequestOptions,
 ): Promise<V2JobCreateResponse> {
-  const response = await fetch(v2ApiPath(`/jobs/${type}`), {
-    method: "POST",
-    signal: options?.signal,
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Failed to queue ${type}`);
-  }
-
-  return (await response.json()) as V2JobCreateResponse;
-}
-
-async function readV2Json<T>(response: Response, fallback: string): Promise<T> {
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || fallback);
-  }
-
-  return (await response.json()) as T;
+  const response = await createJob(type, { signal: options?.signal });
+  return unwrapGenerated(
+    response as unknown as GeneratedResponse<V2JobCreateResponse>,
+    `Failed to queue ${type}`,
+    [200, 202],
+  );
 }
 
 export async function cancelV2Jobs(
   type?: string | null,
   options?: V2RequestOptions,
 ): Promise<V2JobCancelResponse> {
-  const query = type ? `?type=${encodeURIComponent(type)}` : "";
-  const response = await fetch(v2ApiPath(`/jobs${query}`), {
-    method: "DELETE",
-    signal: options?.signal,
-  });
-
-  return readV2Json(response, "Failed to cancel v2 jobs");
+  const response = await cancelJobs(type ? { type } : undefined, { signal: options?.signal });
+  return unwrapGenerated(
+    response as unknown as GeneratedResponse<V2JobCancelResponse>,
+    "Failed to cancel v2 jobs",
+  );
 }
 
 export async function cancelV2JobRun(
   id: string,
   options?: V2RequestOptions,
 ): Promise<V2JobCancelResponse> {
-  const response = await fetch(v2ApiPath(`/jobs/${id}`), {
-    method: "DELETE",
-    signal: options?.signal,
-  });
-
-  return readV2Json(response, "Failed to cancel v2 job");
+  const response = await cancelJobRun(id, { signal: options?.signal });
+  return unwrapGenerated(
+    response as unknown as GeneratedResponse<V2JobCancelResponse>,
+    "Failed to cancel v2 job",
+  );
 }
 
 export async function clearV2JobFailures(
   type?: string | null,
   options?: V2RequestOptions,
 ): Promise<V2JobFailureClearResponse> {
-  const query = type ? `?type=${encodeURIComponent(type)}` : "";
-  const response = await fetch(v2ApiPath(`/jobs/failures/clear${query}`), {
-    method: "POST",
-    signal: options?.signal,
-  });
-
-  return readV2Json(response, "Failed to clear v2 job failures");
+  const response = await clearJobFailures(type ? { type } : undefined, { signal: options?.signal });
+  return unwrapGenerated(
+    response as unknown as GeneratedResponse<V2JobFailureClearResponse>,
+    "Failed to clear v2 job failures",
+  );
 }
 
 export function fetchV2Settings(options?: V2RequestOptions): Promise<V2SettingsResponse> {
@@ -574,53 +631,43 @@ export function fetchV2Settings(options?: V2RequestOptions): Promise<V2SettingsR
 export async function fetchV2LibraryConfig(
   options?: V2RequestOptions,
 ): Promise<V2LibraryConfigResponse> {
-  const response = await fetch(v2ApiPath("/settings/library"), {
-    method: "GET",
-    signal: options?.signal,
-  });
-
-  return readV2Json(response, "Failed to load v2 settings");
+  return unwrapGenerated(
+    await getLibraryConfig({ signal: options?.signal }),
+    "Failed to load v2 settings",
+  ) as unknown as V2LibraryConfigResponse;
 }
 
 export async function updateV2LibrarySettings(
   payload: Partial<V2LibrarySettings>,
   options?: V2RequestOptions,
 ): Promise<V2LibrarySettings> {
-  const response = await fetch(v2ApiPath("/settings/library"), {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-    signal: options?.signal,
-  });
-
-  return readV2Json(response, "Failed to save v2 settings");
+  return unwrapGenerated(
+    await updateLibrarySettings(
+      payload as unknown as Parameters<typeof updateLibrarySettings>[0],
+      { signal: options?.signal },
+    ),
+    "Failed to save v2 settings",
+  ) as unknown as V2LibrarySettings;
 }
 
 export async function browseV2LibraryPath(
   targetPath?: string,
   options?: V2RequestOptions,
 ): Promise<V2LibraryBrowse> {
-  const query = targetPath ? `?path=${encodeURIComponent(targetPath)}` : "";
-  const response = await fetch(v2ApiPath(`/libraries/browse${query}`), {
-    method: "GET",
-    signal: options?.signal,
-  });
-
-  return readV2Json(response, "Failed to browse folders");
+  return unwrapGenerated(
+    await browseLibraryPath(targetPath ? { path: targetPath } : undefined, { signal: options?.signal }),
+    "Failed to browse folders",
+  );
 }
 
 export async function createV2LibraryRoot(
   payload: Partial<V2LibraryRoot> & { path: string },
   options?: V2RequestOptions,
 ): Promise<V2LibraryRoot> {
-  const response = await fetch(v2ApiPath("/libraries"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-    signal: options?.signal,
-  });
-
-  return readV2Json(response, "Failed to add library root");
+  return unwrapGenerated(
+    await createLibraryRootRequest(payload as unknown as Parameters<typeof createLibraryRootRequest>[0], { signal: options?.signal }),
+    "Failed to add library root",
+  );
 }
 
 export async function updateV2LibraryRoot(
@@ -628,46 +675,44 @@ export async function updateV2LibraryRoot(
   payload: Partial<V2LibraryRoot>,
   options?: V2RequestOptions,
 ): Promise<V2LibraryRoot> {
-  const response = await fetch(v2ApiPath(`/libraries/${id}`), {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-    signal: options?.signal,
-  });
-
-  return readV2Json(response, "Failed to update library root");
+  const response = await updateLibraryRootRequest(
+    id,
+    payload as unknown as Parameters<typeof updateLibraryRootRequest>[1],
+    { signal: options?.signal },
+  );
+  return unwrapGenerated(
+    response as unknown as GeneratedResponse<V2LibraryRoot>,
+    "Failed to update library root",
+  );
 }
 
 export async function deleteV2LibraryRoot(
   id: string,
   options?: V2RequestOptions,
 ): Promise<{ ok: true }> {
-  const response = await fetch(v2ApiPath(`/libraries/${id}`), {
-    method: "DELETE",
-    signal: options?.signal,
-  });
-
-  return readV2Json(response, "Failed to remove library root");
+  const response = await deleteLibraryRootRequest(id, { signal: options?.signal });
+  return unwrapGenerated(
+    response as unknown as GeneratedResponse<{ ok: true }>,
+    "Failed to remove library root",
+  );
 }
 
 export async function rebuildV2Previews(
   options?: V2RequestOptions,
 ): Promise<V2BulkJobResponse> {
-  const response = await fetch(v2ApiPath("/jobs/rebuild-previews"), {
-    method: "POST",
-    signal: options?.signal,
-  });
-
-  return readV2Json(response, "Failed to queue preview rebuild");
+  const response = await rebuildPreviews({ signal: options?.signal });
+  return unwrapGenerated(
+    response as unknown as GeneratedResponse<V2BulkJobResponse>,
+    "Failed to queue preview rebuild",
+  );
 }
 
 export async function backfillV2Fingerprints(
   options?: V2RequestOptions,
 ): Promise<V2BulkJobResponse> {
-  const response = await fetch(v2ApiPath("/jobs/backfill-fingerprints"), {
-    method: "POST",
-    signal: options?.signal,
-  });
-
-  return readV2Json(response, "Failed to queue fingerprint backfill");
+  const response = await backfillFingerprints({ signal: options?.signal });
+  return unwrapGenerated(
+    response as unknown as GeneratedResponse<V2BulkJobResponse>,
+    "Failed to queue fingerprint backfill",
+  );
 }
