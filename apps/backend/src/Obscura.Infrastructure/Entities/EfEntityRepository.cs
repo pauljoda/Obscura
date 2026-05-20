@@ -1,10 +1,7 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Obscura.Application.Entities;
 using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
-using Obscura.Domain.Taxonomy;
 using Obscura.Infrastructure.Entities.Mappers;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
@@ -23,7 +20,6 @@ namespace Obscura.Infrastructure.Entities;
 /// </summary>
 public sealed class EfEntityRepository : IEntityWriteRepository {
     private const string RelatedRelationshipCode = "related";
-    private const string CreditsRelationshipCode = "credits";
 
     private readonly ObscuraDbContext _db;
     private readonly IReadOnlyDictionary<EntityKind, IEntityKindMapper> _kindMappers;
@@ -133,9 +129,9 @@ public sealed class EfEntityRepository : IEntityWriteRepository {
         EntityHydrationContext context,
         CancellationToken cancellationToken) {
         var links = await _db.EntityRelationshipLinks.AsNoTracking()
-            .Where(link => link.EntityId == entity.Id)
-            .OrderBy(link => link.RelationshipCode)
-            .ThenBy(link => link.SortOrder)
+            .Where(link => link.EntityId == entity.Id &&
+                           link.RelationshipCode == RelatedRelationshipCode)
+            .OrderBy(link => link.SortOrder)
             .ToArrayAsync(cancellationToken);
         var targetIds = links.Select(link => link.TargetEntityId).ToArray();
         var targetRows = await _db.Entities.AsNoTracking()
@@ -147,12 +143,6 @@ public sealed class EfEntityRepository : IEntityWriteRepository {
             }
 
             var target = await HydrateAsync(targetRow, context, cancellationToken);
-            if (string.Equals(link.RelationshipCode, CreditsRelationshipCode, StringComparison.OrdinalIgnoreCase) &&
-                target is Person person) {
-                entity.Credits?.Add(person, DecodeCreditRole(link.MetadataJson), string.IsNullOrEmpty(link.Label) ? null : link.Label);
-                continue;
-            }
-
             if (!entity.Relationships.Any(existing => existing.Id == target.Id)) {
                 entity.AddRelationship(target);
             }
@@ -181,7 +171,9 @@ public sealed class EfEntityRepository : IEntityWriteRepository {
         _db.EntityChildLinks.RemoveRange(
             _db.EntityChildLinks.Where(link => link.ParentEntityId == entity.Id));
         _db.EntityRelationshipLinks.RemoveRange(
-            _db.EntityRelationshipLinks.Where(link => link.EntityId == entity.Id));
+            _db.EntityRelationshipLinks.Where(link =>
+                link.EntityId == entity.Id &&
+                link.RelationshipCode == RelatedRelationshipCode));
         foreach (var mapper in _capabilityMappers) {
             await mapper.ClearAsync(entity, cancellationToken);
         }
@@ -219,21 +211,6 @@ public sealed class EfEntityRepository : IEntityWriteRepository {
             relationshipIndex++;
         }
 
-        var creditIndex = 0;
-        foreach (var credit in entity.Credits?.Credits ?? Array.Empty<CapabilityCredits.Item>()) {
-            _db.EntityRelationshipLinks.Add(new EntityRelationshipLinkRow {
-                EntityId = entity.Id,
-                RelationshipCode = CreditsRelationshipCode,
-                Label = credit.Label ?? string.Empty,
-                TargetEntityId = credit.Person.Id,
-                TargetKindCode = EntityKindRegistry.Person.Code,
-                SortOrder = creditIndex,
-                MetadataJson = JsonSerializer.Serialize(new CreditMetadata(credit.Role.ToCode())),
-                CreatedAt = now,
-            });
-            creditIndex++;
-        }
-
         foreach (var mapper in _capabilityMappers) {
             await mapper.PersistAsync(entity, cancellationToken);
         }
@@ -265,23 +242,6 @@ public sealed class EfEntityRepository : IEntityWriteRepository {
         row.SortOrder = entity.SortOrder;
         row.UpdatedAt = now;
     }
-
-    private static CreditRole DecodeCreditRole(string? metadataJson) {
-        if (string.IsNullOrWhiteSpace(metadataJson)) {
-            return CreditRole.Person;
-        }
-
-        try {
-            var metadata = JsonSerializer.Deserialize<CreditMetadata>(metadataJson);
-            return metadata?.Role is { } role && role.TryDecodeAs<CreditRole>(out var decoded)
-                ? decoded
-                : CreditRole.Person;
-        } catch (JsonException) {
-            return CreditRole.Person;
-        }
-    }
-
-    private sealed record CreditMetadata([property: JsonPropertyName("role")] string Role);
 
     private sealed class EntityHydrationContext {
         private readonly Dictionary<Guid, Entity> _entities = [];

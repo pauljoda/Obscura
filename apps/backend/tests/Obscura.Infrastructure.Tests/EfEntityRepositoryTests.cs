@@ -69,7 +69,7 @@ public sealed class EfEntityRepositoryTests {
         var relatedPerson = Assert.Single(series.RelationshipsOf<Person>());
         var credits = series.Credits!.Credits;
         var credit = Assert.Single(credits);
-        Assert.Same(relatedPerson, credit.Person);
+        Assert.Equal(relatedPerson.Id, credit.Person.Id);
         Assert.Equal(CreditRole.Actor, credits[0].Role);
         Assert.Equal("Detective", credits[0].Label);
     }

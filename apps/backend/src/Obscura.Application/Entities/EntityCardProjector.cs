@@ -32,7 +32,7 @@ public static class EntityCardProjector {
         entity.Credits?.Credits
             .Select(credit => new EntityCreditMetadata(
                 credit.Person.Id,
-                credit.Role.ToString().ToLowerInvariant(),
+                credit.Role.ToCode(),
                 credit.Label))
             .ToArray() ?? [];
 
