@@ -1,17 +1,18 @@
-using Obscura.Application.Videos;
+using Obscura.Application.Entities;
 using Obscura.Domain.Capabilities;
-using Obscura.Infrastructure.Entities;
 
-namespace Obscura.Infrastructure.Videos;
+namespace Obscura.Application.Videos;
 
 /// <summary>
 /// Persists Jellyfin-compatible playback events into Obscura's shared playback capability.
+/// Combines transcode session lifecycle (via <see cref="ITranscodeSessionService"/>) with
+/// entity-level playback state writes (via <see cref="IEntityWriteRepository"/>).
 /// </summary>
 public sealed class PlaybackSessionService : IPlaybackSessionService {
-    private readonly EfEntityRepository _entities;
+    private readonly IEntityWriteRepository _entities;
     private readonly ITranscodeSessionService _transcodes;
 
-    public PlaybackSessionService(EfEntityRepository entities, ITranscodeSessionService transcodes) {
+    public PlaybackSessionService(IEntityWriteRepository entities, ITranscodeSessionService transcodes) {
         _entities = entities;
         _transcodes = transcodes;
     }

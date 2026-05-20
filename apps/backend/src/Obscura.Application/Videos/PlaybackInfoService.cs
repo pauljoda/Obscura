@@ -1,10 +1,13 @@
 using Obscura.Application.Settings;
-using Obscura.Application.Videos;
 
-namespace Obscura.Infrastructure.Videos;
+namespace Obscura.Application.Videos;
 
 /// <summary>
-/// Clean-room Jellyfin-shaped playback negotiator backed by Obscura's current source file resolver.
+/// Clean-room Jellyfin-shaped playback negotiator. Resolves the source file via
+/// <see cref="IVideoSourceService"/>, registers a transcode session, and builds the playback
+/// info response (selected audio stream, transcoding URL, stream metadata). All work is
+/// orchestration; the heavy lifting (source resolution, ffmpeg sessions, settings access) is
+/// delegated to ports and the settings use-case service.
 /// </summary>
 public sealed class PlaybackInfoService : IPlaybackInfoService
 {
@@ -35,7 +38,10 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
         _settings = settings;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Builds a playback response for one media item and client request, or null when no
+    /// source can be located.
+    /// </summary>
     public async Task<PlaybackInfoResult?> GetPlaybackInfoAsync(
         Guid itemId,
         PlaybackInfoQuery? request,
