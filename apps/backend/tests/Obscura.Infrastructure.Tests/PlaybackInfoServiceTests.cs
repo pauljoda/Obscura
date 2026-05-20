@@ -1,6 +1,7 @@
 using Obscura.Application.Videos;
 using Obscura.Infrastructure.Videos;
 using Obscura.Application.Settings;
+using Obscura.Contracts.Settings;
 
 namespace Obscura.Infrastructure.Tests;
 
@@ -104,28 +105,28 @@ public sealed class PlaybackInfoServiceTests
             _audioPreferredLanguages = audioPreferredLanguages;
         }
 
-        public Task<LibrarySettingsResult> GetLibrarySettingsAsync(CancellationToken cancellationToken) =>
+        public Task<LibrarySettings> GetLibrarySettingsAsync(CancellationToken cancellationToken) =>
             Task.FromResult(SampleSettings());
 
-        public Task<LibrarySettingsResult> SaveLibrarySettingsAsync(LibrarySettingsResult state, CancellationToken cancellationToken) =>
+        public Task<LibrarySettings> SaveLibrarySettingsAsync(LibrarySettings state, CancellationToken cancellationToken) =>
             Task.FromResult(state);
 
-        public Task<IReadOnlyList<LibraryRootResult>> ListLibraryRootsAsync(CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<LibraryRootResult>>([]);
+        public Task<IReadOnlyList<LibraryRoot>> ListLibraryRootsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<LibraryRoot>>([]);
 
-        public Task<LibraryRootResult?> GetLibraryRootAsync(Guid id, CancellationToken cancellationToken) =>
-            Task.FromResult<LibraryRootResult?>(null);
+        public Task<LibraryRoot?> GetLibraryRootAsync(Guid id, CancellationToken cancellationToken) =>
+            Task.FromResult<LibraryRoot?>(null);
 
-        public Task<LibraryRootResult> AddLibraryRootAsync(LibraryRootResult state, CancellationToken cancellationToken) =>
+        public Task<LibraryRoot> AddLibraryRootAsync(LibraryRoot state, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
-        public Task<LibraryRootResult> SaveLibraryRootAsync(LibraryRootResult state, CancellationToken cancellationToken) =>
+        public Task<LibraryRoot> SaveLibraryRootAsync(LibraryRoot state, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<bool> DeleteLibraryRootAsync(Guid id, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
-        private LibrarySettingsResult SampleSettings() =>
+        private LibrarySettings SampleSettings() =>
             new(
                 Guid.Parse("56565656-5656-5656-5656-565656565656"),
                 false,

@@ -1,3 +1,5 @@
+using Obscura.Contracts.Settings;
+
 namespace Obscura.Application.Settings;
 
 /// <summary>
@@ -21,7 +23,7 @@ public sealed class SettingsService
     /// <summary>
     /// Returns the small shell-settings subset used by the top-level app chrome.
     /// </summary>
-    public async Task<SettingsResult> GetAsync(CancellationToken cancellationToken)
+    public async Task<SettingsResponse> GetAsync(CancellationToken cancellationToken)
     {
         var state = await _persistence.GetLibrarySettingsAsync(cancellationToken);
         return ToShell(state);
@@ -30,7 +32,7 @@ public sealed class SettingsService
     /// <summary>
     /// Applies a partial update to the shell-settings subset and returns the new state.
     /// </summary>
-    public async Task<SettingsResult> UpdateAsync(SettingsUpdate request, CancellationToken cancellationToken)
+    public async Task<SettingsResponse> UpdateAsync(SettingsUpdateRequest request, CancellationToken cancellationToken)
     {
         var state = await _persistence.GetLibrarySettingsAsync(cancellationToken);
         var next = state with
@@ -46,19 +48,19 @@ public sealed class SettingsService
     /// <summary>
     /// Returns the full library settings + watched roots payload for the library settings page.
     /// </summary>
-    public async Task<LibraryConfigResult> GetLibraryConfigAsync(CancellationToken cancellationToken)
+    public async Task<LibraryConfigResponse> GetLibraryConfigAsync(CancellationToken cancellationToken)
     {
         var settings = await _persistence.GetLibrarySettingsAsync(cancellationToken);
         var roots = await _persistence.ListLibraryRootsAsync(cancellationToken);
-        return new LibraryConfigResult(settings, roots);
+        return new LibraryConfigResponse(settings, roots);
     }
 
     /// <summary>
     /// Applies a partial update to the full library settings record, clamping numeric ranges
     /// and trimming string inputs.
     /// </summary>
-    public async Task<LibrarySettingsResult> UpdateLibrarySettingsAsync(
-        LibrarySettingsUpdate request,
+    public async Task<LibrarySettings> UpdateLibrarySettingsAsync(
+        LibrarySettingsUpdateRequest request,
         CancellationToken cancellationToken)
     {
         var state = await _persistence.GetLibrarySettingsAsync(cancellationToken);
@@ -71,7 +73,7 @@ public sealed class SettingsService
     /// Falls back to the user profile directory or the filesystem root when no readable path is
     /// supplied.
     /// </summary>
-    public Task<LibraryBrowseResult> BrowseLibraryPathAsync(string? path, CancellationToken cancellationToken)
+    public Task<LibraryBrowseResponse> BrowseLibraryPathAsync(string? path, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var requestedPath = string.IsNullOrWhiteSpace(path)
@@ -86,10 +88,10 @@ public sealed class SettingsService
         var directories = directory.EnumerateDirectories()
             .Where(child => !child.Attributes.HasFlag(FileAttributes.Hidden))
             .OrderBy(child => child.Name)
-            .Select(child => new LibraryBrowseEntryResult(child.Name, child.FullName))
+            .Select(child => new LibraryBrowseEntry(child.Name, child.FullName))
             .ToArray();
 
-        return Task.FromResult(new LibraryBrowseResult(
+        return Task.FromResult(new LibraryBrowseResponse(
             directory.FullName,
             directory.Parent?.FullName,
             directories));
@@ -99,8 +101,8 @@ public sealed class SettingsService
     /// Adds a new watched media root. The label defaults to the trailing directory name when
     /// omitted by the caller, and falls back to the raw path when the directory name is empty.
     /// </summary>
-    public Task<LibraryRootResult> CreateLibraryRootAsync(
-        LibraryRootCreate request,
+    public Task<LibraryRoot> CreateLibraryRootAsync(
+        LibraryRootCreateRequest request,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Path);
@@ -114,7 +116,7 @@ public sealed class SettingsService
             label = request.Path;
         }
 
-        var state = new LibraryRootResult(
+        var state = new LibraryRoot(
             Id: Guid.NewGuid(),
             Path: request.Path,
             Label: label,
@@ -135,9 +137,9 @@ public sealed class SettingsService
     /// <summary>
     /// Partially updates one watched media root. Returns null when no root with the supplied id exists.
     /// </summary>
-    public async Task<LibraryRootResult?> UpdateLibraryRootAsync(
+    public async Task<LibraryRoot?> UpdateLibraryRootAsync(
         Guid id,
-        LibraryRootUpdate request,
+        LibraryRootUpdateRequest request,
         CancellationToken cancellationToken)
     {
         var current = await _persistence.GetLibraryRootAsync(id, cancellationToken);
@@ -169,10 +171,10 @@ public sealed class SettingsService
     public Task<bool> DeleteLibraryRootAsync(Guid id, CancellationToken cancellationToken) =>
         _persistence.DeleteLibraryRootAsync(id, cancellationToken);
 
-    private static SettingsResult ToShell(LibrarySettingsResult state) =>
+    private static SettingsResponse ToShell(LibrarySettings state) =>
         new(HideNsfw: state.HideNsfw, EnableCastControls: state.ShowCastControls);
 
-    private static LibrarySettingsResult ApplyLibraryPatch(LibrarySettingsResult state, LibrarySettingsUpdate request) =>
+    private static LibrarySettings ApplyLibraryPatch(LibrarySettings state, LibrarySettingsUpdateRequest request) =>
         state with
         {
             AutoScanEnabled = request.AutoScanEnabled ?? state.AutoScanEnabled,

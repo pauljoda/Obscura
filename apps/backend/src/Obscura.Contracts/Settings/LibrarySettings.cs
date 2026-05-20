@@ -1,7 +1,9 @@
 namespace Obscura.Contracts.Settings;
 
 /// <summary>
-/// API-facing settings values used by the migrated settings page.
+/// API-facing settings values used by the migrated settings page. <see cref="HideNsfw"/>
+/// is shared with the shell-settings endpoint (<see cref="SettingsResponse"/>) and is
+/// surfaced here for completeness; the library settings page does not edit it directly.
 /// </summary>
 public sealed record LibrarySettings(
     Guid Id,
@@ -31,6 +33,7 @@ public sealed record LibrarySettings(
     string HlsTranscoderProfile,
     string HlsFfmpegPath,
     string HlsVaapiDevice,
+    bool HideNsfw,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 

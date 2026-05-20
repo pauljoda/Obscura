@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Obscura.Application.Settings;
+using Obscura.Contracts.Settings;
 using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
@@ -8,7 +9,7 @@ using Obscura.Infrastructure.Videos;
 namespace Obscura.Infrastructure.Settings;
 
 /// <summary>
-/// EF Core adapter for <see cref="ISettingsPersistence"/>. Owns the row ↔ Application DTO
+/// EF Core adapter for <see cref="ISettingsPersistence"/>. Owns the row ↔ Contract DTO
 /// translation for both the singleton <c>library_settings</c> row and the watched library
 /// roots, and normalizes the HLS transcoder profile string on persist so callers downstream
 /// always see a value that maps to a supported encoder.
@@ -22,40 +23,40 @@ public sealed class EfSettingsPersistence : ISettingsPersistence
         _db = db;
     }
 
-    public async Task<LibrarySettingsResult> GetLibrarySettingsAsync(CancellationToken cancellationToken)
+    public async Task<LibrarySettings> GetLibrarySettingsAsync(CancellationToken cancellationToken)
     {
         var row = await EnsureRowAsync(cancellationToken);
-        return ToResult(row);
+        return ToContract(row);
     }
 
-    public async Task<LibrarySettingsResult> SaveLibrarySettingsAsync(
-        LibrarySettingsResult state,
+    public async Task<LibrarySettings> SaveLibrarySettingsAsync(
+        LibrarySettings state,
         CancellationToken cancellationToken)
     {
         var row = await EnsureRowAsync(cancellationToken);
         ApplyToRow(row, state);
         row.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
-        return ToResult(row);
+        return ToContract(row);
     }
 
-    public async Task<IReadOnlyList<LibraryRootResult>> ListLibraryRootsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<LibraryRoot>> ListLibraryRootsAsync(CancellationToken cancellationToken)
     {
         return await _db.LibraryRoots
             .AsNoTracking()
             .OrderBy(root => root.Label)
             .ThenBy(root => root.Path)
-            .Select(root => ToResult(root))
+            .Select(root => ToContract(root))
             .ToArrayAsync(cancellationToken);
     }
 
-    public async Task<LibraryRootResult?> GetLibraryRootAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<LibraryRoot?> GetLibraryRootAsync(Guid id, CancellationToken cancellationToken)
     {
         var row = await _db.LibraryRoots.AsNoTracking().FirstOrDefaultAsync(root => root.Id == id, cancellationToken);
-        return row is null ? null : ToResult(row);
+        return row is null ? null : ToContract(row);
     }
 
-    public async Task<LibraryRootResult> AddLibraryRootAsync(LibraryRootResult state, CancellationToken cancellationToken)
+    public async Task<LibraryRoot> AddLibraryRootAsync(LibraryRoot state, CancellationToken cancellationToken)
     {
         var row = new LibraryRootRow
         {
@@ -76,10 +77,10 @@ public sealed class EfSettingsPersistence : ISettingsPersistence
 
         _db.LibraryRoots.Add(row);
         await _db.SaveChangesAsync(cancellationToken);
-        return ToResult(row);
+        return ToContract(row);
     }
 
-    public async Task<LibraryRootResult> SaveLibraryRootAsync(LibraryRootResult state, CancellationToken cancellationToken)
+    public async Task<LibraryRoot> SaveLibraryRootAsync(LibraryRoot state, CancellationToken cancellationToken)
     {
         var row = await _db.LibraryRoots.FindAsync([state.Id], cancellationToken)
             ?? throw new InvalidOperationException($"Library root '{state.Id}' was not found.");
@@ -97,7 +98,7 @@ public sealed class EfSettingsPersistence : ISettingsPersistence
         row.UpdatedAt = state.UpdatedAt;
 
         await _db.SaveChangesAsync(cancellationToken);
-        return ToResult(row);
+        return ToContract(row);
     }
 
     public async Task<bool> DeleteLibraryRootAsync(Guid id, CancellationToken cancellationToken)
@@ -137,7 +138,7 @@ public sealed class EfSettingsPersistence : ISettingsPersistence
         return row;
     }
 
-    private static void ApplyToRow(LibrarySettingsRow row, LibrarySettingsResult state)
+    private static void ApplyToRow(LibrarySettingsRow row, LibrarySettings state)
     {
         row.AutoScanEnabled = state.AutoScanEnabled;
         row.ScanIntervalMinutes = state.ScanIntervalMinutes;
@@ -178,7 +179,7 @@ public sealed class EfSettingsPersistence : ISettingsPersistence
         row.HlsVaapiDevice = string.IsNullOrWhiteSpace(state.HlsVaapiDevice) ? "/dev/dri/renderD128" : state.HlsVaapiDevice.Trim();
     }
 
-    private static LibrarySettingsResult ToResult(LibrarySettingsRow row) =>
+    private static LibrarySettings ToContract(LibrarySettingsRow row) =>
         new(
             row.Id,
             row.AutoScanEnabled,
@@ -211,7 +212,7 @@ public sealed class EfSettingsPersistence : ISettingsPersistence
             row.CreatedAt,
             row.UpdatedAt);
 
-    private static LibraryRootResult ToResult(LibraryRootRow row) =>
+    private static LibraryRoot ToContract(LibraryRootRow row) =>
         new(
             row.Id,
             row.Path,

@@ -1,11 +1,9 @@
 using Obscura.Application.Jobs;
 using Obscura.Application.Organization;
-using Obscura.Application.Settings;
 using Obscura.Application.Videos;
 using Obscura.Contracts.Jobs;
 using Obscura.Contracts.Organize;
 using Obscura.Contracts.Playback;
-using Obscura.Contracts.Settings;
 
 namespace Obscura.Api.Mapping;
 
@@ -42,122 +40,6 @@ internal static class ApplicationContractMapping
 
     private static JobQueueCountDto ToContract(JobQueueCountResult result) =>
         new(result.Type, result.Status, result.Count);
-
-    public static SettingsUpdate ToApplication(this SettingsUpdateRequest request) =>
-        new(request.HideNsfw, request.EnableCastControls);
-
-    public static SettingsResponse ToContract(this SettingsResult result) =>
-        new(result.HideNsfw, result.EnableCastControls);
-
-    public static LibrarySettingsUpdate ToApplication(this LibrarySettingsUpdateRequest request) =>
-        new(
-            request.AutoScanEnabled,
-            request.ScanIntervalMinutes,
-            request.AutoGenerateMetadata,
-            request.AutoGenerateFingerprints,
-            request.GeneratePhash,
-            request.AutoGeneratePreview,
-            request.GenerateTrickplay,
-            request.TrickplayIntervalSeconds,
-            request.PreviewClipDurationSeconds,
-            request.ThumbnailQuality,
-            request.TrickplayQuality,
-            request.BackgroundWorkerConcurrency,
-            request.NsfwLanAutoEnable,
-            request.MetadataStorageDedicated,
-            request.SubtitlesAutoEnable,
-            request.SubtitlesPreferredLanguages,
-            request.AudioPreferredLanguages,
-            request.SubtitleStyle,
-            request.SubtitleFontScale,
-            request.SubtitlePositionPercent,
-            request.SubtitleOpacity,
-            request.DefaultPlaybackMode,
-            request.ShowCastControls,
-            request.HlsTranscoderProfile,
-            request.HlsFfmpegPath,
-            request.HlsVaapiDevice);
-
-    public static LibraryRootCreate ToApplication(this LibraryRootCreateRequest request) =>
-        new(
-            request.Path,
-            request.Label,
-            request.Enabled,
-            request.Recursive,
-            request.ScanVideos,
-            request.ScanImages,
-            request.ScanAudio,
-            request.ScanBooks,
-            request.IsNsfw);
-
-    public static LibraryRootUpdate ToApplication(this LibraryRootUpdateRequest request) =>
-        new(
-            request.Path,
-            request.Label,
-            request.Enabled,
-            request.Recursive,
-            request.ScanVideos,
-            request.ScanImages,
-            request.ScanAudio,
-            request.ScanBooks,
-            request.IsNsfw);
-
-    public static LibraryConfigResponse ToContract(this LibraryConfigResult result) =>
-        new(result.Settings.ToContract(), result.Roots.Select(ToContract).ToArray());
-
-    public static LibrarySettings ToContract(this LibrarySettingsResult result) =>
-        new(
-            result.Id,
-            result.AutoScanEnabled,
-            result.ScanIntervalMinutes,
-            result.AutoGenerateMetadata,
-            result.AutoGenerateFingerprints,
-            result.GeneratePhash,
-            result.AutoGeneratePreview,
-            result.GenerateTrickplay,
-            result.TrickplayIntervalSeconds,
-            result.PreviewClipDurationSeconds,
-            result.ThumbnailQuality,
-            result.TrickplayQuality,
-            result.BackgroundWorkerConcurrency,
-            result.NsfwLanAutoEnable,
-            result.MetadataStorageDedicated,
-            result.SubtitlesAutoEnable,
-            result.SubtitlesPreferredLanguages,
-            result.AudioPreferredLanguages,
-            result.SubtitleStyle,
-            result.SubtitleFontScale,
-            result.SubtitlePositionPercent,
-            result.SubtitleOpacity,
-            result.DefaultPlaybackMode,
-            result.ShowCastControls,
-            result.HlsTranscoderProfile,
-            result.HlsFfmpegPath,
-            result.HlsVaapiDevice,
-            result.CreatedAt,
-            result.UpdatedAt);
-
-    public static LibraryRoot ToContract(this LibraryRootResult result) =>
-        new(
-            result.Id,
-            result.Path,
-            result.Label,
-            result.Enabled,
-            result.Recursive,
-            result.ScanVideos,
-            result.ScanImages,
-            result.ScanAudio,
-            result.ScanBooks,
-            result.IsNsfw,
-            result.LastScannedAt,
-            result.CreatedAt,
-            result.UpdatedAt);
-
-    public static LibraryBrowseResponse ToContract(this LibraryBrowseResult result) =>
-        new(result.Path, result.ParentPath, result.Directories.Select(ToContract).ToArray());
-
-    private static LibraryBrowseEntry ToContract(LibraryBrowseEntryResult result) =>
-        new(result.Name, result.Path);
 
     public static PlaybackInfoQuery ToApplication(this PlaybackInfoRequest request) =>
         new()

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Obscura.Application.Settings;
+using Obscura.Contracts.Settings;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Settings;
 
@@ -26,7 +27,7 @@ public sealed class SettingsServiceTests
         await using var db = CreateContext();
         var service = new SettingsService(new EfSettingsPersistence(db));
 
-        await service.UpdateAsync(new SettingsUpdate(true, false), CancellationToken.None);
+        await service.UpdateAsync(new SettingsUpdateRequest(true, false), CancellationToken.None);
         var settings = await service.GetAsync(CancellationToken.None);
 
         Assert.True(settings.HideNsfw);
@@ -40,7 +41,7 @@ public sealed class SettingsServiceTests
         var service = new SettingsService(new EfSettingsPersistence(db));
 
         var settings = await service.UpdateLibrarySettingsAsync(
-            new LibrarySettingsUpdate(
+            new LibrarySettingsUpdateRequest(
                 null, null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, "ja,jpn", null, null, null, null, null, null,
                 null, null, null),
@@ -57,7 +58,7 @@ public sealed class SettingsServiceTests
         var service = new SettingsService(new EfSettingsPersistence(db));
 
         var settings = await service.UpdateLibrarySettingsAsync(
-            new LibrarySettingsUpdate(
+            new LibrarySettingsUpdateRequest(
                 null, null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null, null, null,
                 "VideoToolbox", "/opt/homebrew/bin/ffmpeg", "/dev/dri/renderD129"),
