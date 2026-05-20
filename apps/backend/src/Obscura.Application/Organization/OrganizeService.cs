@@ -1,15 +1,14 @@
-using Microsoft.EntityFrameworkCore;
-using Obscura.Application.Organization;
 using Obscura.Domain.Entities;
-using Obscura.Infrastructure.Persistence;
-using Obscura.Infrastructure.Persistence.Entities;
 
-namespace Obscura.Infrastructure.Organization;
+namespace Obscura.Application.Organization;
 
 /// <summary>
-/// Computes generic entity organization plans from source paths, structural parents, and entity-kind storage metadata.
+/// Application use-case service that computes generic entity organization plans from source
+/// paths, structural parents, and entity-kind storage metadata, and applies them by moving
+/// source files or folders on disk. Raw persistence reads and the post-move database-side
+/// path rewrite are delegated to <see cref="IOrganizePersistence"/>.
 /// </summary>
-public sealed class EntityOrganizerService(ObscuraDbContext db)
+public sealed class OrganizeService
 {
     private const string Ready = "ready";
     private const string Unchanged = "unchanged";
@@ -17,8 +16,18 @@ public sealed class EntityOrganizerService(ObscuraDbContext db)
     private const string Applied = "applied";
     private const string Failed = "failed";
 
+    private readonly IOrganizePersistence _persistence;
+
     /// <summary>
-    /// Builds a dry-run organization plan without moving files.
+    /// Creates the service over the organize persistence port.
+    /// </summary>
+    public OrganizeService(IOrganizePersistence persistence)
+    {
+        _persistence = persistence;
+    }
+
+    /// <summary>
+    /// Builds a dry-run organization plan without moving any files.
     /// </summary>
     public async Task<OrganizePlanResult> PlanAsync(
         OrganizePlanQuery request,
@@ -29,7 +38,9 @@ public sealed class EntityOrganizerService(ObscuraDbContext db)
     }
 
     /// <summary>
-    /// Applies a computable organization plan by moving source files or folders and updating source paths.
+    /// Applies a computed organization plan by moving source files and folders on disk and
+    /// updating stored paths. Items whose ancestors are also being moved are skipped so a
+    /// second run can reposition them once the parent move has completed.
     /// </summary>
     public async Task<OrganizeApplyResult> ApplyAsync(
         OrganizePlanQuery request,
@@ -61,7 +72,7 @@ public sealed class EntityOrganizerService(ObscuraDbContext db)
                 results.Add(item with
                 {
                     Status = Skipped,
-                    Reason = "A parent folder is being moved first. Run organize again to apply child renames."
+                    Reason = "A parent folder is being moved first. Run organize again to apply child renames.",
                 });
                 continue;
             }
@@ -69,7 +80,7 @@ public sealed class EntityOrganizerService(ObscuraDbContext db)
             try
             {
                 MoveSource(item.SourcePath, item.TargetPath);
-                await UpdateMovedPathPrefixesAsync(item.SourcePath, item.TargetPath, cancellationToken);
+                await _persistence.ApplyPathPrefixRewriteAsync(item.SourcePath, item.TargetPath, cancellationToken);
                 results.Add(item with { Status = Applied });
                 applied++;
             }
@@ -79,7 +90,6 @@ public sealed class EntityOrganizerService(ObscuraDbContext db)
             }
         }
 
-        await db.SaveChangesAsync(cancellationToken);
         return new OrganizeApplyResult(results, applied, results.Count - applied);
     }
 
@@ -87,28 +97,18 @@ public sealed class EntityOrganizerService(ObscuraDbContext db)
         OrganizePlanQuery request,
         CancellationToken cancellationToken)
     {
-        var roots = await db.LibraryRoots.AsNoTracking()
-            .Where(root => request.RootId == null || root.Id == request.RootId)
-            .ToArrayAsync(cancellationToken);
+        var roots = await _persistence.ListRootsAsync(request.RootId, cancellationToken);
         var rootPaths = roots
             .Select(root => (root.Id, Path: Normalize(root.Path)))
             .OrderByDescending(root => root.Path.Length)
             .ToArray();
 
-        var entities = await db.Entities.AsNoTracking()
-            .Where(entity => entity.DeletedAt == null)
-            .Where(entity => request.EntityId == null || entity.Id == request.EntityId)
-            .ToArrayAsync(cancellationToken);
+        var entities = await _persistence.ListActiveEntitiesAsync(request.EntityId, cancellationToken);
         var entityIds = entities.Select(entity => entity.Id).ToArray();
-        var sourceFiles = await db.EntityFiles.AsNoTracking()
-            .Where(file => file.Role == EntityFileRole.Source)
-            .Where(file => entityIds.Contains(file.EntityId))
-            .ToArrayAsync(cancellationToken);
+        var sourceFiles = await _persistence.ListSourceFilesAsync(entityIds, cancellationToken);
 
         var entityById = entities.ToDictionary(entity => entity.Id);
-        var sourceByEntityId = sourceFiles
-            .GroupBy(file => file.EntityId)
-            .ToDictionary(group => group.Key, group => group.OrderBy(file => file.CreatedAt).First());
+        var sourceByEntityId = sourceFiles.ToDictionary(file => file.EntityId);
         var memo = new Dictionary<Guid, OrganizePlanItemResult?>();
 
         return entities
@@ -120,8 +120,8 @@ public sealed class EntityOrganizerService(ObscuraDbContext db)
 
     private static OrganizePlanItemResult? BuildItem(
         Guid entityId,
-        IReadOnlyDictionary<Guid, EntityRow> entityById,
-        IReadOnlyDictionary<Guid, EntityFileRow> sourceByEntityId,
+        IReadOnlyDictionary<Guid, OrganizeEntityRow> entityById,
+        IReadOnlyDictionary<Guid, OrganizeSourceFile> sourceByEntityId,
         IReadOnlyList<(Guid Id, string Path)> rootPaths,
         IDictionary<Guid, OrganizePlanItemResult?> memo)
     {
@@ -165,7 +165,7 @@ public sealed class EntityOrganizerService(ObscuraDbContext db)
             EntityStorageShape.File or EntityStorageShape.Archive => Path.Combine(
                 targetContainer,
                 SafePathSegment(entity.Title, entity.Id) + Path.GetExtension(sourcePath)),
-            _ => sourcePath
+            _ => sourcePath,
         };
 
         var status = SamePath(sourcePath, targetPath) ? Unchanged : Ready;
@@ -175,9 +175,9 @@ public sealed class EntityOrganizerService(ObscuraDbContext db)
     }
 
     private static string? ResolveTargetContainer(
-        EntityRow entity,
-        IReadOnlyDictionary<Guid, EntityRow> entityById,
-        IReadOnlyDictionary<Guid, EntityFileRow> sourceByEntityId,
+        OrganizeEntityRow entity,
+        IReadOnlyDictionary<Guid, OrganizeEntityRow> entityById,
+        IReadOnlyDictionary<Guid, OrganizeSourceFile> sourceByEntityId,
         IReadOnlyList<(Guid Id, string Path)> rootPaths,
         IDictionary<Guid, OrganizePlanItemResult?> memo)
     {
@@ -208,7 +208,7 @@ public sealed class EntityOrganizerService(ObscuraDbContext db)
     }
 
     private static OrganizePlanItemResult NewItem(
-        EntityRow entity,
+        OrganizeEntityRow entity,
         EntityStorageShape storageShape,
         string sourcePath,
         string targetPath,
@@ -223,36 +223,6 @@ public sealed class EntityOrganizerService(ObscuraDbContext db)
             targetPath,
             status,
             reason);
-
-    private async Task UpdateMovedPathPrefixesAsync(
-        string sourcePath,
-        string targetPath,
-        CancellationToken cancellationToken)
-    {
-        var now = DateTimeOffset.UtcNow;
-        var sourceFiles = await db.EntityFiles
-            .Where(file => file.Role == EntityFileRole.Source)
-            .ToArrayAsync(cancellationToken);
-        foreach (var sourceFile in sourceFiles)
-        {
-            if (TryMapMovedPath(sourceFile.Path, sourcePath, targetPath, out var nextPath))
-            {
-                sourceFile.Path = nextPath;
-                sourceFile.UpdatedAt = now;
-            }
-        }
-
-        var folderSources = await db.EntitySources
-            .ToArrayAsync(cancellationToken);
-        foreach (var source in folderSources)
-        {
-            if (TryMapMovedPath(source.Value, sourcePath, targetPath, out var nextPath))
-            {
-                source.Value = nextPath;
-                source.UpdatedAt = now;
-            }
-        }
-    }
 
     private static void MoveSource(string sourcePath, string targetPath)
     {
@@ -299,31 +269,6 @@ public sealed class EntityOrganizerService(ObscuraDbContext db)
     }
 
     private static string Normalize(string path) => Path.GetFullPath(path);
-
-    private static bool TryMapMovedPath(
-        string currentPath,
-        string sourcePath,
-        string targetPath,
-        out string mappedPath)
-    {
-        var normalizedCurrent = Normalize(currentPath);
-        var normalizedSource = Normalize(sourcePath);
-        if (SamePath(normalizedCurrent, normalizedSource))
-        {
-            mappedPath = Normalize(targetPath);
-            return true;
-        }
-
-        if (IsSubPathOf(normalizedCurrent, normalizedSource))
-        {
-            var relativePath = Path.GetRelativePath(normalizedSource, normalizedCurrent);
-            mappedPath = Normalize(Path.Combine(targetPath, relativePath));
-            return true;
-        }
-
-        mappedPath = currentPath;
-        return false;
-    }
 
     private static bool SamePath(string left, string right) =>
         string.Equals(

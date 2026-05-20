@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Obscura.Application.Entities;
 using Obscura.Application.Jobs;
+using Obscura.Application.Organization;
 using Obscura.Application.Settings;
 using Obscura.Application.UserState;
 using Obscura.Application.Jobs.Handlers;
@@ -29,6 +30,7 @@ public static class DependencyInjection {
         services.AddScoped<EntityCapabilityService>();
         services.AddScoped<SettingsService>();
         services.AddScoped<UserStateService>();
+        services.AddScoped<OrganizeService>();
 
         return services;
     }

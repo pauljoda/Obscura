@@ -5,6 +5,7 @@ using Npgsql;
 using Obscura.Application.Entities;
 using Obscura.Application.Jobs;
 using Obscura.Application.Jobs.Ports;
+using Obscura.Application.Organization;
 using Obscura.Application.Settings;
 using Obscura.Application.UserState;
 using Obscura.Application.Videos;
@@ -86,7 +87,7 @@ public static class DependencyInjection {
         services.AddScoped<EfEntityRepository>();
         services.AddScoped<IEntityWriteRepository>(provider => provider.GetRequiredService<EfEntityRepository>());
         services.AddScoped<EfEntityReadUseCases>();
-        services.AddScoped<EntityOrganizerService>();
+        services.AddScoped<IOrganizePersistence, EfOrganizePersistence>();
         services.AddScoped<IVideoSourceService, VideoSourceService>();
         services.AddSingleton(new HlsAssetServiceOptions(
             cacheDir,

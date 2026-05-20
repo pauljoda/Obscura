@@ -28,7 +28,7 @@ public sealed class EntityOrganizerServiceTests
         SeedSource(db, videoId, Path.Combine(rootPath, "chair", "s1", "bad-name.mkv"), now);
         await db.SaveChangesAsync();
 
-        var service = new EntityOrganizerService(db);
+        var service = new OrganizeService(new EfOrganizePersistence(db));
         var plan = await service.PlanAsync(new OrganizePlanQuery(null, null), CancellationToken.None);
 
         var series = Assert.Single(plan.Items, item => item.EntityId == seriesId);
@@ -56,7 +56,7 @@ public sealed class EntityOrganizerServiceTests
         SeedSource(db, pageId, Path.Combine(rootPath, "Book.cbz#page-1.jpg"), now);
         await db.SaveChangesAsync();
 
-        var service = new EntityOrganizerService(db);
+        var service = new OrganizeService(new EfOrganizePersistence(db));
         var plan = await service.PlanAsync(new OrganizePlanQuery(pageId, null), CancellationToken.None);
 
         var item = Assert.Single(plan.Items);
@@ -82,7 +82,7 @@ public sealed class EntityOrganizerServiceTests
             SeedSource(db, videoId, sourcePath, now);
             await db.SaveChangesAsync();
 
-            var service = new EntityOrganizerService(db);
+            var service = new OrganizeService(new EfOrganizePersistence(db));
             var result = await service.ApplyAsync(new OrganizePlanQuery(videoId, null), CancellationToken.None);
 
             var item = Assert.Single(result.Items);

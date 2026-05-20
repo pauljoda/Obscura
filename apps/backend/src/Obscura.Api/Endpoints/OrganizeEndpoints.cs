@@ -1,7 +1,6 @@
 using Obscura.Api.Mapping;
 using Obscura.Application.Organization;
 using Obscura.Contracts.Organize;
-using Obscura.Infrastructure.Organization;
 
 namespace Obscura.Api.Endpoints;
 
@@ -15,18 +14,18 @@ public static class OrganizeEndpoints
         group.MapGet("/plan", async (
             Guid? entityId,
             Guid? rootId,
-            EntityOrganizerService organizer,
+            OrganizeService organize,
             CancellationToken cancellationToken) =>
-            Results.Ok((await organizer.PlanAsync(new OrganizePlanQuery(entityId, rootId), cancellationToken)).ToContract()))
+            Results.Ok((await organize.PlanAsync(new OrganizePlanQuery(entityId, rootId), cancellationToken)).ToContract()))
             .WithName("GetOrganizePlan")
             .WithSummary("Computes a dry-run entity organization plan from generic storage metadata.")
             .Produces<OrganizePlanResponse>();
 
         group.MapPost("/apply", async (
             OrganizePlanRequest request,
-            EntityOrganizerService organizer,
+            OrganizeService organize,
             CancellationToken cancellationToken) =>
-            Results.Ok((await organizer.ApplyAsync(request.ToApplication(), cancellationToken)).ToContract()))
+            Results.Ok((await organize.ApplyAsync(request.ToApplication(), cancellationToken)).ToContract()))
             .WithName("ApplyOrganizePlan")
             .WithSummary("Applies an entity organization plan by moving source files or folders.")
             .Produces<OrganizeApplyResponse>();
