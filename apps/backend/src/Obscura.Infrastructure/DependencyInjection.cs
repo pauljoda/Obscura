@@ -6,6 +6,7 @@ using Obscura.Application.Entities;
 using Obscura.Application.Jobs;
 using Obscura.Application.Jobs.Ports;
 using Obscura.Application.Settings;
+using Obscura.Application.UserState;
 using Obscura.Application.Videos;
 using Obscura.Infrastructure.Collections;
 using Obscura.Infrastructure.Database;
@@ -100,7 +101,7 @@ public static class DependencyInjection {
         services.AddScoped<IVideoSubtitleAssetService, VideoSubtitleAssetService>();
         services.AddScoped<IJobQueueService, JobQueueService>();
         services.AddScoped<ISettingsPersistence, EfSettingsPersistence>();
-        services.AddScoped<EfUserStateService>();
+        services.AddScoped<IUserStatePersistence, EfUserStatePersistence>();
 
         return services;
     }
