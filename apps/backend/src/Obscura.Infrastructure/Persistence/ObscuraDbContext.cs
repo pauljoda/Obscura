@@ -65,6 +65,8 @@ public sealed class ObscuraDbContext : DbContext {
 
     public DbSet<EntityClassificationRow> EntityClassifications => Set<EntityClassificationRow>();
 
+    public DbSet<EntityLifetimeRow> EntityLifetimes => Set<EntityLifetimeRow>();
+
     public DbSet<VideoDetailRow> VideoDetails => Set<VideoDetailRow>();
 
     public DbSet<VideoSeriesDetailRow> VideoSeriesDetails => Set<VideoSeriesDetailRow>();

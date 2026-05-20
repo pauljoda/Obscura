@@ -116,6 +116,23 @@ internal static partial class ExpandedV2ModelConfiguration {
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<EntityClassificationRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<EntityLifetimeRow>(entity => {
+            entity.ToTable("entity_lifetimes");
+            entity.HasKey(row => row.EntityId);
+            entity.Property(row => row.EntityId).HasColumnName("entity_id");
+            entity.Property(row => row.StartCode).HasColumnName("start_code").HasMaxLength(64);
+            entity.Property(row => row.StartValue).HasColumnName("start_value").HasMaxLength(256);
+            entity.Property(row => row.StartSortableValue).HasColumnName("start_sortable_value");
+            entity.Property(row => row.StartPrecision).HasColumnName("start_precision").HasMaxLength(32);
+            entity.Property(row => row.EndCode).HasColumnName("end_code").HasMaxLength(64);
+            entity.Property(row => row.EndValue).HasColumnName("end_value").HasMaxLength(256);
+            entity.Property(row => row.EndSortableValue).HasColumnName("end_sortable_value");
+            entity.Property(row => row.EndPrecision).HasColumnName("end_precision").HasMaxLength(32);
+            entity.Property(row => row.Label).HasColumnName("label").HasMaxLength(256);
+            entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
+            entity.HasOne<EntityRow>().WithOne().HasForeignKey<EntityLifetimeRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<EntityFileFingerprintRow>(entity => {
             entity.ToTable("entity_file_fingerprints");
             entity.HasKey(row => row.Id);

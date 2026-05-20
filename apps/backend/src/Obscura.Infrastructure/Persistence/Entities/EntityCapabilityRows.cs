@@ -82,6 +82,20 @@ public sealed class EntityClassificationRow {
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
+public sealed class EntityLifetimeRow {
+    public Guid EntityId { get; set; }
+    public string? StartCode { get; set; }
+    public string? StartValue { get; set; }
+    public DateOnly? StartSortableValue { get; set; }
+    public string? StartPrecision { get; set; }
+    public string? EndCode { get; set; }
+    public string? EndValue { get; set; }
+    public DateOnly? EndSortableValue { get; set; }
+    public string? EndPrecision { get; set; }
+    public string? Label { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
 public sealed class EntityFileFingerprintRow {
     public Guid Id { get; set; }
     public Guid EntityId { get; set; }
