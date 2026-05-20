@@ -91,20 +91,7 @@ if (Directory.Exists(cacheDir)) {
     });
 }
 
-app.MapGet("/api/health", () =>
-    Results.Ok(new HealthResponse("ok", "dotnet")))
-    .WithName("GetHealth")
-    .WithSummary("Reports that the Obscura .NET backend is ready to accept requests.");
-
-app.MapVideoEndpoints();
-app.MapEntityEndpoints();
-app.MapJellyfinPlaybackEndpoints();
-app.MapJobEndpoints();
-app.MapSettingsEndpoints();
-app.MapUserStateEndpoints();
-app.MapPluginEndpoints();
-app.MapIdentifyEndpoints();
-app.MapOrganizeEndpoints();
+app.MapObscuraEndpoints();
 
 var staticIndexPath = resolvedStaticWebRoot is not null
     ? Path.Combine(resolvedStaticWebRoot, "index.html")

@@ -4,7 +4,9 @@ using Obscura.Contracts.System;
 namespace Obscura.Api.Endpoints;
 
 public static class VideoEndpoints {
-    public static RouteGroupBuilder MapVideoEndpoints(this IEndpointRouteBuilder routes) {
+    public static IEndpointRouteBuilder MapVideoEndpoints(this IEndpointRouteBuilder routes) {
+        routes.MapVideoCatalogEndpoints();
+
         var group = routes.MapGroup("/api/videos")
             .WithTags("Videos");
 
@@ -20,7 +22,7 @@ public static class VideoEndpoints {
             .Produces(StatusCodes.Status200OK)
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
-        return group;
+        return routes;
     }
 
     private static async Task<IResult> StreamSubtitleAsync(

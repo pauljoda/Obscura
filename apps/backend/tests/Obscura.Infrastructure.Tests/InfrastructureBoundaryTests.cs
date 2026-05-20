@@ -60,7 +60,7 @@ public sealed class InfrastructureBoundaryTests {
         var endpointFiles = Directory.GetFiles(
             RepoPath("apps/backend/src/Obscura.Api/Endpoints"),
             "*.cs",
-            SearchOption.TopDirectoryOnly);
+            SearchOption.AllDirectories);
 
         Assert.All(endpointFiles, file => {
             var source = File.ReadAllText(file);
