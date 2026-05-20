@@ -1,7 +1,5 @@
-using Obscura.Application.Jobs;
 using Obscura.Application.Organization;
 using Obscura.Application.Videos;
-using Obscura.Contracts.Jobs;
 using Obscura.Contracts.Organize;
 using Obscura.Contracts.Playback;
 
@@ -9,38 +7,6 @@ namespace Obscura.Api.Mapping;
 
 internal static class ApplicationContractMapping
 {
-    public static JobListResponse ToContract(this JobListResult result) =>
-        new(result.Items.Select(ToContract).ToArray(), result.Counts.Select(ToContract).ToArray());
-
-    public static JobCreateResponse ToContract(this JobCreateResult result) =>
-        new(result.Job.ToContract());
-
-    public static JobCancelResponse ToContract(this JobCancelResult result) =>
-        new(result.Cancelled);
-
-    public static JobFailureClearResponse ToContract(this JobFailureClearResult result) =>
-        new(result.Cleared);
-
-    public static BulkJobResponse ToContract(this BulkJobResult result) =>
-        new(result.Enqueued, result.Skipped);
-
-    public static JobRun ToContract(this JobRunResult result) =>
-        new(
-            result.Id,
-            result.Type,
-            result.Status,
-            result.Progress,
-            result.Message,
-            result.TargetKind,
-            result.TargetId,
-            result.TargetLabel,
-            result.CreatedAt,
-            result.StartedAt,
-            result.FinishedAt);
-
-    private static JobQueueCountDto ToContract(JobQueueCountResult result) =>
-        new(result.Type, result.Status, result.Count);
-
     public static PlaybackInfoQuery ToApplication(this PlaybackInfoRequest request) =>
         new()
         {

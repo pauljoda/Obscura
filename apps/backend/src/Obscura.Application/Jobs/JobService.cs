@@ -1,4 +1,5 @@
 using Obscura.Application.Jobs.Ports;
+using Obscura.Contracts.Jobs;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Application.Jobs;
@@ -31,65 +32,51 @@ public sealed class JobService
     /// <summary>
     /// Lists recent job runs for the operations dashboard.
     /// </summary>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>Application job list result.</returns>
-    public async Task<JobListResult> ListAsync(CancellationToken cancellationToken)
+    public async Task<JobListResponse> ListAsync(CancellationToken cancellationToken)
     {
-        var items = (await _queue.ListAsync(cancellationToken)).Select(ToResult).ToArray();
+        var items = (await _queue.ListAsync(cancellationToken)).Select(ToContract).ToArray();
         var counts = (await _queue.GetQueueCountsAsync(cancellationToken))
-            .Select(c => new JobQueueCountResult(c.TypeCode, c.StatusCode, c.Count))
+            .Select(c => new JobQueueCountDto(c.TypeCode, c.StatusCode, c.Count))
             .ToArray();
-        return new JobListResult(items, counts);
+        return new JobListResponse(items, counts);
     }
 
     /// <summary>
     /// Creates a job from a typed queue operation.
     /// </summary>
-    /// <param name="type">Typed job operation supplied by the API boundary.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>Application create result for the queued job.</returns>
-    public async Task<JobCreateResult> CreateAsync(JobType type, CancellationToken cancellationToken)
+    public async Task<JobCreateResponse> CreateAsync(JobType type, CancellationToken cancellationToken)
     {
         var job = await _queue.EnqueueAsync(type, cancellationToken);
-        return new JobCreateResult(ToResult(job));
+        return new JobCreateResponse(ToContract(job));
     }
 
     /// <summary>
     /// Cancels queued or running jobs, optionally scoped to one typed operation.
     /// </summary>
-    /// <param name="type">Optional job type scope.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>Count of jobs marked cancelled.</returns>
-    public async Task<JobCancelResult> CancelAsync(JobType? type, CancellationToken cancellationToken)
+    public async Task<JobCancelResponse> CancelAsync(JobType? type, CancellationToken cancellationToken)
     {
         var cancelled = await _queue.CancelAsync(type, cancellationToken);
-        return new JobCancelResult(cancelled);
+        return new JobCancelResponse(cancelled);
     }
 
     /// <summary>
     /// Cancels a single queued or running job by identifier.
     /// </summary>
-    /// <param name="id">Job run identifier.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>Response with a one-or-zero cancellation count.</returns>
-    public async Task<JobCancelResult> CancelRunAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<JobCancelResponse> CancelRunAsync(Guid id, CancellationToken cancellationToken)
     {
         var cancelled = await _queue.CancelRunAsync(id, cancellationToken);
-        return new JobCancelResult(cancelled ? 1 : 0);
+        return new JobCancelResponse(cancelled ? 1 : 0);
     }
 
     /// <summary>
     /// Clears failed jobs from the active failure list, optionally scoped to one typed operation.
     /// </summary>
-    /// <param name="type">Optional job type scope.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>Count of failed jobs cleared.</returns>
-    public async Task<JobFailureClearResult> ClearFailuresAsync(
+    public async Task<JobFailureClearResponse> ClearFailuresAsync(
         JobType? type,
         CancellationToken cancellationToken)
     {
         var cleared = await _queue.ClearFailuresAsync(type, cancellationToken);
-        return new JobFailureClearResult(cleared);
+        return new JobFailureClearResponse(cleared);
     }
 
     /// <summary>
@@ -97,9 +84,7 @@ public sealed class JobService
     /// already have a matching job pending. Used by the operations dashboard "rebuild previews"
     /// maintenance action.
     /// </summary>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>Counts of newly enqueued jobs and entities skipped because a job was already pending.</returns>
-    public async Task<BulkJobResult> RebuildPreviewsAsync(CancellationToken cancellationToken)
+    public async Task<BulkJobResponse> RebuildPreviewsAsync(CancellationToken cancellationToken)
     {
         var previewKinds = new (EntityKind Kind, JobType JobType)[]
         {
@@ -132,7 +117,7 @@ public sealed class JobService
             }
         }
 
-        return new BulkJobResult(enqueued, skipped);
+        return new BulkJobResponse(enqueued, skipped);
     }
 
     /// <summary>
@@ -140,9 +125,7 @@ public sealed class JobService
     /// stored MD5 fingerprint and does not already have a fingerprint job pending. Used by the
     /// operations dashboard "backfill fingerprints" maintenance action.
     /// </summary>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>Counts of newly enqueued jobs and entities skipped because of an existing fingerprint or pending job.</returns>
-    public async Task<BulkJobResult> BackfillFingerprintsAsync(CancellationToken cancellationToken)
+    public async Task<BulkJobResponse> BackfillFingerprintsAsync(CancellationToken cancellationToken)
     {
         var fingerprintKinds = new (EntityKind Kind, JobType JobType)[]
         {
@@ -183,10 +166,10 @@ public sealed class JobService
             }
         }
 
-        return new BulkJobResult(enqueued, skipped);
+        return new BulkJobResponse(enqueued, skipped);
     }
 
-    private static JobRunResult ToResult(JobRunSnapshot job) =>
+    private static JobRun ToContract(JobRunSnapshot job) =>
         new(
             job.Id,
             job.Type.ToCode(),

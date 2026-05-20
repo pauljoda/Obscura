@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Obscura.Api.Mapping;
 using Obscura.Application.Jobs;
-using Obscura.Contracts.Jobs;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Api.Endpoints;
@@ -11,10 +9,10 @@ public static class JobEndpoints {
         var group = routes.MapGroup("/api/jobs")
             .WithTags("Jobs");
 
-        group.MapGet("/", async (
+        group.MapGet("/", (
             JobService jobs,
             CancellationToken cancellationToken) =>
-            (await jobs.ListAsync(cancellationToken)).ToContract())
+            jobs.ListAsync(cancellationToken))
             .WithName("ListJobs")
             .WithSummary("Lists Obscura background job runs for the operations dashboard.");
 
@@ -23,8 +21,7 @@ public static class JobEndpoints {
             JobService jobs,
             CancellationToken cancellationToken) => {
                 var response = await jobs.CreateAsync(type.Value, cancellationToken);
-
-                return Results.Accepted($"/api/jobs/{response.Job.Id}", response.ToContract());
+                return Results.Accepted($"/api/jobs/{response.Job.Id}", response);
             })
             .WithName("CreateJob")
             .WithSummary("Queues a background job run.");
@@ -37,7 +34,7 @@ public static class JobEndpoints {
                     return Results.BadRequest(new { message = $"Unknown job type '{type}'." });
                 }
 
-                return Results.Ok((await jobs.CancelAsync(jobType, cancellationToken)).ToContract());
+                return Results.Ok(await jobs.CancelAsync(jobType, cancellationToken));
             })
             .WithName("CancelJobs")
             .WithSummary("Cancels queued or running job runs.");
@@ -46,7 +43,7 @@ public static class JobEndpoints {
             Guid id,
             JobService jobs,
             CancellationToken cancellationToken) =>
-            Results.Ok((await jobs.CancelRunAsync(id, cancellationToken)).ToContract()))
+            Results.Ok(await jobs.CancelRunAsync(id, cancellationToken)))
             .WithName("CancelJobRun")
             .WithSummary("Cancels one queued or running job run.");
 
@@ -58,7 +55,7 @@ public static class JobEndpoints {
                     return Results.BadRequest(new { message = $"Unknown job type '{type}'." });
                 }
 
-                return Results.Ok((await jobs.ClearFailuresAsync(jobType, cancellationToken)).ToContract());
+                return Results.Ok(await jobs.ClearFailuresAsync(jobType, cancellationToken));
             })
             .WithName("ClearJobFailures")
             .WithSummary("Clears failed job runs from the operations dashboard.");
@@ -66,14 +63,14 @@ public static class JobEndpoints {
         group.MapPost("/rebuild-previews", async (
             JobService jobs,
             CancellationToken cancellationToken) =>
-            Results.Ok((await jobs.RebuildPreviewsAsync(cancellationToken)).ToContract()))
+            Results.Ok(await jobs.RebuildPreviewsAsync(cancellationToken)))
             .WithName("RebuildPreviews")
             .WithSummary("Queues preview generation for all media entities.");
 
         group.MapPost("/backfill-fingerprints", async (
             JobService jobs,
             CancellationToken cancellationToken) =>
-            Results.Ok((await jobs.BackfillFingerprintsAsync(cancellationToken)).ToContract()))
+            Results.Ok(await jobs.BackfillFingerprintsAsync(cancellationToken)))
             .WithName("BackfillFingerprints")
             .WithSummary("Queues fingerprint generation for entities that lack one.");
 
