@@ -55,10 +55,12 @@ describe("/videos/[id] detail layout", () => {
 
   it("uses shared thumbnails for the cast and crew rows", () => {
     const pageSource = readLocalSource("./+page.svelte");
+    const videoSectionsSource = readLocalSource("./VideoDetailSectionContent.svelte");
     const sectionSource = readLocalSource("../../../lib/components/entities/EntityCastAndCrewSection.svelte");
 
     expect(pageSource).toContain("Cast and Crew");
-    expect(pageSource).toContain("EntityCastAndCrewSection");
+    expect(pageSource).toContain("VideoDetailSectionContent");
+    expect(videoSectionsSource).toContain("EntityCastAndCrewSection");
     expect(sectionSource).toContain('titleAlign="center"');
     expect(sectionSource).toContain('titleSize="compact"');
     expect(sectionSource).toContain("{#snippet subtitleContent(card)}");
@@ -67,6 +69,8 @@ describe("/videos/[id] detail layout", () => {
     expect(sectionSource).toContain("white-space: normal");
     expect(pageSource).not.toContain("credit-scroller");
     expect(pageSource).not.toContain("credit-chip");
+    expect(videoSectionsSource).not.toContain("credit-scroller");
+    expect(videoSectionsSource).not.toContain("credit-chip");
   });
 
   it("renders character credit subtitles without adding a label prefix", () => {
@@ -78,8 +82,10 @@ describe("/videos/[id] detail layout", () => {
 
   it("adds old video panels through shared EntityDetail section-driven tabs", () => {
     const pageSource = readLocalSource("./+page.svelte");
+    const videoSectionsSource = readLocalSource("./VideoDetailSectionContent.svelte");
 
-    expect(pageSource).toContain("VideoMarkerEditor");
+    expect(pageSource).toContain("VideoDetailSectionContent");
+    expect(videoSectionsSource).toContain("VideoMarkerEditor");
     expect(pageSource).toContain("detailSections");
     expect(pageSource).toContain("detailTabs");
     expect(pageSource).toContain("sections: [");
@@ -92,10 +98,10 @@ describe("/videos/[id] detail layout", () => {
     expect(pageSource).toContain('id: "files"');
     expect(pageSource).toContain("icon:");
     expect(pageSource).toContain("{#snippet sectionContent(section)}");
-    expect(pageSource).toContain("<VideoTranscriptPanel");
-    expect(pageSource).toContain("<VideoMarkerEditor");
-    expect(pageSource).toContain("markers={card.markers}");
-    expect(pageSource).toContain("entityId={videoId}");
+    expect(videoSectionsSource).toContain("<VideoTranscriptPanel");
+    expect(videoSectionsSource).toContain("<VideoMarkerEditor");
+    expect(videoSectionsSource).toContain("markers={card.markers}");
+    expect(videoSectionsSource).toContain("entityId={videoId}");
     expect(pageSource).toContain('layout: "grid"');
     expect(pageSource).toContain('sections: ["files"]');
   });

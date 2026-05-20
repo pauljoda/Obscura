@@ -12,10 +12,6 @@
     Users,
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-  import type {
-    SubtitleAppearance,
-    SubtitleDisplayStyle,
-  } from "$lib/player/subtitle-types";
   import {
     fetchV2Video,
     fetchV2LibraryConfig,
@@ -33,7 +29,6 @@
     toggleOptimisticEntityFlag,
     updateOptimisticEntityRating,
   } from "$lib/entities/entity-detail-state";
-  import EntityCastAndCrewSection from "$lib/components/entities/EntityCastAndCrewSection.svelte";
   import IdentifyButton from "$lib/components/IdentifyButton.svelte";
   import type { EntityDetailTag } from "$lib/entities/entity-detail";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
@@ -54,8 +49,15 @@
   import VideoPlayer, {
     type VideoPlayerHandle,
   } from "$lib/components/VideoPlayer.svelte";
-  import VideoMarkerEditor from "$lib/components/VideoMarkerEditor.svelte";
+  import VideoDetailSectionContent from "./VideoDetailSectionContent.svelte";
   import VideoTranscriptPanel from "$lib/components/VideoTranscriptPanel.svelte";
+  import {
+    buildSubtitleDefaults,
+    clampTranscriptDockPercent,
+    readTranscriptDockPreferences,
+    writeTranscriptDockPreference,
+    writeTranscriptDockWidth,
+  } from "./video-page-state";
 
   type LoadState = "loading" | "ready" | "error";
 
@@ -191,17 +193,6 @@
     ];
   });
 
-  function formatTimestamp(seconds: number): string {
-    const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
-    const hours = Math.floor(safeSeconds / 3600);
-    const minutes = Math.floor((safeSeconds % 3600) / 60);
-    const wholeSeconds = Math.floor(safeSeconds % 60);
-    if (hours > 0) {
-      return `${hours}:${String(minutes).padStart(2, "0")}:${String(wholeSeconds).padStart(2, "0")}`;
-    }
-    return `${minutes}:${String(wholeSeconds).padStart(2, "0")}`;
-  }
-
   const dates = $derived.by(() => {
     if (!video) return [];
     const cap = getCapability(video.capabilities, "dates");
@@ -229,20 +220,7 @@
     isTranscriptDockActive && !isDesktopViewport,
   );
 
-  const subtitleDefaults = $derived(
-    librarySettings
-      ? {
-          autoEnable: librarySettings.subtitlesAutoEnable ?? false,
-          preferredLanguages: librarySettings.subtitlesPreferredLanguages ?? "en,eng",
-          appearance: {
-            style: (librarySettings.subtitleStyle ?? "stylized") as SubtitleDisplayStyle,
-            fontScale: librarySettings.subtitleFontScale ?? 1,
-            positionPercent: librarySettings.subtitlePositionPercent ?? 88,
-            opacity: librarySettings.subtitleOpacity ?? 1,
-          } satisfies SubtitleAppearance,
-        }
-      : undefined,
-  );
+  const subtitleDefaults = $derived(buildSubtitleDefaults(librarySettings));
   const defaultPlaybackMode = $derived<"direct" | "hls">(
     librarySettings?.defaultPlaybackMode === "hls" ? "hls" : "direct",
   );
@@ -254,15 +232,9 @@
     void loadVideo();
     let cancelled = false;
 
-    if (window.localStorage.getItem("obscura:transcript-docked") === "1") {
-      userWantsDock = true;
-    }
-    const savedWidth = Number(
-      window.localStorage.getItem("obscura:transcript-dock-width"),
-    );
-    if (Number.isFinite(savedWidth) && savedWidth >= 40 && savedWidth <= 92) {
-      dockVideoPercent = savedWidth;
-    }
+    const dockPrefs = readTranscriptDockPreferences(window.localStorage);
+    userWantsDock = dockPrefs.docked;
+    dockVideoPercent = dockPrefs.videoPercent;
 
     const mq = window.matchMedia("(min-width: 1024px)");
     const updateViewport = () => (isDesktopViewport = mq.matches);
@@ -493,10 +465,7 @@
   function toggleTranscriptDock() {
     userWantsDock = !userWantsDock;
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(
-        "obscura:transcript-docked",
-        userWantsDock ? "1" : "0",
-      );
+      writeTranscriptDockPreference(window.localStorage, userWantsDock);
     }
   }
 
@@ -513,7 +482,7 @@
     const rect = container.getBoundingClientRect();
     if (rect.width <= 0) return;
     const pct = ((event.clientX - rect.left) / rect.width) * 100;
-    dockVideoPercent = Math.max(40, Math.min(92, pct));
+    dockVideoPercent = clampTranscriptDockPercent(pct);
   }
 
   function handleResizeEnd(event: PointerEvent) {
@@ -525,10 +494,7 @@
       // already released
     }
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(
-        "obscura:transcript-dock-width",
-        String(Math.round(dockVideoPercent)),
-      );
+      writeTranscriptDockWidth(window.localStorage, dockVideoPercent);
     }
   }
 
@@ -620,7 +586,6 @@
           {/if}
         </div>
         {#if isTranscriptDocked}
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             role="separator"
             aria-label="Resize transcript panel"
@@ -693,109 +658,25 @@
       {/snippet}
 
       {#snippet sectionContent(section)}
-        {#if section.id === "cast-and-crew"}
-          <EntityCastAndCrewSection {studioCards} {creditCards} />
-        {:else if section.id === "technical"}
-          {#if card.technical.length > 0}
-            <div class="tab-data-list">
-              {#each card.technical as row (row.label)}
-                <div class="tab-data-row">
-                  <span>{row.label}</span>
-                  <strong>{row.value}</strong>
-                </div>
-              {/each}
-            </div>
-          {/if}
-        {:else if section.id === "dates"}
-          {#if card.dates.length > 0}
-            <div class="tab-data-list">
-              {#each card.dates as row (row.code)}
-                <div class="tab-data-row">
-                  <span>{row.label}</span>
-                  <strong>{row.value}</strong>
-                </div>
-              {/each}
-            </div>
-          {/if}
-        {:else if section.id === "playback"}
-          {#if playbackState}
-            <div class="tab-data-list">
-              <div class="tab-data-row">
-                <span>Play Count</span>
-                <strong>{playbackState.playCount}</strong>
-              </div>
-              {#if playbackState.resumeSeconds > 0}
-                <div class="tab-data-row">
-                  <span>Resume</span>
-                  <strong>{formatTimestamp(playbackState.resumeSeconds)}</strong>
-                </div>
-              {/if}
-            </div>
-          {/if}
-        {:else if section.id === "source"}
-          {#if card.sources.length > 0 || card.fingerprints.length > 0}
-            <div class="tab-data-list">
-              {#each card.sources as source (source.code)}
-                <div class="tab-data-row">
-                  <span>{source.code}</span>
-                  <strong>{source.value}</strong>
-                </div>
-              {/each}
-              {#each card.fingerprints as fingerprint (`${fingerprint.algorithm}:${fingerprint.value}`)}
-                <div class="tab-data-row">
-                  <span>{fingerprint.algorithm}</span>
-                  <strong>{fingerprint.value}</strong>
-                </div>
-              {/each}
-            </div>
-          {/if}
-        {:else if section.id === "markers"}
-          <VideoMarkerEditor
-            entityId={videoId}
-            markers={card.markers}
-            getCurrentTime={() => currentTime}
-            {displayTime}
-            onSeek={handleSeek}
-            onRefresh={refreshVideo}
-          />
-        {:else if section.id === "transcript"}
-          {#if isTranscriptDockActive}
-            <div class="transcript-tab-stack">
-              <div class="tab-inline-notice">
-                <span>
-                  {isTranscriptDocked
-                    ? "Transcript is docked next to the video."
-                    : "Transcript is docked under the video."}
-                </span>
-                <button type="button" onclick={toggleTranscriptDock}>Move it back here</button>
-              </div>
-              <VideoTranscriptPanel
-                {videoId}
-                tracks={playerProps.subtitleTracks}
-                activeTrackId={activeSubtitleId}
-                onActiveTrackIdChange={handleActiveSubtitleChange}
-                currentTime={displayTime}
-                onSeek={handleSeek}
-                onTracksChanged={refreshVideo}
-                variant="tracks-only"
-                isDocked
-                onDockToggle={toggleTranscriptDock}
-              />
-            </div>
-          {:else}
-            <VideoTranscriptPanel
-              {videoId}
-              tracks={playerProps.subtitleTracks}
-              activeTrackId={activeSubtitleId}
-              onActiveTrackIdChange={handleActiveSubtitleChange}
-              currentTime={displayTime}
-              onSeek={handleSeek}
-              onTracksChanged={refreshVideo}
-              onDockToggle={hasSubtitles ? toggleTranscriptDock : undefined}
-              isDocked={false}
-            />
-          {/if}
-        {/if}
+        <VideoDetailSectionContent
+          {section}
+          {card}
+          {studioCards}
+          {creditCards}
+          {videoId}
+          {playbackState}
+          {playerProps}
+          {isTranscriptDockActive}
+          {isTranscriptDocked}
+          {hasSubtitles}
+          {activeSubtitleId}
+          {displayTime}
+          getCurrentTime={() => currentTime}
+          onSeek={handleSeek}
+          onRefresh={refreshVideo}
+          onActiveSubtitleChange={handleActiveSubtitleChange}
+          onTranscriptDockToggle={toggleTranscriptDock}
+        />
       {/snippet}
     </EntityDetail>
   {/if}
@@ -864,65 +745,6 @@
     margin: 0 0.5rem;
     background: var(--color-text-muted, #8a93a6);
     opacity: 0.5;
-  }
-
-  .tab-data-list,
-  .transcript-tab-stack {
-    display: grid;
-    gap: 0;
-    min-width: 0;
-  }
-
-  .tab-data-row {
-    display: grid;
-    grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
-    gap: 0.8rem;
-    align-items: baseline;
-    min-width: 0;
-    padding: 0.55rem 0;
-    border-bottom: 1px solid color-mix(in srgb, var(--color-border, #1c2235) 56%, transparent);
-    font-size: 0.82rem;
-  }
-
-  .tab-data-row span {
-    color: var(--color-text-muted, #8a93a6);
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.7rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .tab-data-row strong {
-    min-width: 0;
-    overflow-wrap: anywhere;
-    color: var(--color-text-secondary, #c4c9d4);
-    font-weight: 500;
-  }
-
-  .tab-empty-state,
-  .tab-inline-notice {
-    padding: 1rem;
-    border: 1px solid var(--color-border, #1c2235);
-    background: var(--color-surface-2, #101420);
-    color: var(--color-text-muted, #8a93a6);
-    font-size: 0.82rem;
-  }
-
-  .tab-inline-notice {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .tab-inline-notice button {
-    border: 0;
-    background: transparent;
-    color: var(--color-text-accent, #c49a5a);
-    font-size: 0.78rem;
-    cursor: pointer;
-    white-space: nowrap;
   }
 
   @keyframes pulse {
