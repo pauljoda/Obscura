@@ -86,7 +86,7 @@ public static class DependencyInjection {
         services.AddScoped<ICollectionRefreshPersistence, CollectionRefreshPersistenceService>();
         services.AddScoped<EfEntityRepository>();
         services.AddScoped<IEntityWriteRepository>(provider => provider.GetRequiredService<EfEntityRepository>());
-        services.AddScoped<EfEntityReadUseCases>();
+        services.AddScoped<IEntityReadService, EfEntityReadService>();
         services.AddScoped<IOrganizePersistence, EfOrganizePersistence>();
         services.AddScoped<IVideoSourceService, VideoSourceService>();
         services.AddSingleton(new HlsAssetServiceOptions(

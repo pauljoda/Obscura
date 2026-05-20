@@ -30,11 +30,14 @@ public sealed class InfrastructureBoundaryTests
     }
 
     [Fact]
-    public void ApplicationProjectDoesNotReferenceOuterLayersOrApiContracts()
+    public void ApplicationProjectDoesNotReferenceInfrastructureOrApiOrEfCore()
     {
+        // Obscura.Contracts is a pure data-only project (no HTTP/EF dependencies), and
+        // Application consumes it directly to avoid duplicating one record per layer for
+        // the same flat data. Infrastructure, API, and EF Core remain forbidden from
+        // Application so use-case orchestration stays persistence- and transport-agnostic.
         var projectFile = ReadRepoFile("apps/backend/src/Obscura.Application/Obscura.Application.csproj");
 
-        Assert.DoesNotContain("Obscura.Contracts", projectFile, StringComparison.Ordinal);
         Assert.DoesNotContain("Obscura.Infrastructure", projectFile, StringComparison.Ordinal);
         Assert.DoesNotContain("Obscura.Api", projectFile, StringComparison.Ordinal);
         Assert.DoesNotContain("Microsoft.EntityFrameworkCore", projectFile, StringComparison.Ordinal);
@@ -51,7 +54,6 @@ public sealed class InfrastructureBoundaryTests
         Assert.All(sourceFiles, file =>
         {
             var source = File.ReadAllText(file);
-            Assert.DoesNotContain("using Obscura.Contracts", source, StringComparison.Ordinal);
             Assert.DoesNotContain("using Obscura.Infrastructure", source, StringComparison.Ordinal);
             Assert.DoesNotContain("using Obscura.Api", source, StringComparison.Ordinal);
             Assert.DoesNotContain("using Microsoft.EntityFrameworkCore", source, StringComparison.Ordinal);

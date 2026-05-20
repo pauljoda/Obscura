@@ -4,13 +4,14 @@ using Obscura.Domain.Entities;
 using Obscura.Domain.Media;
 using ContractCapability = Obscura.Contracts.Entities.EntityCapability;
 
-namespace Obscura.Infrastructure.Entities;
+namespace Obscura.Application.Entities;
 
 /// <summary>
 /// The single projection from a hydrated domain <see cref="Entity"/> to the API
 /// <see cref="EntityCard"/> contract. This is the only place domain capabilities are
-/// mapped to contract capabilities; the row-based browse/thumbnail path is the one
-/// deliberate read-optimized exception and does not flow through here.
+/// mapped to contract capabilities; the row-based browse/thumbnail path in
+/// Infrastructure is the one deliberate read-optimized exception and does not flow
+/// through here.
 /// </summary>
 public static class EntityCardProjector
 {

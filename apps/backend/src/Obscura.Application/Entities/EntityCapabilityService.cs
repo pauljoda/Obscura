@@ -1,3 +1,4 @@
+using Obscura.Contracts.Entities;
 using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 
@@ -9,8 +10,9 @@ namespace Obscura.Application.Entities;
 /// orchestration so endpoints stay thin and the domain methods remain the single source
 /// of behavioral truth.
 ///
-/// Returns the hydrated <see cref="Entity"/> on success so callers can project it to a
-/// response contract, or <c>null</c> when no active entity exists for the identifier.
+/// Returns the projected <see cref="EntityCard"/> on success so endpoints can return
+/// the response contract directly, or <c>null</c> when no active entity exists for the
+/// identifier.
 /// </summary>
 public sealed class EntityCapabilityService
 {
@@ -28,11 +30,7 @@ public sealed class EntityCapabilityService
     /// <summary>
     /// Sets or clears the entity's user rating.
     /// </summary>
-    /// <param name="id">Entity identifier.</param>
-    /// <param name="value">New rating value, or null to clear.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>The mutated entity, or null when the entity does not exist.</returns>
-    public Task<Entity?> RateAsync(Guid id, int? value, CancellationToken cancellationToken) =>
+    public Task<EntityCard?> RateAsync(Guid id, int? value, CancellationToken cancellationToken) =>
         MutateAsync(id, entity =>
         {
             var rating = entity.GetOrAddCapability(() => new CapabilityRating());
@@ -51,13 +49,7 @@ public sealed class EntityCapabilityService
     /// <summary>
     /// Patches the entity's flag capability. Any null argument leaves the corresponding flag unchanged.
     /// </summary>
-    /// <param name="id">Entity identifier.</param>
-    /// <param name="isFavorite">New favorite state, or null to leave unchanged.</param>
-    /// <param name="isNsfw">New NSFW state, or null to leave unchanged.</param>
-    /// <param name="isOrganized">New organized state, or null to leave unchanged.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>The mutated entity, or null when the entity does not exist.</returns>
-    public Task<Entity?> UpdateFlagsAsync(
+    public Task<EntityCard?> UpdateFlagsAsync(
         Guid id,
         bool? isFavorite,
         bool? isNsfw,
@@ -73,13 +65,7 @@ public sealed class EntityCapabilityService
     /// <summary>
     /// Updates the entity's playback capability. Seconds inputs are converted to <see cref="TimeSpan"/>.
     /// </summary>
-    /// <param name="id">Entity identifier.</param>
-    /// <param name="resumeSeconds">Optional resume position in seconds.</param>
-    /// <param name="durationSeconds">Optional playback session duration in seconds.</param>
-    /// <param name="completed">Optional completion flag.</param>
-    /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    /// <returns>The mutated entity, or null when the entity does not exist.</returns>
-    public Task<Entity?> UpdatePlaybackAsync(
+    public Task<EntityCard?> UpdatePlaybackAsync(
         Guid id,
         double? resumeSeconds,
         double? durationSeconds,
@@ -98,7 +84,7 @@ public sealed class EntityCapabilityService
     /// <summary>
     /// Appends a new marker to the entity's marker capability.
     /// </summary>
-    public Task<Entity?> AddMarkerAsync(
+    public Task<EntityCard?> AddMarkerAsync(
         Guid id,
         string title,
         double seconds,
@@ -111,9 +97,9 @@ public sealed class EntityCapabilityService
         }, cancellationToken);
 
     /// <summary>
-    /// Updates one existing marker on the entity. Returns the entity only when the marker exists.
+    /// Updates one existing marker on the entity. Returns the entity card only when the marker exists.
     /// </summary>
-    public Task<Entity?> UpdateMarkerAsync(
+    public Task<EntityCard?> UpdateMarkerAsync(
         Guid id,
         Guid markerId,
         string title,
@@ -126,9 +112,9 @@ public sealed class EntityCapabilityService
             cancellationToken);
 
     /// <summary>
-    /// Removes one marker from the entity. Returns the entity only when the marker existed.
+    /// Removes one marker from the entity. Returns the entity card only when the marker existed.
     /// </summary>
-    public Task<Entity?> DeleteMarkerAsync(
+    public Task<EntityCard?> DeleteMarkerAsync(
         Guid id,
         Guid markerId,
         CancellationToken cancellationToken) =>
@@ -136,7 +122,7 @@ public sealed class EntityCapabilityService
             entity.GetOrAddCapability(() => new CapabilityMarkers()).Delete(markerId),
             cancellationToken);
 
-    private async Task<Entity?> MutateAsync(
+    private async Task<EntityCard?> MutateAsync(
         Guid id,
         Func<Entity, bool> mutate,
         CancellationToken cancellationToken)
@@ -148,6 +134,6 @@ public sealed class EntityCapabilityService
         }
 
         await _entities.SaveAsync(entity, cancellationToken);
-        return entity;
+        return EntityCardProjector.ToCard(entity);
     }
 }

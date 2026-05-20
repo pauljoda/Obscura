@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Application.Entities;
 using Obscura.Contracts.Collections;
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.Media;
@@ -14,17 +15,16 @@ using Obscura.Infrastructure.Persistence.Entities;
 namespace Obscura.Infrastructure.Entities;
 
 /// <summary>
-/// Read model for entity browse and detail API routes. Detail/card reads flow through
-/// the hydrated domain entity and <see cref="EntityCardProjector"/>; the browse and
-/// thumbnail path stays a deliberate row-optimized projection.
+/// EF Core adapter for <see cref="IEntityReadService"/>. Card and detail reads flow
+/// through the hydrated domain entity and <see cref="EntityCardProjector"/>; the
+/// browse and thumbnail path stays a deliberate row-optimized projection so list
+/// pages do not pay the full hydration cost.
 /// </summary>
-public sealed class EfEntityReadUseCases(ObscuraDbContext db, EfEntityRepository repository)
+public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository repository)
+    : IEntityReadService
 {
     private const int PageSize = 60;
 
-    /// <summary>
-    /// Lists active entities as thumbnail read models, optionally scoped by kind, search text, NSFW visibility, and cursor.
-    /// </summary>
     public async Task<EntityListResponse> ListAsync(
         string? kind,
         string? query,
@@ -75,18 +75,12 @@ public sealed class EfEntityReadUseCases(ObscuraDbContext db, EfEntityRepository
         return new EntityListResponse(thumbnails, nextCursor);
     }
 
-    /// <summary>
-    /// Gets one active entity as the shared entity card read model.
-    /// </summary>
     public async Task<EntityCard?> GetAsync(Guid id, CancellationToken cancellationToken)
     {
         var entity = await repository.FindAsync(id, cancellationToken);
         return entity is null ? null : EntityCardProjector.ToCard(entity);
     }
 
-    /// <summary>
-    /// Gets thumbnails for the requested identifiers while preserving the caller's requested order.
-    /// </summary>
     public async Task<EntityThumbnailBatchResponse> GetThumbnailsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken)
     {
         var rows = await db.Entities.AsNoTracking()
@@ -97,9 +91,6 @@ public sealed class EfEntityReadUseCases(ObscuraDbContext db, EfEntityRepository
         return new EntityThumbnailBatchResponse(ids.Where(byId.ContainsKey).Select(id => byId[id]).ToArray());
     }
 
-    /// <summary>
-    /// Gets one active entity as its kind-specific detail contract.
-    /// </summary>
     public async Task<IEntityCard?> GetDetailAsync(Guid id, string kind, CancellationToken cancellationToken)
     {
         var entity = await repository.FindAsync(id, cancellationToken);

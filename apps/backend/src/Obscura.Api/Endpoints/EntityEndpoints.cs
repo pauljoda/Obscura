@@ -7,7 +7,6 @@ using Obscura.Contracts.System;
 using Obscura.Contracts.Taxonomy;
 using Obscura.Contracts.Videos;
 using Obscura.Domain.Entities;
-using Obscura.Infrastructure.Entities;
 
 namespace Obscura.Api.Endpoints;
 
@@ -23,7 +22,7 @@ public static class EntityEndpoints
             string? cursor,
             bool? hideNsfw,
             HttpContext httpContext,
-            EfEntityReadUseCases entities,
+            IEntityReadService entities,
             CancellationToken cancellationToken) =>
         {
             if (!TryGetKind(httpContext.Request.Query["kind"].ToString(), out var kind, out var error))
@@ -39,7 +38,7 @@ public static class EntityEndpoints
 
         group.MapGet("/{id:guid}", async (
             Guid id,
-            EfEntityReadUseCases entities,
+            IEntityReadService entities,
             CancellationToken cancellationToken) =>
             await GetEntityAsync(id, entities, cancellationToken))
             .WithName("GetEntity")
@@ -48,7 +47,7 @@ public static class EntityEndpoints
 
         group.MapPost("/thumbnails", async (
             EntityThumbnailBatchRequest request,
-            EfEntityReadUseCases entities,
+            IEntityReadService entities,
             CancellationToken cancellationToken) =>
             Results.Ok(await entities.GetThumbnailsAsync(request.Ids, cancellationToken)))
             .WithName("GetEntityThumbnails")
@@ -124,7 +123,7 @@ public static class EntityEndpoints
         routes.MapGet("/api/series/{id:guid}/seasons/{seasonId:guid}", async (
             Guid id,
             Guid seasonId,
-            EfEntityReadUseCases entities,
+            IEntityReadService entities,
             CancellationToken cancellationToken) =>
             await GetKindDetailAsync(seasonId, "video-season", entities, cancellationToken))
             .WithTags("Series")
@@ -161,7 +160,7 @@ public static class EntityEndpoints
             string? query,
             string? cursor,
             bool? hideNsfw,
-            EfEntityReadUseCases entities,
+            IEntityReadService entities,
             CancellationToken cancellationToken) =>
             Results.Ok(await entities.ListAsync(kind, query, cursor, hideNsfw, cancellationToken)))
             .WithName(listName)
@@ -169,7 +168,7 @@ public static class EntityEndpoints
 
         group.MapGet("/{id:guid}", async (
             Guid id,
-            EfEntityReadUseCases entities,
+            IEntityReadService entities,
             CancellationToken cancellationToken) =>
             await GetKindDetailAsync(id, kind, entities, cancellationToken))
             .WithName(detailName)
@@ -181,7 +180,7 @@ public static class EntityEndpoints
 
     private static async Task<IResult> GetEntityAsync(
         Guid id,
-        EfEntityReadUseCases entities,
+        IEntityReadService entities,
         CancellationToken cancellationToken)
     {
         var entity = await entities.GetAsync(id, cancellationToken);
@@ -193,7 +192,7 @@ public static class EntityEndpoints
     private static async Task<IResult> GetKindDetailAsync(
         Guid id,
         string kind,
-        EfEntityReadUseCases entities,
+        IEntityReadService entities,
         CancellationToken cancellationToken)
     {
         var entity = await entities.GetDetailAsync(id, kind, cancellationToken);
@@ -202,10 +201,10 @@ public static class EntityEndpoints
             : Results.Ok<object>(entity);
     }
 
-    private static IResult ToResult(Guid id, Entity? entity) =>
-        entity is null
+    private static IResult ToResult(Guid id, EntityCard? card) =>
+        card is null
             ? Results.NotFound(new ApiProblem("entity_not_found", $"Entity '{id}' was not found."))
-            : Results.Ok(EntityCardProjector.ToCard(entity));
+            : Results.Ok(card);
 
     private static bool TryGetKind(string? value, out string? kind, out IResult error)
     {
