@@ -3,15 +3,6 @@ using Obscura.Contracts.Entities;
 namespace Obscura.Contracts.Videos;
 
 /// <summary>
-/// Cursor-paged response for video browsing.
-/// </summary>
-/// <param name="Items">Current page of video cards.</param>
-/// <param name="NextCursor">Cursor for the next page, or null when complete.</param>
-public sealed record VideoListResponse(
-    IReadOnlyList<EntityThumbnail> Items,
-    string? NextCursor);
-
-/// <summary>
 /// API-facing video detail shape combining video metadata with shared entity capabilities.
 /// </summary>
 /// <param name="Id">Video entity identifier.</param>

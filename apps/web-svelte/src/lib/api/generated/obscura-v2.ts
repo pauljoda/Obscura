@@ -14,7 +14,6 @@ import type {
   CancelJobsParams,
   ClearJobFailuresParams,
   CollectionDetail,
-  CollectionListResponse,
   EntityCard,
   EntityFlagsUpdateRequest,
   EntityListResponse,
@@ -52,7 +51,6 @@ import type {
   ListTagsParams,
   ListVideoSeriesParams,
   ListVideosParams,
-  MediaListResponse,
   OrganizeApplyResponse,
   OrganizePlanRequest,
   OrganizePlanResponse,
@@ -68,12 +66,9 @@ import type {
   SettingsUpdateRequest,
   StudioDetail,
   TagDetail,
-  TaxonomyListResponse,
   VideoDetail,
-  VideoListResponse,
   VideoSeasonDetail,
-  VideoSeriesDetail,
-  VideoSeriesListResponse
+  VideoSeriesDetail
 } from './model';
 
 import { orvalFetch } from '../orval-fetch';
@@ -1497,7 +1492,7 @@ export const deleteEntityMarker = async (id: string,
 
 
 export type listVideosResponse200 = {
-  data: VideoListResponse
+  data: EntityListResponse
   status: 200
 }
 
@@ -1577,7 +1572,7 @@ export const getVideo = async (id: string, options?: RequestInit): Promise<getVi
 
 
 export type listVideoSeriesResponse200 = {
-  data: VideoSeriesListResponse
+  data: EntityListResponse
   status: 200
 }
 
@@ -1657,7 +1652,7 @@ export const getVideoSeries = async (id: string, options?: RequestInit): Promise
 
 
 export type listImagesResponse200 = {
-  data: MediaListResponse
+  data: EntityListResponse
   status: 200
 }
 
@@ -1737,7 +1732,7 @@ export const getImage = async (id: string, options?: RequestInit): Promise<getIm
 
 
 export type listGalleriesResponse200 = {
-  data: MediaListResponse
+  data: EntityListResponse
   status: 200
 }
 
@@ -1817,7 +1812,7 @@ export const getGallery = async (id: string, options?: RequestInit): Promise<get
 
 
 export type listBooksResponse200 = {
-  data: MediaListResponse
+  data: EntityListResponse
   status: 200
 }
 
@@ -1897,7 +1892,7 @@ export const getBook = async (id: string, options?: RequestInit): Promise<getBoo
 
 
 export type listAudioLibrariesResponse200 = {
-  data: MediaListResponse
+  data: EntityListResponse
   status: 200
 }
 
@@ -1977,7 +1972,7 @@ export const getAudioLibrary = async (id: string, options?: RequestInit): Promis
 
 
 export type listAudioTracksResponse200 = {
-  data: MediaListResponse
+  data: EntityListResponse
   status: 200
 }
 
@@ -2057,7 +2052,7 @@ export const getAudioTrack = async (id: string, options?: RequestInit): Promise<
 
 
 export type listPeopleResponse200 = {
-  data: TaxonomyListResponse
+  data: EntityListResponse
   status: 200
 }
 
@@ -2137,7 +2132,7 @@ export const getPerson = async (id: string, options?: RequestInit): Promise<getP
 
 
 export type listStudiosResponse200 = {
-  data: TaxonomyListResponse
+  data: EntityListResponse
   status: 200
 }
 
@@ -2217,7 +2212,7 @@ export const getStudio = async (id: string, options?: RequestInit): Promise<getS
 
 
 export type listTagsResponse200 = {
-  data: TaxonomyListResponse
+  data: EntityListResponse
   status: 200
 }
 
@@ -2297,7 +2292,7 @@ export const getTag = async (id: string, options?: RequestInit): Promise<getTagR
 
 
 export type listCollectionsResponse200 = {
-  data: CollectionListResponse
+  data: EntityListResponse
   status: 200
 }
 

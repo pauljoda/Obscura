@@ -34,7 +34,6 @@ import type {
   AudioTrackDetail,
   BookDetail,
   CollectionDetail,
-  CollectionListResponse,
   EntityCapability,
   EntityCard,
   EntityGroup,
@@ -45,16 +44,12 @@ import type {
   ImageDetail,
   JobListResponse,
   JobRun,
-  MediaListResponse,
   PersonDetail,
   SettingsResponse,
   StudioDetail,
   TagDetail,
-  TaxonomyListResponse,
   VideoDetail,
-  VideoListResponse,
   VideoSeriesDetail,
-  VideoSeriesListResponse,
   VideoSeasonDetail,
 } from "./generated/model";
 import { jellyfinApiPath, v2ApiPath } from "./orval-fetch";
@@ -71,9 +66,9 @@ export type V2EntityChildGroup = EntityGroup;
 export type V2EntityRelationshipGroup = EntityGroup;
 export type V2EntityThumbnail = EntityThumbnail;
 export type V2EntityListResponse = EntityListResponse;
-export type V2VideoListResponse = VideoListResponse;
+export type V2VideoListResponse = EntityListResponse;
 export type V2VideoDetail = VideoDetail;
-export type V2VideoSeriesListResponse = VideoSeriesListResponse;
+export type V2VideoSeriesListResponse = EntityListResponse;
 export type V2VideoSeriesDetail = VideoSeriesDetail;
 export type V2VideoSeasonDetail = VideoSeasonDetail;
 export type V2JobRun = JobRun & {
@@ -104,10 +99,10 @@ export type V2PersonDetail = PersonDetail;
 export type V2StudioDetail = StudioDetail;
 export type V2TagDetail = TagDetail;
 export type V2CollectionDetail = CollectionDetail;
-export type V2CollectionListResponse = CollectionListResponse;
-export type V2TaxonomyListResponse = TaxonomyListResponse;
+export type V2CollectionListResponse = EntityListResponse;
+export type V2TaxonomyListResponse = EntityListResponse;
 export type V2SettingsResponse = SettingsResponse;
-export type V2MediaListResponse = MediaListResponse;
+export type V2MediaListResponse = EntityListResponse;
 export interface V2EntityReference {
   id: string;
   kind: string;

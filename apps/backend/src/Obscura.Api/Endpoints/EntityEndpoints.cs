@@ -148,8 +148,8 @@ public static class EntityEndpoints
             .Produces<EntityCard>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
-        routes.MapEntityKindRoutes("/api/videos", "video", "Videos", "ListVideos", "GetVideo", typeof(VideoListResponse), typeof(VideoDetail));
-        routes.MapEntityKindRoutes("/api/series", "video-series", "Series", "ListVideoSeries", "GetVideoSeries", typeof(VideoSeriesListResponse), typeof(VideoSeriesDetail));
+        routes.MapEntityKindRoutes("/api/videos", "video", "Videos", "ListVideos", "GetVideo", typeof(EntityListResponse), typeof(VideoDetail));
+        routes.MapEntityKindRoutes("/api/series", "video-series", "Series", "ListVideoSeries", "GetVideoSeries", typeof(EntityListResponse), typeof(VideoSeriesDetail));
         routes.MapGet("/api/series/{id:guid}/seasons/{seasonId:guid}", async (
             Guid id,
             Guid seasonId,
@@ -160,15 +160,15 @@ public static class EntityEndpoints
             .WithName("GetVideoSeason")
             .Produces<VideoSeasonDetail>()
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
-        routes.MapEntityKindRoutes("/api/images", "image", "Images", "ListImages", "GetImage", typeof(MediaListResponse), typeof(ImageDetail));
-        routes.MapEntityKindRoutes("/api/galleries", "gallery", "Galleries", "ListGalleries", "GetGallery", typeof(MediaListResponse), typeof(GalleryDetail));
-        routes.MapEntityKindRoutes("/api/books", "book", "Books", "ListBooks", "GetBook", typeof(MediaListResponse), typeof(BookDetail));
-        routes.MapEntityKindRoutes("/api/audio-libraries", "audio-library", "Audio", "ListAudioLibraries", "GetAudioLibrary", typeof(MediaListResponse), typeof(AudioLibraryDetail));
-        routes.MapEntityKindRoutes("/api/audio-tracks", "audio-track", "Audio", "ListAudioTracks", "GetAudioTrack", typeof(MediaListResponse), typeof(AudioTrackDetail));
-        routes.MapEntityKindRoutes("/api/people", "person", "Taxonomy", "ListPeople", "GetPerson", typeof(TaxonomyListResponse), typeof(PersonDetail));
-        routes.MapEntityKindRoutes("/api/studios", "studio", "Taxonomy", "ListStudios", "GetStudio", typeof(TaxonomyListResponse), typeof(StudioDetail));
-        routes.MapEntityKindRoutes("/api/tags", "tag", "Taxonomy", "ListTags", "GetTag", typeof(TaxonomyListResponse), typeof(TagDetail));
-        routes.MapEntityKindRoutes("/api/collections", "collection", "Collections", "ListCollections", "GetCollection", typeof(CollectionListResponse), typeof(CollectionDetail));
+        routes.MapEntityKindRoutes("/api/images", "image", "Images", "ListImages", "GetImage", typeof(EntityListResponse), typeof(ImageDetail));
+        routes.MapEntityKindRoutes("/api/galleries", "gallery", "Galleries", "ListGalleries", "GetGallery", typeof(EntityListResponse), typeof(GalleryDetail));
+        routes.MapEntityKindRoutes("/api/books", "book", "Books", "ListBooks", "GetBook", typeof(EntityListResponse), typeof(BookDetail));
+        routes.MapEntityKindRoutes("/api/audio-libraries", "audio-library", "Audio", "ListAudioLibraries", "GetAudioLibrary", typeof(EntityListResponse), typeof(AudioLibraryDetail));
+        routes.MapEntityKindRoutes("/api/audio-tracks", "audio-track", "Audio", "ListAudioTracks", "GetAudioTrack", typeof(EntityListResponse), typeof(AudioTrackDetail));
+        routes.MapEntityKindRoutes("/api/people", "person", "Taxonomy", "ListPeople", "GetPerson", typeof(EntityListResponse), typeof(PersonDetail));
+        routes.MapEntityKindRoutes("/api/studios", "studio", "Taxonomy", "ListStudios", "GetStudio", typeof(EntityListResponse), typeof(StudioDetail));
+        routes.MapEntityKindRoutes("/api/tags", "tag", "Taxonomy", "ListTags", "GetTag", typeof(EntityListResponse), typeof(TagDetail));
+        routes.MapEntityKindRoutes("/api/collections", "collection", "Collections", "ListCollections", "GetCollection", typeof(EntityListResponse), typeof(CollectionDetail));
 
         return routes;
     }

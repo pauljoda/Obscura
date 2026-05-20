@@ -3,15 +3,6 @@ using Obscura.Contracts.Entities;
 namespace Obscura.Contracts.Collections;
 
 /// <summary>
-/// Cursor-paged response for collection browsing.
-/// </summary>
-/// <param name="Items">Current page of collection cards.</param>
-/// <param name="NextCursor">Cursor for the next page, or null when complete.</param>
-public sealed record CollectionListResponse(
-    IReadOnlyList<EntityThumbnail> Items,
-    string? NextCursor);
-
-/// <summary>
 /// API-facing collection detail shape with expanded collection members.
 /// </summary>
 /// <param name="Id">Collection entity identifier.</param>
