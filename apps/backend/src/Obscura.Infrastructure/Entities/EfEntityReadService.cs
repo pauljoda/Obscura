@@ -1,14 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Obscura.Application.Entities;
-using Obscura.Contracts.Collections;
 using Obscura.Contracts.Entities;
-using Obscura.Contracts.Media;
-using Obscura.Contracts.Series;
-using Obscura.Contracts.Taxonomy;
-using Obscura.Contracts.Videos;
 using Obscura.Domain.Entities;
-using Obscura.Domain.Media;
-using Obscura.Domain.Taxonomy;
+using Obscura.Infrastructure.Entities.Mappers;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
 
@@ -18,11 +12,25 @@ namespace Obscura.Infrastructure.Entities;
 /// EF Core adapter for <see cref="IEntityReadService"/>. Card and detail reads flow
 /// through the hydrated domain entity and <see cref="EntityCardProjector"/>; the
 /// browse and thumbnail path stays a deliberate row-optimized projection so list
-/// pages do not pay the full hydration cost.
+/// pages do not pay the full hydration cost. Kind-specific detail DTO projection is
+/// delegated to <see cref="IEntityKindMapper.ProjectDetail"/> so this service stays a
+/// coordinator and never branches on a concrete entity kind.
 /// </summary>
-public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository repository)
-    : IEntityReadService {
+public sealed class EfEntityReadService : IEntityReadService {
     private const int PageSize = 60;
+
+    private readonly ObscuraDbContext _db;
+    private readonly EfEntityRepository _repository;
+    private readonly IReadOnlyDictionary<EntityKind, IEntityKindMapper> _kindMappers;
+
+    public EfEntityReadService(
+        ObscuraDbContext db,
+        EfEntityRepository repository,
+        IEnumerable<IEntityKindMapper> kindMappers) {
+        _db = db;
+        _repository = repository;
+        _kindMappers = kindMappers.ToDictionary(mapper => mapper.Kind);
+    }
 
     public async Task<EntityListResponse> ListAsync(
         string? kind,
@@ -30,7 +38,7 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
         string? cursor,
         bool? hideNsfw,
         CancellationToken cancellationToken) {
-        var entityQuery = db.Entities.AsNoTracking()
+        var entityQuery = _db.Entities.AsNoTracking()
             .Where(entity => entity.DeletedAt == null);
 
         if (!string.IsNullOrWhiteSpace(kind)) {
@@ -45,7 +53,7 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
         if (hideNsfw == true) {
             entityQuery =
                 from entity in entityQuery
-                join flag in db.EntityFlags.AsNoTracking() on entity.Id equals flag.EntityId into flags
+                join flag in _db.EntityFlags.AsNoTracking() on entity.Id equals flag.EntityId into flags
                 from flag in flags.DefaultIfEmpty()
                 where flag == null || !flag.IsNsfw
                 select entity;
@@ -70,12 +78,12 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
     }
 
     public async Task<EntityCard?> GetAsync(Guid id, CancellationToken cancellationToken) {
-        var entity = await repository.FindAsync(id, cancellationToken);
+        var entity = await _repository.FindAsync(id, cancellationToken);
         return entity is null ? null : EntityCardProjector.ToCard(entity);
     }
 
     public async Task<EntityThumbnailBatchResponse> GetThumbnailsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken) {
-        var rows = await db.Entities.AsNoTracking()
+        var rows = await _db.Entities.AsNoTracking()
             .Where(entity => ids.Contains(entity.Id) && entity.DeletedAt == null)
             .ToArrayAsync(cancellationToken);
         var thumbnails = await ProjectThumbnailsAsync(rows, cancellationToken);
@@ -84,7 +92,7 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
     }
 
     public async Task<IEntityCard?> GetDetailAsync(Guid id, string kind, CancellationToken cancellationToken) {
-        var entity = await repository.FindAsync(id, cancellationToken);
+        var entity = await _repository.FindAsync(id, cancellationToken);
         if (entity is null) {
             return null;
         }
@@ -95,158 +103,9 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
         }
 
         var creditMetadata = EntityCardProjector.CreditMetadata(entity);
-        return kind switch {
-            "video" => new VideoDetail {
-                Id = card.Id,
-                Kind = card.Kind,
-                Title = card.Title,
-                ParentEntityId = card.ParentEntityId,
-                SortOrder = card.SortOrder,
-                Capabilities = card.Capabilities,
-                ChildrenByKind = card.ChildrenByKind,
-                Relationships = card.Relationships,
-                CreditMetadata = creditMetadata,
-                SubtitlesExtractedAt = (entity as Video)?.SubtitlesExtractedAt,
-            },
-            "video-series" => new VideoSeriesDetail {
-                Id = card.Id,
-                Kind = card.Kind,
-                Title = card.Title,
-                ParentEntityId = card.ParentEntityId,
-                SortOrder = card.SortOrder,
-                Capabilities = card.Capabilities,
-                ChildrenByKind = card.ChildrenByKind,
-                Relationships = card.Relationships,
-                CreditMetadata = creditMetadata,
-            },
-            "video-season" => new VideoSeasonDetail {
-                Id = card.Id,
-                Kind = card.Kind,
-                Title = card.Title,
-                ParentEntityId = card.ParentEntityId,
-                SortOrder = card.SortOrder,
-                Capabilities = card.Capabilities,
-                ChildrenByKind = card.ChildrenByKind,
-                Relationships = card.Relationships,
-            },
-            "image" => new ImageDetail {
-                Id = card.Id,
-                Kind = card.Kind,
-                Title = card.Title,
-                ParentEntityId = card.ParentEntityId,
-                SortOrder = card.SortOrder,
-                Capabilities = card.Capabilities,
-                ChildrenByKind = card.ChildrenByKind,
-                Relationships = card.Relationships,
-            },
-            "gallery" when entity is Gallery gallery => new GalleryDetail {
-                Id = card.Id,
-                Kind = card.Kind,
-                Title = card.Title,
-                ParentEntityId = card.ParentEntityId,
-                SortOrder = card.SortOrder,
-                Capabilities = card.Capabilities,
-                ChildrenByKind = card.ChildrenByKind,
-                Relationships = card.Relationships,
-                CreditMetadata = creditMetadata,
-                GalleryType = gallery.GalleryType.ToCode(),
-                CoverImageId = gallery.CoverImageId,
-            },
-            "book" when entity is Book book => new BookDetail {
-                Id = card.Id,
-                Kind = card.Kind,
-                Title = card.Title,
-                ParentEntityId = card.ParentEntityId,
-                SortOrder = card.SortOrder,
-                Capabilities = card.Capabilities,
-                ChildrenByKind = card.ChildrenByKind,
-                Relationships = card.Relationships,
-                BookType = book.BookType.ToCode(),
-                CoverPageId = book.CoverPageId,
-            },
-            "audio-library" => new AudioLibraryDetail {
-                Id = card.Id,
-                Kind = card.Kind,
-                Title = card.Title,
-                ParentEntityId = card.ParentEntityId,
-                SortOrder = card.SortOrder,
-                Capabilities = card.Capabilities,
-                ChildrenByKind = card.ChildrenByKind,
-                Relationships = card.Relationships,
-            },
-            "audio-track" when entity is AudioTrack track => new AudioTrackDetail {
-                Id = card.Id,
-                Kind = card.Kind,
-                Title = card.Title,
-                ParentEntityId = card.ParentEntityId,
-                SortOrder = card.SortOrder,
-                Capabilities = card.Capabilities,
-                ChildrenByKind = card.ChildrenByKind,
-                Relationships = card.Relationships,
-                EmbeddedArtist = track.EmbeddedArtist,
-                EmbeddedAlbum = track.EmbeddedAlbum,
-            },
-            "person" when entity is Person person => new PersonDetail {
-                Id = card.Id,
-                Kind = card.Kind,
-                Title = card.Title,
-                ParentEntityId = card.ParentEntityId,
-                SortOrder = card.SortOrder,
-                Capabilities = card.Capabilities,
-                ChildrenByKind = card.ChildrenByKind,
-                Relationships = card.Relationships,
-                Disambiguation = person.Disambiguation,
-                Gender = person.Gender,
-                Country = person.Country,
-                Ethnicity = person.Ethnicity,
-                EyeColor = person.EyeColor,
-                HairColor = person.HairColor,
-                Height = person.Height,
-                Weight = person.Weight,
-                Measurements = person.Measurements,
-                Tattoos = person.Tattoos,
-                Piercings = person.Piercings,
-            },
-            "studio" => new StudioDetail {
-                Id = card.Id,
-                Kind = card.Kind,
-                Title = card.Title,
-                ParentEntityId = card.ParentEntityId,
-                SortOrder = card.SortOrder,
-                Capabilities = card.Capabilities,
-                ChildrenByKind = card.ChildrenByKind,
-                Relationships = card.Relationships,
-            },
-            "tag" when entity is Tag tag => new TagDetail {
-                Id = card.Id,
-                Kind = card.Kind,
-                Title = card.Title,
-                ParentEntityId = card.ParentEntityId,
-                SortOrder = card.SortOrder,
-                Capabilities = card.Capabilities,
-                ChildrenByKind = card.ChildrenByKind,
-                Relationships = card.Relationships,
-                IgnoreAutoTag = tag.IgnoreAutoTag,
-            },
-            "collection" when entity is Collection collection => new CollectionDetail {
-                Id = card.Id,
-                Kind = card.Kind,
-                Title = card.Title,
-                ParentEntityId = card.ParentEntityId,
-                SortOrder = card.SortOrder,
-                Capabilities = card.Capabilities,
-                ChildrenByKind = card.ChildrenByKind,
-                Relationships = card.Relationships,
-                Mode = collection.Mode.ToCode(),
-                RuleTreeJson = collection.RuleTreeJson,
-                CoverMode = collection.CoverMode.ToCode(),
-                CoverItemId = collection.CoverItemId,
-                SlideshowDuration = collection.SlideshowDuration,
-                SlideshowAutoAdvance = collection.SlideshowAutoAdvance,
-                LastRefreshedAt = collection.LastRefreshedAt,
-            },
-            _ => card
-        };
+        return _kindMappers.TryGetValue(entity.Kind, out var mapper)
+            ? mapper.ProjectDetail(entity, card, creditMetadata)
+            : card;
     }
 
     private async Task<IReadOnlyList<EntityThumbnail>> ProjectThumbnailsAsync(
@@ -257,13 +116,13 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
         }
 
         var ids = rows.Select(entity => entity.Id).ToArray();
-        var ratings = await db.EntityRatings.AsNoTracking()
+        var ratings = await _db.EntityRatings.AsNoTracking()
             .Where(rating => ids.Contains(rating.EntityId))
             .ToDictionaryAsync(rating => rating.EntityId, rating => rating.Value, cancellationToken);
-        var flags = await db.EntityFlags.AsNoTracking()
+        var flags = await _db.EntityFlags.AsNoTracking()
             .Where(flag => ids.Contains(flag.EntityId))
             .ToDictionaryAsync(flag => flag.EntityId, cancellationToken);
-        var covers = await db.EntityFiles.AsNoTracking()
+        var covers = await _db.EntityFiles.AsNoTracking()
             .Where(file => ids.Contains(file.EntityId))
             .Where(file => file.Role == EntityFileRole.Thumbnail || file.Role == EntityFileRole.Poster || file.Role == EntityFileRole.Cover || file.Role == EntityFileRole.Backdrop)
             .OrderBy(file => file.Role == EntityFileRole.Thumbnail ? 0 :

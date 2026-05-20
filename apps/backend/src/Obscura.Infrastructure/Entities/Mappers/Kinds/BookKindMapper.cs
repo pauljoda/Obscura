@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Contracts.Entities;
+using Obscura.Contracts.Media;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Media;
 using Obscura.Infrastructure.Persistence;
@@ -25,6 +27,25 @@ internal sealed class BookKindMapper(ObscuraDbContext db) : IEntityKindMapper {
         row.BookType = book.BookType;
         row.CoverPageEntityId = book.CoverPageId;
     }
+
+    public IEntityCard ProjectDetail(
+        Entity entity,
+        EntityCard card,
+        IReadOnlyList<EntityCreditMetadata> creditMetadata) =>
+        entity is Book book
+            ? new BookDetail {
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
+                Capabilities = card.Capabilities,
+                ChildrenByKind = card.ChildrenByKind,
+                Relationships = card.Relationships,
+                BookType = book.BookType.ToCode(),
+                CoverPageId = book.CoverPageId,
+            }
+            : card;
 
     private BookDetailRow Track(BookDetailRow row) {
         db.BookDetails.Add(row);

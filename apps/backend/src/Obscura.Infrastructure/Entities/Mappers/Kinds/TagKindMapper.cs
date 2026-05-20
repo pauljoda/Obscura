@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Contracts.Entities;
+using Obscura.Contracts.Taxonomy;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Taxonomy;
 using Obscura.Infrastructure.Persistence;
@@ -24,6 +26,24 @@ internal sealed class TagKindMapper(ObscuraDbContext db) : IEntityKindMapper {
             ?? Track(new TagDetailRow { EntityId = entity.Id });
         row.IgnoreAutoTag = tag.IgnoreAutoTag;
     }
+
+    public IEntityCard ProjectDetail(
+        Entity entity,
+        EntityCard card,
+        IReadOnlyList<EntityCreditMetadata> creditMetadata) =>
+        entity is Tag tag
+            ? new TagDetail {
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
+                Capabilities = card.Capabilities,
+                ChildrenByKind = card.ChildrenByKind,
+                Relationships = card.Relationships,
+                IgnoreAutoTag = tag.IgnoreAutoTag,
+            }
+            : card;
 
     private TagDetailRow Track(TagDetailRow row) {
         db.TagDetails.Add(row);

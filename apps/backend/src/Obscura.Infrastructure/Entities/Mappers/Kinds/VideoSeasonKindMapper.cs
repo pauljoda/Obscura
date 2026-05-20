@@ -1,3 +1,5 @@
+using Obscura.Contracts.Entities;
+using Obscura.Contracts.Series;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Media;
 using Obscura.Infrastructure.Persistence;
@@ -10,4 +12,19 @@ internal sealed class VideoSeasonKindMapper(ObscuraDbContext db) : SimpleKindMap
 
     protected override Entity Construct(EntityRow row) =>
         new VideoSeason(row.Id, row.Title, row.ParentEntityId, sortOrder: row.SortOrder);
+
+    public override IEntityCard ProjectDetail(
+        Entity entity,
+        EntityCard card,
+        IReadOnlyList<EntityCreditMetadata> creditMetadata) =>
+        new VideoSeasonDetail {
+            Id = card.Id,
+            Kind = card.Kind,
+            Title = card.Title,
+            ParentEntityId = card.ParentEntityId,
+            SortOrder = card.SortOrder,
+            Capabilities = card.Capabilities,
+            ChildrenByKind = card.ChildrenByKind,
+            Relationships = card.Relationships,
+        };
 }

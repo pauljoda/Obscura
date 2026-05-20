@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Contracts.Entities;
+using Obscura.Contracts.Media;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Media;
 using Obscura.Infrastructure.Persistence;
@@ -29,6 +31,26 @@ internal sealed class GalleryKindMapper(ObscuraDbContext db) : IEntityKindMapper
         row.GalleryType = gallery.GalleryType;
         row.CoverImageEntityId = gallery.CoverImageId;
     }
+
+    public IEntityCard ProjectDetail(
+        Entity entity,
+        EntityCard card,
+        IReadOnlyList<EntityCreditMetadata> creditMetadata) =>
+        entity is Gallery gallery
+            ? new GalleryDetail {
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
+                Capabilities = card.Capabilities,
+                ChildrenByKind = card.ChildrenByKind,
+                Relationships = card.Relationships,
+                CreditMetadata = creditMetadata,
+                GalleryType = gallery.GalleryType.ToCode(),
+                CoverImageId = gallery.CoverImageId,
+            }
+            : card;
 
     private GalleryDetailRow Track(GalleryDetailRow row) {
         db.GalleryDetails.Add(row);

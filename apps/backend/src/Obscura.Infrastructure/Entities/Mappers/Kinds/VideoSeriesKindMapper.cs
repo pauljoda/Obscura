@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Contracts.Entities;
+using Obscura.Contracts.Series;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Media;
 using Obscura.Infrastructure.Persistence;
@@ -24,6 +26,22 @@ internal sealed class VideoSeriesKindMapper(ObscuraDbContext db) : IEntityKindMa
             ?? Track(new VideoSeriesDetailRow { EntityId = entity.Id });
         row.Status = series.Status;
     }
+
+    public IEntityCard ProjectDetail(
+        Entity entity,
+        EntityCard card,
+        IReadOnlyList<EntityCreditMetadata> creditMetadata) =>
+        new VideoSeriesDetail {
+            Id = card.Id,
+            Kind = card.Kind,
+            Title = card.Title,
+            ParentEntityId = card.ParentEntityId,
+            SortOrder = card.SortOrder,
+            Capabilities = card.Capabilities,
+            ChildrenByKind = card.ChildrenByKind,
+            Relationships = card.Relationships,
+            CreditMetadata = creditMetadata,
+        };
 
     private VideoSeriesDetailRow Track(VideoSeriesDetailRow row) {
         db.VideoSeriesDetails.Add(row);

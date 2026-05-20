@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Contracts.Entities;
+using Obscura.Contracts.Taxonomy;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Taxonomy;
 using Obscura.Infrastructure.Persistence;
@@ -47,6 +49,34 @@ internal sealed class PersonKindMapper(ObscuraDbContext db) : IEntityKindMapper 
         row.Tattoos = person.Tattoos;
         row.Piercings = person.Piercings;
     }
+
+    public IEntityCard ProjectDetail(
+        Entity entity,
+        EntityCard card,
+        IReadOnlyList<EntityCreditMetadata> creditMetadata) =>
+        entity is Person person
+            ? new PersonDetail {
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
+                Capabilities = card.Capabilities,
+                ChildrenByKind = card.ChildrenByKind,
+                Relationships = card.Relationships,
+                Disambiguation = person.Disambiguation,
+                Gender = person.Gender,
+                Country = person.Country,
+                Ethnicity = person.Ethnicity,
+                EyeColor = person.EyeColor,
+                HairColor = person.HairColor,
+                Height = person.Height,
+                Weight = person.Weight,
+                Measurements = person.Measurements,
+                Tattoos = person.Tattoos,
+                Piercings = person.Piercings,
+            }
+            : card;
 
     private PersonDetailRow Track(PersonDetailRow row) {
         db.PersonDetails.Add(row);

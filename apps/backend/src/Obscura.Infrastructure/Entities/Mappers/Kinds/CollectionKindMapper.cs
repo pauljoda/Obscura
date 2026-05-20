@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Contracts.Collections;
+using Obscura.Contracts.Entities;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Media;
 using Obscura.Infrastructure.Persistence;
@@ -41,6 +43,30 @@ internal sealed class CollectionKindMapper(ObscuraDbContext db) : IEntityKindMap
         row.SlideshowAutoAdvance = collection.SlideshowAutoAdvance;
         row.LastRefreshedAt = collection.LastRefreshedAt;
     }
+
+    public IEntityCard ProjectDetail(
+        Entity entity,
+        EntityCard card,
+        IReadOnlyList<EntityCreditMetadata> creditMetadata) =>
+        entity is Collection collection
+            ? new CollectionDetail {
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
+                Capabilities = card.Capabilities,
+                ChildrenByKind = card.ChildrenByKind,
+                Relationships = card.Relationships,
+                Mode = collection.Mode.ToCode(),
+                RuleTreeJson = collection.RuleTreeJson,
+                CoverMode = collection.CoverMode.ToCode(),
+                CoverItemId = collection.CoverItemId,
+                SlideshowDuration = collection.SlideshowDuration,
+                SlideshowAutoAdvance = collection.SlideshowAutoAdvance,
+                LastRefreshedAt = collection.LastRefreshedAt,
+            }
+            : card;
 
     private CollectionDetailRow Track(CollectionDetailRow row) {
         db.CollectionDetails.Add(row);
