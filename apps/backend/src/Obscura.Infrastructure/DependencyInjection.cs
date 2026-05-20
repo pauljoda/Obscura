@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using Obscura.Application.Entities;
 using Obscura.Application.Jobs;
 using Obscura.Application.Jobs.Ports;
 using Obscura.Application.Settings;
@@ -82,6 +83,7 @@ public static class DependencyInjection {
         services.AddScoped<ICollectionRuleEngine, CollectionRuleEngine>();
         services.AddScoped<ICollectionRefreshPersistence, CollectionRefreshPersistenceService>();
         services.AddScoped<EfEntityRepository>();
+        services.AddScoped<IEntityWriteRepository>(provider => provider.GetRequiredService<EfEntityRepository>());
         services.AddScoped<EfEntityReadUseCases>();
         services.AddScoped<EntityOrganizerService>();
         services.AddScoped<IVideoSourceService, VideoSourceService>();

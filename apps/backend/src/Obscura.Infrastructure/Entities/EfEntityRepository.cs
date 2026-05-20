@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using Obscura.Application.Entities;
 using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Media;
@@ -11,9 +12,11 @@ using Obscura.Infrastructure.Persistence.Entities;
 namespace Obscura.Infrastructure.Entities;
 
 /// <summary>
-/// EF-backed repository that hydrates domain entities from row storage.
+/// EF-backed repository that hydrates domain entities from row storage and persists their
+/// mutable state. Implements the Application <see cref="IEntityWriteRepository"/> port so
+/// Application services can mutate entities without taking a direct dependency on EF Core.
 /// </summary>
-public sealed class EfEntityRepository(ObscuraDbContext db) {
+public sealed class EfEntityRepository(ObscuraDbContext db) : IEntityWriteRepository {
     private const string RelatedRelationshipCode = "related";
     private const string CreditsRelationshipCode = "credits";
 
