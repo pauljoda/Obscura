@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Obscura.Api.Mapping;
 using Obscura.Application.Jobs;
-using Obscura.Application.Jobs.Ports;
 using Obscura.Contracts.Jobs;
 using Obscura.Domain.Entities;
 
@@ -65,78 +64,16 @@ public static class JobEndpoints {
             .WithSummary("Clears failed job runs from the operations dashboard.");
 
         group.MapPost("/rebuild-previews", async (
-            IMaintenancePersistence maintenance,
-            IJobQueueService queue,
-            CancellationToken cancellationToken) => {
-                int enqueued = 0, skipped = 0;
-
-                var previewKinds = new (EntityKind Kind, JobType JobType)[] {
-                    (EntityKind.Video, JobType.GeneratePreview),
-                    (EntityKind.Image, JobType.GenerateImageThumbnail),
-                    (EntityKind.BookPage, JobType.GenerateBookPageThumbnail),
-                    (EntityKind.AudioTrack, JobType.GenerateAudioWaveform)
-                };
-
-                foreach (var (kind, jobType) in previewKinds) {
-                    var entityIds = await maintenance.GetActiveEntityIdsByKindAsync(kind, cancellationToken);
-                    foreach (var entityId in entityIds) {
-                        var id = entityId.ToString();
-                        if (await queue.HasPendingAsync(jobType, id, cancellationToken)) {
-                            skipped++;
-                            continue;
-                        }
-
-                        await queue.EnqueueAsync(new EnqueueJobRequest(
-                            Type: jobType,
-                            TargetEntityKind: EntityKindRegistry.ToCode(kind),
-                            TargetEntityId: id), cancellationToken);
-                        enqueued++;
-                    }
-                }
-
-                return Results.Ok(new BulkJobResponse(enqueued, skipped));
-            })
+            JobService jobs,
+            CancellationToken cancellationToken) =>
+            Results.Ok((await jobs.RebuildPreviewsAsync(cancellationToken)).ToContract()))
             .WithName("RebuildPreviews")
             .WithSummary("Queues preview generation for all media entities.");
 
         group.MapPost("/backfill-fingerprints", async (
-            IMaintenancePersistence maintenance,
-            ILibraryScanPersistence scanPersistence,
-            IJobQueueService queue,
-            CancellationToken cancellationToken) => {
-                int enqueued = 0, skipped = 0;
-
-                var fingerprintKinds = new (EntityKind Kind, JobType JobType)[] {
-                    (EntityKind.Video, JobType.FingerprintVideo),
-                    (EntityKind.Image, JobType.FingerprintImage),
-                    (EntityKind.AudioTrack, JobType.FingerprintAudio)
-                };
-
-                foreach (var (kind, jobType) in fingerprintKinds) {
-                    var entityIds = await maintenance.GetActiveEntityIdsByKindAsync(kind, cancellationToken);
-                    foreach (var entityId in entityIds) {
-                        if (await scanPersistence.HasEntityFingerprintAsync(
-                            entityId, FingerprintAlgorithm.Md5, cancellationToken)) {
-                            skipped++;
-                            continue;
-                        }
-
-                        var id = entityId.ToString();
-                        if (await queue.HasPendingAsync(jobType, id, cancellationToken)) {
-                            skipped++;
-                            continue;
-                        }
-
-                        await queue.EnqueueAsync(new EnqueueJobRequest(
-                            Type: jobType,
-                            TargetEntityKind: EntityKindRegistry.ToCode(kind),
-                            TargetEntityId: id), cancellationToken);
-                        enqueued++;
-                    }
-                }
-
-                return Results.Ok(new BulkJobResponse(enqueued, skipped));
-            })
+            JobService jobs,
+            CancellationToken cancellationToken) =>
+            Results.Ok((await jobs.BackfillFingerprintsAsync(cancellationToken)).ToContract()))
             .WithName("BackfillFingerprints")
             .WithSummary("Queues fingerprint generation for entities that lack one.");
 
