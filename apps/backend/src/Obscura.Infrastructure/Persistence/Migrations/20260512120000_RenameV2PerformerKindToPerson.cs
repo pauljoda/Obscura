@@ -9,11 +9,9 @@ namespace Obscura.Infrastructure.Persistence.Migrations;
 /// <inheritdoc />
 [DbContext(typeof(ObscuraDbContext))]
 [Migration("20260512120000_RenameV2PerformerKindToPerson")]
-public partial class RenameV2PerformerKindToPerson : Migration
-{
+public partial class RenameV2PerformerKindToPerson : Migration {
     /// <inheritdoc />
-    protected override void Up(MigrationBuilder migrationBuilder)
-    {
+    protected override void Up(MigrationBuilder migrationBuilder) {
         migrationBuilder.Sql(
             """
             INSERT INTO v2.entity_kinds (code, category, display_name)
@@ -36,8 +34,7 @@ public partial class RenameV2PerformerKindToPerson : Migration
     }
 
     /// <inheritdoc />
-    protected override void Down(MigrationBuilder migrationBuilder)
-    {
+    protected override void Down(MigrationBuilder migrationBuilder) {
         migrationBuilder.Sql(
             """
             INSERT INTO v2.entity_kinds (code, category, display_name)

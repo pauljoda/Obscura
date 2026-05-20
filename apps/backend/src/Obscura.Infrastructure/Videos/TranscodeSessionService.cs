@@ -6,14 +6,11 @@ namespace Obscura.Infrastructure.Videos;
 /// <summary>
 /// In-memory transcode session registry. Process ownership hooks will attach here as the HLS manager deepens.
 /// </summary>
-public sealed class TranscodeSessionService : ITranscodeSessionService
-{
+public sealed class TranscodeSessionService : ITranscodeSessionService {
     private readonly ConcurrentDictionary<string, ActiveTranscodeSession> _sessions = new(StringComparer.Ordinal);
 
-    public void Register(string playSessionId, Guid itemId)
-    {
-        if (string.IsNullOrWhiteSpace(playSessionId))
-        {
+    public void Register(string playSessionId, Guid itemId) {
+        if (string.IsNullOrWhiteSpace(playSessionId)) {
             return;
         }
 
@@ -23,10 +20,8 @@ public sealed class TranscodeSessionService : ITranscodeSessionService
             (_, existing) => existing with { ItemId = itemId, LastPingedAt = DateTimeOffset.UtcNow });
     }
 
-    public void Ping(string playSessionId)
-    {
-        if (string.IsNullOrWhiteSpace(playSessionId))
-        {
+    public void Ping(string playSessionId) {
+        if (string.IsNullOrWhiteSpace(playSessionId)) {
             return;
         }
 
@@ -36,12 +31,9 @@ public sealed class TranscodeSessionService : ITranscodeSessionService
             (_, existing) => existing with { LastPingedAt = DateTimeOffset.UtcNow });
     }
 
-    public Task CancelAsync(string playSessionId, CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrWhiteSpace(playSessionId))
-        {
-            if (_sessions.TryRemove(playSessionId, out var session))
-            {
+    public Task CancelAsync(string playSessionId, CancellationToken cancellationToken) {
+        if (!string.IsNullOrWhiteSpace(playSessionId)) {
+            if (_sessions.TryRemove(playSessionId, out var session)) {
                 HlsAssetService.CancelActiveGenerationsForItem(session.ItemId);
             }
         }
@@ -49,8 +41,7 @@ public sealed class TranscodeSessionService : ITranscodeSessionService
         return Task.CompletedTask;
     }
 
-    public Task<int> CancelAllAsync(CancellationToken cancellationToken)
-    {
+    public Task<int> CancelAllAsync(CancellationToken cancellationToken) {
         var count = _sessions.Count;
         _sessions.Clear();
         var activeHlsGenerations = HlsAssetService.CancelAllActiveGenerations();

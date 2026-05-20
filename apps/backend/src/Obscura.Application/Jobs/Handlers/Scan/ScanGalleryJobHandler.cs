@@ -12,14 +12,12 @@ namespace Obscura.Application.Jobs.Handlers.Scan;
 public sealed class ScanGalleryJobHandler(
     ILogger<ScanGalleryJobHandler> logger,
     IFileDiscovery fileDiscovery,
-    ILibraryScanPersistence persistence) : ScanJobHandler(logger, fileDiscovery, persistence)
-{
+    ILibraryScanPersistence persistence) : ScanJobHandler(logger, fileDiscovery, persistence) {
     public override JobType Type => JobType.ScanGallery;
 
     protected override bool IsEligibleRoot(LibraryRootData root) => root.ScanImages;
 
-    protected override async Task ScanRootAsync(JobContext context, LibraryRootData root, CancellationToken cancellationToken)
-    {
+    protected override async Task ScanRootAsync(JobContext context, LibraryRootData root, CancellationToken cancellationToken) {
         logger.LogInformation("ScanGallery: discovering images in {Path}", root.Path);
 
         var dirGroups = await FileDiscovery.DiscoverFilesByDirectoryAsync(
@@ -32,16 +30,14 @@ public sealed class ScanGalleryJobHandler(
         var validGalleryPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var processedDirs = 0;
 
-        foreach (var (dirPath, imageFiles) in dirGroups)
-        {
+        foreach (var (dirPath, imageFiles) in dirGroups) {
             var galleryTitle = Path.GetFileName(dirPath);
             validGalleryPaths.Add(dirPath);
 
             var galleryId = await Persistence.UpsertGalleryAsync(dirPath, galleryTitle, root.IsNsfw, cancellationToken);
             var validImagePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            for (var i = 0; i < imageFiles.Count; i++)
-            {
+            for (var i = 0; i < imageFiles.Count; i++) {
                 var filePath = imageFiles[i];
                 var title = Path.GetFileNameWithoutExtension(filePath);
                 validImagePaths.Add(filePath);
@@ -51,15 +47,13 @@ public sealed class ScanGalleryJobHandler(
 
                 var imageId = await Persistence.UpsertImageAsync(filePath, title, galleryId, size, i, root.IsNsfw, cancellationToken);
 
-                if (settings.AutoGeneratePreview && !await Persistence.HasEntityFileAsync(imageId, EntityFileRole.Thumbnail, cancellationToken))
-                {
+                if (settings.AutoGeneratePreview && !await Persistence.HasEntityFileAsync(imageId, EntityFileRole.Thumbnail, cancellationToken)) {
                     await context.EnqueueIfNeededAsync(new EnqueueJobRequest(
                         JobType.GenerateImageThumbnail, TargetEntityKind: "image",
                         TargetEntityId: imageId.ToString(), TargetLabel: title), cancellationToken);
                 }
 
-                if (settings.AutoGenerateFingerprints && !await Persistence.HasEntityFingerprintAsync(imageId, FingerprintAlgorithm.Md5, cancellationToken))
-                {
+                if (settings.AutoGenerateFingerprints && !await Persistence.HasEntityFingerprintAsync(imageId, FingerprintAlgorithm.Md5, cancellationToken)) {
                     await context.EnqueueIfNeededAsync(new EnqueueJobRequest(
                         JobType.FingerprintImage, TargetEntityKind: "image",
                         TargetEntityId: imageId.ToString(), TargetLabel: title), cancellationToken);
@@ -69,8 +63,7 @@ public sealed class ScanGalleryJobHandler(
             await Persistence.RemoveStaleImagesInGalleryAsync(galleryId, validImagePaths, cancellationToken);
             processedDirs++;
 
-            if (processedDirs % 10 == 0)
-            {
+            if (processedDirs % 10 == 0) {
                 await context.ReportProgressAsync(processedDirs * 80 / dirGroups.Count,
                     $"Processed {processedDirs}/{dirGroups.Count} directories", cancellationToken);
             }

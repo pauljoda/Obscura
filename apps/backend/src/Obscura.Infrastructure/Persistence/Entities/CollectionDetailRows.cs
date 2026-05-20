@@ -2,8 +2,7 @@ using Obscura.Domain.Entities;
 
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class CollectionDetailRow
-{
+public sealed class CollectionDetailRow {
     public Guid EntityId { get; set; }
     public CollectionMode Mode { get; set; } = CollectionMode.Manual;
     public string? RuleTreeJson { get; set; }
@@ -14,8 +13,7 @@ public sealed class CollectionDetailRow
     public DateTimeOffset? LastRefreshedAt { get; set; }
 }
 
-public sealed class CollectionItemDetailRow
-{
+public sealed class CollectionItemDetailRow {
     public Guid Id { get; set; }
     public Guid CollectionEntityId { get; set; }
     public Guid ItemEntityId { get; set; }

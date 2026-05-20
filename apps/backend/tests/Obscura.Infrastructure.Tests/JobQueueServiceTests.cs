@@ -6,11 +6,9 @@ using Obscura.Infrastructure.Queue;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class JobQueueServiceTests
-{
+public sealed class JobQueueServiceTests {
     [Fact]
-    public async Task EnqueueCreatesQueuedJobAndListReturnsNewestFirst()
-    {
+    public async Task EnqueueCreatesQueuedJobAndListReturnsNewestFirst() {
         await using var db = CreateContext();
         var service = new JobQueueService(db);
 
@@ -26,8 +24,7 @@ public sealed class JobQueueServiceTests
     }
 
     [Fact]
-    public async Task ClaimCompleteAndFailAdvanceJobLifecycle()
-    {
+    public async Task ClaimCompleteAndFailAdvanceJobLifecycle() {
         await using var db = CreateContext();
         var service = new JobQueueService(db);
 
@@ -46,8 +43,7 @@ public sealed class JobQueueServiceTests
     }
 
     [Fact]
-    public async Task FailedClaimRetriesUntilMaxAttempts()
-    {
+    public async Task FailedClaimRetriesUntilMaxAttempts() {
         await using var db = CreateContext();
         var service = new JobQueueService(db);
 
@@ -67,8 +63,7 @@ public sealed class JobQueueServiceTests
     }
 
     [Fact]
-    public async Task CancelAndClearFailuresMoveRunsOutOfActiveBuckets()
-    {
+    public async Task CancelAndClearFailuresMoveRunsOutOfActiveBuckets() {
         await using var db = CreateContext();
         var service = new JobQueueService(db);
 
@@ -104,8 +99,7 @@ public sealed class JobQueueServiceTests
         Assert.Equal(JobRunStatus.Cancelled, clearedFailed.Status);
     }
 
-    private static ObscuraDbContext CreateContext()
-    {
+    private static ObscuraDbContext CreateContext() {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()
             .UseInMemoryDatabase($"job-queue-{Guid.NewGuid():N}")
             .Options;

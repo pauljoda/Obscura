@@ -3,8 +3,7 @@ namespace Obscura.Infrastructure.Videos;
 /// <summary>
 /// Selects the ffmpeg video encoder profile used by virtual adaptive HLS generation.
 /// </summary>
-public enum HlsTranscoderProfile
-{
+public enum HlsTranscoderProfile {
     /// <summary>Choose a native hardware encoder when Obscura can do so conservatively, otherwise use software x264.</summary>
     Auto,
 
@@ -27,8 +26,7 @@ public enum HlsTranscoderProfile
 /// <summary>
 /// Helper methods for converting user-provided transcoder profile values into supported ffmpeg profiles.
 /// </summary>
-public static class HlsTranscoderProfiles
-{
+public static class HlsTranscoderProfiles {
     /// <summary>
     /// Parses a profile value while preserving a known-good fallback for unknown or empty input.
     /// </summary>

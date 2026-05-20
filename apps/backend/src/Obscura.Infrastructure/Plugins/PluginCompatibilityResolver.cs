@@ -5,8 +5,7 @@ namespace Obscura.Infrastructure.Plugins;
 /// <summary>
 /// Selects plugin artifacts that are safe for the current Obscura build.
 /// </summary>
-public static class PluginCompatibilityResolver
-{
+public static class PluginCompatibilityResolver {
     /// <summary>
     /// Finds the newest v2 dotnet-process artifact for a plugin that supports the current app version.
     /// </summary>
@@ -17,8 +16,7 @@ public static class PluginCompatibilityResolver
     public static PluginIndexEntryV2? LatestCompatible(
         IEnumerable<PluginIndexEntryV2> entries,
         string pluginId,
-        Version currentAppVersion)
-    {
+        Version currentAppVersion) {
         ArgumentNullException.ThrowIfNull(entries);
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginId);
         ArgumentNullException.ThrowIfNull(currentAppVersion);
@@ -36,16 +34,13 @@ public static class PluginCompatibilityResolver
         string.Equals(entry.Runtime, "dotnet-process", StringComparison.OrdinalIgnoreCase) &&
         entry.ApiTags.Any(tag => string.Equals(tag, "v2", StringComparison.OrdinalIgnoreCase));
 
-    private static bool SupportsAppVersion(PluginCompatibility compatibility, Version current)
-    {
+    private static bool SupportsAppVersion(PluginCompatibility compatibility, Version current) {
         var min = ParseVersion(compatibility.ObscuraMin);
-        if (current < min)
-        {
+        if (current < min) {
             return false;
         }
 
-        if (string.IsNullOrWhiteSpace(compatibility.ObscuraMax))
-        {
+        if (string.IsNullOrWhiteSpace(compatibility.ObscuraMax)) {
             return true;
         }
 
@@ -53,8 +48,7 @@ public static class PluginCompatibilityResolver
         return current <= max;
     }
 
-    private static Version ParseVersion(string value)
-    {
+    private static Version ParseVersion(string value) {
         var normalized = value.Split('-', 2)[0];
         return Version.TryParse(normalized, out var version)
             ? version

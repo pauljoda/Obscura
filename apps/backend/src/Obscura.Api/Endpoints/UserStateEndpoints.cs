@@ -5,13 +5,10 @@ using Obscura.Contracts.System;
 
 namespace Obscura.Api.Endpoints;
 
-public static class UserStateEndpoints
-{
-    public static IEndpointRouteBuilder MapUserStateEndpoints(this IEndpointRouteBuilder routes)
-    {
+public static class UserStateEndpoints {
+    public static IEndpointRouteBuilder MapUserStateEndpoints(this IEndpointRouteBuilder routes) {
         routes.MapGet("/api/update-check", () =>
-            Results.Ok(new
-            {
+            Results.Ok(new {
                 status = "unknown",
                 localVersion = Assembly.GetExecutingAssembly()
                     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "unknown",
@@ -28,13 +25,12 @@ public static class UserStateEndpoints
 
         routes.MapGet("/api/playlist-session", async (
             UserStateService userState,
-            CancellationToken cancellationToken) =>
-        {
-            var valueJson = await userState.GetPlaylistSessionJsonAsync(cancellationToken);
-            return Results.Text(
-                string.IsNullOrWhiteSpace(valueJson) ? "null" : valueJson,
-                "application/json");
-        })
+            CancellationToken cancellationToken) => {
+                var valueJson = await userState.GetPlaylistSessionJsonAsync(cancellationToken);
+                return Results.Text(
+                    string.IsNullOrWhiteSpace(valueJson) ? "null" : valueJson,
+                    "application/json");
+            })
             .WithName("GetPlaylistSession")
             .WithTags("User State")
             .WithSummary("Gets the current browser playlist session.");
@@ -42,37 +38,31 @@ public static class UserStateEndpoints
         routes.MapPut("/api/playlist-session", async (
             HttpRequest request,
             UserStateService userState,
-            CancellationToken cancellationToken) =>
-        {
-            JsonNode? node;
-            try
-            {
-                node = await JsonNode.ParseAsync(request.Body, cancellationToken: cancellationToken);
-            }
-            catch
-            {
-                return Results.BadRequest(new ApiProblem("playlist_session_invalid", "Playlist session payload must be valid JSON."));
-            }
+            CancellationToken cancellationToken) => {
+                JsonNode? node;
+                try {
+                    node = await JsonNode.ParseAsync(request.Body, cancellationToken: cancellationToken);
+                } catch {
+                    return Results.BadRequest(new ApiProblem("playlist_session_invalid", "Playlist session payload must be valid JSON."));
+                }
 
-            if (node is not JsonObject session)
-            {
-                return Results.BadRequest(new ApiProblem("playlist_session_invalid", "Playlist session payload must be a JSON object."));
-            }
+                if (node is not JsonObject session) {
+                    return Results.BadRequest(new ApiProblem("playlist_session_invalid", "Playlist session payload must be a JSON object."));
+                }
 
-            var valueJson = await userState.SavePlaylistSessionAsync(session, cancellationToken);
-            return Results.Text(valueJson, "application/json");
-        })
+                var valueJson = await userState.SavePlaylistSessionAsync(session, cancellationToken);
+                return Results.Text(valueJson, "application/json");
+            })
             .WithName("PutPlaylistSession")
             .WithTags("User State")
             .WithSummary("Stores the current browser playlist session.");
 
         routes.MapDelete("/api/playlist-session", async (
             UserStateService userState,
-            CancellationToken cancellationToken) =>
-        {
-            await userState.ClearPlaylistSessionAsync(cancellationToken);
-            return Results.Ok(new { ok = true });
-        })
+            CancellationToken cancellationToken) => {
+                await userState.ClearPlaylistSessionAsync(cancellationToken);
+                return Results.Ok(new { ok = true });
+            })
             .WithName("DeletePlaylistSession")
             .WithTags("User State")
             .WithSummary("Clears the current browser playlist session.");

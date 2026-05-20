@@ -4,12 +4,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Persistence;
 
-internal static class EntityRelationshipModelConfiguration
-{
-    public static void ConfigureEntityRelationshipModel(this ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<EntityChildLinkRow>(entity =>
-        {
+internal static class EntityRelationshipModelConfiguration {
+    public static void ConfigureEntityRelationshipModel(this ModelBuilder modelBuilder) {
+        modelBuilder.Entity<EntityChildLinkRow>(entity => {
             entity.ToTable("entity_child_links");
             entity.HasKey(row => new { row.ParentEntityId, row.ChildEntityId, row.ChildKindCode });
             entity.Property(row => row.ParentEntityId).HasColumnName("parent_entity_id");
@@ -38,8 +35,7 @@ internal static class EntityRelationshipModelConfiguration
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        modelBuilder.Entity<EntityRelationshipLinkRow>(entity =>
-        {
+        modelBuilder.Entity<EntityRelationshipLinkRow>(entity => {
             entity.ToTable("entity_relationship_links");
             entity.HasKey(row => new { row.EntityId, row.RelationshipCode, row.TargetEntityId });
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -66,8 +62,7 @@ internal static class EntityRelationshipModelConfiguration
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        modelBuilder.Entity<EntityUrlRow>(entity =>
-        {
+        modelBuilder.Entity<EntityUrlRow>(entity => {
             entity.ToTable("entity_urls");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
@@ -84,8 +79,7 @@ internal static class EntityRelationshipModelConfiguration
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<EntityExternalIdRow>(entity =>
-        {
+        modelBuilder.Entity<EntityExternalIdRow>(entity => {
             entity.ToTable("entity_external_ids");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();

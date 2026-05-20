@@ -1,7 +1,6 @@
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class LibraryRootRow
-{
+public sealed class LibraryRootRow {
     public Guid Id { get; set; }
 
     public string Path { get; set; } = string.Empty;

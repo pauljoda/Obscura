@@ -2,14 +2,11 @@
 
 #nullable disable
 
-namespace Obscura.Infrastructure.Persistence.Migrations
-{
+namespace Obscura.Infrastructure.Persistence.Migrations {
     /// <inheritdoc />
-    public partial class AddV2HideNsfwSetting : Migration
-    {
+    public partial class AddV2HideNsfwSetting : Migration {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
+        protected override void Up(MigrationBuilder migrationBuilder) {
             migrationBuilder.AddColumn<bool>(
                 name: "hide_nsfw",
                 schema: "v2",
@@ -20,8 +17,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+        protected override void Down(MigrationBuilder migrationBuilder) {
             migrationBuilder.DropColumn(
                 name: "hide_nsfw",
                 schema: "v2",

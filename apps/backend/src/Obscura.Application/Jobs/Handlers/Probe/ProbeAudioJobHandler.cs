@@ -12,18 +12,15 @@ namespace Obscura.Application.Jobs.Handlers.Probe;
 public sealed class ProbeAudioJobHandler(
     ILogger<ProbeAudioJobHandler> logger,
     IMediaProbe mediaProbe,
-    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence)
-{
+    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence) {
     public override JobType Type => JobType.ProbeAudio;
 
     protected override async Task ExecuteAsync(
-        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken)
-    {
+        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken) {
         await context.ReportProgressAsync(10, "Probing audio metadata", cancellationToken);
 
         var probe = await mediaProbe.ProbeAudioAsync(filePath, cancellationToken);
-        if (probe is null)
-        {
+        if (probe is null) {
             logger.LogWarning("ProbeAudio: ffprobe failed for {Path}", filePath);
             return;
         }
@@ -33,14 +30,12 @@ public sealed class ProbeAudioJobHandler(
             probe.SampleRate, probe.Channels, probe.Codec, probe.Container, null,
             cancellationToken);
 
-        if (probe.Artist is not null || probe.Album is not null)
-        {
+        if (probe.Artist is not null || probe.Album is not null) {
             await Persistence.UpsertAudioTrackTagsAsync(entityId, probe.Artist, probe.Album, cancellationToken);
         }
 
         var settings = await Persistence.GetSettingsAsync(cancellationToken);
-        if (settings.AutoGeneratePreview && !await Persistence.HasEntityFileAsync(entityId, EntityFileRole.Waveform, cancellationToken))
-        {
+        if (settings.AutoGeneratePreview && !await Persistence.HasEntityFileAsync(entityId, EntityFileRole.Waveform, cancellationToken)) {
             await context.EnqueueIfNeededAsync(new EnqueueJobRequest(
                 JobType.GenerateAudioWaveform, TargetEntityKind: "audio-track",
                 TargetEntityId: entityId.ToString(), TargetLabel: context.Job.TargetLabel), cancellationToken);

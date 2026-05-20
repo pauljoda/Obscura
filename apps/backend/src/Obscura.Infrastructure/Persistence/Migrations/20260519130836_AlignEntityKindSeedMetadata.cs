@@ -2,14 +2,11 @@
 
 #nullable disable
 
-namespace Obscura.Infrastructure.Persistence.Migrations
-{
+namespace Obscura.Infrastructure.Persistence.Migrations {
     /// <inheritdoc />
-    public partial class AlignEntityKindSeedMetadata : Migration
-    {
+    public partial class AlignEntityKindSeedMetadata : Migration {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
+        protected override void Up(MigrationBuilder migrationBuilder) {
             migrationBuilder.UpdateData(
                 schema: "v2",
                 table: "entity_kinds",
@@ -36,8 +33,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+        protected override void Down(MigrationBuilder migrationBuilder) {
             migrationBuilder.UpdateData(
                 schema: "v2",
                 table: "entity_kinds",

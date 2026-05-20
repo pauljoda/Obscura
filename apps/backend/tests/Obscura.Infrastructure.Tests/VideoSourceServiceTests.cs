@@ -8,18 +8,15 @@ using Obscura.Infrastructure.Videos;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class VideoSourceServiceTests : IDisposable
-{
+public sealed class VideoSourceServiceTests : IDisposable {
     private readonly string _tempDir = Path.Combine(Path.GetTempPath(), $"obscura-video-source-{Guid.NewGuid():N}");
 
-    public VideoSourceServiceTests()
-    {
+    public VideoSourceServiceTests() {
         Directory.CreateDirectory(_tempDir);
     }
 
     [Fact]
-    public async Task GetsExistingSourceFileForVideoEntity()
-    {
+    public async Task GetsExistingSourceFileForVideoEntity() {
         await using var db = CreateContext();
         var videoId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var filePath = Path.Combine(_tempDir, "video.mp4");
@@ -37,8 +34,7 @@ public sealed class VideoSourceServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task MarksKnownTranscodeContainersAsNotDirectPlayable()
-    {
+    public async Task MarksKnownTranscodeContainersAsNotDirectPlayable() {
         await using var db = CreateContext();
         var videoId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         var filePath = Path.Combine(_tempDir, "video.mkv");
@@ -55,16 +51,14 @@ public sealed class VideoSourceServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task PrefersPersistedMediaSourceMetadataOverTechnicalRow()
-    {
+    public async Task PrefersPersistedMediaSourceMetadataOverTechnicalRow() {
         await using var db = CreateContext();
         var videoId = Guid.Parse("33333333-3333-3333-3333-333333333333");
         var sourceId = Guid.Parse("44444444-4444-4444-4444-444444444444");
         var filePath = Path.Combine(_tempDir, "video.mkv");
         await File.WriteAllTextAsync(filePath, "video-bytes");
         SeedVideoSource(db, videoId, filePath, null);
-        db.EntityTechnical.Add(new EntityTechnicalRow
-        {
+        db.EntityTechnical.Add(new EntityTechnicalRow {
             EntityId = videoId,
             DurationSeconds = 12,
             Width = 640,
@@ -73,8 +67,7 @@ public sealed class VideoSourceServiceTests : IDisposable
             Container = "mp4",
             UpdatedAt = DateTimeOffset.UtcNow
         });
-        db.MediaSources.Add(new MediaSourceRow
-        {
+        db.MediaSources.Add(new MediaSourceRow {
             Id = sourceId,
             EntityId = videoId,
             Path = filePath,
@@ -107,16 +100,14 @@ public sealed class VideoSourceServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ProbesStreamsWhenPersistedSourceOnlyHasOneSyntheticAudioTrack()
-    {
+    public async Task ProbesStreamsWhenPersistedSourceOnlyHasOneSyntheticAudioTrack() {
         await using var db = CreateContext();
         var videoId = Guid.Parse("55555555-5555-5555-5555-555555555555");
         var sourceId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var filePath = Path.Combine(_tempDir, "video.mkv");
         await File.WriteAllTextAsync(filePath, "video-bytes");
         SeedVideoSource(db, videoId, filePath, null);
-        db.MediaSources.Add(new MediaSourceRow
-        {
+        db.MediaSources.Add(new MediaSourceRow {
             Id = sourceId,
             EntityId = videoId,
             Path = filePath,
@@ -126,8 +117,7 @@ public sealed class VideoSourceServiceTests : IDisposable
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         });
-        db.MediaStreams.Add(new MediaStreamRow
-        {
+        db.MediaStreams.Add(new MediaStreamRow {
             Id = Guid.NewGuid(),
             MediaSourceId = sourceId,
             EntityId = videoId,
@@ -160,16 +150,13 @@ public sealed class VideoSourceServiceTests : IDisposable
         Assert.Equal("eng", audioStreams.Single(stream => stream.StreamIndex == 2).Language);
     }
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_tempDir))
-        {
+    public void Dispose() {
+        if (Directory.Exists(_tempDir)) {
             Directory.Delete(_tempDir, recursive: true);
         }
     }
 
-    private static ObscuraDbContext CreateContext()
-    {
+    private static ObscuraDbContext CreateContext() {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()
             .UseInMemoryDatabase($"video-source-{Guid.NewGuid():N}")
             .Options;
@@ -181,18 +168,15 @@ public sealed class VideoSourceServiceTests : IDisposable
         ObscuraDbContext db,
         Guid videoId,
         string path,
-        string? mimeType)
-    {
-        db.Entities.Add(new EntityRow
-        {
+        string? mimeType) {
+        db.Entities.Add(new EntityRow {
             Id = videoId,
             KindCode = EntityKindRegistry.Video.Code,
             Title = "Source",
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         });
-        db.EntityFiles.Add(new EntityFileRow
-        {
+        db.EntityFiles.Add(new EntityFileRow {
             Id = Guid.NewGuid(),
             EntityId = videoId,
             Role = EntityFileRole.Source,
@@ -203,12 +187,10 @@ public sealed class VideoSourceServiceTests : IDisposable
         });
     }
 
-    private sealed class JsonProcessExecutor : ProcessExecutor
-    {
+    private sealed class JsonProcessExecutor : ProcessExecutor {
         private readonly string _json;
 
-        public JsonProcessExecutor(string json)
-        {
+        public JsonProcessExecutor(string json) {
             _json = json;
         }
 
@@ -216,8 +198,7 @@ public sealed class VideoSourceServiceTests : IDisposable
             string fileName,
             IReadOnlyList<string> arguments,
             IReadOnlyDictionary<string, string>? environment,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             return Task.FromResult(new ProcessExecutionResult(0, _json, string.Empty));
         }
     }

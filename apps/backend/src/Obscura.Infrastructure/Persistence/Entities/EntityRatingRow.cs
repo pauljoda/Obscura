@@ -1,7 +1,6 @@
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class EntityRatingRow
-{
+public sealed class EntityRatingRow {
     public Guid EntityId { get; set; }
 
     public int Value { get; set; }

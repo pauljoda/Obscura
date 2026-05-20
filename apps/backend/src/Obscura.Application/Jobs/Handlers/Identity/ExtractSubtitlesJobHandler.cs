@@ -13,21 +13,18 @@ public sealed class ExtractSubtitlesJobHandler(
     ILogger<ExtractSubtitlesJobHandler> logger,
     IMediaProbe mediaProbe,
     IMediaAssetGenerator assets,
-    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence)
-{
+    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence) {
     public override JobType Type => JobType.ExtractSubtitles;
 
     protected override Task OnSourceFileNotFoundAsync(Guid entityId, CancellationToken cancellationToken) =>
         Persistence.MarkSubtitlesExtractedAsync(entityId, cancellationToken);
 
     protected override async Task ExecuteAsync(
-        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken)
-    {
+        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken) {
         await context.ReportProgressAsync(10, "Probing subtitle streams", cancellationToken);
 
         var streams = await mediaProbe.ProbeSubtitleStreamsAsync(filePath, cancellationToken);
-        if (streams.Count == 0)
-        {
+        if (streams.Count == 0) {
             logger.LogInformation("ExtractSubtitles: no text subtitles in {Label}", context.Job.TargetLabel);
             await Persistence.MarkSubtitlesExtractedAsync(entityId, cancellationToken);
             await context.ReportProgressAsync(100, "No subtitles found", cancellationToken);
@@ -41,8 +38,7 @@ public sealed class ExtractSubtitlesJobHandler(
 
         await context.ReportProgressAsync(80, "Recording subtitle tracks", cancellationToken);
 
-        foreach (var path in extractedPaths)
-        {
+        foreach (var path in extractedPaths) {
             var fileName = Path.GetFileNameWithoutExtension(path);
             var parts = fileName.Split('-');
             var language = parts.Length >= 2 ? parts[1] : "und";

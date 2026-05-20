@@ -13,8 +13,7 @@ namespace Obscura.Application.Entities;
 /// Infrastructure is the one deliberate read-optimized exception and does not flow
 /// through here.
 /// </summary>
-public static class EntityCardProjector
-{
+public static class EntityCardProjector {
     /// <summary>Projects a hydrated domain entity to the shared entity card contract.</summary>
     public static EntityCard ToCard(Entity entity) =>
         new() {
@@ -37,27 +36,22 @@ public static class EntityCardProjector
                 credit.Label))
             .ToArray() ?? [];
 
-    private static IReadOnlyList<ContractCapability> MapCapabilities(Entity entity)
-    {
+    private static IReadOnlyList<ContractCapability> MapCapabilities(Entity entity) {
         var capabilities = new List<ContractCapability>();
 
-        if (entity.Rating is { } rating)
-        {
+        if (entity.Rating is { } rating) {
             capabilities.Add(new RatingCapability(rating.Value));
         }
 
-        if (entity.Flags is { } flags)
-        {
+        if (entity.Flags is { } flags) {
             capabilities.Add(new FlagsCapability(flags.IsFavorite, flags.IsNsfw, flags.IsOrganized));
         }
 
-        if (entity.Description is { } description)
-        {
+        if (entity.Description is { } description) {
             capabilities.Add(new DescriptionCapability(description.Value));
         }
 
-        if (entity.Playback is { } playback)
-        {
+        if (entity.Playback is { } playback) {
             capabilities.Add(new PlaybackCapability(
                 playback.PlayCount,
                 playback.PlayDuration.TotalSeconds,
@@ -66,13 +60,11 @@ public static class EntityCardProjector
                 playback.CompletedAt));
         }
 
-        if (entity.MarkerCapability is { } markers)
-        {
+        if (entity.MarkerCapability is { } markers) {
             capabilities.Add(new MarkersCapability(markers.Items));
         }
 
-        if (entity.Technical is { } technical)
-        {
+        if (entity.Technical is { } technical) {
             capabilities.Add(new TechnicalCapability(
                 technical.Duration,
                 technical.Width,
@@ -87,53 +79,43 @@ public static class EntityCardProjector
         }
 
         var images = ProjectImages(entity);
-        if (images is not null)
-        {
+        if (images is not null) {
             capabilities.Add(images);
         }
 
-        if (entity.Files is { } files)
-        {
+        if (entity.Files is { } files) {
             capabilities.Add(new FilesCapability(files.Items));
         }
 
-        if (entity.GetCapability<CapabilityLinks>() is { } links)
-        {
+        if (entity.GetCapability<CapabilityLinks>() is { } links) {
             capabilities.Add(new LinksCapability(links.Urls, links.ExternalIds));
         }
 
-        if (entity.SubtitleCapability is { } subtitles)
-        {
+        if (entity.SubtitleCapability is { } subtitles) {
             capabilities.Add(new SubtitlesCapability(subtitles.Items));
         }
 
-        if (entity.GetCapability<CapabilityFingerprints>() is { } fingerprints)
-        {
+        if (entity.GetCapability<CapabilityFingerprints>() is { } fingerprints) {
             capabilities.Add(new FingerprintsCapability(fingerprints.Items));
         }
 
-        if (entity.Stats is { } stats)
-        {
+        if (entity.Stats is { } stats) {
             capabilities.Add(new StatsCapability(stats.Items));
         }
 
-        if (entity.Dates is { } dates)
-        {
+        if (entity.Dates is { } dates) {
             capabilities.Add(new DatesCapability(dates.Items));
         }
 
-        if (entity.Lifetime is { } lifetime)
-        {
+        if (entity.Lifetime is { } lifetime) {
             capabilities.Add(new LifetimeCapability(lifetime.Start, lifetime.End, lifetime.Label));
         }
 
-        if (entity.Source is { } source)
-        {
+        if (entity.Source is { } source) {
             capabilities.Add(new SourceCapability(source.Items));
         }
 
-        if (entity.Progress is { } progress)
-        {
+        if (entity.Progress is { } progress) {
             capabilities.Add(new ProgressCapability(
                 progress.CurrentEntityId,
                 progress.Unit,
@@ -144,27 +126,23 @@ public static class EntityCardProjector
                 progress.UpdatedAt));
         }
 
-        if (entity.Position is { } position)
-        {
+        if (entity.Position is { } position) {
             capabilities.Add(new PositionCapability(position.Items));
         }
 
-        if (entity.Classification is { } classification)
-        {
+        if (entity.Classification is { } classification) {
             capabilities.Add(new ClassificationCapability(classification.Value, classification.System));
         }
 
         return capabilities;
     }
 
-    private static ImagesCapability? ProjectImages(Entity entity)
-    {
+    private static ImagesCapability? ProjectImages(Entity entity) {
         var files = entity.Files?.Items ?? [];
         var assets = files
             .Where(file => file.Role is EntityFileRole.Thumbnail or EntityFileRole.Poster
                 or EntityFileRole.Cover or EntityFileRole.Backdrop)
-            .OrderBy(file => file.Role switch
-            {
+            .OrderBy(file => file.Role switch {
                 EntityFileRole.Thumbnail => 0,
                 EntityFileRole.Poster => 1,
                 EntityFileRole.Cover => 2,
@@ -173,8 +151,7 @@ public static class EntityCardProjector
             .Select(file => new EntityImageAsset(file.Role, file.Path, file.MimeType))
             .ToArray();
 
-        if (assets.Length == 0)
-        {
+        if (assets.Length == 0) {
             return null;
         }
 
@@ -193,13 +170,11 @@ public static class EntityCardProjector
                     .ToArray()))
             .ToArray();
 
-    private static EntityThumbnail ToThumbnail(Entity entity)
-    {
+    private static EntityThumbnail ToThumbnail(Entity entity) {
         var cover = (entity.Files?.Items ?? [])
             .Where(file => file.Role is EntityFileRole.Thumbnail or EntityFileRole.Poster
                 or EntityFileRole.Cover or EntityFileRole.Backdrop)
-            .OrderBy(file => file.Role switch
-            {
+            .OrderBy(file => file.Role switch {
                 EntityFileRole.Thumbnail => 0,
                 EntityFileRole.Poster => 1,
                 EntityFileRole.Cover => 2,

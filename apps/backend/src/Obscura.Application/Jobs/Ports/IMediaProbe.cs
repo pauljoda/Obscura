@@ -3,8 +3,7 @@ namespace Obscura.Application.Jobs.Ports;
 /// <summary>
 /// Port for probing media files for technical metadata.
 /// </summary>
-public interface IMediaProbe
-{
+public interface IMediaProbe {
     Task<VideoProbeData?> ProbeVideoAsync(string filePath, CancellationToken cancellationToken);
     Task<AudioProbeData?> ProbeAudioAsync(string filePath, CancellationToken cancellationToken);
     Task<ImageProbeData?> ProbeImageAsync(string filePath, CancellationToken cancellationToken);

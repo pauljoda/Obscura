@@ -4,14 +4,11 @@
 
 #pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 
-namespace Obscura.Infrastructure.Persistence.Migrations
-{
+namespace Obscura.Infrastructure.Persistence.Migrations {
     /// <inheritdoc />
-    public partial class AddV2AudioSubKinds : Migration
-    {
+    public partial class AddV2AudioSubKinds : Migration {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
+        protected override void Up(MigrationBuilder migrationBuilder) {
             migrationBuilder.InsertData(
                 schema: "v2",
                 table: "entity_kinds",
@@ -24,8 +21,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+        protected override void Down(MigrationBuilder migrationBuilder) {
             migrationBuilder.DeleteData(
                 schema: "v2",
                 table: "entity_kinds",

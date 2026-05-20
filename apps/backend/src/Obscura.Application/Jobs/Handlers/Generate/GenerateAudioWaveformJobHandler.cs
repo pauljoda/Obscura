@@ -13,25 +13,21 @@ namespace Obscura.Application.Jobs.Handlers.Generate;
 public sealed class GenerateAudioWaveformJobHandler(
     ILogger<GenerateAudioWaveformJobHandler> logger,
     IMediaAssetGenerator assets,
-    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence)
-{
+    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence) {
     public override JobType Type => JobType.GenerateAudioWaveform;
 
     protected override async Task ExecuteAsync(
-        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken)
-    {
+        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken) {
         await context.ReportProgressAsync(10, "Generating waveform data", cancellationToken);
 
         var probe = await GetDurationAsync(entityId, cancellationToken);
-        if (probe is null or <= 0)
-        {
+        if (probe is null or <= 0) {
             logger.LogWarning("GenerateAudioWaveform: no duration for {EntityId}, skipping", entityId);
             return;
         }
 
         var waveformData = await assets.GenerateWaveformDataAsync(filePath, probe.Value, 20, cancellationToken);
-        if (waveformData is null)
-        {
+        if (waveformData is null) {
             logger.LogWarning("GenerateAudioWaveform: PCM decode failed for {Label}", context.Job.TargetLabel);
             return;
         }
@@ -50,8 +46,7 @@ public sealed class GenerateAudioWaveformJobHandler(
         await context.ReportProgressAsync(100, "Waveform complete", cancellationToken);
     }
 
-    private async Task<double?> GetDurationAsync(Guid entityId, CancellationToken cancellationToken)
-    {
+    private async Task<double?> GetDurationAsync(Guid entityId, CancellationToken cancellationToken) {
         var tech = await Persistence.GetEntityTechnicalAsync(entityId, cancellationToken);
         return tech?.DurationSeconds;
     }

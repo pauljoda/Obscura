@@ -6,24 +6,20 @@ using Obscura.Domain.Entities;
 
 namespace Obscura.Api.Tests;
 
-public sealed class GeneratePreviewJobHandlerTests : IDisposable
-{
+public sealed class GeneratePreviewJobHandlerTests : IDisposable {
     private readonly string _tempDir = Path.Combine(Path.GetTempPath(), $"obscura-preview-handler-{Guid.NewGuid():N}");
 
-    public GeneratePreviewJobHandlerTests()
-    {
+    public GeneratePreviewJobHandlerTests() {
         Directory.CreateDirectory(_tempDir);
     }
 
     [Fact]
-    public async Task TrickplayOnlySettingsDoNotGenerateThumbnailPreviewAssets()
-    {
+    public async Task TrickplayOnlySettingsDoNotGenerateThumbnailPreviewAssets() {
         var entityId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var sourcePath = Path.Combine(_tempDir, "movie.mkv");
         await File.WriteAllTextAsync(sourcePath, "video");
         var assets = new RecordingMediaAssetGenerator(_tempDir);
-        var persistence = new PreviewPersistence(sourcePath)
-        {
+        var persistence = new PreviewPersistence(sourcePath) {
             Settings = new LibrarySettingsData(
                 AutoGenerateMetadata: false,
                 AutoGenerateFingerprints: false,
@@ -71,16 +67,13 @@ public sealed class GeneratePreviewJobHandlerTests : IDisposable
         Assert.DoesNotContain(persistence.EntityFiles, file => file.Role == EntityFileRole.Preview);
     }
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_tempDir))
-        {
+    public void Dispose() {
+        if (Directory.Exists(_tempDir)) {
             Directory.Delete(_tempDir, recursive: true);
         }
     }
 
-    private sealed class RecordingMediaAssetGenerator(string tempDir) : IMediaAssetGenerator
-    {
+    private sealed class RecordingMediaAssetGenerator(string tempDir) : IMediaAssetGenerator {
         public bool GeneratedThumbnailAndPreview { get; private set; }
 
         public Task<bool> GenerateVideoThumbnailAsync(string inputPath, string outputPath, double seekSeconds, int width, int height, int quality, CancellationToken cancellationToken) =>
@@ -92,8 +85,7 @@ public sealed class GeneratePreviewJobHandlerTests : IDisposable
         public Task<bool> ExtractTrickplayFrameAsync(string inputPath, string outputPath, double seekSeconds, int width, int height, int jpegQuality, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
-        public Task<int> ExtractTrickplayFramesBatchAsync(string inputPath, string outputDir, double duration, int intervalSeconds, int width, int height, int jpegQuality, CancellationToken cancellationToken)
-        {
+        public Task<int> ExtractTrickplayFramesBatchAsync(string inputPath, string outputDir, double duration, int intervalSeconds, int width, int height, int jpegQuality, CancellationToken cancellationToken) {
             Directory.CreateDirectory(outputDir);
             return Task.FromResult(25);
         }
@@ -101,8 +93,7 @@ public sealed class GeneratePreviewJobHandlerTests : IDisposable
         public Task<bool> ComposeSpriteSheetAsync(string frameDir, string outputPath, int columns, int frameWidth, int frameHeight, int jpegQuality, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
-        public async Task<int> ComposeTiledJpegSheetsAsync(string frameDir, string outputDir, int columns, int rows, int frameWidth, int frameHeight, int jpegQuality, CancellationToken cancellationToken)
-        {
+        public async Task<int> ComposeTiledJpegSheetsAsync(string frameDir, string outputDir, int columns, int rows, int frameWidth, int frameHeight, int jpegQuality, CancellationToken cancellationToken) {
             Directory.CreateDirectory(outputDir);
             await File.WriteAllTextAsync(Path.Combine(outputDir, "0.jpg"), "tile", cancellationToken);
             return 1;
@@ -118,8 +109,7 @@ public sealed class GeneratePreviewJobHandlerTests : IDisposable
             string previewPath,
             double previewStartSeconds,
             int previewDurationSeconds,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             GeneratedThumbnailAndPreview = true;
             Directory.CreateDirectory(Path.GetDirectoryName(thumbnailPath)!);
             Directory.CreateDirectory(Path.GetDirectoryName(previewPath)!);
@@ -157,8 +147,7 @@ public sealed class GeneratePreviewJobHandlerTests : IDisposable
         public string SubtitleUrl(Guid entityId, string fileName) => throw new NotSupportedException();
     }
 
-    private sealed class PreviewPersistence(string sourcePath) : ILibraryScanPersistence
-    {
+    private sealed class PreviewPersistence(string sourcePath) : ILibraryScanPersistence {
         public LibrarySettingsData Settings { get; init; } = new(
             AutoGenerateMetadata: false,
             AutoGenerateFingerprints: false,
@@ -176,8 +165,7 @@ public sealed class GeneratePreviewJobHandlerTests : IDisposable
         public Task<string?> GetSourceFilePathAsync(Guid entityId, CancellationToken cancellationToken) => Task.FromResult<string?>(sourcePath);
         public Task<EntityTechnicalData?> GetEntityTechnicalAsync(Guid entityId, CancellationToken cancellationToken) => Task.FromResult(Technical);
         public Task UpsertTrickplayInfoAsync(Guid entityId, TrickplayInfoData info, CancellationToken cancellationToken) => Task.CompletedTask;
-        public Task UpsertEntityFileAsync(Guid entityId, EntityFileRole role, string path, string? mimeType, long? sizeBytes, CancellationToken cancellationToken)
-        {
+        public Task UpsertEntityFileAsync(Guid entityId, EntityFileRole role, string path, string? mimeType, long? sizeBytes, CancellationToken cancellationToken) {
             EntityFiles.Add((role, path));
             return Task.CompletedTask;
         }
@@ -215,8 +203,7 @@ public sealed class GeneratePreviewJobHandlerTests : IDisposable
         public Task UpsertAudioTrackTagsAsync(Guid entityId, string? artist, string? album, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
-    private sealed class NoopJobQueue : IJobQueueService
-    {
+    private sealed class NoopJobQueue : IJobQueueService {
         public Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<JobRunSnapshot>>([]);
         public Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<JobRunSnapshot> EnqueueAsync(EnqueueJobRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();

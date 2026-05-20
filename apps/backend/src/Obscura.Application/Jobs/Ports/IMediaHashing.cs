@@ -3,8 +3,7 @@ namespace Obscura.Application.Jobs.Ports;
 /// <summary>
 /// Port for computing file fingerprints (MD5 and oshash).
 /// </summary>
-public interface IMediaHashing
-{
+public interface IMediaHashing {
     Task<FileHashData> ComputeHashesAsync(string filePath, CancellationToken cancellationToken);
 }
 

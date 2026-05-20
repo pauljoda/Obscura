@@ -3,8 +3,7 @@ namespace Obscura.Application.Videos;
 /// <summary>
 /// Serves Jellyfin-style HLS image playlists and tiled JPEG sheets for timeline scrubbing.
 /// </summary>
-public interface ITrickplayService
-{
+public interface ITrickplayService {
     Task<TrickplayPlaylist?> GetPlaylistAsync(Guid itemId, int width, CancellationToken cancellationToken);
 
     Task<TrickplayTile?> GetTileAsync(Guid itemId, int width, int index, CancellationToken cancellationToken);

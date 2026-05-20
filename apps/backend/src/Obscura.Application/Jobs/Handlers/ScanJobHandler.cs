@@ -12,30 +12,23 @@ namespace Obscura.Application.Jobs.Handlers;
 public abstract class ScanJobHandler(
     ILogger logger,
     IFileDiscovery fileDiscovery,
-    ILibraryScanPersistence persistence) : IJobHandler
-{
+    ILibraryScanPersistence persistence) : IJobHandler {
     public abstract JobType Type { get; }
 
-    public async Task HandleAsync(JobContext context, CancellationToken cancellationToken)
-    {
-        if (!ScanRootPayload.TryParse(context.Job.PayloadJson, out var payload))
-        {
+    public async Task HandleAsync(JobContext context, CancellationToken cancellationToken) {
+        if (!ScanRootPayload.TryParse(context.Job.PayloadJson, out var payload)) {
             var roots = await persistence.GetEnabledRootsAsync(cancellationToken);
             var eligible = roots.Where(IsEligibleRoot).ToList();
             logger.LogInformation("{JobType}: scanning {Count} eligible roots", Type.ToCode(), eligible.Count);
 
-            for (var i = 0; i < eligible.Count; i++)
-            {
+            for (var i = 0; i < eligible.Count; i++) {
                 await ScanRootAsync(context, eligible[i], cancellationToken);
                 await context.ReportProgressAsync((i + 1) * 100 / eligible.Count,
                     $"Scanned {eligible[i].Label}", cancellationToken);
             }
-        }
-        else
-        {
+        } else {
             var root = await persistence.GetLibraryRootAsync(payload.RootId, cancellationToken);
-            if (root is null)
-            {
+            if (root is null) {
                 logger.LogWarning("{JobType}: root {RootId} not found", Type.ToCode(), payload.RootId);
                 return;
             }

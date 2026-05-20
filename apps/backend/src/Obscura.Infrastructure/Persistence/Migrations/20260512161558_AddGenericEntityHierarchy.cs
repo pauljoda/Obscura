@@ -4,14 +4,11 @@
 
 #pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 
-namespace Obscura.Infrastructure.Persistence.Migrations
-{
+namespace Obscura.Infrastructure.Persistence.Migrations {
     /// <inheritdoc />
-    public partial class AddGenericEntityHierarchy : Migration
-    {
+    public partial class AddGenericEntityHierarchy : Migration {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
+        protected override void Up(MigrationBuilder migrationBuilder) {
             migrationBuilder.InsertData(
                 schema: "v2",
                 table: "entity_kinds",
@@ -34,8 +31,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+        protected override void Down(MigrationBuilder migrationBuilder) {
             migrationBuilder.DropIndex(
                 name: "IX_entity_hierarchy_links_child_entity_id_relationship",
                 schema: "v2",

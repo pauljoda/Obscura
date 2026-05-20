@@ -2,8 +2,7 @@ using Obscura.Domain.Entities;
 
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class DatabaseBackupRow
-{
+public sealed class DatabaseBackupRow {
     public Guid Id { get; set; }
 
     public string BackupPath { get; set; } = string.Empty;

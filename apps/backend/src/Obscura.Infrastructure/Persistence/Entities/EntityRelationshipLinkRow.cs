@@ -1,7 +1,6 @@
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class EntityRelationshipLinkRow
-{
+public sealed class EntityRelationshipLinkRow {
     public Guid EntityId { get; set; }
 
     public string RelationshipCode { get; set; } = string.Empty;

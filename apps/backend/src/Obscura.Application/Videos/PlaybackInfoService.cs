@@ -9,10 +9,8 @@ namespace Obscura.Application.Videos;
 /// orchestration; the heavy lifting (source resolution, ffmpeg sessions, settings access) is
 /// delegated to ports and the settings use-case service.
 /// </summary>
-public sealed class PlaybackInfoService : IPlaybackInfoService
-{
-    private static readonly IReadOnlyDictionary<string, string[]> LanguageAliases = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
-    {
+public sealed class PlaybackInfoService : IPlaybackInfoService {
+    private static readonly IReadOnlyDictionary<string, string[]> LanguageAliases = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) {
         ["en"] = ["en", "eng", "english"],
         ["es"] = ["es", "spa", "spn", "spanish", "espanol"],
         ["fr"] = ["fr", "fre", "fra", "french", "francais"],
@@ -31,8 +29,7 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
     public PlaybackInfoService(
         IVideoSourceService sources,
         ITranscodeSessionService transcodes,
-        SettingsService? settings = null)
-    {
+        SettingsService? settings = null) {
         _sources = sources;
         _transcodes = transcodes;
         _settings = settings;
@@ -45,11 +42,9 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
     public async Task<PlaybackInfoResult?> GetPlaybackInfoAsync(
         Guid itemId,
         PlaybackInfoQuery? request,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var source = await _sources.GetSourceAsync(itemId, cancellationToken);
-        if (source is null)
-        {
+        if (source is null) {
             return null;
         }
 
@@ -60,8 +55,7 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
         var transcodingAllowed = request?.EnableTranscoding != false;
         var mediaSourceId = (source.MediaSourceId ?? itemId).ToString("N");
 
-        if (transcodingAllowed)
-        {
+        if (transcodingAllowed) {
             _transcodes.Register(playSessionId, itemId);
         }
 
@@ -98,8 +92,7 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
         Guid itemId,
         string mediaSourceId,
         string playSessionId,
-        int? audioStreamIndex)
-    {
+        int? audioStreamIndex) {
         var url = $"/Videos/{itemId:D}/master.m3u8?MediaSourceId={mediaSourceId}&PlaySessionId={playSessionId}";
         return audioStreamIndex is null ? url : $"{url}&AudioStreamIndex={audioStreamIndex.Value}";
     }
@@ -107,14 +100,12 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
     private static VideoSourceStream? SelectAudioStream(
         VideoSourceFile source,
         int? requestedIndex,
-        string? preferredLanguages)
-    {
+        string? preferredLanguages) {
         var audioStreams = source.Streams?
             .Where(stream => stream.Type.Equals("Audio", StringComparison.OrdinalIgnoreCase))
             .OrderBy(stream => stream.StreamIndex)
             .ToList() ?? [];
-        if (audioStreams.Count == 0)
-        {
+        if (audioStreams.Count == 0) {
             return null;
         }
 
@@ -126,20 +117,16 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
 
     private static VideoSourceStream? SelectPreferredAudioStream(
         IReadOnlyList<VideoSourceStream> audioStreams,
-        string? preferredLanguages)
-    {
+        string? preferredLanguages) {
         var preferences = ParseLanguagePreferences(preferredLanguages);
-        if (preferences.Count == 0)
-        {
+        if (preferences.Count == 0) {
             return null;
         }
 
-        foreach (var preference in preferences)
-        {
+        foreach (var preference in preferences) {
             var match = audioStreams.FirstOrDefault(stream =>
                 AudioStreamLanguageCandidates(stream).Contains(preference));
-            if (match is not null)
-            {
+            if (match is not null) {
                 return match;
             }
         }
@@ -147,10 +134,8 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
         return null;
     }
 
-    private static IReadOnlyList<string> ParseLanguagePreferences(string? preferredLanguages)
-    {
-        if (string.IsNullOrWhiteSpace(preferredLanguages))
-        {
+    private static IReadOnlyList<string> ParseLanguagePreferences(string? preferredLanguages) {
+        if (string.IsNullOrWhiteSpace(preferredLanguages)) {
             return [];
         }
 
@@ -162,8 +147,7 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
             .ToArray();
     }
 
-    private static HashSet<string> AudioStreamLanguageCandidates(VideoSourceStream stream)
-    {
+    private static HashSet<string> AudioStreamLanguageCandidates(VideoSourceStream stream) {
         var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         AddLanguageCandidate(candidates, stream.Language);
         AddLanguageCandidate(candidates, stream.Title);
@@ -171,42 +155,33 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
         return candidates;
     }
 
-    private static void AddLanguageCandidate(ISet<string> candidates, string? value)
-    {
+    private static void AddLanguageCandidate(ISet<string> candidates, string? value) {
         var normalized = NormalizeLanguageToken(value);
-        if (normalized.Length > 0)
-        {
+        if (normalized.Length > 0) {
             candidates.Add(normalized);
         }
     }
 
-    private static void AddBestGuessLanguageCandidates(ISet<string> candidates, string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
+    private static void AddBestGuessLanguageCandidates(ISet<string> candidates, string? value) {
+        if (string.IsNullOrWhiteSpace(value)) {
             return;
         }
 
         var text = value.ToLowerInvariant();
-        foreach (var (language, aliases) in LanguageAliases)
-        {
-            if (aliases.Any(alias => text.Contains(alias, StringComparison.OrdinalIgnoreCase)))
-            {
+        foreach (var (language, aliases) in LanguageAliases) {
+            if (aliases.Any(alias => text.Contains(alias, StringComparison.OrdinalIgnoreCase))) {
                 candidates.Add(language);
             }
         }
     }
 
-    private static string NormalizeLanguageToken(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
+    private static string NormalizeLanguageToken(string? value) {
+        if (string.IsNullOrWhiteSpace(value)) {
             return string.Empty;
         }
 
         var token = value.Trim().Replace('_', '-').ToLowerInvariant();
-        if (token.Contains('-', StringComparison.Ordinal))
-        {
+        if (token.Contains('-', StringComparison.Ordinal)) {
             token = token.Split('-', StringSplitOptions.RemoveEmptyEntries)[0];
         }
 
@@ -217,10 +192,8 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
 
     private static IReadOnlyList<MediaStreamInfoResult> BuildStreams(
         VideoSourceFile source,
-        int? selectedAudioStreamIndex)
-    {
-        if (source.Streams is { Count: > 0 })
-        {
+        int? selectedAudioStreamIndex) {
+        if (source.Streams is { Count: > 0 }) {
             return source.Streams
                 .OrderBy(stream => stream.StreamIndex)
                 .Select(stream => new MediaStreamInfoResult(
@@ -254,8 +227,7 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
             null,
             IsDefault: true);
 
-        if (source.AudioCodec is null && source.SampleRate is null && source.Channels is null)
-        {
+        if (source.AudioCodec is null && source.SampleRate is null && source.Channels is null) {
             return [videoStream];
         }
 
@@ -276,15 +248,12 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
         return [videoStream, audioStream];
     }
 
-    private static string StreamDisplayTitle(VideoSourceStream stream)
-    {
-        if (!string.IsNullOrWhiteSpace(stream.Title))
-        {
+    private static string StreamDisplayTitle(VideoSourceStream stream) {
+        if (!string.IsNullOrWhiteSpace(stream.Title)) {
             return stream.Title!;
         }
 
-        if (stream.Type.Equals("Audio", StringComparison.OrdinalIgnoreCase))
-        {
+        if (stream.Type.Equals("Audio", StringComparison.OrdinalIgnoreCase)) {
             var language = string.IsNullOrWhiteSpace(stream.Language) ? "Audio" : stream.Language!.ToUpperInvariant();
             var channels = stream.Channels is > 0 ? $" · {stream.Channels}ch" : "";
             return $"{language}{channels}";
@@ -293,11 +262,9 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
         return stream.Type;
     }
 
-    private static bool StreamIsSelected(VideoSourceStream stream, int? selectedAudioStreamIndex)
-    {
+    private static bool StreamIsSelected(VideoSourceStream stream, int? selectedAudioStreamIndex) {
         if (!stream.Type.Equals("Audio", StringComparison.OrdinalIgnoreCase) ||
-            selectedAudioStreamIndex is null)
-        {
+            selectedAudioStreamIndex is null) {
             return stream.IsDefault;
         }
 
@@ -307,8 +274,7 @@ public sealed class PlaybackInfoService : IPlaybackInfoService
     private static string? CodecFromContentType(string contentType) =>
         contentType.Equals("video/mp4", StringComparison.OrdinalIgnoreCase) ? "h264" : null;
 
-    private static string? ContainerFromPath(string path)
-    {
+    private static string? ContainerFromPath(string path) {
         var extension = Path.GetExtension(path).TrimStart('.').ToLowerInvariant();
         return string.IsNullOrWhiteSpace(extension) ? null : extension;
     }

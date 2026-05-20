@@ -5,12 +5,10 @@ namespace Obscura.Infrastructure.Media.Processing;
 /// <summary>
 /// Generates thumbnails, preview clips, and trickplay sprites via ffmpeg.
 /// </summary>
-public sealed class ThumbnailService
-{
+public sealed class ThumbnailService {
     private readonly ProcessExecutor _processExecutor;
 
-    public ThumbnailService(ProcessExecutor processExecutor)
-    {
+    public ThumbnailService(ProcessExecutor processExecutor) {
         _processExecutor = processExecutor;
     }
 
@@ -19,8 +17,7 @@ public sealed class ThumbnailService
     /// </summary>
     public async Task<bool> GenerateVideoThumbnailAsync(
         string inputPath, string outputPath, double seekSeconds,
-        int width, int height, int quality, CancellationToken cancellationToken)
-    {
+        int width, int height, int quality, CancellationToken cancellationToken) {
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
         var result = await _processExecutor.RunAsync("ffmpeg",
@@ -42,8 +39,7 @@ public sealed class ThumbnailService
     public async Task<bool> GeneratePreviewClipAsync(
         string inputPath, string outputPath,
         double startSeconds, int durationSeconds,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
         var result = await _processExecutor.RunAsync("ffmpeg",
@@ -69,8 +65,7 @@ public sealed class ThumbnailService
     public async Task<bool> ExtractTrickplayFrameAsync(
         string inputPath, string outputPath,
         double seekSeconds, int width, int height, int jpegQuality,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
         var result = await _processExecutor.RunAsync("ffmpeg",
@@ -93,8 +88,7 @@ public sealed class ThumbnailService
     public async Task<bool> GenerateImageThumbnailAsync(
         string inputPath, string outputPath,
         int targetWidth, int quality,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
         var result = await _processExecutor.RunAsync("ffmpeg",
@@ -117,43 +111,37 @@ public sealed class ThumbnailService
     public async Task<IReadOnlyList<string>> ExtractSubtitlesAsync(
         string inputPath, string outputDir,
         IReadOnlyList<SubtitleStreamInfo> streams,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         Directory.CreateDirectory(outputDir);
 
         if (streams.Count == 0)
             return [];
 
         var outputPaths = new List<string>();
-        foreach (var stream in streams)
-        {
+        foreach (var stream in streams) {
             var fileName = $"embedded-{stream.Language}-{stream.StreamIndex}.vtt";
             outputPaths.Add(Path.Combine(outputDir, fileName));
         }
 
         var args = new List<string> { "-y", "-v", "error", "-i", inputPath };
-        for (var i = 0; i < streams.Count; i++)
-        {
+        for (var i = 0; i < streams.Count; i++) {
             args.AddRange(["-map", $"0:{streams[i].StreamIndex}", "-c:s", "webvtt", outputPaths[i]]);
         }
 
         var result = await _processExecutor.RunAsync("ffmpeg", args, null, cancellationToken);
-        if (result.ExitCode == 0)
-        {
+        if (result.ExitCode == 0) {
             return outputPaths.Where(File.Exists).ToList();
         }
 
         // Fallback: extract one stream at a time
         var succeeded = new List<string>();
-        foreach (var (stream, outputPath) in streams.Zip(outputPaths))
-        {
+        foreach (var (stream, outputPath) in streams.Zip(outputPaths)) {
             var perStreamResult = await _processExecutor.RunAsync("ffmpeg",
                 ["-y", "-v", "error", "-i", inputPath,
                  "-map", $"0:{stream.StreamIndex}", "-c:s", "webvtt", outputPath],
                 null, cancellationToken);
 
-            if (perStreamResult.ExitCode == 0 && File.Exists(outputPath))
-            {
+            if (perStreamResult.ExitCode == 0 && File.Exists(outputPath)) {
                 succeeded.Add(outputPath);
             }
         }
@@ -170,8 +158,7 @@ public sealed class ThumbnailService
     public async Task<int> ExtractTrickplayFramesBatchAsync(
         string inputPath, string outputDir, double duration,
         int intervalSeconds, int width, int height, int jpegQuality,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         Directory.CreateDirectory(outputDir);
 
         var totalFrames = (int)(duration / intervalSeconds);
@@ -180,8 +167,7 @@ public sealed class ThumbnailService
         using var semaphore = new SemaphoreSlim(8);
         var tasks = new List<Task<bool>>(totalFrames);
 
-        for (var i = 0; i < totalFrames; i++)
-        {
+        for (var i = 0; i < totalFrames; i++) {
             var seekSeconds = i * intervalSeconds + intervalSeconds / 2.0;
             seekSeconds = Math.Min(seekSeconds, Math.Max(0, duration - 0.5));
 
@@ -203,8 +189,7 @@ public sealed class ThumbnailService
     public async Task<bool> ComposeSpriteSheetAsync(
         string frameDir, string outputPath, int columns,
         int frameWidth, int frameHeight, int jpegQuality,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var frames = Directory.GetFiles(frameDir, "frame-*.jpg")
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToArray();
@@ -242,8 +227,7 @@ public sealed class ThumbnailService
         int frameWidth,
         int frameHeight,
         int jpegQuality,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var frames = Directory.GetFiles(frameDir, "frame-*.jpg")
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToArray();
@@ -253,8 +237,7 @@ public sealed class ThumbnailService
         var framesPerSheet = columns * rows;
         var sheetCount = 0;
 
-        foreach (var chunk in frames.Chunk(framesPerSheet))
-        {
+        foreach (var chunk in frames.Chunk(framesPerSheet)) {
             var outputPath = Path.Combine(outputDir, $"{sheetCount}.jpg");
             var concatList = Path.Combine(outputDir, $"_concat_{sheetCount}.txt");
             await File.WriteAllLinesAsync(
@@ -271,8 +254,7 @@ public sealed class ThumbnailService
                 null, cancellationToken);
 
             File.Delete(concatList);
-            if (result.ExitCode != 0 || !File.Exists(outputPath))
-            {
+            if (result.ExitCode != 0 || !File.Exists(outputPath)) {
                 break;
             }
 
@@ -285,11 +267,9 @@ public sealed class ThumbnailService
     private async Task<bool> ExtractSingleKeyframeAsync(
         SemaphoreSlim semaphore, string inputPath, string outputPath,
         double seekSeconds, int width, int height, int jpegQuality,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         await semaphore.WaitAsync(cancellationToken);
-        try
-        {
+        try {
             var result = await _processExecutor.RunAsync("ffmpeg",
                 ["-hide_banner", "-loglevel", "error", "-y",
                  "-skip_frame", "nokey",
@@ -302,9 +282,7 @@ public sealed class ThumbnailService
                 null, cancellationToken);
 
             return result.ExitCode == 0 && File.Exists(outputPath);
-        }
-        finally
-        {
+        } finally {
             semaphore.Release();
         }
     }
@@ -317,8 +295,7 @@ public sealed class ThumbnailService
         string inputPath,
         string thumbnailPath, double thumbSeekSeconds, int thumbWidth, int thumbHeight, int thumbQuality,
         string previewPath, double previewStartSeconds, int previewDurationSeconds,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         Directory.CreateDirectory(Path.GetDirectoryName(thumbnailPath)!);
         Directory.CreateDirectory(Path.GetDirectoryName(previewPath)!);
 
@@ -357,8 +334,7 @@ public sealed class ThumbnailService
     /// </summary>
     public async Task<int[]?> GenerateWaveformDataAsync(
         string inputPath, double durationSeconds, int pixelsPerSecond,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         const int sampleRate = 8000;
         var result = await _processExecutor.RunAsync("ffmpeg",
             ["-hide_banner", "-loglevel", "error",
@@ -384,14 +360,12 @@ public sealed class ThumbnailService
             samplesPerPixel = 1;
 
         var data = new int[totalPixels * 2];
-        for (var pixel = 0; pixel < totalPixels; pixel++)
-        {
+        for (var pixel = 0; pixel < totalPixels; pixel++) {
             var startSample = pixel * samplesPerPixel;
             var endSample = Math.Min(startSample + samplesPerPixel, totalSamples);
             short min = 0, max = 0;
 
-            for (var s = startSample; s < endSample; s++)
-            {
+            for (var s = startSample; s < endSample; s++) {
                 var offset = s * 2;
                 if (offset + 1 >= pcmBytes.Length) break;
                 var sample = (short)(pcmBytes[offset] | (pcmBytes[offset + 1] << 8));

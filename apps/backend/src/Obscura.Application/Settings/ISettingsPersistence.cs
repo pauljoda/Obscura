@@ -8,8 +8,7 @@ namespace Obscura.Application.Settings;
 /// orchestration tier in <see cref="SettingsService"/> owns validation, clamping, default
 /// derivation, and any non-persistence logic.
 /// </summary>
-public interface ISettingsPersistence
-{
+public interface ISettingsPersistence {
     /// <summary>
     /// Loads the singleton library settings row, creating it with defaults when none exists.
     /// </summary>

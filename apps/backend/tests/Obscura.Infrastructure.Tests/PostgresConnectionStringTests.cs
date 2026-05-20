@@ -2,11 +2,9 @@ using Obscura.Infrastructure.Database;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class PostgresConnectionStringTests
-{
+public sealed class PostgresConnectionStringTests {
     [Fact]
-    public void NormalizeKeepsNpgsqlConnectionStrings()
-    {
+    public void NormalizeKeepsNpgsqlConnectionStrings() {
         const string input = "Host=postgres;Port=5432;Database=obscura;Username=obscura;Password=obscura";
 
         var normalized = PostgresConnectionString.Normalize(input);
@@ -15,8 +13,7 @@ public sealed class PostgresConnectionStringTests
     }
 
     [Fact]
-    public void NormalizeConvertsDockerDatabaseUrlsToNpgsqlConnectionStrings()
-    {
+    public void NormalizeConvertsDockerDatabaseUrlsToNpgsqlConnectionStrings() {
         var normalized = PostgresConnectionString.Normalize(
             "postgresql://obscura:secret@postgres:5432/obscura");
 

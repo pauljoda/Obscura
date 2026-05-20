@@ -2,23 +2,20 @@ using Obscura.Domain.Entities;
 
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class MediaFileIgnoreRow
-{
+public sealed class MediaFileIgnoreRow {
     public string Path { get; set; } = string.Empty;
     public string EntityKindCode { get; set; } = string.Empty;
     public string Reason { get; set; } = "deleted-from-library";
     public DateTimeOffset CreatedAt { get; set; }
 }
 
-public sealed class UiPreferenceRow
-{
+public sealed class UiPreferenceRow {
     public string Key { get; set; } = string.Empty;
     public string ValueJson { get; set; } = "{}";
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-public sealed class ProviderConfigRow
-{
+public sealed class ProviderConfigRow {
     public Guid Id { get; set; }
     public string ProviderCode { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
@@ -30,8 +27,7 @@ public sealed class ProviderConfigRow
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-public sealed class ProviderCredentialRow
-{
+public sealed class ProviderCredentialRow {
     public Guid Id { get; set; }
     public Guid ProviderConfigId { get; set; }
     public string CredentialKey { get; set; } = string.Empty;
@@ -40,8 +36,7 @@ public sealed class ProviderCredentialRow
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-public sealed class IdentifyResultRow
-{
+public sealed class IdentifyResultRow {
     public Guid Id { get; set; }
     public Guid EntityId { get; set; }
     public Guid? ProviderConfigId { get; set; }
@@ -55,8 +50,7 @@ public sealed class IdentifyResultRow
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-public sealed class FingerprintSubmissionRow
-{
+public sealed class FingerprintSubmissionRow {
     public Guid Id { get; set; }
     public Guid EntityId { get; set; }
     public Guid? ProviderConfigId { get; set; }

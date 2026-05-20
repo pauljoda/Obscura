@@ -6,18 +6,15 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class TrickplayServiceTests : IDisposable
-{
+public sealed class TrickplayServiceTests : IDisposable {
     private readonly string _cacheRoot = Path.Combine(Path.GetTempPath(), $"obscura-trickplay-{Guid.NewGuid():N}");
 
-    public TrickplayServiceTests()
-    {
+    public TrickplayServiceTests() {
         Directory.CreateDirectory(_cacheRoot);
     }
 
     [Fact]
-    public async Task BuildsImagesOnlyPlaylistFromJpegTiles()
-    {
+    public async Task BuildsImagesOnlyPlaylistFromJpegTiles() {
         var itemId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var tileRoot = Path.Combine(_cacheRoot, "trickplay", itemId.ToString(), "320");
         Directory.CreateDirectory(tileRoot);
@@ -35,8 +32,7 @@ public sealed class TrickplayServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ResolvesTileInsideExpectedWidthFolder()
-    {
+    public async Task ResolvesTileInsideExpectedWidthFolder() {
         var itemId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         var tileRoot = Path.Combine(_cacheRoot, "trickplay", itemId.ToString(), "320");
         Directory.CreateDirectory(tileRoot);
@@ -53,20 +49,17 @@ public sealed class TrickplayServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task PlaylistFallsBackToAvailableGeneratedWidth()
-    {
+    public async Task PlaylistFallsBackToAvailableGeneratedWidth() {
         await using var db = CreateContext();
         var itemId = Guid.Parse("44444444-4444-4444-4444-444444444444");
-        db.Entities.Add(new EntityRow
-        {
+        db.Entities.Add(new EntityRow {
             Id = itemId,
             KindCode = EntityKindRegistry.Video.Code,
             Title = "Video",
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         });
-        db.TrickplayInfos.Add(new TrickplayInfoRow
-        {
+        db.TrickplayInfos.Add(new TrickplayInfoRow {
             EntityId = itemId,
             Width = 280,
             Height = 158,
@@ -91,8 +84,7 @@ public sealed class TrickplayServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task TileFallsBackToAvailableGeneratedWidth()
-    {
+    public async Task TileFallsBackToAvailableGeneratedWidth() {
         var itemId = Guid.Parse("55555555-5555-5555-5555-555555555555");
         var tileRoot = Path.Combine(_cacheRoot, "trickplay", itemId.ToString(), "280");
         Directory.CreateDirectory(tileRoot);
@@ -107,20 +99,17 @@ public sealed class TrickplayServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task PlaylistUsesPersistedTrickplayInfoWhenAvailable()
-    {
+    public async Task PlaylistUsesPersistedTrickplayInfoWhenAvailable() {
         await using var db = CreateContext();
         var itemId = Guid.Parse("33333333-3333-3333-3333-333333333333");
-        db.Entities.Add(new EntityRow
-        {
+        db.Entities.Add(new EntityRow {
             Id = itemId,
             KindCode = EntityKindRegistry.Video.Code,
             Title = "Video",
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         });
-        db.TrickplayInfos.Add(new TrickplayInfoRow
-        {
+        db.TrickplayInfos.Add(new TrickplayInfoRow {
             EntityId = itemId,
             Width = 240,
             Height = 134,
@@ -145,16 +134,13 @@ public sealed class TrickplayServiceTests : IDisposable
         Assert.Contains("#EXT-X-TARGETDURATION:112", playlist.Content);
     }
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_cacheRoot))
-        {
+    public void Dispose() {
+        if (Directory.Exists(_cacheRoot)) {
             Directory.Delete(_cacheRoot, recursive: true);
         }
     }
 
-    private static ObscuraDbContext CreateContext()
-    {
+    private static ObscuraDbContext CreateContext() {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()
             .UseInMemoryDatabase($"trickplay-{Guid.NewGuid():N}")
             .Options;

@@ -8,11 +8,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class EntityOrganizerServiceTests
-{
+public sealed class EntityOrganizerServiceTests {
     [Fact]
-    public async Task PlanUsesGenericStorageShapesAndStructuralParents()
-    {
+    public async Task PlanUsesGenericStorageShapesAndStructuralParents() {
         await using var db = CreateContext();
         var rootPath = Path.Combine(Path.GetTempPath(), "obscura-organize-plan");
         var seriesId = Guid.Parse("10000000-0000-0000-0000-000000000001");
@@ -45,8 +43,7 @@ public sealed class EntityOrganizerServiceTests
     }
 
     [Fact]
-    public async Task PlanSkipsArchiveEntriesBecauseTheyAreNotMovedIndependently()
-    {
+    public async Task PlanSkipsArchiveEntriesBecauseTheyAreNotMovedIndependently() {
         await using var db = CreateContext();
         var rootPath = Path.Combine(Path.GetTempPath(), "obscura-organize-archive");
         var pageId = Guid.Parse("20000000-0000-0000-0000-000000000001");
@@ -67,12 +64,10 @@ public sealed class EntityOrganizerServiceTests
     }
 
     [Fact]
-    public async Task ApplyMovesReadyFileAndUpdatesSourcePath()
-    {
+    public async Task ApplyMovesReadyFileAndUpdatesSourcePath() {
         await using var db = CreateContext();
         var tempRoot = Directory.CreateTempSubdirectory("obscura-organize-apply-");
-        try
-        {
+        try {
             var videoId = Guid.Parse("30000000-0000-0000-0000-000000000001");
             var now = DateTimeOffset.UtcNow;
             var sourcePath = Path.Combine(tempRoot.FullName, "bad-name.mkv");
@@ -94,15 +89,12 @@ public sealed class EntityOrganizerServiceTests
             Assert.Equal(
                 Path.Combine(tempRoot.FullName, "Good Name.mkv"),
                 Assert.Single(db.EntityFiles.Where(file => file.EntityId == videoId)).Path);
-        }
-        finally
-        {
+        } finally {
             tempRoot.Delete(recursive: true);
         }
     }
 
-    private static ObscuraDbContext CreateContext()
-    {
+    private static ObscuraDbContext CreateContext() {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()
             .UseInMemoryDatabase($"entity-organizer-{Guid.NewGuid():N}")
             .Options;
@@ -110,11 +102,9 @@ public sealed class EntityOrganizerServiceTests
         return new ObscuraDbContext(options);
     }
 
-    private static void SeedRoot(ObscuraDbContext db, string path)
-    {
+    private static void SeedRoot(ObscuraDbContext db, string path) {
         var now = DateTimeOffset.UtcNow;
-        db.LibraryRoots.Add(new LibraryRootRow
-        {
+        db.LibraryRoots.Add(new LibraryRootRow {
             Id = Guid.NewGuid(),
             Path = path,
             Label = "Root",
@@ -132,10 +122,8 @@ public sealed class EntityOrganizerServiceTests
         string title,
         Guid? parentEntityId,
         int? sortOrder,
-        DateTimeOffset now)
-    {
-        db.Entities.Add(new EntityRow
-        {
+        DateTimeOffset now) {
+        db.Entities.Add(new EntityRow {
             Id = id,
             KindCode = kindCode,
             Title = title,
@@ -150,10 +138,8 @@ public sealed class EntityOrganizerServiceTests
         ObscuraDbContext db,
         Guid entityId,
         string path,
-        DateTimeOffset now)
-    {
-        db.EntityFiles.Add(new EntityFileRow
-        {
+        DateTimeOffset now) {
+        db.EntityFiles.Add(new EntityFileRow {
             Id = Guid.NewGuid(),
             EntityId = entityId,
             Role = EntityFileRole.Source,

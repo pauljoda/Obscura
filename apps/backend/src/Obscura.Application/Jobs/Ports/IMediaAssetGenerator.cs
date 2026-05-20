@@ -3,8 +3,7 @@ namespace Obscura.Application.Jobs.Ports;
 /// <summary>
 /// Port for generating thumbnails, previews, sprites, waveforms, and extracting subtitles.
 /// </summary>
-public interface IMediaAssetGenerator
-{
+public interface IMediaAssetGenerator {
     Task<bool> GenerateVideoThumbnailAsync(
         string inputPath, string outputPath, double seekSeconds,
         int width, int height, int quality, CancellationToken cancellationToken);

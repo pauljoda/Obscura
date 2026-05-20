@@ -4,12 +4,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Persistence;
 
-internal static partial class ExpandedV2ModelConfiguration
-{
-    private static void ConfigureMediaDetails(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<VideoSeriesDetailRow>(entity =>
-        {
+internal static partial class ExpandedV2ModelConfiguration {
+    private static void ConfigureMediaDetails(ModelBuilder modelBuilder) {
+        modelBuilder.Entity<VideoSeriesDetailRow>(entity => {
             entity.ToTable("video_series_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -17,8 +14,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<VideoSeriesDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<GalleryDetailRow>(entity =>
-        {
+        modelBuilder.Entity<GalleryDetailRow>(entity => {
             entity.ToTable("gallery_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -34,10 +30,8 @@ internal static partial class ExpandedV2ModelConfiguration
         ConfigureAudio(modelBuilder);
     }
 
-    private static void ConfigureBooks(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<BookDetailRow>(entity =>
-        {
+    private static void ConfigureBooks(ModelBuilder modelBuilder) {
+        modelBuilder.Entity<BookDetailRow>(entity => {
             entity.ToTable("book_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -49,8 +43,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<BookDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<BookChapterDetailRow>(entity =>
-        {
+        modelBuilder.Entity<BookChapterDetailRow>(entity => {
             entity.ToTable("book_chapter_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -60,10 +53,8 @@ internal static partial class ExpandedV2ModelConfiguration
 
     }
 
-    private static void ConfigureAudio(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<AudioTrackDetailRow>(entity =>
-        {
+    private static void ConfigureAudio(ModelBuilder modelBuilder) {
+        modelBuilder.Entity<AudioTrackDetailRow>(entity => {
             entity.ToTable("audio_track_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");

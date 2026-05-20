@@ -2,14 +2,11 @@
 
 #nullable disable
 
-namespace Obscura.Infrastructure.Persistence.Migrations
-{
+namespace Obscura.Infrastructure.Persistence.Migrations {
     /// <inheritdoc />
-    public partial class AddPreferredAudioLanguageSetting : Migration
-    {
+    public partial class AddPreferredAudioLanguageSetting : Migration {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
+        protected override void Up(MigrationBuilder migrationBuilder) {
             migrationBuilder.AddColumn<string>(
                 name: "audio_preferred_languages",
                 schema: "v2",
@@ -20,8 +17,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+        protected override void Down(MigrationBuilder migrationBuilder) {
             migrationBuilder.DropColumn(
                 name: "audio_preferred_languages",
                 schema: "v2",

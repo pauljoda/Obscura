@@ -3,14 +3,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Obscura.Infrastructure.Persistence.Migrations
-{
+namespace Obscura.Infrastructure.Persistence.Migrations {
     /// <inheritdoc />
-    public partial class AddGenericEntityGraph : Migration
-    {
+    public partial class AddGenericEntityGraph : Migration {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
+        protected override void Up(MigrationBuilder migrationBuilder) {
             migrationBuilder.AddColumn<string>(
                 name: "allowed_child_kind_codes",
                 schema: "v2",
@@ -53,8 +50,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "entity_child_links",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     parent_entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     child_entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     child_kind_code = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
@@ -63,8 +59,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     source = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_child_links", x => new { x.parent_entity_id, x.child_entity_id, x.child_kind_code });
                     table.ForeignKey(
                         name: "FK_entity_child_links_entities_child_entity_id",
@@ -255,8 +250,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+        protected override void Down(MigrationBuilder migrationBuilder) {
             migrationBuilder.DropForeignKey(
                 name: "FK_entities_entities_parent_entity_id",
                 schema: "v2",

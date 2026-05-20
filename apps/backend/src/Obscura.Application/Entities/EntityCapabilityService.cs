@@ -14,16 +14,14 @@ namespace Obscura.Application.Entities;
 /// the response contract directly, or <c>null</c> when no active entity exists for the
 /// identifier.
 /// </summary>
-public sealed class EntityCapabilityService
-{
+public sealed class EntityCapabilityService {
     private readonly IEntityWriteRepository _entities;
 
     /// <summary>
     /// Creates the service over the entity write port.
     /// </summary>
     /// <param name="entities">Entity write repository implemented by Infrastructure.</param>
-    public EntityCapabilityService(IEntityWriteRepository entities)
-    {
+    public EntityCapabilityService(IEntityWriteRepository entities) {
         _entities = entities;
     }
 
@@ -31,15 +29,11 @@ public sealed class EntityCapabilityService
     /// Sets or clears the entity's user rating.
     /// </summary>
     public Task<EntityCard?> RateAsync(Guid id, int? value, CancellationToken cancellationToken) =>
-        MutateAsync(id, entity =>
-        {
+        MutateAsync(id, entity => {
             var rating = entity.GetOrAddCapability(() => new CapabilityRating());
-            if (value is { } v)
-            {
+            if (value is { } v) {
                 rating.Rate(v);
-            }
-            else
-            {
+            } else {
                 rating.Clear();
             }
 
@@ -55,8 +49,7 @@ public sealed class EntityCapabilityService
         bool? isNsfw,
         bool? isOrganized,
         CancellationToken cancellationToken) =>
-        MutateAsync(id, entity =>
-        {
+        MutateAsync(id, entity => {
             entity.GetOrAddCapability(() => new CapabilityFlags())
                 .Patch(isFavorite, isNsfw, isOrganized);
             return true;
@@ -71,8 +64,7 @@ public sealed class EntityCapabilityService
         double? durationSeconds,
         bool? completed,
         CancellationToken cancellationToken) =>
-        MutateAsync(id, entity =>
-        {
+        MutateAsync(id, entity => {
             entity.GetOrAddCapability(() => new CapabilityPlayback()).Update(
                 resumeSeconds is null ? null : TimeSpan.FromSeconds(resumeSeconds.Value),
                 durationSeconds is null ? null : TimeSpan.FromSeconds(durationSeconds.Value),
@@ -90,8 +82,7 @@ public sealed class EntityCapabilityService
         double seconds,
         double? endSeconds,
         CancellationToken cancellationToken) =>
-        MutateAsync(id, entity =>
-        {
+        MutateAsync(id, entity => {
             entity.GetOrAddCapability(() => new CapabilityMarkers()).Add(title, seconds, endSeconds);
             return true;
         }, cancellationToken);
@@ -125,11 +116,9 @@ public sealed class EntityCapabilityService
     private async Task<EntityCard?> MutateAsync(
         Guid id,
         Func<Entity, bool> mutate,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var entity = await _entities.FindAsync(id, cancellationToken);
-        if (entity is null || !mutate(entity))
-        {
+        if (entity is null || !mutate(entity)) {
             return null;
         }
 

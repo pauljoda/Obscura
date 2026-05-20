@@ -3,13 +3,10 @@ using Obscura.Infrastructure.Processes;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class MediaToolServiceTests
-{
+public sealed class MediaToolServiceTests {
     [Fact]
-    public async Task CheckReportsAvailableFfmpegAndFfprobeVersions()
-    {
-        var service = new MediaToolService(new FakeProcessExecutor(new Dictionary<string, ProcessExecutionResult>
-        {
+    public async Task CheckReportsAvailableFfmpegAndFfprobeVersions() {
+        var service = new MediaToolService(new FakeProcessExecutor(new Dictionary<string, ProcessExecutionResult> {
             ["ffmpeg"] = new(0, "ffmpeg version 7.1\nbuilt with clang", ""),
             ["ffprobe"] = new(0, "ffprobe version 7.1\nbuilt with clang", "")
         }));
@@ -23,8 +20,7 @@ public sealed class MediaToolServiceTests
     }
 
     [Fact]
-    public async Task CheckHandlesMissingTools()
-    {
+    public async Task CheckHandlesMissingTools() {
         var service = new MediaToolService(new ThrowingProcessExecutor());
 
         var status = await service.CheckAsync(CancellationToken.None);
@@ -35,12 +31,10 @@ public sealed class MediaToolServiceTests
         Assert.Null(status.FfprobeVersion);
     }
 
-    private sealed class FakeProcessExecutor : ProcessExecutor
-    {
+    private sealed class FakeProcessExecutor : ProcessExecutor {
         private readonly IReadOnlyDictionary<string, ProcessExecutionResult> _results;
 
-        public FakeProcessExecutor(IReadOnlyDictionary<string, ProcessExecutionResult> results)
-        {
+        public FakeProcessExecutor(IReadOnlyDictionary<string, ProcessExecutionResult> results) {
             _results = results;
         }
 
@@ -48,20 +42,17 @@ public sealed class MediaToolServiceTests
             string fileName,
             IReadOnlyList<string> arguments,
             IReadOnlyDictionary<string, string>? environment,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             return Task.FromResult(_results[fileName]);
         }
     }
 
-    private sealed class ThrowingProcessExecutor : ProcessExecutor
-    {
+    private sealed class ThrowingProcessExecutor : ProcessExecutor {
         public override Task<ProcessExecutionResult> RunAsync(
             string fileName,
             IReadOnlyList<string> arguments,
             IReadOnlyDictionary<string, string>? environment,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             throw new FileNotFoundException(fileName);
         }
     }

@@ -464,78 +464,78 @@ public sealed class EfEntityRepository(ObscuraDbContext db) : IEntityWriteReposi
         var id = entity.Id;
         switch (entity) {
             case Video video: {
-                var row = await db.VideoDetails.FindAsync([id], cancellationToken)
-                    ?? Track(db.VideoDetails, new VideoDetailRow { EntityId = id });
-                row.SubtitlesExtractedAt = video.SubtitlesExtractedAt;
-                break;
-            }
+                    var row = await db.VideoDetails.FindAsync([id], cancellationToken)
+                        ?? Track(db.VideoDetails, new VideoDetailRow { EntityId = id });
+                    row.SubtitlesExtractedAt = video.SubtitlesExtractedAt;
+                    break;
+                }
             case VideoSeries series: {
-                var row = await db.VideoSeriesDetails.FindAsync([id], cancellationToken)
-                    ?? Track(db.VideoSeriesDetails, new VideoSeriesDetailRow { EntityId = id });
-                row.Status = series.Status;
-                break;
-            }
+                    var row = await db.VideoSeriesDetails.FindAsync([id], cancellationToken)
+                        ?? Track(db.VideoSeriesDetails, new VideoSeriesDetailRow { EntityId = id });
+                    row.Status = series.Status;
+                    break;
+                }
             case Gallery gallery: {
-                var row = await db.GalleryDetails.FindAsync([id], cancellationToken)
-                    ?? Track(db.GalleryDetails, new GalleryDetailRow { EntityId = id });
-                row.GalleryType = gallery.GalleryType;
-                row.CoverImageEntityId = gallery.CoverImageId;
-                break;
-            }
+                    var row = await db.GalleryDetails.FindAsync([id], cancellationToken)
+                        ?? Track(db.GalleryDetails, new GalleryDetailRow { EntityId = id });
+                    row.GalleryType = gallery.GalleryType;
+                    row.CoverImageEntityId = gallery.CoverImageId;
+                    break;
+                }
             case Book book: {
-                var row = await db.BookDetails.FindAsync([id], cancellationToken)
-                    ?? Track(db.BookDetails, new BookDetailRow { EntityId = id });
-                row.BookType = book.BookType;
-                row.CoverPageEntityId = book.CoverPageId;
-                break;
-            }
+                    var row = await db.BookDetails.FindAsync([id], cancellationToken)
+                        ?? Track(db.BookDetails, new BookDetailRow { EntityId = id });
+                    row.BookType = book.BookType;
+                    row.CoverPageEntityId = book.CoverPageId;
+                    break;
+                }
             case BookChapter chapter: {
-                var row = await db.BookChapterDetails.FindAsync([id], cancellationToken)
-                    ?? Track(db.BookChapterDetails, new BookChapterDetailRow { EntityId = id });
-                row.CoverPageEntityId = chapter.CoverPageId;
-                break;
-            }
+                    var row = await db.BookChapterDetails.FindAsync([id], cancellationToken)
+                        ?? Track(db.BookChapterDetails, new BookChapterDetailRow { EntityId = id });
+                    row.CoverPageEntityId = chapter.CoverPageId;
+                    break;
+                }
             case AudioTrack track: {
-                var row = await db.AudioTrackDetails.FindAsync([id], cancellationToken)
-                    ?? Track(db.AudioTrackDetails, new AudioTrackDetailRow { EntityId = id });
-                row.EmbeddedArtist = track.EmbeddedArtist;
-                row.EmbeddedAlbum = track.EmbeddedAlbum;
-                break;
-            }
+                    var row = await db.AudioTrackDetails.FindAsync([id], cancellationToken)
+                        ?? Track(db.AudioTrackDetails, new AudioTrackDetailRow { EntityId = id });
+                    row.EmbeddedArtist = track.EmbeddedArtist;
+                    row.EmbeddedAlbum = track.EmbeddedAlbum;
+                    break;
+                }
             case Person person: {
-                var row = await db.PersonDetails.FindAsync([id], cancellationToken)
-                    ?? Track(db.PersonDetails, new PersonDetailRow { EntityId = id });
-                row.Disambiguation = person.Disambiguation;
-                row.Gender = person.Gender;
-                row.Country = person.Country;
-                row.Ethnicity = person.Ethnicity;
-                row.EyeColor = person.EyeColor;
-                row.HairColor = person.HairColor;
-                row.Height = person.Height;
-                row.Weight = person.Weight;
-                row.Measurements = person.Measurements;
-                row.Tattoos = person.Tattoos;
-                row.Piercings = person.Piercings;
-                break;
-            }
+                    var row = await db.PersonDetails.FindAsync([id], cancellationToken)
+                        ?? Track(db.PersonDetails, new PersonDetailRow { EntityId = id });
+                    row.Disambiguation = person.Disambiguation;
+                    row.Gender = person.Gender;
+                    row.Country = person.Country;
+                    row.Ethnicity = person.Ethnicity;
+                    row.EyeColor = person.EyeColor;
+                    row.HairColor = person.HairColor;
+                    row.Height = person.Height;
+                    row.Weight = person.Weight;
+                    row.Measurements = person.Measurements;
+                    row.Tattoos = person.Tattoos;
+                    row.Piercings = person.Piercings;
+                    break;
+                }
             case Tag tag: {
-                var row = await db.TagDetails.FindAsync([id], cancellationToken)
-                    ?? Track(db.TagDetails, new TagDetailRow { EntityId = id });
-                row.IgnoreAutoTag = tag.IgnoreAutoTag;
-                break;
-            }
+                    var row = await db.TagDetails.FindAsync([id], cancellationToken)
+                        ?? Track(db.TagDetails, new TagDetailRow { EntityId = id });
+                    row.IgnoreAutoTag = tag.IgnoreAutoTag;
+                    break;
+                }
             case Collection collection: {
-                var row = await db.CollectionDetails.FindAsync([id], cancellationToken)
-                    ?? Track(db.CollectionDetails, new CollectionDetailRow { EntityId = id });
-                row.Mode = collection.Mode;
-                row.RuleTreeJson = collection.RuleTreeJson;
-                row.CoverMode = collection.CoverMode;
-                row.CoverItemEntityId = collection.CoverItemId;
-                row.SlideshowDurationSeconds = (int)collection.SlideshowDuration.TotalSeconds;
-                row.SlideshowAutoAdvance = collection.SlideshowAutoAdvance;
-                row.LastRefreshedAt = collection.LastRefreshedAt;
-                break;
-            }
+                    var row = await db.CollectionDetails.FindAsync([id], cancellationToken)
+                        ?? Track(db.CollectionDetails, new CollectionDetailRow { EntityId = id });
+                    row.Mode = collection.Mode;
+                    row.RuleTreeJson = collection.RuleTreeJson;
+                    row.CoverMode = collection.CoverMode;
+                    row.CoverItemEntityId = collection.CoverItemId;
+                    row.SlideshowDurationSeconds = (int)collection.SlideshowDuration.TotalSeconds;
+                    row.SlideshowAutoAdvance = collection.SlideshowAutoAdvance;
+                    row.LastRefreshedAt = collection.LastRefreshedAt;
+                    break;
+                }
         }
     }
 
@@ -587,7 +587,10 @@ public sealed class EfEntityRepository(ObscuraDbContext db) : IEntityWriteReposi
 
         if (entity.Classification is { } classification && (classification.Value is not null || classification.System is not null)) {
             db.EntityClassifications.Add(new EntityClassificationRow {
-                EntityId = id, Value = classification.Value, System = classification.System, UpdatedAt = now
+                EntityId = id,
+                Value = classification.Value,
+                System = classification.System,
+                UpdatedAt = now
             });
         }
 
@@ -609,37 +612,63 @@ public sealed class EfEntityRepository(ObscuraDbContext db) : IEntityWriteReposi
             var order = 0;
             foreach (var url in links.Urls) {
                 db.EntityUrls.Add(new EntityUrlRow {
-                    Id = Guid.NewGuid(), EntityId = id, Url = url.Value, Label = url.Label, SortOrder = order++, CreatedAt = now
+                    Id = Guid.NewGuid(),
+                    EntityId = id,
+                    Url = url.Value,
+                    Label = url.Label,
+                    SortOrder = order++,
+                    CreatedAt = now
                 });
             }
 
             foreach (var externalId in links.ExternalIds) {
                 db.EntityExternalIds.Add(new EntityExternalIdRow {
-                    Id = Guid.NewGuid(), EntityId = id, Provider = externalId.Provider,
-                    Value = externalId.Value, Url = externalId.Url, CreatedAt = now, UpdatedAt = now
+                    Id = Guid.NewGuid(),
+                    EntityId = id,
+                    Provider = externalId.Provider,
+                    Value = externalId.Value,
+                    Url = externalId.Url,
+                    CreatedAt = now,
+                    UpdatedAt = now
                 });
             }
         }
 
         foreach (var file in entity.Files?.Items ?? []) {
             db.EntityFiles.Add(new EntityFileRow {
-                Id = Guid.NewGuid(), EntityId = id, Role = file.Role, Path = file.Path,
-                MimeType = file.MimeType, CreatedAt = now, UpdatedAt = now
+                Id = Guid.NewGuid(),
+                EntityId = id,
+                Role = file.Role,
+                Path = file.Path,
+                MimeType = file.MimeType,
+                CreatedAt = now,
+                UpdatedAt = now
             });
         }
 
         foreach (var subtitle in entity.SubtitleCapability?.Items ?? []) {
             db.EntitySubtitles.Add(new EntitySubtitleRow {
                 Id = subtitle.Id == Guid.Empty ? Guid.NewGuid() : subtitle.Id,
-                EntityId = id, Language = subtitle.Language, Label = subtitle.Label, Format = subtitle.Format,
-                Source = subtitle.Source, StoragePath = subtitle.StoragePath, SourceFormat = subtitle.SourceFormat,
-                SourcePath = subtitle.SourcePath, IsDefault = subtitle.IsDefault, CreatedAt = now
+                EntityId = id,
+                Language = subtitle.Language,
+                Label = subtitle.Label,
+                Format = subtitle.Format,
+                Source = subtitle.Source,
+                StoragePath = subtitle.StoragePath,
+                SourceFormat = subtitle.SourceFormat,
+                SourcePath = subtitle.SourcePath,
+                IsDefault = subtitle.IsDefault,
+                CreatedAt = now
             });
         }
 
         foreach (var fingerprint in entity.GetCapability<CapabilityFingerprints>()?.Items ?? []) {
             db.EntityFileFingerprints.Add(new EntityFileFingerprintRow {
-                Id = Guid.NewGuid(), EntityId = id, Algorithm = fingerprint.Algorithm, Value = fingerprint.Value, CreatedAt = now
+                Id = Guid.NewGuid(),
+                EntityId = id,
+                Algorithm = fingerprint.Algorithm,
+                Value = fingerprint.Value,
+                CreatedAt = now
             });
         }
 
@@ -649,8 +678,12 @@ public sealed class EfEntityRepository(ObscuraDbContext db) : IEntityWriteReposi
 
         foreach (var date in entity.Dates?.Items ?? []) {
             db.EntityDates.Add(new EntityDateRow {
-                EntityId = id, Code = date.Code, Value = date.Value,
-                SortableValue = date.SortableValue, Precision = date.Precision, UpdatedAt = now
+                EntityId = id,
+                Code = date.Code,
+                Value = date.Value,
+                SortableValue = date.SortableValue,
+                Precision = date.Precision,
+                UpdatedAt = now
             });
         }
 
@@ -660,7 +693,11 @@ public sealed class EfEntityRepository(ObscuraDbContext db) : IEntityWriteReposi
 
         foreach (var position in entity.Position?.Items ?? []) {
             db.EntityPositions.Add(new EntityPositionRow {
-                EntityId = id, Code = position.Code, Value = position.Value, Label = position.Label, UpdatedAt = now
+                EntityId = id,
+                Code = position.Code,
+                Value = position.Value,
+                Label = position.Label,
+                UpdatedAt = now
             });
         }
     }
@@ -700,73 +737,73 @@ public sealed class EfEntityRepository(ObscuraDbContext db) : IEntityWriteReposi
             case EntityKind.AudioLibrary:
                 return new AudioLibrary(id, row.Title);
             case EntityKind.AudioTrack: {
-                var detail = await db.AudioTrackDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
-                return new AudioTrack(id, row.Title, detail?.EmbeddedArtist, detail?.EmbeddedAlbum);
-            }
+                    var detail = await db.AudioTrackDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                    return new AudioTrack(id, row.Title, detail?.EmbeddedArtist, detail?.EmbeddedAlbum);
+                }
             case EntityKind.Book: {
-                var detail = await db.BookDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
-                return new Book(id, row.Title, detail?.BookType ?? BookType.Book, detail?.CoverPageEntityId);
-            }
+                    var detail = await db.BookDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                    return new Book(id, row.Title, detail?.BookType ?? BookType.Book, detail?.CoverPageEntityId);
+                }
             case EntityKind.BookVolume:
                 return new BookVolume(id, row.Title);
             case EntityKind.BookChapter: {
-                var detail = await db.BookChapterDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
-                return new BookChapter(id, row.Title, detail?.CoverPageEntityId);
-            }
+                    var detail = await db.BookChapterDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                    return new BookChapter(id, row.Title, detail?.CoverPageEntityId);
+                }
             case EntityKind.BookPage:
                 return new BookPage(id, row.Title);
             case EntityKind.Collection: {
-                var detail = await db.CollectionDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
-                return detail is null
-                    ? new Collection(id, row.Title)
-                    : new Collection(
-                        id,
-                        row.Title,
-                        detail.Mode,
-                        detail.RuleTreeJson,
-                        detail.CoverMode,
-                        detail.CoverItemEntityId,
-                        TimeSpan.FromSeconds(detail.SlideshowDurationSeconds),
-                        detail.SlideshowAutoAdvance,
-                        detail.LastRefreshedAt);
-            }
+                    var detail = await db.CollectionDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                    return detail is null
+                        ? new Collection(id, row.Title)
+                        : new Collection(
+                            id,
+                            row.Title,
+                            detail.Mode,
+                            detail.RuleTreeJson,
+                            detail.CoverMode,
+                            detail.CoverItemEntityId,
+                            TimeSpan.FromSeconds(detail.SlideshowDurationSeconds),
+                            detail.SlideshowAutoAdvance,
+                            detail.LastRefreshedAt);
+                }
             case EntityKind.Gallery: {
-                var detail = await db.GalleryDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
-                return new Gallery(id, row.Title, detail?.GalleryType ?? GalleryType.Virtual, detail?.CoverImageEntityId);
-            }
+                    var detail = await db.GalleryDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                    return new Gallery(id, row.Title, detail?.GalleryType ?? GalleryType.Virtual, detail?.CoverImageEntityId);
+                }
             case EntityKind.Image:
                 return new Image(id, row.Title);
             case EntityKind.Person: {
-                var detail = await db.PersonDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
-                return new Person(
-                    id,
-                    row.Title,
-                    detail?.Disambiguation,
-                    detail?.Gender,
-                    detail?.Country,
-                    detail?.Ethnicity,
-                    detail?.EyeColor,
-                    detail?.HairColor,
-                    detail?.Height,
-                    detail?.Weight,
-                    detail?.Measurements,
-                    detail?.Tattoos,
-                    detail?.Piercings);
-            }
+                    var detail = await db.PersonDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                    return new Person(
+                        id,
+                        row.Title,
+                        detail?.Disambiguation,
+                        detail?.Gender,
+                        detail?.Country,
+                        detail?.Ethnicity,
+                        detail?.EyeColor,
+                        detail?.HairColor,
+                        detail?.Height,
+                        detail?.Weight,
+                        detail?.Measurements,
+                        detail?.Tattoos,
+                        detail?.Piercings);
+                }
             case EntityKind.Studio:
                 return new Studio(id, row.Title);
             case EntityKind.Tag: {
-                var detail = await db.TagDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
-                return new Tag(id, row.Title, detail?.IgnoreAutoTag ?? false);
-            }
+                    var detail = await db.TagDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                    return new Tag(id, row.Title, detail?.IgnoreAutoTag ?? false);
+                }
             case EntityKind.Video: {
-                var detail = await db.VideoDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
-                return new Video(id, row.Title, detail?.SubtitlesExtractedAt);
-            }
+                    var detail = await db.VideoDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                    return new Video(id, row.Title, detail?.SubtitlesExtractedAt);
+                }
             case EntityKind.VideoSeries: {
-                var detail = await db.VideoSeriesDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
-                return new VideoSeries(id, row.Title, detail?.Status);
-            }
+                    var detail = await db.VideoSeriesDetails.AsNoTracking().FirstOrDefaultAsync(d => d.EntityId == id, cancellationToken);
+                    return new VideoSeries(id, row.Title, detail?.Status);
+                }
             case EntityKind.VideoSeason:
                 return new VideoSeason(id, row.Title, row.ParentEntityId, sortOrder: row.SortOrder);
             default:

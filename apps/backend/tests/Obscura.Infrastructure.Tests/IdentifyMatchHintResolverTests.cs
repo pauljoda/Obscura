@@ -5,24 +5,20 @@ using Obscura.Infrastructure.Plugins;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class IdentifyMatchHintResolverTests
-{
+public sealed class IdentifyMatchHintResolverTests {
     [Fact]
-    public async Task ResolvePrefersStoredProviderIdOverProviderUrls()
-    {
+    public async Task ResolvePrefersStoredProviderIdOverProviderUrls() {
         await using var db = CreateContext();
         var entityId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         SeedEntity(db, entityId, "video", "Stored Match");
-        db.EntityUrls.Add(new EntityUrlRow
-        {
+        db.EntityUrls.Add(new EntityUrlRow {
             Id = Guid.NewGuid(),
             EntityId = entityId,
             Url = "https://www.themoviedb.org/movie/999",
             SortOrder = 0,
             CreatedAt = DateTimeOffset.UtcNow
         });
-        db.EntityExternalIds.Add(new EntityExternalIdRow
-        {
+        db.EntityExternalIds.Add(new EntityExternalIdRow {
             Id = Guid.NewGuid(),
             EntityId = entityId,
             Provider = "tmdb",
@@ -41,13 +37,11 @@ public sealed class IdentifyMatchHintResolverTests
     }
 
     [Fact]
-    public async Task ResolveParsesProviderUrlWhenStoredIdIsMissing()
-    {
+    public async Task ResolveParsesProviderUrlWhenStoredIdIsMissing() {
         await using var db = CreateContext();
         var entityId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         SeedEntity(db, entityId, "video-series", "URL Match");
-        db.EntityUrls.Add(new EntityUrlRow
-        {
+        db.EntityUrls.Add(new EntityUrlRow {
             Id = Guid.NewGuid(),
             EntityId = entityId,
             Url = "https://www.themoviedb.org/tv/456-url-match",
@@ -63,8 +57,7 @@ public sealed class IdentifyMatchHintResolverTests
         Assert.Equal("URL Match", hints.Title);
     }
 
-    private static ObscuraDbContext CreateContext()
-    {
+    private static ObscuraDbContext CreateContext() {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()
             .UseInMemoryDatabase($"identify-hints-{Guid.NewGuid():N}")
             .Options;
@@ -72,10 +65,8 @@ public sealed class IdentifyMatchHintResolverTests
         return new ObscuraDbContext(options);
     }
 
-    private static void SeedEntity(ObscuraDbContext db, Guid id, string kind, string title)
-    {
-        db.Entities.Add(new EntityRow
-        {
+    private static void SeedEntity(ObscuraDbContext db, Guid id, string kind, string title) {
+        db.Entities.Add(new EntityRow {
             Id = id,
             KindCode = kind,
             Title = title,

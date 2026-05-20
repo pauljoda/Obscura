@@ -10,34 +10,25 @@ namespace Obscura.Application.Jobs;
 /// </summary>
 public sealed class JobHistoryPruner(
     IServiceScopeFactory scopeFactory,
-    ILogger<JobHistoryPruner> logger) : BackgroundService
-{
+    ILogger<JobHistoryPruner> logger) : BackgroundService {
     private static readonly TimeSpan PruneInterval = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan Retention = TimeSpan.FromDays(7);
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
         logger.LogInformation("Job history pruner started (retention: {Days} days).", Retention.TotalDays);
 
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
+        while (!stoppingToken.IsCancellationRequested) {
+            try {
                 await using var scope = scopeFactory.CreateAsyncScope();
                 var queue = scope.ServiceProvider.GetRequiredService<IJobQueueService>();
                 var pruned = await queue.PruneHistoryAsync(Retention, stoppingToken);
 
-                if (pruned > 0)
-                {
+                if (pruned > 0) {
                     logger.LogInformation("Pruned {Count} old job runs.", pruned);
                 }
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
+            } catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) {
                 break;
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 logger.LogError(ex, "Job history prune failed.");
             }
 

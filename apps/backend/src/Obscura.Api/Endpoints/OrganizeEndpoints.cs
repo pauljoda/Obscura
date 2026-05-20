@@ -3,10 +3,8 @@ using Obscura.Contracts.Organize;
 
 namespace Obscura.Api.Endpoints;
 
-public static class OrganizeEndpoints
-{
-    public static RouteGroupBuilder MapOrganizeEndpoints(this IEndpointRouteBuilder routes)
-    {
+public static class OrganizeEndpoints {
+    public static RouteGroupBuilder MapOrganizeEndpoints(this IEndpointRouteBuilder routes) {
         var group = routes.MapGroup("/api/organize")
             .WithTags("Organize");
 

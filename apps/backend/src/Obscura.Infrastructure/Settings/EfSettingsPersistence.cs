@@ -14,25 +14,21 @@ namespace Obscura.Infrastructure.Settings;
 /// roots, and normalizes the HLS transcoder profile string on persist so callers downstream
 /// always see a value that maps to a supported encoder.
 /// </summary>
-public sealed class EfSettingsPersistence : ISettingsPersistence
-{
+public sealed class EfSettingsPersistence : ISettingsPersistence {
     private readonly ObscuraDbContext _db;
 
-    public EfSettingsPersistence(ObscuraDbContext db)
-    {
+    public EfSettingsPersistence(ObscuraDbContext db) {
         _db = db;
     }
 
-    public async Task<LibrarySettings> GetLibrarySettingsAsync(CancellationToken cancellationToken)
-    {
+    public async Task<LibrarySettings> GetLibrarySettingsAsync(CancellationToken cancellationToken) {
         var row = await EnsureRowAsync(cancellationToken);
         return ToContract(row);
     }
 
     public async Task<LibrarySettings> SaveLibrarySettingsAsync(
         LibrarySettings state,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var row = await EnsureRowAsync(cancellationToken);
         ApplyToRow(row, state);
         row.UpdatedAt = DateTimeOffset.UtcNow;
@@ -40,8 +36,7 @@ public sealed class EfSettingsPersistence : ISettingsPersistence
         return ToContract(row);
     }
 
-    public async Task<IReadOnlyList<LibraryRoot>> ListLibraryRootsAsync(CancellationToken cancellationToken)
-    {
+    public async Task<IReadOnlyList<LibraryRoot>> ListLibraryRootsAsync(CancellationToken cancellationToken) {
         return await _db.LibraryRoots
             .AsNoTracking()
             .OrderBy(root => root.Label)
@@ -50,16 +45,13 @@ public sealed class EfSettingsPersistence : ISettingsPersistence
             .ToArrayAsync(cancellationToken);
     }
 
-    public async Task<LibraryRoot?> GetLibraryRootAsync(Guid id, CancellationToken cancellationToken)
-    {
+    public async Task<LibraryRoot?> GetLibraryRootAsync(Guid id, CancellationToken cancellationToken) {
         var row = await _db.LibraryRoots.AsNoTracking().FirstOrDefaultAsync(root => root.Id == id, cancellationToken);
         return row is null ? null : ToContract(row);
     }
 
-    public async Task<LibraryRoot> AddLibraryRootAsync(LibraryRoot state, CancellationToken cancellationToken)
-    {
-        var row = new LibraryRootRow
-        {
+    public async Task<LibraryRoot> AddLibraryRootAsync(LibraryRoot state, CancellationToken cancellationToken) {
+        var row = new LibraryRootRow {
             Id = state.Id,
             Path = state.Path,
             Label = state.Label,
@@ -80,8 +72,7 @@ public sealed class EfSettingsPersistence : ISettingsPersistence
         return ToContract(row);
     }
 
-    public async Task<LibraryRoot> SaveLibraryRootAsync(LibraryRoot state, CancellationToken cancellationToken)
-    {
+    public async Task<LibraryRoot> SaveLibraryRootAsync(LibraryRoot state, CancellationToken cancellationToken) {
         var row = await _db.LibraryRoots.FindAsync([state.Id], cancellationToken)
             ?? throw new InvalidOperationException($"Library root '{state.Id}' was not found.");
 
@@ -101,11 +92,9 @@ public sealed class EfSettingsPersistence : ISettingsPersistence
         return ToContract(row);
     }
 
-    public async Task<bool> DeleteLibraryRootAsync(Guid id, CancellationToken cancellationToken)
-    {
+    public async Task<bool> DeleteLibraryRootAsync(Guid id, CancellationToken cancellationToken) {
         var row = await _db.LibraryRoots.FindAsync([id], cancellationToken);
-        if (row is null)
-        {
+        if (row is null) {
             return false;
         }
 
@@ -114,20 +103,17 @@ public sealed class EfSettingsPersistence : ISettingsPersistence
         return true;
     }
 
-    private async Task<LibrarySettingsRow> EnsureRowAsync(CancellationToken cancellationToken)
-    {
+    private async Task<LibrarySettingsRow> EnsureRowAsync(CancellationToken cancellationToken) {
         var row = await _db.LibrarySettings
             .OrderBy(settings => settings.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (row is not null)
-        {
+        if (row is not null) {
             return row;
         }
 
         var now = DateTimeOffset.UtcNow;
-        row = new LibrarySettingsRow
-        {
+        row = new LibrarySettingsRow {
             Id = Guid.NewGuid(),
             CreatedAt = now,
             UpdatedAt = now,
@@ -138,8 +124,7 @@ public sealed class EfSettingsPersistence : ISettingsPersistence
         return row;
     }
 
-    private static void ApplyToRow(LibrarySettingsRow row, LibrarySettings state)
-    {
+    private static void ApplyToRow(LibrarySettingsRow row, LibrarySettings state) {
         row.AutoScanEnabled = state.AutoScanEnabled;
         row.ScanIntervalMinutes = state.ScanIntervalMinutes;
         row.AutoGenerateMetadata = state.AutoGenerateMetadata;
@@ -158,16 +143,14 @@ public sealed class EfSettingsPersistence : ISettingsPersistence
         row.SubtitlesAutoEnable = state.SubtitlesAutoEnable;
         row.SubtitlesPreferredLanguages = state.SubtitlesPreferredLanguages;
         row.AudioPreferredLanguages = state.AudioPreferredLanguages;
-        if (state.SubtitleStyle.TryDecodeAs<SubtitleStyle>(out var subtitleStyle))
-        {
+        if (state.SubtitleStyle.TryDecodeAs<SubtitleStyle>(out var subtitleStyle)) {
             row.SubtitleStyle = subtitleStyle;
         }
 
         row.SubtitleFontScale = state.SubtitleFontScale;
         row.SubtitlePositionPercent = state.SubtitlePositionPercent;
         row.SubtitleOpacity = state.SubtitleOpacity;
-        if (state.DefaultPlaybackMode.TryDecodeAs<PlaybackMode>(out var playbackMode))
-        {
+        if (state.DefaultPlaybackMode.TryDecodeAs<PlaybackMode>(out var playbackMode)) {
             row.DefaultPlaybackMode = playbackMode;
         }
 

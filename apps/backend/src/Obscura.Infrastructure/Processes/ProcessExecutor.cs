@@ -5,8 +5,7 @@ namespace Obscura.Infrastructure.Processes;
 /// <summary>
 /// Runs external command-line processes and captures their standard output and error streams.
 /// </summary>
-public class ProcessExecutor
-{
+public class ProcessExecutor {
     /// <summary>
     /// Starts a process with explicit arguments and environment overrides.
     /// </summary>
@@ -19,30 +18,25 @@ public class ProcessExecutor
         string fileName,
         IReadOnlyList<string> arguments,
         IReadOnlyDictionary<string, string>? environment,
-        CancellationToken cancellationToken)
-    {
-        var startInfo = new ProcessStartInfo(fileName)
-        {
+        CancellationToken cancellationToken) {
+        var startInfo = new ProcessStartInfo(fileName) {
             RedirectStandardError = true,
             RedirectStandardOutput = true,
             UseShellExecute = false
         };
 
-        foreach (var argument in arguments)
-        {
+        foreach (var argument in arguments) {
             startInfo.ArgumentList.Add(argument);
         }
 
-        foreach (var (key, value) in environment ?? new Dictionary<string, string>())
-        {
+        foreach (var (key, value) in environment ?? new Dictionary<string, string>()) {
             startInfo.Environment[key] = value;
         }
 
         using var process = Process.Start(startInfo) ??
             throw new InvalidOperationException($"Failed to start '{fileName}'.");
 
-        try
-        {
+        try {
             var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
             var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
             await process.WaitForExitAsync(cancellationToken);
@@ -51,9 +45,7 @@ public class ProcessExecutor
                 process.ExitCode,
                 await stdoutTask,
                 await stderrTask);
-        }
-        catch (OperationCanceledException) when (!process.HasExited)
-        {
+        } catch (OperationCanceledException) when (!process.HasExited) {
             process.Kill(entireProcessTree: true);
             await process.WaitForExitAsync(CancellationToken.None);
             throw;
@@ -74,24 +66,20 @@ public class ProcessExecutor
         IReadOnlyList<string> arguments,
         IReadOnlyDictionary<string, string>? environment,
         string outputPath,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
-        var startInfo = new ProcessStartInfo(fileName)
-        {
+        var startInfo = new ProcessStartInfo(fileName) {
             RedirectStandardError = true,
             RedirectStandardOutput = true,
             UseShellExecute = false
         };
 
-        foreach (var argument in arguments)
-        {
+        foreach (var argument in arguments) {
             startInfo.ArgumentList.Add(argument);
         }
 
-        foreach (var (key, value) in environment ?? new Dictionary<string, string>())
-        {
+        foreach (var (key, value) in environment ?? new Dictionary<string, string>()) {
             startInfo.Environment[key] = value;
         }
 
@@ -99,8 +87,7 @@ public class ProcessExecutor
             throw new InvalidOperationException($"Failed to start '{fileName}'.");
         await using var output = File.Create(outputPath);
 
-        try
-        {
+        try {
             var copyTask = process.StandardOutput.BaseStream.CopyToAsync(output, cancellationToken);
             var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
             await process.WaitForExitAsync(cancellationToken);
@@ -110,9 +97,7 @@ public class ProcessExecutor
                 ExitCode: process.ExitCode,
                 StandardOutput: string.Empty,
                 StandardError: await stderrTask);
-        }
-        catch (OperationCanceledException) when (!process.HasExited)
-        {
+        } catch (OperationCanceledException) when (!process.HasExited) {
             process.Kill(entireProcessTree: true);
             await process.WaitForExitAsync(CancellationToken.None);
             throw;

@@ -3,14 +3,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Obscura.Infrastructure.Persistence.Migrations
-{
+namespace Obscura.Infrastructure.Persistence.Migrations {
     /// <inheritdoc />
-    public partial class SlimCapabilityFirstDetails : Migration
-    {
+    public partial class SlimCapabilityFirstDetails : Migration {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
+        protected override void Up(MigrationBuilder migrationBuilder) {
             migrationBuilder.DropForeignKey(
                 name: "FK_book_details_library_roots_library_root_id",
                 schema: "v2",
@@ -531,8 +528,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+        protected override void Down(MigrationBuilder migrationBuilder) {
             migrationBuilder.DropIndex(
                 name: "IX_book_volume_details_book_entity_id",
                 schema: "v2",
@@ -1156,8 +1152,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "book_read_progress",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     book_entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     chapter_entity_id = table.Column<Guid>(type: "uuid", nullable: true),
                     completed_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
@@ -1166,8 +1161,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     reader_mode = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_book_read_progress", x => x.book_entity_id);
                     table.ForeignKey(
                         name: "FK_book_read_progress_entities_book_entity_id",

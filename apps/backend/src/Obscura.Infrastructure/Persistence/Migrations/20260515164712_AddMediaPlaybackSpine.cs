@@ -3,19 +3,15 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Obscura.Infrastructure.Persistence.Migrations
-{
+namespace Obscura.Infrastructure.Persistence.Migrations {
     /// <inheritdoc />
-    public partial class AddMediaPlaybackSpine : Migration
-    {
+    public partial class AddMediaPlaybackSpine : Migration {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
+        protected override void Up(MigrationBuilder migrationBuilder) {
             migrationBuilder.CreateTable(
                 name: "media_sources",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     entity_file_id = table.Column<Guid>(type: "uuid", nullable: true),
@@ -34,8 +30,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_media_sources", x => x.id);
                     table.ForeignKey(
                         name: "FK_media_sources_entities_entity_id",
@@ -56,8 +51,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "trickplay_infos",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     width = table.Column<int>(type: "integer", nullable: false),
                     height = table.Column<int>(type: "integer", nullable: false),
@@ -69,8 +63,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_trickplay_infos", x => new { x.entity_id, x.width });
                     table.CheckConstraint("ck_trickplay_infos_height", "height > 0");
                     table.CheckConstraint("ck_trickplay_infos_interval", "interval_seconds > 0");
@@ -89,8 +82,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "media_streams",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     media_source_id = table.Column<Guid>(type: "uuid", nullable: false),
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -109,8 +101,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     is_forced = table.Column<bool>(type: "boolean", nullable: false),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_media_streams", x => x.id);
                     table.ForeignKey(
                         name: "FK_media_streams_entities_entity_id",
@@ -156,8 +147,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+        protected override void Down(MigrationBuilder migrationBuilder) {
             migrationBuilder.DropTable(
                 name: "media_streams",
                 schema: "v2");

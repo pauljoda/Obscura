@@ -14,8 +14,7 @@ namespace Obscura.Application.Jobs.Handlers.Scan;
 public sealed class ScanLibraryJobHandler(
     ILogger<ScanLibraryJobHandler> logger,
     IFileDiscovery fileDiscovery,
-    ILibraryScanPersistence persistence) : ScanJobHandler(logger, fileDiscovery, persistence)
-{
+    ILibraryScanPersistence persistence) : ScanJobHandler(logger, fileDiscovery, persistence) {
     private const int BatchSize = 50;
     private static readonly Regex SeasonFolderPattern = new(
         @"^(?:Season\s*(?<season>\d{1,3})|S(?<season>\d{1,3}))$",
@@ -29,13 +28,11 @@ public sealed class ScanLibraryJobHandler(
     protected override bool IsEligibleRoot(LibraryRootData root) => root.ScanVideos;
 
     protected override async Task ScanRootAsync(
-        JobContext context, LibraryRootData root, CancellationToken cancellationToken)
-    {
+        JobContext context, LibraryRootData root, CancellationToken cancellationToken) {
         var timer = new JobPhaseTimer();
 
         IReadOnlyList<string> files;
-        using (timer.Phase("discover"))
-        {
+        using (timer.Phase("discover")) {
             logger.LogInformation("ScanLibrary: discovering videos in {Path}", root.Path);
             files = await FileDiscovery.DiscoverFilesAsync(
                 root.Path, MediaCategory.Video, root.Recursive, cancellationToken);
@@ -46,15 +43,12 @@ public sealed class ScanLibraryJobHandler(
         var allEntityIds = new List<Guid>(files.Count);
         var validPaths = new HashSet<string>(files.Count, StringComparer.OrdinalIgnoreCase);
 
-        using (timer.Phase("upsert"))
-        {
-            for (var batchStart = 0; batchStart < files.Count; batchStart += BatchSize)
-            {
+        using (timer.Phase("upsert")) {
+            for (var batchStart = 0; batchStart < files.Count; batchStart += BatchSize) {
                 var batchEnd = Math.Min(batchStart + BatchSize, files.Count);
                 var batchItems = new List<VideoUpsertItem>(batchEnd - batchStart);
 
-                for (var i = batchStart; i < batchEnd; i++)
-                {
+                for (var i = batchStart; i < batchEnd; i++) {
                     var filePath = files[i];
                     validPaths.Add(filePath);
                     batchItems.Add(BuildVideoUpsertItem(filePath, root));
@@ -69,18 +63,15 @@ public sealed class ScanLibraryJobHandler(
             }
         }
 
-        using (timer.Phase("enqueue"))
-        {
-            for (var batchStart = 0; batchStart < allEntityIds.Count; batchStart += BatchSize)
-            {
+        using (timer.Phase("enqueue")) {
+            for (var batchStart = 0; batchStart < allEntityIds.Count; batchStart += BatchSize) {
                 var batchEnd = Math.Min(batchStart + BatchSize, allEntityIds.Count);
                 var batchIds = allEntityIds.GetRange(batchStart, batchEnd - batchStart);
 
                 var needs = await Persistence.CheckDownstreamNeedsBatchAsync(batchIds, cancellationToken);
                 var jobRequests = new List<EnqueueJobRequest>();
 
-                for (var i = 0; i < batchIds.Count; i++)
-                {
+                for (var i = 0; i < batchIds.Count; i++) {
                     var entityId = batchIds[i];
                     var label = Path.GetFileNameWithoutExtension(files[batchStart + i]);
                     var entityIdStr = entityId.ToString();
@@ -104,8 +95,7 @@ public sealed class ScanLibraryJobHandler(
                         jobRequests.Add(new EnqueueJobRequest(JobType.GeneratePreview, TargetEntityKind: "video", TargetEntityId: entityIdStr, TargetLabel: label, Priority: 10));
                 }
 
-                if (jobRequests.Count > 0)
-                {
+                if (jobRequests.Count > 0) {
                     var enqueued = await context.EnqueueBatchAsync(jobRequests, cancellationToken);
                     logger.LogDebug("ScanLibrary: enqueued {Enqueued}/{Total} downstream jobs for batch", enqueued, jobRequests.Count);
                 }
@@ -117,8 +107,7 @@ public sealed class ScanLibraryJobHandler(
         }
 
         int removed;
-        using (timer.Phase("cleanup"))
-        {
+        using (timer.Phase("cleanup")) {
             removed = await Persistence.RemoveStaleVideosByRootAsync(root.Id, validPaths, cancellationToken);
             if (removed > 0)
                 logger.LogInformation("ScanLibrary: removed {Count} stale video entities from {Label}", removed, root.Label);
@@ -132,20 +121,16 @@ public sealed class ScanLibraryJobHandler(
             root.Label, files.Count, removed, report.ToLogString());
     }
 
-    private static VideoUpsertItem BuildVideoUpsertItem(string filePath, LibraryRootData root)
-    {
+    private static VideoUpsertItem BuildVideoUpsertItem(string filePath, LibraryRootData root) {
         var title = Path.GetFileNameWithoutExtension(filePath);
         var episodeToken = ParseEpisodeToken(title);
         var parentFolder = Path.GetDirectoryName(filePath);
 
-        if (!string.IsNullOrWhiteSpace(parentFolder))
-        {
+        if (!string.IsNullOrWhiteSpace(parentFolder)) {
             var parentFolderName = Path.GetFileName(parentFolder);
-            if (TryParseSeasonFolder(parentFolderName, out var seasonNumber))
-            {
+            if (TryParseSeasonFolder(parentFolderName, out var seasonNumber)) {
                 var seriesFolder = Path.GetDirectoryName(parentFolder);
-                if (!string.IsNullOrWhiteSpace(seriesFolder) && !SamePath(seriesFolder, root.Path))
-                {
+                if (!string.IsNullOrWhiteSpace(seriesFolder) && !SamePath(seriesFolder, root.Path)) {
                     return new VideoUpsertItem(
                         filePath,
                         title,
@@ -158,8 +143,7 @@ public sealed class ScanLibraryJobHandler(
                 }
             }
 
-            if (episodeToken is not null && !SamePath(parentFolder, root.Path))
-            {
+            if (episodeToken is not null && !SamePath(parentFolder, root.Path)) {
                 return new VideoUpsertItem(
                     filePath,
                     title,
@@ -175,11 +159,9 @@ public sealed class ScanLibraryJobHandler(
         return new VideoUpsertItem(filePath, title, root.Id, root.IsNsfw);
     }
 
-    private static bool TryParseSeasonFolder(string folderName, out int seasonNumber)
-    {
+    private static bool TryParseSeasonFolder(string folderName, out int seasonNumber) {
         var match = SeasonFolderPattern.Match(folderName);
-        if (match.Success && int.TryParse(match.Groups["season"].Value, out seasonNumber))
-        {
+        if (match.Success && int.TryParse(match.Groups["season"].Value, out seasonNumber)) {
             return true;
         }
 
@@ -187,11 +169,9 @@ public sealed class ScanLibraryJobHandler(
         return false;
     }
 
-    private static EpisodeToken? ParseEpisodeToken(string fileName)
-    {
+    private static EpisodeToken? ParseEpisodeToken(string fileName) {
         var match = EpisodeTokenPattern.Match(fileName);
-        if (!match.Success)
-        {
+        if (!match.Success) {
             return null;
         }
 

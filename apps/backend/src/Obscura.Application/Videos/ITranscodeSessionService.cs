@@ -3,8 +3,7 @@ namespace Obscura.Application.Videos;
 /// <summary>
 /// Tracks active ffmpeg work by play session so clients can ping, stop, or cancel encodings.
 /// </summary>
-public interface ITranscodeSessionService
-{
+public interface ITranscodeSessionService {
     /// <summary>
     /// Registers a playback session that may own transcoded HLS assets.
     /// </summary>

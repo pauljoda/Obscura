@@ -9,8 +9,7 @@ namespace Obscura.Application.Organization;
 /// source files or folders on disk. Raw persistence reads and the post-move database-side
 /// path rewrite are delegated to <see cref="IOrganizePersistence"/>.
 /// </summary>
-public sealed class OrganizeService
-{
+public sealed class OrganizeService {
     private const string Ready = "ready";
     private const string Unchanged = "unchanged";
     private const string Skipped = "skipped";
@@ -22,8 +21,7 @@ public sealed class OrganizeService
     /// <summary>
     /// Creates the service over the organize persistence port.
     /// </summary>
-    public OrganizeService(IOrganizePersistence persistence)
-    {
+    public OrganizeService(IOrganizePersistence persistence) {
         _persistence = persistence;
     }
 
@@ -32,8 +30,7 @@ public sealed class OrganizeService
     /// </summary>
     public async Task<OrganizePlanResponse> PlanAsync(
         OrganizePlanRequest request,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var plan = await BuildPlanAsync(request, cancellationToken);
         return new OrganizePlanResponse(plan);
     }
@@ -45,8 +42,7 @@ public sealed class OrganizeService
     /// </summary>
     public async Task<OrganizeApplyResponse> ApplyAsync(
         OrganizePlanRequest request,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var plan = await BuildPlanAsync(request, cancellationToken);
         var ancestorMoveSources = plan
             .Where(item => item.Status == Ready)
@@ -56,37 +52,30 @@ public sealed class OrganizeService
         var results = new List<OrganizePlanItem>(plan.Count);
         var applied = 0;
 
-        foreach (var item in plan)
-        {
+        foreach (var item in plan) {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (item.Status != Ready)
-            {
+            if (item.Status != Ready) {
                 results.Add(item);
                 continue;
             }
 
             if (ancestorMoveSources.Any(path =>
                     !SamePath(path, item.SourcePath) &&
-                    IsSubPathOf(item.SourcePath, path)))
-            {
-                results.Add(item with
-                {
+                    IsSubPathOf(item.SourcePath, path))) {
+                results.Add(item with {
                     Status = Skipped,
                     Reason = "A parent folder is being moved first. Run organize again to apply child renames.",
                 });
                 continue;
             }
 
-            try
-            {
+            try {
                 MoveSource(item.SourcePath, item.TargetPath);
                 await _persistence.ApplyPathPrefixRewriteAsync(item.SourcePath, item.TargetPath, cancellationToken);
                 results.Add(item with { Status = Applied });
                 applied++;
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
+            } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
                 results.Add(item with { Status = Failed, Reason = ex.Message });
             }
         }
@@ -96,8 +85,7 @@ public sealed class OrganizeService
 
     private async Task<IReadOnlyList<OrganizePlanItem>> BuildPlanAsync(
         OrganizePlanRequest request,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var roots = await _persistence.ListRootsAsync(request.RootId, cancellationToken);
         var rootPaths = roots
             .Select(root => (root.Id, Path: Normalize(root.Path)))
@@ -124,25 +112,21 @@ public sealed class OrganizeService
         IReadOnlyDictionary<Guid, OrganizeEntityRow> entityById,
         IReadOnlyDictionary<Guid, OrganizeSourceFile> sourceByEntityId,
         IReadOnlyList<(Guid Id, string Path)> rootPaths,
-        IDictionary<Guid, OrganizePlanItem?> memo)
-    {
-        if (memo.TryGetValue(entityId, out var cached))
-        {
+        IDictionary<Guid, OrganizePlanItem?> memo) {
+        if (memo.TryGetValue(entityId, out var cached)) {
             return cached;
         }
 
         if (!entityById.TryGetValue(entityId, out var entity) ||
             !sourceByEntityId.TryGetValue(entityId, out var sourceFile) ||
-            !EntityKindRegistry.TryGet(entity.KindCode, out var kind))
-        {
+            !EntityKindRegistry.TryGet(entity.KindCode, out var kind)) {
             memo[entityId] = null;
             return null;
         }
 
         var storageShape = EntityKindRegistry.Describe(kind).StorageShape;
         var sourcePath = Normalize(sourceFile.Path);
-        if (storageShape is EntityStorageShape.None or EntityStorageShape.ArchiveEntry)
-        {
+        if (storageShape is EntityStorageShape.None or EntityStorageShape.ArchiveEntry) {
             var skipped = NewItem(entity, storageShape, sourcePath, sourcePath, Skipped,
                 storageShape == EntityStorageShape.ArchiveEntry
                     ? "Archive entries are not moved independently."
@@ -152,16 +136,14 @@ public sealed class OrganizeService
         }
 
         var targetContainer = ResolveTargetContainer(entity, entityById, sourceByEntityId, rootPaths, memo);
-        if (targetContainer is null)
-        {
+        if (targetContainer is null) {
             var skipped = NewItem(entity, storageShape, sourcePath, sourcePath, Skipped,
                 "No library root contains the entity source path.");
             memo[entityId] = skipped;
             return skipped;
         }
 
-        var targetPath = storageShape switch
-        {
+        var targetPath = storageShape switch {
             EntityStorageShape.Folder => Path.Combine(targetContainer, SafePathSegment(entity.Title, entity.Id)),
             EntityStorageShape.File or EntityStorageShape.Archive => Path.Combine(
                 targetContainer,
@@ -180,16 +162,13 @@ public sealed class OrganizeService
         IReadOnlyDictionary<Guid, OrganizeEntityRow> entityById,
         IReadOnlyDictionary<Guid, OrganizeSourceFile> sourceByEntityId,
         IReadOnlyList<(Guid Id, string Path)> rootPaths,
-        IDictionary<Guid, OrganizePlanItem?> memo)
-    {
+        IDictionary<Guid, OrganizePlanItem?> memo) {
         if (entity.ParentEntityId is { } parentId &&
             entityById.TryGetValue(parentId, out var parent) &&
-            EntityKindRegistry.TryGet(parent.KindCode, out var parentKind))
-        {
+            EntityKindRegistry.TryGet(parent.KindCode, out var parentKind)) {
             var parentStorageShape = EntityKindRegistry.Describe(parentKind).StorageShape;
             var parentItem = BuildItem(parentId, entityById, sourceByEntityId, rootPaths, memo);
-            if (parentItem is null)
-            {
+            if (parentItem is null) {
                 return null;
             }
 
@@ -198,8 +177,7 @@ public sealed class OrganizeService
                 : Path.GetDirectoryName(parentItem.TargetPath);
         }
 
-        if (!sourceByEntityId.TryGetValue(entity.Id, out var sourceFile))
-        {
+        if (!sourceByEntityId.TryGetValue(entity.Id, out var sourceFile)) {
             return null;
         }
 
@@ -225,32 +203,26 @@ public sealed class OrganizeService
             status,
             reason);
 
-    private static void MoveSource(string sourcePath, string targetPath)
-    {
-        if (SamePath(sourcePath, targetPath))
-        {
+    private static void MoveSource(string sourcePath, string targetPath) {
+        if (SamePath(sourcePath, targetPath)) {
             return;
         }
 
         var parent = Path.GetDirectoryName(targetPath);
-        if (!string.IsNullOrWhiteSpace(parent))
-        {
+        if (!string.IsNullOrWhiteSpace(parent)) {
             Directory.CreateDirectory(parent);
         }
 
-        if (File.Exists(targetPath) || Directory.Exists(targetPath))
-        {
+        if (File.Exists(targetPath) || Directory.Exists(targetPath)) {
             throw new IOException($"Target path already exists: {targetPath}");
         }
 
-        if (Directory.Exists(sourcePath))
-        {
+        if (Directory.Exists(sourcePath)) {
             Directory.Move(sourcePath, targetPath);
             return;
         }
 
-        if (File.Exists(sourcePath))
-        {
+        if (File.Exists(sourcePath)) {
             File.Move(sourcePath, targetPath);
             return;
         }
@@ -258,8 +230,7 @@ public sealed class OrganizeService
         throw new IOException($"Source path does not exist: {sourcePath}");
     }
 
-    private static string SafePathSegment(string title, Guid entityId)
-    {
+    private static string SafePathSegment(string title, Guid entityId) {
         var invalid = Path.GetInvalidFileNameChars().ToHashSet();
         var cleaned = new string(title
             .Select(character => invalid.Contains(character) ? '_' : character)
@@ -277,8 +248,7 @@ public sealed class OrganizeService
             Path.TrimEndingDirectorySeparator(Normalize(right)),
             StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsSubPathOf(string path, string parent)
-    {
+    private static bool IsSubPathOf(string path, string parent) {
         var fullPath = Path.TrimEndingDirectorySeparator(Normalize(path));
         var fullParent = Path.TrimEndingDirectorySeparator(Normalize(parent));
         return fullPath.StartsWith(fullParent + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);

@@ -4,12 +4,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Persistence;
 
-internal static partial class ExpandedV2ModelConfiguration
-{
-    private static void ConfigureTaxonomyDetails(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<PersonDetailRow>(entity =>
-        {
+internal static partial class ExpandedV2ModelConfiguration {
+    private static void ConfigureTaxonomyDetails(ModelBuilder modelBuilder) {
+        modelBuilder.Entity<PersonDetailRow>(entity => {
             entity.ToTable("person_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -27,16 +24,14 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<PersonDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<StudioDetailRow>(entity =>
-        {
+        modelBuilder.Entity<StudioDetailRow>(entity => {
             entity.ToTable("studio_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<StudioDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<TagDetailRow>(entity =>
-        {
+        modelBuilder.Entity<TagDetailRow>(entity => {
             entity.ToTable("tag_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");

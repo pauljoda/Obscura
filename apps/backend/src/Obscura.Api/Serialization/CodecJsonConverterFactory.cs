@@ -9,8 +9,7 @@ namespace Obscura.Api.Serialization;
 /// string code instead of its numeric value, keeping the HTTP wire format identical to the
 /// hand-written string codes used before the domain value objects were shared with the contracts.
 /// </summary>
-public sealed class CodecJsonConverterFactory : JsonConverterFactory
-{
+public sealed class CodecJsonConverterFactory : JsonConverterFactory {
     /// <inheritdoc />
     public override bool CanConvert(Type typeToConvert) =>
         typeToConvert.IsEnum && CodecRegistry.TryGet(typeToConvert, out _);
@@ -21,12 +20,10 @@ public sealed class CodecJsonConverterFactory : JsonConverterFactory
             typeof(CodecJsonConverter<>).MakeGenericType(typeToConvert))!;
 
     private sealed class CodecJsonConverter<TEnum> : JsonConverter<TEnum>
-        where TEnum : struct, Enum
-    {
+        where TEnum : struct, Enum {
         private readonly ICodec<TEnum> _codec = CodecRegistry.Get<TEnum>();
 
-        public override TEnum Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
+        public override TEnum Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
             var code = reader.GetString()
                 ?? throw new JsonException($"Expected a string code for {typeof(TEnum).Name}.");
             return _codec.Decode(code);

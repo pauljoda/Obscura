@@ -2,8 +2,7 @@ using Obscura.Domain.Entities;
 
 namespace Obscura.Infrastructure.Queue;
 
-public static class JobQueueSql
-{
+public static class JobQueueSql {
     public static readonly string ClaimNext = $$"""
         WITH next_job AS (
             SELECT id

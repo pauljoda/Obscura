@@ -6,18 +6,15 @@ using Obscura.Application.Videos;
 
 namespace Obscura.Api.Tests;
 
-public sealed class VideoStreamEndpointTests : IDisposable
-{
+public sealed class VideoStreamEndpointTests : IDisposable {
     private readonly string _tempDir = Path.Combine(Path.GetTempPath(), $"obscura-stream-{Guid.NewGuid():N}");
 
-    public VideoStreamEndpointTests()
-    {
+    public VideoStreamEndpointTests() {
         Directory.CreateDirectory(_tempDir);
     }
 
     [Fact]
-    public async Task StreamEndpointSupportsByteRangeRequests()
-    {
+    public async Task StreamEndpointSupportsByteRangeRequests() {
         var filePath = Path.Combine(_tempDir, "source.mp4");
         await File.WriteAllTextAsync(filePath, "0123456789");
         using var factory = CreateFactory(new FakeVideoSourceService(
@@ -38,8 +35,7 @@ public sealed class VideoStreamEndpointTests : IDisposable
     }
 
     [Fact]
-    public async Task StreamEndpointSupportsHeadProbes()
-    {
+    public async Task StreamEndpointSupportsHeadProbes() {
         var filePath = Path.Combine(_tempDir, "source.mp4");
         await File.WriteAllTextAsync(filePath, "0123456789");
         using var factory = CreateFactory(new FakeVideoSourceService(
@@ -57,8 +53,7 @@ public sealed class VideoStreamEndpointTests : IDisposable
     }
 
     [Fact]
-    public async Task StreamEndpointRejectsNonDirectPlayableSources()
-    {
+    public async Task StreamEndpointRejectsNonDirectPlayableSources() {
         var filePath = Path.Combine(_tempDir, "source.mkv");
         await File.WriteAllTextAsync(filePath, "0123456789");
         using var factory = CreateFactory(new FakeVideoSourceService(
@@ -71,38 +66,30 @@ public sealed class VideoStreamEndpointTests : IDisposable
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
     }
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_tempDir))
-        {
+    public void Dispose() {
+        if (Directory.Exists(_tempDir)) {
             Directory.Delete(_tempDir, recursive: true);
         }
     }
 
-    private static WebApplicationFactory<Program> CreateFactory(IVideoSourceService sourceService)
-    {
+    private static WebApplicationFactory<Program> CreateFactory(IVideoSourceService sourceService) {
         return new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureServices(services =>
-                {
+            .WithWebHostBuilder(builder => {
+                builder.ConfigureServices(services => {
                     services.AddSingleton(sourceService);
                 });
             });
     }
 
-    private sealed class FakeVideoSourceService : IVideoSourceService
-    {
+    private sealed class FakeVideoSourceService : IVideoSourceService {
         public static readonly Guid VideoId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         private readonly VideoSourceFile? _source;
 
-        public FakeVideoSourceService(VideoSourceFile? source)
-        {
+        public FakeVideoSourceService(VideoSourceFile? source) {
             _source = source;
         }
 
-        public Task<VideoSourceFile?> GetSourceAsync(Guid id, CancellationToken cancellationToken)
-        {
+        public Task<VideoSourceFile?> GetSourceAsync(Guid id, CancellationToken cancellationToken) {
             return Task.FromResult(id == VideoId ? _source : null);
         }
     }

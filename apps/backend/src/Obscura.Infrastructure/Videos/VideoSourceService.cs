@@ -9,8 +9,7 @@ namespace Obscura.Infrastructure.Videos;
 /// <summary>
 /// EF-backed implementation that resolves source video files from the shared file capability table.
 /// </summary>
-public sealed class VideoSourceService : IVideoSourceService
-{
+public sealed class VideoSourceService : IVideoSourceService {
     private static readonly ISet<string> BrowserNativeExtensions =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -40,15 +39,13 @@ public sealed class VideoSourceService : IVideoSourceService
     /// Creates a video source resolver over the v2 database context.
     /// </summary>
     /// <param name="db">Database context used to find video source file rows.</param>
-    public VideoSourceService(ObscuraDbContext db, MediaProbeService? mediaProbe = null)
-    {
+    public VideoSourceService(ObscuraDbContext db, MediaProbeService? mediaProbe = null) {
         _db = db;
         _mediaProbe = mediaProbe;
     }
 
     /// <inheritdoc />
-    public async Task<VideoSourceFile?> GetSourceAsync(Guid id, CancellationToken cancellationToken)
-    {
+    public async Task<VideoSourceFile?> GetSourceAsync(Guid id, CancellationToken cancellationToken) {
         var source = await (
             from entity in _db.Entities.AsNoTracking()
             join file in _db.EntityFiles.AsNoTracking() on entity.Id equals file.EntityId
@@ -58,15 +55,13 @@ public sealed class VideoSourceService : IVideoSourceService
                 entity.KindCode == EntityKindRegistry.Video.Code &&
                 entity.DeletedAt == null &&
                 file.Role == EntityFileRole.Source
-            select new
-            {
+            select new {
                 File = file,
                 Technical = technical
             })
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (source is null || !File.Exists(source.File.Path))
-        {
+        if (source is null || !File.Exists(source.File.Path)) {
             return null;
         }
 
@@ -95,11 +90,9 @@ public sealed class VideoSourceService : IVideoSourceService
                     row.IsForced))
                 .ToListAsync(cancellationToken);
         if (_mediaProbe is not null && streams.Count(stream =>
-                stream.Type.Equals("Audio", StringComparison.OrdinalIgnoreCase)) <= 1)
-        {
+                stream.Type.Equals("Audio", StringComparison.OrdinalIgnoreCase)) <= 1) {
             var probed = await _mediaProbe.ProbeVideoAsync(source.File.Path, cancellationToken);
-            if (probed?.Streams is { Count: > 0 })
-            {
+            if (probed?.Streams is { Count: > 0 }) {
                 streams = probed.Streams
                     .Select(stream => new VideoSourceStream(
                         stream.StreamIndex,
@@ -143,10 +136,8 @@ public sealed class VideoSourceService : IVideoSourceService
             streams);
     }
 
-    private static string MimeForExtension(string extension)
-    {
-        return extension.ToLowerInvariant() switch
-        {
+    private static string MimeForExtension(string extension) {
+        return extension.ToLowerInvariant() switch {
             ".mp4" or ".m4v" => "video/mp4",
             ".webm" => "video/webm",
             ".ogg" or ".ogv" => "video/ogg",

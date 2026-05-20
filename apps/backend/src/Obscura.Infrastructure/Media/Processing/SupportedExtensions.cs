@@ -3,8 +3,7 @@ namespace Obscura.Infrastructure.Media.Processing;
 /// <summary>
 /// Canonical file-extension sets for each media category, used by file discovery and scan handlers.
 /// </summary>
-public static class SupportedExtensions
-{
+public static class SupportedExtensions {
     public static readonly IReadOnlySet<string> Video = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         ".mp4", ".m4v", ".mkv", ".mov", ".webm", ".avi", ".wmv", ".flv", ".ts", ".m2ts", ".mpg", ".mpeg"
@@ -31,8 +30,7 @@ public static class SupportedExtensions
     /// Filename suffixes that indicate a generated/derived file (preview, thumb, sample).
     /// Files whose name (without extension) ends with one of these are skipped during scanning.
     /// </summary>
-    public static bool IsGeneratedSuffix(string fileNameWithoutExtension)
-    {
+    public static bool IsGeneratedSuffix(string fileNameWithoutExtension) {
         return fileNameWithoutExtension.EndsWith("-preview", StringComparison.OrdinalIgnoreCase)
             || fileNameWithoutExtension.EndsWith("_preview", StringComparison.OrdinalIgnoreCase)
             || fileNameWithoutExtension.EndsWith(".preview", StringComparison.OrdinalIgnoreCase)

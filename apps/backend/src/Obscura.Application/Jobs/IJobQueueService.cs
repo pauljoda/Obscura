@@ -5,8 +5,7 @@ namespace Obscura.Application.Jobs;
 /// <summary>
 /// Application port for durable background job queue operations.
 /// </summary>
-public interface IJobQueueService
-{
+public interface IJobQueueService {
     /// <summary>
     /// Lists recent background job runs for operational surfaces.
     /// </summary>

@@ -8,19 +8,16 @@ using Obscura.Contracts.Playback;
 
 namespace Obscura.Api.Tests;
 
-public sealed class JellyfinPlaybackEndpointTests : IDisposable
-{
+public sealed class JellyfinPlaybackEndpointTests : IDisposable {
     private static readonly Guid VideoId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private readonly string _tempDir = Path.Combine(Path.GetTempPath(), $"obscura-jellyfin-api-{Guid.NewGuid():N}");
 
-    public JellyfinPlaybackEndpointTests()
-    {
+    public JellyfinPlaybackEndpointTests() {
         Directory.CreateDirectory(_tempDir);
     }
 
     [Fact]
-    public async Task PlaybackInfoEndpointReturnsJellyfinStyleMediaSource()
-    {
+    public async Task PlaybackInfoEndpointReturnsJellyfinStyleMediaSource() {
         using var factory = CreateFactory(playback: new FakePlaybackInfoService(new PlaybackInfoResponse(
             "play-session",
             [
@@ -46,8 +43,7 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
             ])));
         using var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync($"/Items/{VideoId}/PlaybackInfo", new PlaybackInfoRequest
-        {
+        var response = await client.PostAsJsonAsync($"/Items/{VideoId}/PlaybackInfo", new PlaybackInfoRequest {
             EnableDirectPlay = true,
             EnableTranscoding = true
         });
@@ -62,8 +58,7 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
     }
 
     [Fact]
-    public async Task MasterPlaylistEndpointMapsToMasterHlsAsset()
-    {
+    public async Task MasterPlaylistEndpointMapsToMasterHlsAsset() {
         var path = Path.Combine(_tempDir, "master.m3u8");
         await File.WriteAllTextAsync(path, "#EXTM3U\n");
         var hls = new RecordingHlsAssetService(new HlsAsset(path, "application/vnd.apple.mpegurl", "public, max-age=60"));
@@ -79,8 +74,7 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
     }
 
     [Fact]
-    public async Task HlsSegmentEndpointMapsJellyfinRouteToVariantAsset()
-    {
+    public async Task HlsSegmentEndpointMapsJellyfinRouteToVariantAsset() {
         var path = Path.Combine(_tempDir, "seg_00000.ts");
         await File.WriteAllTextAsync(path, "segment");
         var hls = new RecordingHlsAssetService(new HlsAsset(path, "video/mp2t", "public, max-age=31536000, immutable"));
@@ -94,8 +88,7 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
     }
 
     [Fact]
-    public async Task HlsVariantEndpointMapsJellyfinRouteToVariantPlaylist()
-    {
+    public async Task HlsVariantEndpointMapsJellyfinRouteToVariantPlaylist() {
         var path = Path.Combine(_tempDir, "index.m3u8");
         await File.WriteAllTextAsync(path, "#EXTM3U\n");
         var hls = new RecordingHlsAssetService(new HlsAsset(path, "application/vnd.apple.mpegurl", "public, max-age=60"));
@@ -109,8 +102,7 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
     }
 
     [Fact]
-    public async Task HlsVariantEndpointPassesAudioStreamSelection()
-    {
+    public async Task HlsVariantEndpointPassesAudioStreamSelection() {
         var path = Path.Combine(_tempDir, "index.m3u8");
         await File.WriteAllTextAsync(path, "#EXTM3U\n");
         var hls = new RecordingHlsAssetService(new HlsAsset(path, "application/vnd.apple.mpegurl", "public, max-age=60"));
@@ -125,8 +117,7 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
     }
 
     [Fact]
-    public async Task HlsVariantEndpointAcceptsMasterPlaylistRelativeUrls()
-    {
+    public async Task HlsVariantEndpointAcceptsMasterPlaylistRelativeUrls() {
         var path = Path.Combine(_tempDir, "index.m3u8");
         await File.WriteAllTextAsync(path, "#EXTM3U\n");
         var hls = new RecordingHlsAssetService(new HlsAsset(path, "application/vnd.apple.mpegurl", "public, max-age=60"));
@@ -140,8 +131,7 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
     }
 
     [Fact]
-    public async Task TrickplayPlaylistEndpointServesImagesOnlyPlaylist()
-    {
+    public async Task TrickplayPlaylistEndpointServesImagesOnlyPlaylist() {
         using var factory = CreateFactory(trickplay: new FakeTrickplayService(
             new TrickplayPlaylist("#EXTM3U\n#EXT-X-IMAGES-ONLY\n", "public, max-age=60"),
             null));
@@ -156,14 +146,12 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
     }
 
     [Fact]
-    public async Task SessionProgressEndpointRecordsJellyfinProgressPayload()
-    {
+    public async Task SessionProgressEndpointRecordsJellyfinProgressPayload() {
         var sessions = new RecordingPlaybackSessionService();
         using var factory = CreateFactory(sessions: sessions);
         using var client = factory.CreateClient();
 
-        using var response = await client.PostAsJsonAsync("/Sessions/Playing/Progress", new PlaybackSessionRequest
-        {
+        using var response = await client.PostAsJsonAsync("/Sessions/Playing/Progress", new PlaybackSessionRequest {
             ItemId = VideoId,
             PlaySessionId = "play-session",
             PositionTicks = TimeSpan.FromSeconds(42).Ticks
@@ -175,10 +163,8 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
         Assert.Equal(TimeSpan.FromSeconds(42).Ticks, sessions.LastProgress.PositionTicks);
     }
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_tempDir))
-        {
+    public void Dispose() {
+        if (Directory.Exists(_tempDir)) {
             Directory.Delete(_tempDir, recursive: true);
         }
     }
@@ -189,13 +175,10 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
         ITrickplayService? trickplay = null,
         IPlaybackSessionService? sessions = null,
         IVideoSourceService? sources = null,
-        ITranscodeSessionService? transcodes = null)
-    {
+        ITranscodeSessionService? transcodes = null) {
         return new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureServices(services =>
-                {
+            .WithWebHostBuilder(builder => {
+                builder.ConfigureServices(services => {
                     services.AddSingleton(playback ?? new FakePlaybackInfoService(null));
                     services.AddSingleton(hls ?? new RecordingHlsAssetService(null));
                     services.AddSingleton(trickplay ?? new FakeTrickplayService(null, null));
@@ -206,12 +189,10 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
             });
     }
 
-    private sealed class FakePlaybackInfoService : IPlaybackInfoService
-    {
+    private sealed class FakePlaybackInfoService : IPlaybackInfoService {
         private readonly PlaybackInfoResult? _response;
 
-        public FakePlaybackInfoService(PlaybackInfoResponse? response)
-        {
+        public FakePlaybackInfoService(PlaybackInfoResponse? response) {
             _response = response is null
                 ? null
                 : new PlaybackInfoResult(
@@ -263,12 +244,10 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
             Task.FromResult(itemId == VideoId ? _response : null);
     }
 
-    private sealed class RecordingHlsAssetService : IHlsAssetService
-    {
+    private sealed class RecordingHlsAssetService : IHlsAssetService {
         private readonly HlsAsset? _asset;
 
-        public RecordingHlsAssetService(HlsAsset? asset)
-        {
+        public RecordingHlsAssetService(HlsAsset? asset) {
             _asset = asset;
         }
 
@@ -279,21 +258,18 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
             Guid id,
             string assetPath,
             int? audioStreamIndex,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             LastAssetPath = assetPath;
             LastAudioStreamIndex = audioStreamIndex;
             return Task.FromResult(id == VideoId ? _asset : null);
         }
     }
 
-    private sealed class FakeTrickplayService : ITrickplayService
-    {
+    private sealed class FakeTrickplayService : ITrickplayService {
         private readonly TrickplayPlaylist? _playlist;
         private readonly TrickplayTile? _tile;
 
-        public FakeTrickplayService(TrickplayPlaylist? playlist, TrickplayTile? tile)
-        {
+        public FakeTrickplayService(TrickplayPlaylist? playlist, TrickplayTile? tile) {
             _playlist = playlist;
             _tile = tile;
         }
@@ -305,14 +281,12 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
             Task.FromResult(itemId == VideoId ? _tile : null);
     }
 
-    private sealed class RecordingPlaybackSessionService : IPlaybackSessionService
-    {
+    private sealed class RecordingPlaybackSessionService : IPlaybackSessionService {
         public PlaybackSessionCommand? LastProgress { get; private set; }
 
         public Task StartAsync(PlaybackSessionCommand request, CancellationToken cancellationToken) => Task.CompletedTask;
 
-        public Task ProgressAsync(PlaybackSessionCommand request, CancellationToken cancellationToken)
-        {
+        public Task ProgressAsync(PlaybackSessionCommand request, CancellationToken cancellationToken) {
             LastProgress = request;
             return Task.CompletedTask;
         }
@@ -328,12 +302,10 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
             Task.FromResult<UserItemDataResult?>(new UserItemDataResult(false));
     }
 
-    private sealed class FakeVideoSourceService : IVideoSourceService
-    {
+    private sealed class FakeVideoSourceService : IVideoSourceService {
         private readonly VideoSourceFile? _source;
 
-        public FakeVideoSourceService(VideoSourceFile? source)
-        {
+        public FakeVideoSourceService(VideoSourceFile? source) {
             _source = source;
         }
 
@@ -341,14 +313,11 @@ public sealed class JellyfinPlaybackEndpointTests : IDisposable
             Task.FromResult(id == VideoId ? _source : null);
     }
 
-    private sealed class RecordingTranscodeSessionService : ITranscodeSessionService
-    {
-        public void Register(string playSessionId, Guid itemId)
-        {
+    private sealed class RecordingTranscodeSessionService : ITranscodeSessionService {
+        public void Register(string playSessionId, Guid itemId) {
         }
 
-        public void Ping(string playSessionId)
-        {
+        public void Ping(string playSessionId) {
         }
 
         public Task CancelAsync(string playSessionId, CancellationToken cancellationToken) => Task.CompletedTask;

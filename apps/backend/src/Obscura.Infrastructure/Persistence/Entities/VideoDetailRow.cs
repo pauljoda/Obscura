@@ -1,7 +1,6 @@
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class VideoDetailRow
-{
+public sealed class VideoDetailRow {
     public Guid EntityId { get; set; }
 
     public Guid? LibraryRootId { get; set; }

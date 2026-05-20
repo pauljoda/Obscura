@@ -13,8 +13,7 @@ namespace Obscura.Application.Jobs.Handlers.Scan;
 public sealed class ScanBookJobHandler(
     ILogger<ScanBookJobHandler> logger,
     IFileDiscovery fileDiscovery,
-    ILibraryScanPersistence persistence) : ScanJobHandler(logger, fileDiscovery, persistence)
-{
+    ILibraryScanPersistence persistence) : ScanJobHandler(logger, fileDiscovery, persistence) {
     private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".tif"
@@ -24,8 +23,7 @@ public sealed class ScanBookJobHandler(
 
     protected override bool IsEligibleRoot(LibraryRootData root) => root.ScanBooks;
 
-    protected override async Task ScanRootAsync(JobContext context, LibraryRootData root, CancellationToken cancellationToken)
-    {
+    protected override async Task ScanRootAsync(JobContext context, LibraryRootData root, CancellationToken cancellationToken) {
         logger.LogInformation("ScanBook: discovering archives in {Path}", root.Path);
 
         var archiveFiles = await FileDiscovery.DiscoverFilesAsync(
@@ -36,15 +34,13 @@ public sealed class ScanBookJobHandler(
         var settings = await Persistence.GetSettingsAsync(cancellationToken);
         var validBookPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        for (var fileIndex = 0; fileIndex < archiveFiles.Count; fileIndex++)
-        {
+        for (var fileIndex = 0; fileIndex < archiveFiles.Count; fileIndex++) {
             var archivePath = archiveFiles[fileIndex];
             var bookTitle = Path.GetFileNameWithoutExtension(archivePath);
             validBookPaths.Add(archivePath);
 
             var pageMembers = ListImageMembersInZip(archivePath);
-            if (pageMembers.Count == 0)
-            {
+            if (pageMembers.Count == 0) {
                 logger.LogDebug("ScanBook: skipping empty archive {Path}", archivePath);
                 continue;
             }
@@ -52,24 +48,21 @@ public sealed class ScanBookJobHandler(
             var bookId = await Persistence.UpsertBookAsync(archivePath, bookTitle, root.IsNsfw, cancellationToken);
             var chapterId = await Persistence.UpsertBookChapterAsync(archivePath, bookTitle, bookId, pageMembers.Count, root.IsNsfw, cancellationToken);
 
-            for (var i = 0; i < pageMembers.Count; i++)
-            {
+            for (var i = 0; i < pageMembers.Count; i++) {
                 var memberPath = pageMembers[i];
                 var pagePath = $"{archivePath}::{memberPath}";
                 var pageTitle = Path.GetFileNameWithoutExtension(memberPath);
 
                 var pageId = await Persistence.UpsertBookPageAsync(pagePath, pageTitle, bookId, chapterId, i, root.IsNsfw, cancellationToken);
 
-                if (settings.AutoGeneratePreview && !await Persistence.HasEntityFileAsync(pageId, EntityFileRole.Thumbnail, cancellationToken))
-                {
+                if (settings.AutoGeneratePreview && !await Persistence.HasEntityFileAsync(pageId, EntityFileRole.Thumbnail, cancellationToken)) {
                     await context.EnqueueIfNeededAsync(new EnqueueJobRequest(
                         JobType.GenerateBookPageThumbnail, TargetEntityKind: "book-page",
                         TargetEntityId: pageId.ToString(), TargetLabel: pageTitle), cancellationToken);
                 }
             }
 
-            if (fileIndex % 10 == 0)
-            {
+            if (fileIndex % 10 == 0) {
                 await context.ReportProgressAsync(fileIndex * 80 / archiveFiles.Count,
                     $"Processing {fileIndex}/{archiveFiles.Count}", cancellationToken);
             }
@@ -78,10 +71,8 @@ public sealed class ScanBookJobHandler(
         await Persistence.RemoveStaleBooksInRootAsync(root.Id, validBookPaths, cancellationToken);
     }
 
-    private static List<string> ListImageMembersInZip(string archivePath)
-    {
-        try
-        {
+    private static List<string> ListImageMembersInZip(string archivePath) {
+        try {
             using var archive = ZipFile.OpenRead(archivePath);
             return archive.Entries
                 .Where(entry => !string.IsNullOrEmpty(entry.Name)
@@ -89,9 +80,7 @@ public sealed class ScanBookJobHandler(
                 .OrderBy(entry => entry.FullName, StringComparer.OrdinalIgnoreCase)
                 .Select(entry => entry.FullName)
                 .ToList();
-        }
-        catch
-        {
+        } catch {
             return [];
         }
     }

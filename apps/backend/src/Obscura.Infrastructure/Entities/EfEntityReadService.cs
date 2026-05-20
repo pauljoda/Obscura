@@ -21,8 +21,7 @@ namespace Obscura.Infrastructure.Entities;
 /// pages do not pay the full hydration cost.
 /// </summary>
 public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository repository)
-    : IEntityReadService
-{
+    : IEntityReadService {
     private const int PageSize = 60;
 
     public async Task<EntityListResponse> ListAsync(
@@ -30,24 +29,20 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
         string? query,
         string? cursor,
         bool? hideNsfw,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var entityQuery = db.Entities.AsNoTracking()
             .Where(entity => entity.DeletedAt == null);
 
-        if (!string.IsNullOrWhiteSpace(kind))
-        {
+        if (!string.IsNullOrWhiteSpace(kind)) {
             entityQuery = entityQuery.Where(entity => entity.KindCode == kind);
         }
 
-        if (!string.IsNullOrWhiteSpace(query))
-        {
+        if (!string.IsNullOrWhiteSpace(query)) {
             var normalized = query.Trim().ToLower();
             entityQuery = entityQuery.Where(entity => entity.Title.ToLower().Contains(normalized));
         }
 
-        if (hideNsfw == true)
-        {
+        if (hideNsfw == true) {
             entityQuery =
                 from entity in entityQuery
                 join flag in db.EntityFlags.AsNoTracking() on entity.Id equals flag.EntityId into flags
@@ -56,8 +51,7 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
                 select entity;
         }
 
-        if (TryDecodeCursor(cursor, out var cursorTitle, out var cursorId))
-        {
+        if (TryDecodeCursor(cursor, out var cursorTitle, out var cursorId)) {
             entityQuery = entityQuery.Where(entity =>
                 string.Compare(entity.Title, cursorTitle) > 0 ||
                 (entity.Title == cursorTitle && entity.Id.CompareTo(cursorId) > 0));
@@ -75,14 +69,12 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
         return new EntityListResponse(thumbnails, nextCursor);
     }
 
-    public async Task<EntityCard?> GetAsync(Guid id, CancellationToken cancellationToken)
-    {
+    public async Task<EntityCard?> GetAsync(Guid id, CancellationToken cancellationToken) {
         var entity = await repository.FindAsync(id, cancellationToken);
         return entity is null ? null : EntityCardProjector.ToCard(entity);
     }
 
-    public async Task<EntityThumbnailBatchResponse> GetThumbnailsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken)
-    {
+    public async Task<EntityThumbnailBatchResponse> GetThumbnailsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken) {
         var rows = await db.Entities.AsNoTracking()
             .Where(entity => ids.Contains(entity.Id) && entity.DeletedAt == null)
             .ToArrayAsync(cancellationToken);
@@ -91,26 +83,25 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
         return new EntityThumbnailBatchResponse(ids.Where(byId.ContainsKey).Select(id => byId[id]).ToArray());
     }
 
-    public async Task<IEntityCard?> GetDetailAsync(Guid id, string kind, CancellationToken cancellationToken)
-    {
+    public async Task<IEntityCard?> GetDetailAsync(Guid id, string kind, CancellationToken cancellationToken) {
         var entity = await repository.FindAsync(id, cancellationToken);
-        if (entity is null)
-        {
+        if (entity is null) {
             return null;
         }
 
         var card = EntityCardProjector.ToCard(entity);
-        if (!card.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase))
-        {
+        if (!card.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase)) {
             return null;
         }
 
         var creditMetadata = EntityCardProjector.CreditMetadata(entity);
-        return kind switch
-        {
+        return kind switch {
             "video" => new VideoDetail {
-                Id = card.Id, Kind = card.Kind, Title = card.Title,
-                ParentEntityId = card.ParentEntityId, SortOrder = card.SortOrder,
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
                 Capabilities = card.Capabilities,
                 ChildrenByKind = card.ChildrenByKind,
                 Relationships = card.Relationships,
@@ -118,30 +109,42 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
                 SubtitlesExtractedAt = (entity as Video)?.SubtitlesExtractedAt,
             },
             "video-series" => new VideoSeriesDetail {
-                Id = card.Id, Kind = card.Kind, Title = card.Title,
-                ParentEntityId = card.ParentEntityId, SortOrder = card.SortOrder,
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
                 Capabilities = card.Capabilities,
                 ChildrenByKind = card.ChildrenByKind,
                 Relationships = card.Relationships,
                 CreditMetadata = creditMetadata,
             },
             "video-season" => new VideoSeasonDetail {
-                Id = card.Id, Kind = card.Kind, Title = card.Title,
-                ParentEntityId = card.ParentEntityId, SortOrder = card.SortOrder,
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
                 Capabilities = card.Capabilities,
                 ChildrenByKind = card.ChildrenByKind,
                 Relationships = card.Relationships,
             },
             "image" => new ImageDetail {
-                Id = card.Id, Kind = card.Kind, Title = card.Title,
-                ParentEntityId = card.ParentEntityId, SortOrder = card.SortOrder,
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
                 Capabilities = card.Capabilities,
                 ChildrenByKind = card.ChildrenByKind,
                 Relationships = card.Relationships,
             },
             "gallery" when entity is Gallery gallery => new GalleryDetail {
-                Id = card.Id, Kind = card.Kind, Title = card.Title,
-                ParentEntityId = card.ParentEntityId, SortOrder = card.SortOrder,
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
                 Capabilities = card.Capabilities,
                 ChildrenByKind = card.ChildrenByKind,
                 Relationships = card.Relationships,
@@ -150,8 +153,11 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
                 CoverImageId = gallery.CoverImageId,
             },
             "book" when entity is Book book => new BookDetail {
-                Id = card.Id, Kind = card.Kind, Title = card.Title,
-                ParentEntityId = card.ParentEntityId, SortOrder = card.SortOrder,
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
                 Capabilities = card.Capabilities,
                 ChildrenByKind = card.ChildrenByKind,
                 Relationships = card.Relationships,
@@ -159,15 +165,21 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
                 CoverPageId = book.CoverPageId,
             },
             "audio-library" => new AudioLibraryDetail {
-                Id = card.Id, Kind = card.Kind, Title = card.Title,
-                ParentEntityId = card.ParentEntityId, SortOrder = card.SortOrder,
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
                 Capabilities = card.Capabilities,
                 ChildrenByKind = card.ChildrenByKind,
                 Relationships = card.Relationships,
             },
             "audio-track" when entity is AudioTrack track => new AudioTrackDetail {
-                Id = card.Id, Kind = card.Kind, Title = card.Title,
-                ParentEntityId = card.ParentEntityId, SortOrder = card.SortOrder,
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
                 Capabilities = card.Capabilities,
                 ChildrenByKind = card.ChildrenByKind,
                 Relationships = card.Relationships,
@@ -175,8 +187,11 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
                 EmbeddedAlbum = track.EmbeddedAlbum,
             },
             "person" when entity is Person person => new PersonDetail {
-                Id = card.Id, Kind = card.Kind, Title = card.Title,
-                ParentEntityId = card.ParentEntityId, SortOrder = card.SortOrder,
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
                 Capabilities = card.Capabilities,
                 ChildrenByKind = card.ChildrenByKind,
                 Relationships = card.Relationships,
@@ -193,23 +208,32 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
                 Piercings = person.Piercings,
             },
             "studio" => new StudioDetail {
-                Id = card.Id, Kind = card.Kind, Title = card.Title,
-                ParentEntityId = card.ParentEntityId, SortOrder = card.SortOrder,
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
                 Capabilities = card.Capabilities,
                 ChildrenByKind = card.ChildrenByKind,
                 Relationships = card.Relationships,
             },
             "tag" when entity is Tag tag => new TagDetail {
-                Id = card.Id, Kind = card.Kind, Title = card.Title,
-                ParentEntityId = card.ParentEntityId, SortOrder = card.SortOrder,
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
                 Capabilities = card.Capabilities,
                 ChildrenByKind = card.ChildrenByKind,
                 Relationships = card.Relationships,
                 IgnoreAutoTag = tag.IgnoreAutoTag,
             },
             "collection" when entity is Collection collection => new CollectionDetail {
-                Id = card.Id, Kind = card.Kind, Title = card.Title,
-                ParentEntityId = card.ParentEntityId, SortOrder = card.SortOrder,
+                Id = card.Id,
+                Kind = card.Kind,
+                Title = card.Title,
+                ParentEntityId = card.ParentEntityId,
+                SortOrder = card.SortOrder,
                 Capabilities = card.Capabilities,
                 ChildrenByKind = card.ChildrenByKind,
                 Relationships = card.Relationships,
@@ -227,10 +251,8 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
 
     private async Task<IReadOnlyList<EntityThumbnail>> ProjectThumbnailsAsync(
         IReadOnlyList<EntityRow> rows,
-        CancellationToken cancellationToken)
-    {
-        if (rows.Count == 0)
-        {
+        CancellationToken cancellationToken) {
+        if (rows.Count == 0) {
             return [];
         }
 
@@ -253,8 +275,7 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
             .GroupBy(file => file.EntityId)
             .ToDictionary(group => group.Key, group => group.First().Path);
 
-        return rows.Select(row =>
-        {
+        return rows.Select(row => {
             flags.TryGetValue(row.Id, out var flag);
             return new EntityThumbnail(
                 row.Id,
@@ -276,22 +297,17 @@ public sealed class EfEntityReadService(ObscuraDbContext db, EfEntityRepository 
     private static string EncodeCursor(string title, Guid id) =>
         Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{title}\n{id:N}"));
 
-    private static bool TryDecodeCursor(string? cursor, out string title, out Guid id)
-    {
+    private static bool TryDecodeCursor(string? cursor, out string title, out Guid id) {
         title = string.Empty;
         id = Guid.Empty;
-        if (string.IsNullOrWhiteSpace(cursor))
-        {
+        if (string.IsNullOrWhiteSpace(cursor)) {
             return false;
         }
 
-        try
-        {
+        try {
             var parts = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(cursor)).Split('\n');
             return parts.Length == 2 && Guid.TryParseExact(parts[1], "N", out id) && !string.IsNullOrWhiteSpace(title = parts[0]);
-        }
-        catch (FormatException)
-        {
+        } catch (FormatException) {
             return false;
         }
     }

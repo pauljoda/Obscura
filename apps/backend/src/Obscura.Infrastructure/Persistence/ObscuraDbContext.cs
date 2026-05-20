@@ -7,15 +7,13 @@ namespace Obscura.Infrastructure.Persistence;
 /// <summary>
 /// Entity Framework context for the v2 Obscura persistence model.
 /// </summary>
-public sealed class ObscuraDbContext : DbContext
-{
+public sealed class ObscuraDbContext : DbContext {
     /// <summary>
     /// Creates the context with provider-specific options supplied by dependency injection.
     /// </summary>
     /// <param name="options">EF Core context options, including the PostgreSQL connection and provider configuration.</param>
     public ObscuraDbContext(DbContextOptions<ObscuraDbContext> options)
-        : base(options)
-    {
+        : base(options) {
     }
 
     public DbSet<EntityKindRow> EntityKinds => Set<EntityKindRow>();
@@ -109,8 +107,7 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<JobRunRow> JobRuns => Set<JobRunRow>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
+    protected override void OnModelCreating(ModelBuilder modelBuilder) {
         modelBuilder.HasDefaultSchema("v2");
 
         modelBuilder.ConfigureBaseEntityModel();
@@ -118,8 +115,7 @@ public sealed class ObscuraDbContext : DbContext
         modelBuilder.ConfigureEntityAttachmentModel();
         modelBuilder.ConfigureExpandedV2Model();
 
-        modelBuilder.Entity<LibraryRootRow>(entity =>
-        {
+        modelBuilder.Entity<LibraryRootRow>(entity => {
             entity.ToTable("library_roots");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
@@ -138,8 +134,7 @@ public sealed class ObscuraDbContext : DbContext
             entity.HasIndex(row => row.Path).IsUnique();
         });
 
-        modelBuilder.Entity<LibrarySettingsRow>(entity =>
-        {
+        modelBuilder.Entity<LibrarySettingsRow>(entity => {
             entity.ToTable("library_settings");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
@@ -178,8 +173,7 @@ public sealed class ObscuraDbContext : DbContext
             entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
         });
 
-        modelBuilder.Entity<DatabaseBackupRow>(entity =>
-        {
+        modelBuilder.Entity<DatabaseBackupRow>(entity => {
             entity.ToTable("database_backups");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
@@ -194,8 +188,7 @@ public sealed class ObscuraDbContext : DbContext
             entity.Property(row => row.CompletedAt).HasColumnName("completed_at");
         });
 
-        modelBuilder.Entity<JobRunRow>(entity =>
-        {
+        modelBuilder.Entity<JobRunRow>(entity => {
             entity.ToTable("job_runs");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
@@ -227,8 +220,7 @@ public sealed class ObscuraDbContext : DbContext
             entity.HasIndex(row => new { row.Status, row.AvailableAt, row.Priority });
             entity.HasIndex(row => new { row.Type, row.TargetEntityId, row.Status })
                 .HasDatabaseName("ix_job_runs_dedup");
-            entity.ToTable(table =>
-            {
+            entity.ToTable(table => {
                 table.HasCheckConstraint("ck_job_runs_progress", "progress >= 0 AND progress <= 100");
                 table.HasCheckConstraint("ck_job_runs_attempts", "attempts >= 0 AND max_attempts > 0");
             });

@@ -13,36 +13,29 @@ namespace Obscura.Application.Jobs.Handlers.Generate;
 public sealed class GeneratePreviewJobHandler(
     ILogger<GeneratePreviewJobHandler> logger,
     IMediaAssetGenerator assets,
-    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence)
-{
+    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence) {
     public override JobType Type => JobType.GeneratePreview;
 
     protected override async Task ExecuteAsync(
-        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken)
-    {
+        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken) {
         var timer = new JobPhaseTimer();
         var settings = await Persistence.GetSettingsAsync(cancellationToken);
 
         var (duration, width, height) = await GetDimensionsAsync(entityId, cancellationToken);
 
-        if (settings.AutoGeneratePreview)
-        {
-            using (timer.Phase("thumbnail+preview"))
-            {
+        if (settings.AutoGeneratePreview) {
+            using (timer.Phase("thumbnail+preview")) {
                 await context.ReportProgressAsync(10, "Generating thumbnail and preview", cancellationToken);
                 await GenerateThumbnailAndPreviewAsync(entityId, filePath, settings, duration, width, height, cancellationToken);
             }
         }
 
-        if (settings.GenerateTrickplay)
-        {
-            using (timer.Phase("trickplay"))
-            {
+        if (settings.GenerateTrickplay) {
+            using (timer.Phase("trickplay")) {
                 await context.ReportProgressAsync(50, "Generating trickplay tiles", cancellationToken);
                 var trickplayGenerated = await GenerateTrickplayBatchAsync(
                     entityId, filePath, settings, duration, width, height, cancellationToken);
-                if (!trickplayGenerated)
-                {
+                if (!trickplayGenerated) {
                     throw new InvalidOperationException($"Failed to generate trickplay tiles for {entityId}.");
                 }
             }
@@ -57,8 +50,7 @@ public sealed class GeneratePreviewJobHandler(
 
     private async Task GenerateThumbnailAndPreviewAsync(
         Guid entityId, string filePath, LibrarySettingsData settings,
-        double? duration, int? width, int? height, CancellationToken cancellationToken)
-    {
+        double? duration, int? width, int? height, CancellationToken cancellationToken) {
         var thumbPath = assets.VideoThumbnailPath(entityId);
         var previewPath = assets.VideoPreviewPath(entityId);
 
@@ -75,15 +67,13 @@ public sealed class GeneratePreviewJobHandler(
             previewPath, previewStart, clipDuration,
             cancellationToken);
 
-        if (thumbOk)
-        {
+        if (thumbOk) {
             var size = new FileInfo(thumbPath).Length;
             await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Thumbnail,
                 assets.VideoThumbnailUrl(entityId), "image/jpeg", size, cancellationToken);
         }
 
-        if (previewOk)
-        {
+        if (previewOk) {
             var size = new FileInfo(previewPath).Length;
             await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Preview,
                 assets.VideoPreviewUrl(entityId), "video/mp4", size, cancellationToken);
@@ -92,8 +82,7 @@ public sealed class GeneratePreviewJobHandler(
 
     private async Task<bool> GenerateTrickplayBatchAsync(
         Guid entityId, string filePath, LibrarySettingsData settings,
-        double? duration, int? width, int? height, CancellationToken cancellationToken)
-    {
+        double? duration, int? width, int? height, CancellationToken cancellationToken) {
         if (duration is null or <= 0) return true;
 
         var interval = Math.Max(3, settings.TrickplayIntervalSeconds);
@@ -110,8 +99,7 @@ public sealed class GeneratePreviewJobHandler(
             frameWidth, frameHeight, QualityToJpeg(settings.TrickplayQuality),
             cancellationToken);
 
-        if (extractedCount == 0)
-        {
+        if (extractedCount == 0) {
             logger.LogWarning("Trickplay batch extraction produced zero frames for {EntityId}", entityId);
             return false;
         }
@@ -127,8 +115,7 @@ public sealed class GeneratePreviewJobHandler(
             frameDir, tileDir, columns, rows, frameWidth, frameHeight,
             QualityToJpeg(settings.TrickplayQuality), cancellationToken);
 
-        if (tileCount == 0)
-        {
+        if (tileCount == 0) {
             logger.LogWarning("Failed to compose trickplay tiles for {EntityId}", entityId);
             return false;
         }
@@ -152,8 +139,7 @@ public sealed class GeneratePreviewJobHandler(
     }
 
     private async Task<(double? Duration, int? Width, int? Height)> GetDimensionsAsync(
-        Guid entityId, CancellationToken cancellationToken)
-    {
+        Guid entityId, CancellationToken cancellationToken) {
         var tech = await Persistence.GetEntityTechnicalAsync(entityId, cancellationToken);
         if (tech is null)
             return (null, null, null);
@@ -161,24 +147,21 @@ public sealed class GeneratePreviewJobHandler(
         return (tech.DurationSeconds, tech.Width, tech.Height);
     }
 
-    private static double ComputeSeekTime(double? duration)
-    {
+    private static double ComputeSeekTime(double? duration) {
         var seekTime = Math.Max(0, (duration ?? 10) * 0.18);
         if (duration is not null && seekTime > duration.Value - 0.5)
             seekTime = Math.Max(0, duration.Value - 0.5);
         return seekTime;
     }
 
-    private static int ScaleWidth(int sourceWidth, int quality)
-    {
+    private static int ScaleWidth(int sourceWidth, int quality) {
         var min = 320;
         var max = sourceWidth;
         var factor = Math.Clamp(quality, 1, 31);
         return min + (max - min) * (31 - factor) / 30;
     }
 
-    private static int ScaleHeight(int sourceHeight, int sourceWidth, int targetWidth)
-    {
+    private static int ScaleHeight(int sourceHeight, int sourceWidth, int targetWidth) {
         if (sourceWidth == 0) return sourceHeight;
         return targetWidth * sourceHeight / sourceWidth;
     }
@@ -188,8 +171,7 @@ public sealed class GeneratePreviewJobHandler(
     /// Capped at 320×180 regardless of source resolution (matching v1 behavior).
     /// Quality 1 (best) = 320w, quality 5 (lowest) = 160w.
     /// </summary>
-    private static (int Width, int Height) ComputeTrickplayDimensions(int sourceWidth, int sourceHeight, int quality)
-    {
+    private static (int Width, int Height) ComputeTrickplayDimensions(int sourceWidth, int sourceHeight, int quality) {
         const int maxWidth = 320;
         const int minWidth = 160;
         var q = Math.Clamp(quality, 1, 5);
@@ -206,8 +188,7 @@ public sealed class GeneratePreviewJobHandler(
 
     private static int QualityToJpeg(int quality) => Math.Clamp(quality, 1, 10);
 
-    private static int EstimateTrickplayBandwidth(string tileDir, int tileCount, int thumbnailCount, int interval)
-    {
+    private static int EstimateTrickplayBandwidth(string tileDir, int tileCount, int thumbnailCount, int interval) {
         var totalBytes = Directory.GetFiles(tileDir, "*.jpg")
             .Take(tileCount)
             .Sum(path => new FileInfo(path).Length);

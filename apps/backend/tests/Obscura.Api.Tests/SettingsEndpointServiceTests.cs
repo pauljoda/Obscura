@@ -7,16 +7,12 @@ using Obscura.Contracts.Settings;
 
 namespace Obscura.Api.Tests;
 
-public sealed class SettingsEndpointServiceTests
-{
+public sealed class SettingsEndpointServiceTests {
     [Fact]
-    public async Task SettingsEndpointReadsAndUpdatesThroughService()
-    {
+    public async Task SettingsEndpointReadsAndUpdatesThroughService() {
         using var factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureServices(services =>
-                {
+            .WithWebHostBuilder(builder => {
+                builder.ConfigureServices(services => {
                     services.AddScoped<ISettingsPersistence, FakeSettingsPersistence>();
                 });
             });
@@ -35,13 +31,10 @@ public sealed class SettingsEndpointServiceTests
     }
 
     [Fact]
-    public async Task LibrarySettingsEndpointsUseV2SettingsService()
-    {
+    public async Task LibrarySettingsEndpointsUseV2SettingsService() {
         using var factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureServices(services =>
-                {
+            .WithWebHostBuilder(builder => {
+                builder.ConfigureServices(services => {
                     services.AddScoped<ISettingsPersistence, FakeSettingsPersistence>();
                 });
             });
@@ -64,8 +57,7 @@ public sealed class SettingsEndpointServiceTests
         Assert.True(root.IsSuccessStatusCode);
     }
 
-    private sealed class FakeSettingsPersistence : ISettingsPersistence
-    {
+    private sealed class FakeSettingsPersistence : ISettingsPersistence {
         private static readonly Guid SettingsId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         private static readonly Guid RootId = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
@@ -75,8 +67,7 @@ public sealed class SettingsEndpointServiceTests
         public Task<LibrarySettings> GetLibrarySettingsAsync(CancellationToken cancellationToken) =>
             Task.FromResult(_settings);
 
-        public Task<LibrarySettings> SaveLibrarySettingsAsync(LibrarySettings state, CancellationToken cancellationToken)
-        {
+        public Task<LibrarySettings> SaveLibrarySettingsAsync(LibrarySettings state, CancellationToken cancellationToken) {
             _settings = state with { UpdatedAt = DateTimeOffset.UtcNow };
             return Task.FromResult(_settings);
         }
@@ -87,14 +78,12 @@ public sealed class SettingsEndpointServiceTests
         public Task<LibraryRoot?> GetLibraryRootAsync(Guid id, CancellationToken cancellationToken) =>
             Task.FromResult<LibraryRoot?>(_roots.GetValueOrDefault(id));
 
-        public Task<LibraryRoot> AddLibraryRootAsync(LibraryRoot state, CancellationToken cancellationToken)
-        {
+        public Task<LibraryRoot> AddLibraryRootAsync(LibraryRoot state, CancellationToken cancellationToken) {
             _roots[state.Id] = state;
             return Task.FromResult(state);
         }
 
-        public Task<LibraryRoot> SaveLibraryRootAsync(LibraryRoot state, CancellationToken cancellationToken)
-        {
+        public Task<LibraryRoot> SaveLibraryRootAsync(LibraryRoot state, CancellationToken cancellationToken) {
             _roots[state.Id] = state;
             return Task.FromResult(state);
         }

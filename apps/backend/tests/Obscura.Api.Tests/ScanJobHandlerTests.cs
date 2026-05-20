@@ -7,11 +7,9 @@ using Obscura.Domain.Entities;
 
 namespace Obscura.Api.Tests;
 
-public sealed class ScanJobHandlerTests
-{
+public sealed class ScanJobHandlerTests {
     [Fact]
-    public async Task VideoScanEnqueuesPreviewJobWhenOnlyTrickplayNeedsGeneration()
-    {
+    public async Task VideoScanEnqueuesPreviewJobWhenOnlyTrickplayNeedsGeneration() {
         var root = new LibraryRootData(
             Guid.Parse("11111111-1111-1111-1111-111111111111"),
             "/media/videos",
@@ -24,8 +22,7 @@ public sealed class ScanJobHandlerTests
             ScanBooks: false,
             IsNsfw: false);
         var videoId = Guid.Parse("22222222-2222-2222-2222-222222222222");
-        var persistence = new FakeScanPersistence([root])
-        {
+        var persistence = new FakeScanPersistence([root]) {
             Settings = new LibrarySettingsData(
                 AutoGenerateMetadata: false,
                 AutoGenerateFingerprints: false,
@@ -37,8 +34,7 @@ public sealed class ScanJobHandlerTests
                 ThumbnailQuality: 2,
                 TrickplayQuality: 2),
             UpsertedVideoIds = [videoId],
-            DownstreamNeedsById = new Dictionary<Guid, DownstreamNeeds>
-            {
+            DownstreamNeedsById = new Dictionary<Guid, DownstreamNeeds> {
                 [videoId] = new(
                     NeedsProbe: false,
                     NeedsFingerprint: false,
@@ -75,8 +71,7 @@ public sealed class ScanJobHandlerTests
     }
 
     [Fact]
-    public async Task VideoScanClassifiesSeasonFolderEpisodesForHierarchyMaterialization()
-    {
+    public async Task VideoScanClassifiesSeasonFolderEpisodesForHierarchyMaterialization() {
         var root = new LibraryRootData(
             Guid.Parse("11111111-1111-1111-1111-111111111111"),
             "/media/videos",
@@ -89,8 +84,7 @@ public sealed class ScanJobHandlerTests
             ScanBooks: false,
             IsNsfw: false);
         var videoId = Guid.Parse("22222222-2222-2222-2222-222222222222");
-        var persistence = new FakeScanPersistence([root])
-        {
+        var persistence = new FakeScanPersistence([root]) {
             Settings = new LibrarySettingsData(
                 AutoGenerateMetadata: false,
                 AutoGenerateFingerprints: false,
@@ -102,8 +96,7 @@ public sealed class ScanJobHandlerTests
                 ThumbnailQuality: 2,
                 TrickplayQuality: 2),
             UpsertedVideoIds = [videoId],
-            DownstreamNeedsById = new Dictionary<Guid, DownstreamNeeds>
-            {
+            DownstreamNeedsById = new Dictionary<Guid, DownstreamNeeds> {
                 [videoId] = new(
                     NeedsProbe: false,
                     NeedsFingerprint: false,
@@ -145,8 +138,7 @@ public sealed class ScanJobHandlerTests
     }
 
     [Fact]
-    public async Task HandlesScheduledLibraryRootPayloadAsSingleRootScan()
-    {
+    public async Task HandlesScheduledLibraryRootPayloadAsSingleRootScan() {
         var targetRoot = new LibraryRootData(
             Guid.Parse("11111111-1111-1111-1111-111111111111"),
             "/media/one",
@@ -158,8 +150,7 @@ public sealed class ScanJobHandlerTests
             ScanAudio: false,
             ScanBooks: false,
             IsNsfw: false);
-        var otherRoot = targetRoot with
-        {
+        var otherRoot = targetRoot with {
             Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
             Path = "/media/two",
             Label = "Root Two"
@@ -188,8 +179,7 @@ public sealed class ScanJobHandlerTests
     }
 
     private sealed class RecordingScanHandler(FakeScanPersistence persistence)
-        : ScanJobHandler(NullLogger<RecordingScanHandler>.Instance, new NoopFileDiscovery(), persistence)
-    {
+        : ScanJobHandler(NullLogger<RecordingScanHandler>.Instance, new NoopFileDiscovery(), persistence) {
         public List<Guid> ScannedRootIds { get; } = [];
 
         public override JobType Type => JobType.ScanLibrary;
@@ -199,15 +189,13 @@ public sealed class ScanJobHandlerTests
         protected override Task ScanRootAsync(
             JobContext context,
             LibraryRootData root,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             ScannedRootIds.Add(root.Id);
             return Task.CompletedTask;
         }
     }
 
-    private sealed class FakeScanPersistence(IReadOnlyList<LibraryRootData> roots) : ILibraryScanPersistence
-    {
+    private sealed class FakeScanPersistence(IReadOnlyList<LibraryRootData> roots) : ILibraryScanPersistence {
         public List<Guid> LoadedRootIds { get; } = [];
         public bool LoadedEnabledRoots { get; private set; }
         public LibrarySettingsData Settings { get; init; } = new(
@@ -225,14 +213,12 @@ public sealed class ScanJobHandlerTests
             new Dictionary<Guid, DownstreamNeeds>();
         public List<VideoUpsertItem> UpsertedVideoItems { get; } = [];
 
-        public Task<LibraryRootData?> GetLibraryRootAsync(Guid rootId, CancellationToken cancellationToken)
-        {
+        public Task<LibraryRootData?> GetLibraryRootAsync(Guid rootId, CancellationToken cancellationToken) {
             LoadedRootIds.Add(rootId);
             return Task.FromResult(roots.FirstOrDefault(root => root.Id == rootId));
         }
 
-        public Task<IReadOnlyList<LibraryRootData>> GetEnabledRootsAsync(CancellationToken cancellationToken)
-        {
+        public Task<IReadOnlyList<LibraryRootData>> GetEnabledRootsAsync(CancellationToken cancellationToken) {
             LoadedEnabledRoots = true;
             return Task.FromResult(roots);
         }
@@ -288,8 +274,7 @@ public sealed class ScanJobHandlerTests
         public Task<int> RemoveStaleBooksInRootAsync(Guid rootId, IReadOnlySet<string> validPaths, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
-        public Task<IReadOnlyList<Guid>> UpsertVideosBatchAsync(IReadOnlyList<VideoUpsertItem> items, CancellationToken cancellationToken)
-        {
+        public Task<IReadOnlyList<Guid>> UpsertVideosBatchAsync(IReadOnlyList<VideoUpsertItem> items, CancellationToken cancellationToken) {
             UpsertedVideoItems.AddRange(items);
             return Task.FromResult(UpsertedVideoIds);
         }
@@ -343,8 +328,7 @@ public sealed class ScanJobHandlerTests
             throw new NotSupportedException();
     }
 
-    private sealed class NoopFileDiscovery : IFileDiscovery
-    {
+    private sealed class NoopFileDiscovery : IFileDiscovery {
         public Task<IReadOnlyList<string>> DiscoverFilesAsync(string rootPath, MediaCategory category, bool recursive, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
@@ -352,8 +336,7 @@ public sealed class ScanJobHandlerTests
             throw new NotSupportedException();
     }
 
-    private sealed class RecordingFileDiscovery(IReadOnlyList<string> files) : IFileDiscovery
-    {
+    private sealed class RecordingFileDiscovery(IReadOnlyList<string> files) : IFileDiscovery {
         public Task<IReadOnlyList<string>> DiscoverFilesAsync(
             string rootPath, MediaCategory category, bool recursive, CancellationToken cancellationToken) =>
             Task.FromResult(files);
@@ -363,8 +346,7 @@ public sealed class ScanJobHandlerTests
             throw new NotSupportedException();
     }
 
-    private sealed class NoopJobQueue : IJobQueueService
-    {
+    private sealed class NoopJobQueue : IJobQueueService {
         public Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<JobRunSnapshot>>([]);
         public Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<JobRunSnapshot> EnqueueAsync(EnqueueJobRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
@@ -381,16 +363,14 @@ public sealed class ScanJobHandlerTests
         public Task<int> PruneHistoryAsync(TimeSpan retention, CancellationToken cancellationToken) => Task.FromResult(0);
     }
 
-    private sealed class RecordingJobQueue : IJobQueueService
-    {
+    private sealed class RecordingJobQueue : IJobQueueService {
         public List<EnqueueJobRequest> Enqueued { get; } = [];
 
         public Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<JobRunSnapshot>>([]);
         public Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<JobRunSnapshot> EnqueueAsync(EnqueueJobRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<bool> HasPendingAsync(JobType type, string? targetEntityId, CancellationToken cancellationToken) => Task.FromResult(false);
-        public Task<int> EnqueueBatchAsync(IReadOnlyList<EnqueueJobRequest> requests, CancellationToken cancellationToken)
-        {
+        public Task<int> EnqueueBatchAsync(IReadOnlyList<EnqueueJobRequest> requests, CancellationToken cancellationToken) {
             Enqueued.AddRange(requests);
             return Task.FromResult(requests.Count);
         }

@@ -11,26 +11,21 @@ namespace Obscura.Application.Jobs.Handlers.Generate;
 public sealed class GenerateImageThumbnailJobHandler(
     ILogger<GenerateImageThumbnailJobHandler> logger,
     IMediaAssetGenerator assets,
-    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence)
-{
+    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence) {
     public override JobType Type => JobType.GenerateImageThumbnail;
 
     protected override async Task ExecuteAsync(
-        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken)
-    {
+        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken) {
         await context.ReportProgressAsync(20, "Generating thumbnail", cancellationToken);
 
         var thumbPath = assets.ImageThumbnailPath(entityId);
         var success = await assets.GenerateImageThumbnailAsync(filePath, thumbPath, 640, 3, cancellationToken);
 
-        if (success)
-        {
+        if (success) {
             var size = new FileInfo(thumbPath).Length;
             await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Thumbnail, assets.ImageThumbnailUrl(entityId), "image/jpeg", size, cancellationToken);
             logger.LogInformation("GenerateImageThumbnail: created thumbnail for {Label}", context.Job.TargetLabel);
-        }
-        else
-        {
+        } else {
             logger.LogWarning("GenerateImageThumbnail: failed for {Label}", context.Job.TargetLabel);
         }
 

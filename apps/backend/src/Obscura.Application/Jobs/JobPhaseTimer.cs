@@ -7,8 +7,7 @@ namespace Obscura.Application.Jobs;
 /// Create one at the start of a handler, call <see cref="Phase"/> around each logical step,
 /// then <see cref="Finish"/> to produce a summary.
 /// </summary>
-public sealed class JobPhaseTimer
-{
+public sealed class JobPhaseTimer {
     private readonly Stopwatch _total = Stopwatch.StartNew();
     private readonly List<PhaseRecord> _phases = [];
 
@@ -21,8 +20,7 @@ public sealed class JobPhaseTimer
     /// <summary>
     /// Stops the overall timer and returns a summary of all recorded phases.
     /// </summary>
-    public JobTimingReport Finish()
-    {
+    public JobTimingReport Finish() {
         _total.Stop();
         return new JobTimingReport(_total.Elapsed, _phases.ToList());
     }
@@ -30,13 +28,11 @@ public sealed class JobPhaseTimer
     private void Record(string name, TimeSpan elapsed) =>
         _phases.Add(new PhaseRecord(name, elapsed));
 
-    public sealed class PhaseScope(JobPhaseTimer timer, string name) : IDisposable
-    {
+    public sealed class PhaseScope(JobPhaseTimer timer, string name) : IDisposable {
         private readonly Stopwatch _sw = Stopwatch.StartNew();
         private bool _disposed;
 
-        public void Dispose()
-        {
+        public void Dispose() {
             if (_disposed) return;
             _disposed = true;
             _sw.Stop();
@@ -47,17 +43,14 @@ public sealed class JobPhaseTimer
 
 public sealed record PhaseRecord(string Name, TimeSpan Duration);
 
-public sealed record JobTimingReport(TimeSpan Total, IReadOnlyList<PhaseRecord> Phases)
-{
+public sealed record JobTimingReport(TimeSpan Total, IReadOnlyList<PhaseRecord> Phases) {
     /// <summary>
     /// Formats the report as a compact single-line summary for structured logging.
     /// Example: "total=12.34s | discover=0.12s | upsert=1.45s | enqueue=0.89s"
     /// </summary>
-    public string ToLogString()
-    {
+    public string ToLogString() {
         var parts = new List<string> { $"total={Total.TotalSeconds:F2}s" };
-        foreach (var phase in Phases)
-        {
+        foreach (var phase in Phases) {
             parts.Add($"{phase.Name}={phase.Duration.TotalSeconds:F2}s");
         }
         return string.Join(" | ", parts);

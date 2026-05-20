@@ -4,18 +4,15 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Obscura.Api.Tests;
 
-public sealed class UserStateEndpointTests : IClassFixture<WebApplicationFactory<Program>>
-{
+public sealed class UserStateEndpointTests : IClassFixture<WebApplicationFactory<Program>> {
     private readonly WebApplicationFactory<Program> _factory;
 
-    public UserStateEndpointTests(WebApplicationFactory<Program> factory)
-    {
+    public UserStateEndpointTests(WebApplicationFactory<Program> factory) {
         _factory = factory;
     }
 
     [Fact]
-    public async Task UpdateCheckEndpointReturnsNonBlockingStatus()
-    {
+    public async Task UpdateCheckEndpointReturnsNonBlockingStatus() {
         using var client = _factory.CreateClient();
 
         using var response = await client.GetAsync("/api/update-check");
@@ -28,8 +25,7 @@ public sealed class UserStateEndpointTests : IClassFixture<WebApplicationFactory
     }
 
     [Fact]
-    public async Task PlaylistSessionEndpointReturnsJsonNullWhenEmpty()
-    {
+    public async Task PlaylistSessionEndpointReturnsJsonNullWhenEmpty() {
         using var client = _factory.CreateClient();
 
         using var response = await client.GetAsync("/api/playlist-session");

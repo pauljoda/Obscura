@@ -2,8 +2,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace Obscura.Api.Tests;
 
-public sealed class SpaDevProxyTests
-{
+public sealed class SpaDevProxyTests {
     [Theory]
     [InlineData("/api/entities", true)]
     [InlineData("/assets/videos/1/thumb.jpg", true)]
@@ -11,18 +10,15 @@ public sealed class SpaDevProxyTests
     [InlineData("/Videos/ActiveEncodings", true)]
     [InlineData("/videos", false)]
     [InlineData("/videos/0d42e2e4-b181-4392-aae8-3c2184422a97", false)]
-    public void BackendRouteClassifierKeepsLowercaseSpaRoutesOnVite(string path, bool expected)
-    {
+    public void BackendRouteClassifierKeepsLowercaseSpaRoutesOnVite(string path, bool expected) {
         Assert.Equal(expected, SpaDevProxy.ShouldPassThroughToBackend(new PathString(path)));
     }
 
     [Fact]
-    public async Task BackendPassThroughIgnoresBrowserAbortCancellation()
-    {
+    public async Task BackendPassThroughIgnoresBrowserAbortCancellation() {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        var context = new DefaultHttpContext
-        {
+        var context = new DefaultHttpContext {
             RequestAborted = cts.Token
         };
 
@@ -32,8 +28,7 @@ public sealed class SpaDevProxyTests
     }
 
     [Fact]
-    public async Task BackendPassThroughPropagatesNonAbortCancellation()
-    {
+    public async Task BackendPassThroughPropagatesNonAbortCancellation() {
         var context = new DefaultHttpContext();
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>

@@ -5,11 +5,9 @@ using Obscura.Contracts.Settings;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class PlaybackInfoServiceTests
-{
+public sealed class PlaybackInfoServiceTests {
     [Fact]
-    public async Task PlaybackInfoExposesAllAudioStreamsAndSelectsRequestedTrack()
-    {
+    public async Task PlaybackInfoExposesAllAudioStreamsAndSelectsRequestedTrack() {
         var videoId = Guid.Parse("12121212-1212-1212-1212-121212121212");
         var service = new PlaybackInfoService(
             new FakeVideoSourceService(new VideoSourceFile(
@@ -28,8 +26,7 @@ public sealed class PlaybackInfoServiceTests
                 ])),
             new TranscodeSessionService());
 
-        var info = await service.GetPlaybackInfoAsync(videoId, new PlaybackInfoQuery
-        {
+        var info = await service.GetPlaybackInfoAsync(videoId, new PlaybackInfoQuery {
             AudioStreamIndex = 1,
             EnableDirectPlay = true,
             EnableDirectStream = true,
@@ -47,8 +44,7 @@ public sealed class PlaybackInfoServiceTests
     }
 
     [Fact]
-    public async Task PlaybackInfoSelectsPreferredAudioLanguageBeforeContainerDefault()
-    {
+    public async Task PlaybackInfoSelectsPreferredAudioLanguageBeforeContainerDefault() {
         var videoId = Guid.Parse("34343434-3434-3434-3434-343434343434");
         var service = new PlaybackInfoService(
             new FakeVideoSourceService(new VideoSourceFile(
@@ -68,8 +64,7 @@ public sealed class PlaybackInfoServiceTests
             new TranscodeSessionService(),
             new SettingsService(new FakeSettingsPersistence("en,eng,en-US")));
 
-        var info = await service.GetPlaybackInfoAsync(videoId, new PlaybackInfoQuery
-        {
+        var info = await service.GetPlaybackInfoAsync(videoId, new PlaybackInfoQuery {
             EnableDirectPlay = true,
             EnableDirectStream = true,
             EnableTranscoding = true
@@ -83,12 +78,10 @@ public sealed class PlaybackInfoServiceTests
         Assert.True(audioStreams.Single(stream => stream.Index == 2).IsDefault);
     }
 
-    private sealed class FakeVideoSourceService : IVideoSourceService
-    {
+    private sealed class FakeVideoSourceService : IVideoSourceService {
         private readonly VideoSourceFile _source;
 
-        public FakeVideoSourceService(VideoSourceFile source)
-        {
+        public FakeVideoSourceService(VideoSourceFile source) {
             _source = source;
         }
 
@@ -96,12 +89,10 @@ public sealed class PlaybackInfoServiceTests
             Task.FromResult(id == _source.EntityId ? _source : null);
     }
 
-    private sealed class FakeSettingsPersistence : ISettingsPersistence
-    {
+    private sealed class FakeSettingsPersistence : ISettingsPersistence {
         private readonly string _audioPreferredLanguages;
 
-        public FakeSettingsPersistence(string audioPreferredLanguages)
-        {
+        public FakeSettingsPersistence(string audioPreferredLanguages) {
             _audioPreferredLanguages = audioPreferredLanguages;
         }
 

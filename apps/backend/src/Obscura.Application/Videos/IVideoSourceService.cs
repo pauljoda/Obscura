@@ -3,8 +3,7 @@ namespace Obscura.Application.Videos;
 /// <summary>
 /// Application port for locating original video source files that can be streamed by the API host.
 /// </summary>
-public interface IVideoSourceService
-{
+public interface IVideoSourceService {
     /// <summary>
     /// Finds the source file for one video entity.
     /// </summary>

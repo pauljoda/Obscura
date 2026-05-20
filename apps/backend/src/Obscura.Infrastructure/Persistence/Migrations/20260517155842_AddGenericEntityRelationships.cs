@@ -3,14 +3,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Obscura.Infrastructure.Persistence.Migrations
-{
+namespace Obscura.Infrastructure.Persistence.Migrations {
     /// <inheritdoc />
-    public partial class AddGenericEntityRelationships : Migration
-    {
+    public partial class AddGenericEntityRelationships : Migration {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
+        protected override void Up(MigrationBuilder migrationBuilder) {
             migrationBuilder.DropTable(
                 name: "entity_credit_links",
                 schema: "v2");
@@ -31,8 +28,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "entity_relationship_links",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     relationship_code = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     target_entity_id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -42,8 +38,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     metadata_json = table.Column<string>(type: "jsonb", nullable: true),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_relationship_links", x => new { x.entity_id, x.relationship_code, x.target_entity_id });
                     table.ForeignKey(
                         name: "FK_entity_relationship_links_entities_entity_id",
@@ -88,8 +83,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+        protected override void Down(MigrationBuilder migrationBuilder) {
             migrationBuilder.DropTable(
                 name: "entity_relationship_links",
                 schema: "v2");
@@ -106,8 +100,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "entity_credit_links",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     person_entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     role = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
@@ -115,8 +108,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     sort_order = table.Column<int>(type: "integer", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_credit_links", x => new { x.entity_id, x.person_entity_id, x.role });
                     table.ForeignKey(
                         name: "FK_entity_credit_links_entities_entity_id",
@@ -137,14 +129,12 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "entity_studio_links",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     studio_id = table.Column<Guid>(type: "uuid", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_studio_links", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_entity_studio_links_entities_entity_id",
@@ -165,14 +155,12 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "entity_tag_links",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     tag_id = table.Column<Guid>(type: "uuid", nullable: false),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_tag_links", x => new { x.entity_id, x.tag_id });
                     table.ForeignKey(
                         name: "FK_entity_tag_links_entities_entity_id",

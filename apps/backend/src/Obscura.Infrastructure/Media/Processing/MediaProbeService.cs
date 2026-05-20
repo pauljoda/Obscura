@@ -6,20 +6,17 @@ namespace Obscura.Infrastructure.Media.Processing;
 /// <summary>
 /// Probes media files via ffprobe and parses technical metadata from the JSON output.
 /// </summary>
-public sealed class MediaProbeService
-{
+public sealed class MediaProbeService {
     private readonly ProcessExecutor _processExecutor;
 
-    public MediaProbeService(ProcessExecutor processExecutor)
-    {
+    public MediaProbeService(ProcessExecutor processExecutor) {
         _processExecutor = processExecutor;
     }
 
     /// <summary>
     /// Probes a video file for duration, dimensions, codec, bitrate, and container info.
     /// </summary>
-    public async Task<VideoProbeResult?> ProbeVideoAsync(string filePath, CancellationToken cancellationToken)
-    {
+    public async Task<VideoProbeResult?> ProbeVideoAsync(string filePath, CancellationToken cancellationToken) {
         var result = await RunFfprobeAsync(
             ["-v", "error",
              "-show_entries", "format=duration,size,bit_rate,format_name:stream=index,codec_type,codec_name,width,height,avg_frame_rate,bit_rate,sample_rate,channels:stream_tags=language,title:stream_disposition=default,forced",
@@ -37,10 +34,8 @@ public sealed class MediaProbeService
         JsonElement? audioStream = null;
         var streamResults = new List<MediaStreamProbeResult>();
 
-        if (streams.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var stream in streams.EnumerateArray())
-            {
+        if (streams.ValueKind == JsonValueKind.Array) {
+            foreach (var stream in streams.EnumerateArray()) {
                 var codecType = stream.GetStringOrDefault("codec_type");
                 if (codecType == "video" && videoStream is null)
                     videoStream = stream;
@@ -79,8 +74,7 @@ public sealed class MediaProbeService
         double? frameRate = null;
         string? codec = null;
 
-        if (videoStream is { } vs)
-        {
+        if (videoStream is { } vs) {
             width = vs.GetIntOrDefault("width");
             height = vs.GetIntOrDefault("height");
             codec = vs.GetStringOrDefault("codec_name");
@@ -90,8 +84,7 @@ public sealed class MediaProbeService
         int? sampleRate = null, channels = null;
         string? audioCodec = null;
 
-        if (audioStream is { } audio)
-        {
+        if (audioStream is { } audio) {
             sampleRate = audio.GetIntOrDefault("sample_rate");
             channels = audio.GetIntOrDefault("channels");
             audioCodec = audio.GetStringOrDefault("codec_name");
@@ -105,8 +98,7 @@ public sealed class MediaProbeService
     /// <summary>
     /// Probes an audio file for duration, codec, bitrate, sample rate, channels, and embedded tags.
     /// </summary>
-    public async Task<AudioProbeResult?> ProbeAudioAsync(string filePath, CancellationToken cancellationToken)
-    {
+    public async Task<AudioProbeResult?> ProbeAudioAsync(string filePath, CancellationToken cancellationToken) {
         var result = await RunFfprobeAsync(
             ["-v", "error",
              "-show_entries", "format=duration,size,bit_rate,format_name:format_tags=artist,album,title,track:stream=codec_name,sample_rate,channels",
@@ -130,10 +122,8 @@ public sealed class MediaProbeService
         string? codec = null;
         int? sampleRate = null, channels = null;
 
-        if (streams.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var stream in streams.EnumerateArray())
-            {
+        if (streams.ValueKind == JsonValueKind.Array) {
+            foreach (var stream in streams.EnumerateArray()) {
                 codec ??= stream.GetStringOrDefault("codec_name");
                 sampleRate ??= stream.GetIntOrDefault("sample_rate");
                 channels ??= stream.GetIntOrDefault("channels");
@@ -154,8 +144,7 @@ public sealed class MediaProbeService
     /// Probes for subtitle streams in a video file, returning stream metadata.
     /// </summary>
     public async Task<IReadOnlyList<SubtitleStreamInfo>> ProbeSubtitleStreamsAsync(
-        string filePath, CancellationToken cancellationToken)
-    {
+        string filePath, CancellationToken cancellationToken) {
         var result = await RunFfprobeAsync(
             ["-v", "error",
              "-select_streams", "s",
@@ -178,8 +167,7 @@ public sealed class MediaProbeService
 
         var results = new List<SubtitleStreamInfo>();
 
-        foreach (var stream in streams.EnumerateArray())
-        {
+        foreach (var stream in streams.EnumerateArray()) {
             var codecName = stream.GetStringOrDefault("codec_name") ?? "";
             if (imageBased.Contains(codecName))
                 continue;
@@ -198,8 +186,7 @@ public sealed class MediaProbeService
     /// <summary>
     /// Probes an image file for dimensions and codec.
     /// </summary>
-    public async Task<ImageProbeResult?> ProbeImageAsync(string filePath, CancellationToken cancellationToken)
-    {
+    public async Task<ImageProbeResult?> ProbeImageAsync(string filePath, CancellationToken cancellationToken) {
         var result = await RunFfprobeAsync(
             ["-v", "error",
              "-select_streams", "v:0",
@@ -215,8 +202,7 @@ public sealed class MediaProbeService
         if (streams.ValueKind != JsonValueKind.Array)
             return null;
 
-        foreach (var stream in streams.EnumerateArray())
-        {
+        foreach (var stream in streams.EnumerateArray()) {
             var width = stream.GetIntOrDefault("width");
             var height = stream.GetIntOrDefault("height");
             var codec = stream.GetStringOrDefault("codec_name");
@@ -229,28 +215,21 @@ public sealed class MediaProbeService
 
     private async Task<JsonDocument?> RunFfprobeAsync(
         IReadOnlyList<string> arguments,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
+        CancellationToken cancellationToken) {
+        try {
             var result = await _processExecutor.RunAsync("ffprobe", arguments, null, cancellationToken);
             if (result.ExitCode != 0)
                 return null;
 
             return JsonDocument.Parse(result.StandardOutput);
-        }
-        catch (JsonException)
-        {
+        } catch (JsonException) {
             return null;
-        }
-        catch (InvalidOperationException)
-        {
+        } catch (InvalidOperationException) {
             return null;
         }
     }
 
-    private static double? ParseFrameRate(string? value)
-    {
+    private static double? ParseFrameRate(string? value) {
         if (string.IsNullOrEmpty(value))
             return null;
 
@@ -258,8 +237,7 @@ public sealed class MediaProbeService
         if (parts.Length == 2
             && double.TryParse(parts[0], out var num)
             && double.TryParse(parts[1], out var den)
-            && den > 0)
-        {
+            && den > 0) {
             return Math.Round(num / den, 2);
         }
 
@@ -323,38 +301,31 @@ public sealed record ImageProbeResult(
 /// <summary>
 /// Extension helpers for safe JSON element traversal.
 /// </summary>
-internal static class JsonElementExtensions
-{
-    public static JsonElement GetPropertyOrDefault(this JsonElement element, string name)
-    {
+internal static class JsonElementExtensions {
+    public static JsonElement GetPropertyOrDefault(this JsonElement element, string name) {
         if (element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value))
             return value;
         return default;
     }
 
-    public static string? GetStringOrDefault(this JsonElement element, string name)
-    {
-        if (element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value))
-        {
+    public static string? GetStringOrDefault(this JsonElement element, string name) {
+        if (element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value)) {
             return value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString();
         }
         return null;
     }
 
-    public static double? GetDoubleOrDefault(this JsonElement element, string name)
-    {
+    public static double? GetDoubleOrDefault(this JsonElement element, string name) {
         var str = element.GetStringOrDefault(name);
         return str is not null && double.TryParse(str, out var v) ? v : null;
     }
 
-    public static int? GetIntOrDefault(this JsonElement element, string name)
-    {
+    public static int? GetIntOrDefault(this JsonElement element, string name) {
         var str = element.GetStringOrDefault(name);
         return str is not null && int.TryParse(str, out var v) ? v : null;
     }
 
-    public static long? GetLongOrDefault(this JsonElement element, string name)
-    {
+    public static long? GetLongOrDefault(this JsonElement element, string name) {
         var str = element.GetStringOrDefault(name);
         return str is not null && long.TryParse(str, out var v) ? v : null;
     }

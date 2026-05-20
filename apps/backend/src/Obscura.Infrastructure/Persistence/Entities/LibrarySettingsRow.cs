@@ -2,8 +2,7 @@ using Obscura.Domain.Entities;
 
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class LibrarySettingsRow
-{
+public sealed class LibrarySettingsRow {
     public Guid Id { get; set; }
 
     public bool AutoScanEnabled { get; set; }

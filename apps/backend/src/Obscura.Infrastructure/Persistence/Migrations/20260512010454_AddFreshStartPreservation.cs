@@ -3,19 +3,15 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Obscura.Infrastructure.Persistence.Migrations
-{
+namespace Obscura.Infrastructure.Persistence.Migrations {
     /// <inheritdoc />
-    public partial class AddFreshStartPreservation : Migration
-    {
+    public partial class AddFreshStartPreservation : Migration {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
+        protected override void Up(MigrationBuilder migrationBuilder) {
             migrationBuilder.CreateTable(
                 name: "database_backups",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     backup_path = table.Column<string>(type: "text", nullable: false),
                     status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
@@ -23,16 +19,14 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     completed_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_database_backups", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
                 name: "library_roots",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     path = table.Column<string>(type: "text", nullable: false),
                     label = table.Column<string>(type: "text", nullable: false),
@@ -47,16 +41,14 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_library_roots", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
                 name: "library_settings",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     auto_scan_enabled = table.Column<bool>(type: "boolean", nullable: false),
                     scan_interval_minutes = table.Column<int>(type: "integer", nullable: false),
@@ -83,8 +75,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_library_settings", x => x.id);
                 });
 
@@ -97,8 +88,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+        protected override void Down(MigrationBuilder migrationBuilder) {
             migrationBuilder.DropTable(
                 name: "database_backups",
                 schema: "v2");

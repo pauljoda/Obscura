@@ -3,8 +3,7 @@ namespace Obscura.Application.Videos;
 /// <summary>
 /// Application port for resolving subtitle text assets attached to video entities.
 /// </summary>
-public interface IVideoSubtitleAssetService
-{
+public interface IVideoSubtitleAssetService {
     /// <summary>
     /// Finds the normalized WebVTT subtitle file for one subtitle track.
     /// </summary>

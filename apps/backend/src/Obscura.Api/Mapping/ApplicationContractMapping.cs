@@ -3,11 +3,9 @@ using Obscura.Contracts.Playback;
 
 namespace Obscura.Api.Mapping;
 
-internal static class ApplicationContractMapping
-{
+internal static class ApplicationContractMapping {
     public static PlaybackInfoQuery ToApplication(this PlaybackInfoRequest request) =>
-        new()
-        {
+        new() {
             UserId = request.UserId,
             StartTimeTicks = request.StartTimeTicks,
             AudioStreamIndex = request.AudioStreamIndex,
@@ -21,8 +19,7 @@ internal static class ApplicationContractMapping
         };
 
     public static PlaybackSessionCommand ToApplication(this PlaybackSessionRequest request) =>
-        new()
-        {
+        new() {
             ItemId = request.ItemId,
             MediaSourceId = request.MediaSourceId,
             PlaySessionId = request.PlaySessionId,

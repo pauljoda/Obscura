@@ -6,18 +6,15 @@ using Obscura.Application.Videos;
 
 namespace Obscura.Api.Tests;
 
-public sealed class VideoHlsEndpointTests : IDisposable
-{
+public sealed class VideoHlsEndpointTests : IDisposable {
     private readonly string _tempDir = Path.Combine(Path.GetTempPath(), $"obscura-api-hls-{Guid.NewGuid():N}");
 
-    public VideoHlsEndpointTests()
-    {
+    public VideoHlsEndpointTests() {
         Directory.CreateDirectory(_tempDir);
     }
 
     [Fact]
-    public async Task HlsManifestEndpointServesMpegUrlAsset()
-    {
+    public async Task HlsManifestEndpointServesMpegUrlAsset() {
         var filePath = Path.Combine(_tempDir, "master.m3u8");
         await File.WriteAllTextAsync(filePath, "#EXTM3U");
         using var factory = CreateFactory(new FakeHlsAssetService(
@@ -34,8 +31,7 @@ public sealed class VideoHlsEndpointTests : IDisposable
     }
 
     [Fact]
-    public async Task HlsAssetEndpointsSupportHeadProbes()
-    {
+    public async Task HlsAssetEndpointsSupportHeadProbes() {
         var filePath = Path.Combine(_tempDir, "seg_00000.ts");
         await File.WriteAllTextAsync(filePath, "0123456789");
         using var factory = CreateFactory(new FakeHlsAssetService(
@@ -53,8 +49,7 @@ public sealed class VideoHlsEndpointTests : IDisposable
     }
 
     [Fact]
-    public async Task HlsAssetEndpointReturnsProblemDetailsWhenMissing()
-    {
+    public async Task HlsAssetEndpointReturnsProblemDetailsWhenMissing() {
         using var factory = CreateFactory(new FakeHlsAssetService(null));
         using var client = factory.CreateClient();
 
@@ -65,8 +60,7 @@ public sealed class VideoHlsEndpointTests : IDisposable
     }
 
     [Fact]
-    public async Task SubtitleEndpointServesStoredSubtitleAsset()
-    {
+    public async Task SubtitleEndpointServesStoredSubtitleAsset() {
         var trackId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         var filePath = Path.Combine(_tempDir, "track.vtt");
         await File.WriteAllTextAsync(filePath, "WEBVTT");
@@ -83,41 +77,33 @@ public sealed class VideoHlsEndpointTests : IDisposable
         Assert.Equal("WEBVTT", body);
     }
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_tempDir))
-        {
+    public void Dispose() {
+        if (Directory.Exists(_tempDir)) {
             Directory.Delete(_tempDir, recursive: true);
         }
     }
 
-    private static WebApplicationFactory<Program> CreateFactory(IHlsAssetService hlsAssets)
-    {
+    private static WebApplicationFactory<Program> CreateFactory(IHlsAssetService hlsAssets) {
         return CreateFactory(hlsAssets, new FakeVideoSubtitleAssetService(null));
     }
 
     private static WebApplicationFactory<Program> CreateFactory(
         IHlsAssetService hlsAssets,
-        IVideoSubtitleAssetService subtitleAssets)
-    {
+        IVideoSubtitleAssetService subtitleAssets) {
         return new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureServices(services =>
-                {
+            .WithWebHostBuilder(builder => {
+                builder.ConfigureServices(services => {
                     services.AddSingleton(hlsAssets);
                     services.AddSingleton(subtitleAssets);
                 });
             });
     }
 
-    private sealed class FakeHlsAssetService : IHlsAssetService
-    {
+    private sealed class FakeHlsAssetService : IHlsAssetService {
         public static readonly Guid VideoId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         private readonly HlsAsset? _asset;
 
-        public FakeHlsAssetService(HlsAsset? asset)
-        {
+        public FakeHlsAssetService(HlsAsset? asset) {
             _asset = asset;
         }
 
@@ -125,34 +111,29 @@ public sealed class VideoHlsEndpointTests : IDisposable
             Guid id,
             string assetPath,
             int? audioStreamIndex,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             return Task.FromResult(id == VideoId ? _asset : null);
         }
     }
 
-    private sealed class FakeVideoSubtitleAssetService : IVideoSubtitleAssetService
-    {
+    private sealed class FakeVideoSubtitleAssetService : IVideoSubtitleAssetService {
         private readonly VideoSubtitleAsset? _asset;
 
-        public FakeVideoSubtitleAssetService(VideoSubtitleAsset? asset)
-        {
+        public FakeVideoSubtitleAssetService(VideoSubtitleAsset? asset) {
             _asset = asset;
         }
 
         public Task<VideoSubtitleAsset?> GetSubtitleAsync(
             Guid videoId,
             Guid trackId,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             return Task.FromResult(videoId == FakeHlsAssetService.VideoId ? _asset : null);
         }
 
         public Task<VideoSubtitleAsset?> GetSubtitleSourceAsync(
             Guid videoId,
             Guid trackId,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             return Task.FromResult(videoId == FakeHlsAssetService.VideoId ? _asset : null);
         }
     }

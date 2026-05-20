@@ -4,12 +4,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Persistence;
 
-internal static partial class ExpandedV2ModelConfiguration
-{
-    private static void ConfigureSystemTables(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<MediaFileIgnoreRow>(entity =>
-        {
+internal static partial class ExpandedV2ModelConfiguration {
+    private static void ConfigureSystemTables(ModelBuilder modelBuilder) {
+        modelBuilder.Entity<MediaFileIgnoreRow>(entity => {
             entity.ToTable("media_file_ignores");
             entity.HasKey(row => row.Path);
             entity.Property(row => row.Path).HasColumnName("path");
@@ -19,8 +16,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasIndex(row => row.EntityKindCode);
         });
 
-        modelBuilder.Entity<UiPreferenceRow>(entity =>
-        {
+        modelBuilder.Entity<UiPreferenceRow>(entity => {
             entity.ToTable("ui_prefs");
             entity.HasKey(row => row.Key);
             entity.Property(row => row.Key).HasColumnName("key");
@@ -28,8 +24,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
         });
 
-        modelBuilder.Entity<ProviderConfigRow>(entity =>
-        {
+        modelBuilder.Entity<ProviderConfigRow>(entity => {
             entity.ToTable("provider_configs");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
@@ -48,8 +43,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasIndex(row => row.ProviderCode).IsUnique();
         });
 
-        modelBuilder.Entity<ProviderCredentialRow>(entity =>
-        {
+        modelBuilder.Entity<ProviderCredentialRow>(entity => {
             entity.ToTable("provider_credentials");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
@@ -62,8 +56,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<ProviderConfigRow>().WithMany().HasForeignKey(row => row.ProviderConfigId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<IdentifyResultRow>(entity =>
-        {
+        modelBuilder.Entity<IdentifyResultRow>(entity => {
             entity.ToTable("identify_results");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
@@ -86,8 +79,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<ProviderConfigRow>().WithMany().HasForeignKey(row => row.ProviderConfigId).OnDelete(DeleteBehavior.SetNull);
         });
 
-        modelBuilder.Entity<FingerprintSubmissionRow>(entity =>
-        {
+        modelBuilder.Entity<FingerprintSubmissionRow>(entity => {
             entity.ToTable("fingerprint_submissions");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();

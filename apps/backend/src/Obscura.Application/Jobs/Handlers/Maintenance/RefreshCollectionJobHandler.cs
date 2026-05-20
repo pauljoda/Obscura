@@ -11,23 +11,19 @@ namespace Obscura.Application.Jobs.Handlers.Maintenance;
 public sealed class RefreshCollectionJobHandler(
     ILogger<RefreshCollectionJobHandler> logger,
     ICollectionRefreshPersistence persistence,
-    ICollectionRuleEngine ruleEngine) : IJobHandler
-{
+    ICollectionRuleEngine ruleEngine) : IJobHandler {
     public JobType Type => JobType.RefreshCollection;
 
-    public async Task HandleAsync(JobContext context, CancellationToken cancellationToken)
-    {
+    public async Task HandleAsync(JobContext context, CancellationToken cancellationToken) {
         var collectionId = ParseEntityId(context.Job.TargetEntityId);
-        if (collectionId is null)
-        {
+        if (collectionId is null) {
             logger.LogWarning("RefreshCollection: no target entity ID provided");
             await context.ReportProgressAsync(100, "No collection ID", cancellationToken);
             return;
         }
 
         var collection = await persistence.GetDynamicCollectionAsync(collectionId.Value, cancellationToken);
-        if (collection is null)
-        {
+        if (collection is null) {
             logger.LogWarning("RefreshCollection: collection {Id} not found or not dynamic", collectionId);
             await context.ReportProgressAsync(100, "Collection not found or not dynamic", cancellationToken);
             return;

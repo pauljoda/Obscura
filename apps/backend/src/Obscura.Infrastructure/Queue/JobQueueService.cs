@@ -6,17 +6,14 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Queue;
 
-public sealed class JobQueueService : IJobQueueService
-{
+public sealed class JobQueueService : IJobQueueService {
     private readonly ObscuraDbContext _db;
 
-    public JobQueueService(ObscuraDbContext db)
-    {
+    public JobQueueService(ObscuraDbContext db) {
         _db = db;
     }
 
-    public async Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken)
-    {
+    public async Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken) {
         return await _db.JobRuns
             .AsNoTracking()
             .OrderByDescending(row => row.CreatedAt)
@@ -25,16 +22,13 @@ public sealed class JobQueueService : IJobQueueService
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken)
-    {
+    public async Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken) {
         return await EnqueueAsync(new EnqueueJobRequest(type), cancellationToken);
     }
 
-    public async Task<JobRunSnapshot> EnqueueAsync(EnqueueJobRequest request, CancellationToken cancellationToken)
-    {
+    public async Task<JobRunSnapshot> EnqueueAsync(EnqueueJobRequest request, CancellationToken cancellationToken) {
         var now = DateTimeOffset.UtcNow;
-        var row = new JobRunRow
-        {
+        var row = new JobRunRow {
             Id = Guid.NewGuid(),
             Type = request.Type,
             Status = JobRunStatus.Queued,
@@ -56,8 +50,7 @@ public sealed class JobQueueService : IJobQueueService
         return ToSnapshot(row);
     }
 
-    public async Task<int> EnqueueBatchAsync(IReadOnlyList<EnqueueJobRequest> requests, CancellationToken cancellationToken)
-    {
+    public async Task<int> EnqueueBatchAsync(IReadOnlyList<EnqueueJobRequest> requests, CancellationToken cancellationToken) {
         if (requests.Count == 0) return 0;
 
         var pendingTypes = requests.Select(r => r.Type).Distinct().ToList();
@@ -83,16 +76,13 @@ public sealed class JobQueueService : IJobQueueService
         var now = DateTimeOffset.UtcNow;
         var enqueued = 0;
 
-        foreach (var request in requests)
-        {
+        foreach (var request in requests) {
             if (request.TargetEntityId is not null &&
-                pendingSet.Contains((request.Type, request.TargetEntityId)))
-            {
+                pendingSet.Contains((request.Type, request.TargetEntityId))) {
                 continue;
             }
 
-            _db.JobRuns.Add(new JobRunRow
-            {
+            _db.JobRuns.Add(new JobRunRow {
                 Id = Guid.NewGuid(),
                 Type = request.Type,
                 Status = JobRunStatus.Queued,
@@ -110,42 +100,36 @@ public sealed class JobQueueService : IJobQueueService
             enqueued++;
         }
 
-        if (enqueued > 0)
-        {
+        if (enqueued > 0) {
             await _db.SaveChangesAsync(cancellationToken);
         }
 
         return enqueued;
     }
 
-    public async Task<bool> HasPendingAsync(JobType type, string? targetEntityId, CancellationToken cancellationToken)
-    {
+    public async Task<bool> HasPendingAsync(JobType type, string? targetEntityId, CancellationToken cancellationToken) {
         var query = _db.JobRuns.Where(job =>
             job.Type == type &&
             (job.Status == JobRunStatus.Queued || job.Status == JobRunStatus.Running));
 
-        if (targetEntityId is not null)
-        {
+        if (targetEntityId is not null) {
             query = query.Where(job => job.TargetEntityId == targetEntityId);
         }
 
         return await query.AnyAsync(cancellationToken);
     }
 
-    public async Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken)
-    {
+    public async Task<int> CancelAsync(JobType? type, CancellationToken cancellationToken) {
         var now = DateTimeOffset.UtcNow;
         var query = _db.JobRuns
             .Where(job => job.Status == JobRunStatus.Queued || job.Status == JobRunStatus.Running);
 
-        if (type is not null)
-        {
+        if (type is not null) {
             query = query.Where(job => job.Type == type.Value);
         }
 
         var rows = await query.ToListAsync(cancellationToken);
-        foreach (var row in rows)
-        {
+        foreach (var row in rows) {
             row.Status = JobRunStatus.Cancelled;
             row.Message = "Cancelled";
             row.LockedAt = null;
@@ -157,11 +141,9 @@ public sealed class JobQueueService : IJobQueueService
         return rows.Count;
     }
 
-    public async Task<bool> CancelRunAsync(Guid id, CancellationToken cancellationToken)
-    {
+    public async Task<bool> CancelRunAsync(Guid id, CancellationToken cancellationToken) {
         var row = await _db.JobRuns.FindAsync([id], cancellationToken);
-        if (row is null || (row.Status != JobRunStatus.Queued && row.Status != JobRunStatus.Running))
-        {
+        if (row is null || (row.Status != JobRunStatus.Queued && row.Status != JobRunStatus.Running)) {
             return false;
         }
 
@@ -175,17 +157,14 @@ public sealed class JobQueueService : IJobQueueService
         return true;
     }
 
-    public async Task<int> ClearFailuresAsync(JobType? type, CancellationToken cancellationToken)
-    {
+    public async Task<int> ClearFailuresAsync(JobType? type, CancellationToken cancellationToken) {
         var query = _db.JobRuns.Where(job => job.Status == JobRunStatus.Failed);
-        if (type is not null)
-        {
+        if (type is not null) {
             query = query.Where(job => job.Type == type.Value);
         }
 
         var rows = await query.ToListAsync(cancellationToken);
-        foreach (var row in rows)
-        {
+        foreach (var row in rows) {
             row.Status = JobRunStatus.Cancelled;
             row.Message = "Cleared failure";
         }
@@ -198,14 +177,12 @@ public sealed class JobQueueService : IJobQueueService
     /// Claims the next available job. Uses atomic FOR UPDATE SKIP LOCKED on PostgreSQL
     /// for safe concurrent access, with an EF Core fallback for test providers.
     /// </summary>
-    public async Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
-    {
+    public async Task<JobRunSnapshot?> ClaimNextAsync(string workerId, CancellationToken cancellationToken) {
         ArgumentException.ThrowIfNullOrWhiteSpace(workerId);
 
         var now = DateTimeOffset.UtcNow;
 
-        if (_db.Database.IsRelational())
-        {
+        if (_db.Database.IsRelational()) {
             var claimed = await _db.Database.SqlQueryRaw<Guid>(
                 """
                 UPDATE v2.job_runs
@@ -225,8 +202,7 @@ public sealed class JobQueueService : IJobQueueService
                 """,
                 now, workerId).ToListAsync(cancellationToken);
 
-            if (claimed.Count == 0)
-            {
+            if (claimed.Count == 0) {
                 return null;
             }
 
@@ -241,8 +217,7 @@ public sealed class JobQueueService : IJobQueueService
             .ThenBy(job => job.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (row is null)
-        {
+        if (row is null) {
             return null;
         }
 
@@ -256,28 +231,23 @@ public sealed class JobQueueService : IJobQueueService
         return ToSnapshot(row);
     }
 
-    public async Task UpdateProgressAsync(Guid id, int progress, string? message, CancellationToken cancellationToken)
-    {
+    public async Task UpdateProgressAsync(Guid id, int progress, string? message, CancellationToken cancellationToken) {
         var row = await _db.JobRuns.FindAsync([id], cancellationToken);
-        if (row is null || row.Status != JobRunStatus.Running)
-        {
+        if (row is null || row.Status != JobRunStatus.Running) {
             return;
         }
 
         row.Progress = Math.Clamp(progress, 0, 100);
-        if (message is not null)
-        {
+        if (message is not null) {
             row.Message = message;
         }
 
         await _db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task CompleteAsync(Guid id, string? message, CancellationToken cancellationToken)
-    {
+    public async Task CompleteAsync(Guid id, string? message, CancellationToken cancellationToken) {
         var row = await _db.JobRuns.FindAsync([id], cancellationToken);
-        if (row is null || row.Status != JobRunStatus.Running)
-        {
+        if (row is null || row.Status != JobRunStatus.Running) {
             return;
         }
 
@@ -294,11 +264,9 @@ public sealed class JobQueueService : IJobQueueService
         Guid id,
         string message,
         TimeSpan retryDelay,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var row = await _db.JobRuns.FindAsync([id], cancellationToken);
-        if (row is null || row.Status != JobRunStatus.Running)
-        {
+        if (row is null || row.Status != JobRunStatus.Running) {
             return;
         }
 
@@ -312,8 +280,7 @@ public sealed class JobQueueService : IJobQueueService
         await _db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<JobQueueCount>> GetQueueCountsAsync(CancellationToken cancellationToken)
-    {
+    public async Task<IReadOnlyList<JobQueueCount>> GetQueueCountsAsync(CancellationToken cancellationToken) {
         var rows = await _db.JobRuns
             .AsNoTracking()
             .GroupBy(r => new { r.Type, r.Status })
@@ -325,8 +292,7 @@ public sealed class JobQueueService : IJobQueueService
             .ToList();
     }
 
-    public async Task<int> PruneHistoryAsync(TimeSpan retention, CancellationToken cancellationToken)
-    {
+    public async Task<int> PruneHistoryAsync(TimeSpan retention, CancellationToken cancellationToken) {
         var cutoff = DateTimeOffset.UtcNow - retention;
         return await _db.JobRuns
             .Where(job =>
@@ -336,8 +302,7 @@ public sealed class JobQueueService : IJobQueueService
             .ExecuteDeleteAsync(cancellationToken);
     }
 
-    private static JobRunSnapshot ToSnapshot(JobRunRow row)
-    {
+    private static JobRunSnapshot ToSnapshot(JobRunRow row) {
         return new JobRunSnapshot(
             row.Id,
             row.Type,

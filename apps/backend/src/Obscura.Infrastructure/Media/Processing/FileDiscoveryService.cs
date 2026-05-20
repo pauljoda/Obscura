@@ -3,8 +3,7 @@ namespace Obscura.Infrastructure.Media.Processing;
 /// <summary>
 /// Discovers media files by walking directory trees and filtering by supported extensions.
 /// </summary>
-public sealed class FileDiscoveryService
-{
+public sealed class FileDiscoveryService {
     /// <summary>
     /// Recursively walks a root path and returns all files whose extensions match the supplied set.
     /// Skips hidden directories (dot-prefixed) and files with generated suffixes.
@@ -18,12 +17,10 @@ public sealed class FileDiscoveryService
         string rootPath,
         IReadOnlySet<string> extensions,
         bool recursive,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var results = new List<string>();
 
-        if (!Directory.Exists(rootPath))
-        {
+        if (!Directory.Exists(rootPath)) {
             return Task.FromResult<IReadOnlyList<string>>(results);
         }
 
@@ -40,12 +37,10 @@ public sealed class FileDiscoveryService
         string rootPath,
         IReadOnlySet<string> extensions,
         bool recursive,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var allFiles = new List<string>();
 
-        if (!Directory.Exists(rootPath))
-        {
+        if (!Directory.Exists(rootPath)) {
             return Task.FromResult<IReadOnlyDictionary<string, IReadOnlyList<string>>>(
                 new Dictionary<string, IReadOnlyList<string>>());
         }
@@ -54,8 +49,7 @@ public sealed class FileDiscoveryService
 
         var grouped = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var group in allFiles.GroupBy(f => Path.GetDirectoryName(f)!, StringComparer.OrdinalIgnoreCase))
-        {
+        foreach (var group in allFiles.GroupBy(f => Path.GetDirectoryName(f)!, StringComparer.OrdinalIgnoreCase)) {
             var sorted = group.OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
             grouped[group.Key] = sorted;
         }
@@ -68,14 +62,11 @@ public sealed class FileDiscoveryService
         IReadOnlySet<string> extensions,
         bool recursive,
         List<string> results,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         cancellationToken.ThrowIfCancellationRequested();
 
-        try
-        {
-            foreach (var file in Directory.EnumerateFiles(directory))
-            {
+        try {
+            foreach (var file in Directory.EnumerateFiles(directory)) {
                 var ext = Path.GetExtension(file);
                 if (ext.Length == 0 || !extensions.Contains(ext))
                     continue;
@@ -90,21 +81,16 @@ public sealed class FileDiscoveryService
             if (!recursive)
                 return;
 
-            foreach (var subDir in Directory.EnumerateDirectories(directory))
-            {
+            foreach (var subDir in Directory.EnumerateDirectories(directory)) {
                 var dirName = Path.GetFileName(subDir);
                 if (dirName.StartsWith('.'))
                     continue;
 
                 WalkDirectory(subDir, extensions, recursive, results, cancellationToken);
             }
-        }
-        catch (UnauthorizedAccessException)
-        {
+        } catch (UnauthorizedAccessException) {
             // skip inaccessible directories silently
-        }
-        catch (DirectoryNotFoundException)
-        {
+        } catch (DirectoryNotFoundException) {
             // directory was removed between enumeration and access
         }
     }

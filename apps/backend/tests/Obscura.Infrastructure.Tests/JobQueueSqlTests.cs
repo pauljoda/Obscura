@@ -2,11 +2,9 @@ using Obscura.Infrastructure.Queue;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class JobQueueSqlTests
-{
+public sealed class JobQueueSqlTests {
     [Fact]
-    public void ClaimNextUsesSkipLockedToCoordinateWorkers()
-    {
+    public void ClaimNextUsesSkipLockedToCoordinateWorkers() {
         var sql = JobQueueSql.ClaimNext;
 
         Assert.Contains("FOR UPDATE SKIP LOCKED", sql);
@@ -16,8 +14,7 @@ public sealed class JobQueueSqlTests
     }
 
     [Fact]
-    public void MarkFailedRequeuesUntilMaxAttemptsThenFails()
-    {
+    public void MarkFailedRequeuesUntilMaxAttemptsThenFails() {
         var sql = JobQueueSql.MarkFailed;
 
         Assert.Contains("attempts < max_attempts", sql);

@@ -3,13 +3,11 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Obscura.Api.Tests;
 
-public sealed class StaticSpaFallbackTests : IDisposable
-{
+public sealed class StaticSpaFallbackTests : IDisposable {
     private readonly string _webRoot = Path.Combine(Path.GetTempPath(), $"obscura-static-{Guid.NewGuid():N}");
     private readonly WebApplicationFactory<Program> _factory;
 
-    public StaticSpaFallbackTests()
-    {
+    public StaticSpaFallbackTests() {
         Directory.CreateDirectory(_webRoot);
         File.WriteAllText(Path.Combine(_webRoot, "index.html"), "<html><body>Obscura Static Shell</body></html>");
         File.WriteAllText(Path.Combine(_webRoot, "asset.txt"), "asset-ok");
@@ -19,8 +17,7 @@ public sealed class StaticSpaFallbackTests : IDisposable
     }
 
     [Fact]
-    public async Task ServesStaticFilesFromConfiguredWebRoot()
-    {
+    public async Task ServesStaticFilesFromConfiguredWebRoot() {
         using var client = _factory.CreateClient();
 
         var text = await client.GetStringAsync("/asset.txt");
@@ -29,8 +26,7 @@ public sealed class StaticSpaFallbackTests : IDisposable
     }
 
     [Fact]
-    public async Task FallsBackToIndexForClientSideRoutes()
-    {
+    public async Task FallsBackToIndexForClientSideRoutes() {
         using var client = _factory.CreateClient();
 
         var html = await client.GetStringAsync("/videos/11111111-1111-1111-1111-111111111111");
@@ -38,11 +34,9 @@ public sealed class StaticSpaFallbackTests : IDisposable
         Assert.Contains("Obscura Static Shell", html);
     }
 
-    public void Dispose()
-    {
+    public void Dispose() {
         _factory.Dispose();
-        if (Directory.Exists(_webRoot))
-        {
+        if (Directory.Exists(_webRoot)) {
             Directory.Delete(_webRoot, recursive: true);
         }
     }

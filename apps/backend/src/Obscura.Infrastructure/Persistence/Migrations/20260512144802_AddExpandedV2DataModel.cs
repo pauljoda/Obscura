@@ -3,14 +3,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Obscura.Infrastructure.Persistence.Migrations
-{
+namespace Obscura.Infrastructure.Persistence.Migrations {
     /// <inheritdoc />
-    public partial class AddExpandedV2DataModel : Migration
-    {
+    public partial class AddExpandedV2DataModel : Migration {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
+        protected override void Up(MigrationBuilder migrationBuilder) {
             migrationBuilder.AddColumn<int>(
                 name: "bit_rate",
                 schema: "v2",
@@ -91,8 +88,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "audio_library_details",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     details = table.Column<string>(type: "text", nullable: true),
                     date = table.Column<string>(type: "text", nullable: true),
@@ -100,8 +96,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     parent_library_entity_id = table.Column<Guid>(type: "uuid", nullable: true),
                     track_count = table.Column<int>(type: "integer", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_audio_library_details", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_audio_library_details_entities_entity_id",
@@ -115,8 +110,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "audio_track_details",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     details = table.Column<string>(type: "text", nullable: true),
                     date = table.Column<string>(type: "text", nullable: true),
@@ -131,8 +125,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     track_number = table.Column<int>(type: "integer", nullable: true),
                     waveform_path = table.Column<string>(type: "text", nullable: true)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_audio_track_details", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_audio_track_details_entities_entity_id",
@@ -146,8 +139,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "book_chapter_details",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     book_entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     volume_entity_id = table.Column<Guid>(type: "uuid", nullable: true),
@@ -157,8 +149,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     page_count = table.Column<int>(type: "integer", nullable: false),
                     cover_page_entity_id = table.Column<Guid>(type: "uuid", nullable: true)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_book_chapter_details", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_book_chapter_details_entities_book_entity_id",
@@ -179,8 +170,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "book_details",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     library_root_id = table.Column<Guid>(type: "uuid", nullable: true),
                     book_type = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
@@ -194,8 +184,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     page_count = table.Column<int>(type: "integer", nullable: false),
                     chapter_count = table.Column<int>(type: "integer", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_book_details", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_book_details_entities_entity_id",
@@ -216,8 +205,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "book_page_details",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     book_entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     chapter_entity_id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -228,8 +216,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     format = table.Column<string>(type: "text", nullable: true),
                     sort_order = table.Column<int>(type: "integer", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_book_page_details", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_book_page_details_entities_book_entity_id",
@@ -257,8 +244,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "book_read_progress",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     book_entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     chapter_entity_id = table.Column<Guid>(type: "uuid", nullable: true),
                     page_index = table.Column<int>(type: "integer", nullable: false),
@@ -267,8 +253,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     completed_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_book_read_progress", x => x.book_entity_id);
                     table.ForeignKey(
                         name: "FK_book_read_progress_entities_book_entity_id",
@@ -282,8 +267,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "book_volume_details",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     book_entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     volume_number = table.Column<int>(type: "integer", nullable: true),
@@ -291,8 +275,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     relative_path = table.Column<string>(type: "text", nullable: true),
                     cover_image_path = table.Column<string>(type: "text", nullable: true)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_book_volume_details", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_book_volume_details_entities_book_entity_id",
@@ -313,8 +296,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "collection_details",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     description = table.Column<string>(type: "text", nullable: true),
                     mode = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
@@ -327,8 +309,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     slideshow_auto_advance = table.Column<bool>(type: "boolean", nullable: false),
                     last_refreshed_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_collection_details", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_collection_details_entities_entity_id",
@@ -342,8 +323,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "collection_item_details",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     collection_entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     item_entity_id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -351,8 +331,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     sort_order = table.Column<int>(type: "integer", nullable: false),
                     added_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_collection_item_details", x => x.id);
                     table.ForeignKey(
                         name: "FK_collection_item_details_entities_collection_entity_id",
@@ -373,8 +352,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "entity_aliases",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     value = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
@@ -382,8 +360,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     sort_order = table.Column<int>(type: "integer", nullable: false),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_aliases", x => x.id);
                     table.ForeignKey(
                         name: "FK_entity_aliases_entities_entity_id",
@@ -397,8 +374,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "entity_file_fingerprints",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     entity_file_id = table.Column<Guid>(type: "uuid", nullable: true),
@@ -406,8 +382,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     value = table.Column<string>(type: "text", nullable: false),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_file_fingerprints", x => x.id);
                     table.ForeignKey(
                         name: "FK_entity_file_fingerprints_entities_entity_id",
@@ -428,8 +403,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "entity_playback",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     play_count = table.Column<int>(type: "integer", nullable: false),
                     play_duration_seconds = table.Column<double>(type: "double precision", nullable: false),
@@ -438,8 +412,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     completed_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_playback", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_entity_playback_entities_entity_id",
@@ -453,8 +426,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "gallery_details",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     details = table.Column<string>(type: "text", nullable: true),
                     date = table.Column<string>(type: "text", nullable: true),
@@ -465,8 +437,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     cover_image_entity_id = table.Column<Guid>(type: "uuid", nullable: true),
                     image_count = table.Column<int>(type: "integer", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_gallery_details", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_gallery_details_entities_entity_id",
@@ -480,8 +451,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "image_details",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     details = table.Column<string>(type: "text", nullable: true),
                     date = table.Column<string>(type: "text", nullable: true),
@@ -492,8 +462,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     format = table.Column<string>(type: "text", nullable: true),
                     sort_order = table.Column<int>(type: "integer", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_image_details", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_image_details_entities_entity_id",
@@ -507,23 +476,20 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "media_file_ignores",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     path = table.Column<string>(type: "text", nullable: false),
                     entity_kind_code = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     reason = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_media_file_ignores", x => x.path);
                 });
 
             migrationBuilder.CreateTable(
                 name: "person_details",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     disambiguation = table.Column<string>(type: "text", nullable: true),
                     gender = table.Column<string>(type: "text", nullable: true),
@@ -541,8 +507,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     career_end = table.Column<int>(type: "integer", nullable: true),
                     details = table.Column<string>(type: "text", nullable: true)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_person_details", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_person_details_entities_entity_id",
@@ -556,8 +521,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "provider_configs",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     provider_code = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
                     display_name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
@@ -568,22 +532,19 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_provider_configs", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
                 name: "studio_details",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     description = table.Column<string>(type: "text", nullable: true),
                     parent_studio_entity_id = table.Column<Guid>(type: "uuid", nullable: true)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_studio_details", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_studio_details_entities_entity_id",
@@ -597,15 +558,13 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "tag_details",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     description = table.Column<string>(type: "text", nullable: true),
                     parent_tag_entity_id = table.Column<Guid>(type: "uuid", nullable: true),
                     ignore_auto_tag = table.Column<bool>(type: "boolean", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_tag_details", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_tag_details_entities_entity_id",
@@ -619,22 +578,19 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "ui_prefs",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     key = table.Column<string>(type: "text", nullable: false),
                     value_json = table.Column<string>(type: "jsonb", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_ui_prefs", x => x.key);
                 });
 
             migrationBuilder.CreateTable(
                 name: "video_season_details",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     series_entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     season_number = table.Column<int>(type: "integer", nullable: false),
@@ -642,8 +598,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     overview = table.Column<string>(type: "text", nullable: true),
                     air_date = table.Column<string>(type: "text", nullable: true)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_video_season_details", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_video_season_details_entities_entity_id",
@@ -664,8 +619,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "video_series_details",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     library_root_id = table.Column<Guid>(type: "uuid", nullable: true),
                     folder_path = table.Column<string>(type: "text", nullable: true),
@@ -680,8 +634,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     content_rating = table.Column<string>(type: "text", nullable: true),
                     rendering_mode = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_video_series_details", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_video_series_details_entities_entity_id",
@@ -702,8 +655,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "fingerprint_submissions",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     provider_config_id = table.Column<Guid>(type: "uuid", nullable: true),
@@ -713,8 +665,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     error = table.Column<string>(type: "text", nullable: true),
                     submitted_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_fingerprint_submissions", x => x.id);
                     table.ForeignKey(
                         name: "FK_fingerprint_submissions_entities_entity_id",
@@ -735,8 +686,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "identify_results",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     provider_config_id = table.Column<Guid>(type: "uuid", nullable: true),
@@ -749,8 +699,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_identify_results", x => x.id);
                     table.ForeignKey(
                         name: "FK_identify_results_entities_entity_id",
@@ -771,8 +720,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "provider_credentials",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     provider_config_id = table.Column<Guid>(type: "uuid", nullable: false),
                     credential_key = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
@@ -780,8 +728,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_provider_credentials", x => x.id);
                     table.ForeignKey(
                         name: "FK_provider_credentials_provider_configs_provider_config_id",
@@ -980,8 +927,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+        protected override void Down(MigrationBuilder migrationBuilder) {
             migrationBuilder.DropForeignKey(
                 name: "FK_video_details_library_roots_library_root_id",
                 schema: "v2",

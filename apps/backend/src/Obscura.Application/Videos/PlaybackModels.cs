@@ -5,8 +5,7 @@ namespace Obscura.Application.Videos;
 /// <summary>
 /// Application request for Jellyfin-compatible playback negotiation.
 /// </summary>
-public sealed record PlaybackInfoQuery
-{
+public sealed record PlaybackInfoQuery {
     public Guid? UserId { get; init; }
     public long? StartTimeTicks { get; init; }
     public int? AudioStreamIndex { get; init; }
@@ -79,8 +78,7 @@ public sealed record TranscodingInfoResult(
 /// <summary>
 /// Application command for Jellyfin-compatible playback session events.
 /// </summary>
-public sealed record PlaybackSessionCommand
-{
+public sealed record PlaybackSessionCommand {
     public Guid ItemId { get; init; }
     public string? MediaSourceId { get; init; }
     public string? PlaySessionId { get; init; }

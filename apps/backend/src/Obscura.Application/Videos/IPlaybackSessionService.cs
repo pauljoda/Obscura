@@ -5,8 +5,7 @@ namespace Obscura.Application.Videos;
 /// recording stub without an entity write path. Production uses the concrete
 /// <see cref="PlaybackSessionService"/>.
 /// </summary>
-public interface IPlaybackSessionService
-{
+public interface IPlaybackSessionService {
     Task StartAsync(PlaybackSessionCommand request, CancellationToken cancellationToken);
     Task ProgressAsync(PlaybackSessionCommand request, CancellationToken cancellationToken);
     Task PingAsync(PlaybackSessionCommand request, CancellationToken cancellationToken);

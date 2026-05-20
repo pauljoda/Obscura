@@ -1,10 +1,8 @@
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class InfrastructureBoundaryTests
-{
+public sealed class InfrastructureBoundaryTests {
     [Fact]
-    public void InfrastructureDoesNotKeepOneToOneServiceInterfaces()
-    {
+    public void InfrastructureDoesNotKeepOneToOneServiceInterfaces() {
         var infrastructureAssembly = typeof(Obscura.Infrastructure.DependencyInjection).Assembly;
         var applicationAssembly = typeof(Obscura.Application.Jobs.JobService).Assembly;
         var removedInterfaceNames = new[]
@@ -30,8 +28,7 @@ public sealed class InfrastructureBoundaryTests
     }
 
     [Fact]
-    public void ApplicationProjectDoesNotReferenceInfrastructureOrApiOrEfCore()
-    {
+    public void ApplicationProjectDoesNotReferenceInfrastructureOrApiOrEfCore() {
         // Obscura.Contracts is a pure data-only project (no HTTP/EF dependencies), and
         // Application consumes it directly to avoid duplicating one record per layer for
         // the same flat data. Infrastructure, API, and EF Core remain forbidden from
@@ -44,15 +41,13 @@ public sealed class InfrastructureBoundaryTests
     }
 
     [Fact]
-    public void ApplicationSourceDoesNotUseOuterLayerNamespaces()
-    {
+    public void ApplicationSourceDoesNotUseOuterLayerNamespaces() {
         var sourceFiles = Directory.GetFiles(
             RepoPath("apps/backend/src/Obscura.Application"),
             "*.cs",
             SearchOption.AllDirectories);
 
-        Assert.All(sourceFiles, file =>
-        {
+        Assert.All(sourceFiles, file => {
             var source = File.ReadAllText(file);
             Assert.DoesNotContain("using Obscura.Infrastructure", source, StringComparison.Ordinal);
             Assert.DoesNotContain("using Obscura.Api", source, StringComparison.Ordinal);
@@ -61,15 +56,13 @@ public sealed class InfrastructureBoundaryTests
     }
 
     [Fact]
-    public void ApiEndpointsDoNotInjectInfrastructurePersistenceOrLowLevelServices()
-    {
+    public void ApiEndpointsDoNotInjectInfrastructurePersistenceOrLowLevelServices() {
         var endpointFiles = Directory.GetFiles(
             RepoPath("apps/backend/src/Obscura.Api/Endpoints"),
             "*.cs",
             SearchOption.TopDirectoryOnly);
 
-        Assert.All(endpointFiles, file =>
-        {
+        Assert.All(endpointFiles, file => {
             var source = File.ReadAllText(file);
             Assert.DoesNotContain("ObscuraDbContext", source, StringComparison.Ordinal);
         });
@@ -77,14 +70,11 @@ public sealed class InfrastructureBoundaryTests
 
     private static string ReadRepoFile(string relativePath) => File.ReadAllText(RepoPath(relativePath));
 
-    private static string RepoPath(string relativePath)
-    {
+    private static string RepoPath(string relativePath) {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
+        while (directory is not null) {
             var candidate = Path.Combine(directory.FullName, relativePath);
-            if (File.Exists(candidate) || Directory.Exists(candidate))
-            {
+            if (File.Exists(candidate) || Directory.Exists(candidate)) {
                 return candidate;
             }
 

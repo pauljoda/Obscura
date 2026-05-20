@@ -4,12 +4,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Persistence;
 
-internal static partial class ExpandedV2ModelConfiguration
-{
-    private static void ConfigureEntityCapabilities(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<EntityDescriptionRow>(entity =>
-        {
+internal static partial class ExpandedV2ModelConfiguration {
+    private static void ConfigureEntityCapabilities(ModelBuilder modelBuilder) {
+        modelBuilder.Entity<EntityDescriptionRow>(entity => {
             entity.ToTable("entity_descriptions");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -18,8 +15,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<EntityDescriptionRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<EntityPlaybackRow>(entity =>
-        {
+        modelBuilder.Entity<EntityPlaybackRow>(entity => {
             entity.ToTable("entity_playback");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -32,8 +28,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<EntityPlaybackRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<EntityStatRow>(entity =>
-        {
+        modelBuilder.Entity<EntityStatRow>(entity => {
             entity.ToTable("entity_stats");
             entity.HasKey(row => new { row.EntityId, row.Code });
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -44,8 +39,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.ToTable(table => table.HasCheckConstraint("ck_entity_stats_value", "value >= 0"));
         });
 
-        modelBuilder.Entity<EntityDateRow>(entity =>
-        {
+        modelBuilder.Entity<EntityDateRow>(entity => {
             entity.ToTable("entity_dates");
             entity.HasKey(row => new { row.EntityId, row.Code });
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -57,8 +51,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithMany().HasForeignKey(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<EntityTechnicalRow>(entity =>
-        {
+        modelBuilder.Entity<EntityTechnicalRow>(entity => {
             entity.ToTable("entity_technical");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -76,8 +69,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<EntityTechnicalRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<EntitySourceRow>(entity =>
-        {
+        modelBuilder.Entity<EntitySourceRow>(entity => {
             entity.ToTable("entity_sources");
             entity.HasKey(row => new { row.EntityId, row.Code });
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -87,8 +79,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithMany().HasForeignKey(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<EntityProgressRow>(entity =>
-        {
+        modelBuilder.Entity<EntityProgressRow>(entity => {
             entity.ToTable("entity_progress");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -104,8 +95,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.ToTable(table => table.HasCheckConstraint("ck_entity_progress_bounds", "index >= 0 AND total >= 0"));
         });
 
-        modelBuilder.Entity<EntityPositionRow>(entity =>
-        {
+        modelBuilder.Entity<EntityPositionRow>(entity => {
             entity.ToTable("entity_positions");
             entity.HasKey(row => new { row.EntityId, row.Code });
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -116,8 +106,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithMany().HasForeignKey(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<EntityClassificationRow>(entity =>
-        {
+        modelBuilder.Entity<EntityClassificationRow>(entity => {
             entity.ToTable("entity_classifications");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -127,8 +116,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<EntityClassificationRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<EntityFileFingerprintRow>(entity =>
-        {
+        modelBuilder.Entity<EntityFileFingerprintRow>(entity => {
             entity.ToTable("entity_file_fingerprints");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();

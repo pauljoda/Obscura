@@ -17,8 +17,7 @@ public sealed record PluginArtworkServiceOptions(string CacheRoot);
 /// <summary>
 /// Applies selected plugin metadata proposals into v2 entity capability rows.
 /// </summary>
-public sealed class EntityMetadataApplyService
-{
+public sealed class EntityMetadataApplyService {
     private readonly ObscuraDbContext _db;
     private readonly PluginArtworkServiceOptions _options;
     private readonly HttpClient _http;
@@ -32,8 +31,7 @@ public sealed class EntityMetadataApplyService
     public EntityMetadataApplyService(
         ObscuraDbContext db,
         PluginArtworkServiceOptions options,
-        HttpClient? http = null)
-    {
+        HttpClient? http = null) {
         _db = db;
         _options = options;
         _http = http ?? new HttpClient();
@@ -53,15 +51,13 @@ public sealed class EntityMetadataApplyService
         EntityMetadataProposal proposal,
         IReadOnlyCollection<string> selectedFields,
         IReadOnlyDictionary<string, string?>? selectedImages,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(proposal);
         ArgumentNullException.ThrowIfNull(selectedFields);
 
         var entity = await _db.Entities
             .FirstOrDefaultAsync(row => row.Id == entityId && row.DeletedAt == null, cancellationToken);
-        if (entity is null)
-        {
+        if (entity is null) {
             return false;
         }
 
@@ -69,70 +65,57 @@ public sealed class EntityMetadataApplyService
         var patch = proposal.Patch;
         var now = DateTimeOffset.UtcNow;
 
-        if (selected.Contains("title") && !string.IsNullOrWhiteSpace(patch.Title))
-        {
+        if (selected.Contains("title") && !string.IsNullOrWhiteSpace(patch.Title)) {
             entity.Title = patch.Title.Trim();
         }
 
-        if (selected.Contains("description"))
-        {
+        if (selected.Contains("description")) {
             await UpsertDescriptionAsync(entityId, patch.Description, now, cancellationToken);
         }
 
-        if (selected.Contains("externalIds"))
-        {
+        if (selected.Contains("externalIds")) {
             await UpsertExternalIdsAsync(entityId, patch.ExternalIds, patch.Urls, now, cancellationToken);
         }
 
-        if (selected.Contains("urls"))
-        {
+        if (selected.Contains("urls")) {
             await UpsertUrlsAsync(entityId, patch.Urls, now, cancellationToken);
         }
 
-        if (selected.Contains("tags"))
-        {
+        if (selected.Contains("tags")) {
             await ReplaceTagsAsync(entityId, patch.Tags, now, cancellationToken);
         }
 
-        if (selected.Contains("studio") && !string.IsNullOrWhiteSpace(patch.Studio))
-        {
+        if (selected.Contains("studio") && !string.IsNullOrWhiteSpace(patch.Studio)) {
             await SetStudioAsync(entityId, patch.Studio, now, cancellationToken);
         }
 
-        if (selected.Contains("credits"))
-        {
+        if (selected.Contains("credits")) {
             await ReplaceCreditsAsync(entityId, patch.Credits, now, cancellationToken);
         }
 
-        if (selected.Contains("dates"))
-        {
+        if (selected.Contains("dates")) {
             await UpsertDatesAsync(entityId, patch.Dates, now, cancellationToken);
         }
 
-        if (selected.Contains("stats"))
-        {
+        if (selected.Contains("stats")) {
             await UpsertStatsAsync(entityId, patch.Stats, now, cancellationToken);
         }
 
-        if (selected.Contains("positions"))
-        {
+        if (selected.Contains("positions")) {
             var normalizedPositions = NormalizePositions(patch.Positions);
             await UpsertPositionsAsync(entity, normalizedPositions, now, cancellationToken);
         }
 
-        if (selected.Contains("classification"))
-        {
+        if (selected.Contains("classification")) {
             await UpsertClassificationAsync(entityId, patch.Classification, now, cancellationToken);
         }
 
-        if (selected.Contains("images") && selectedImages is not null)
-        {
+        if (selected.Contains("images") && selectedImages is not null) {
             await DownloadSelectedImagesAsync(entityId, selectedImages, now, cancellationToken);
         }
 
         var relationshipProposals = RelationshipProposals(proposal);
-        if (relationshipProposals.Count > 0 && (selected.Contains("credits") || selected.Contains("studio")))
-        {
+        if (relationshipProposals.Count > 0 && (selected.Contains("credits") || selected.Contains("studio"))) {
             await CascadeRelationshipImagesAsync(relationshipProposals, now, cancellationToken);
         }
 
@@ -143,24 +126,18 @@ public sealed class EntityMetadataApplyService
         return true;
     }
 
-    private async Task UpsertDescriptionAsync(Guid entityId, string? value, DateTimeOffset now, CancellationToken cancellationToken)
-    {
+    private async Task UpsertDescriptionAsync(Guid entityId, string? value, DateTimeOffset now, CancellationToken cancellationToken) {
         var existing = await _db.EntityDescriptions.FindAsync([entityId], cancellationToken);
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            if (existing is not null)
-            {
+        if (string.IsNullOrWhiteSpace(value)) {
+            if (existing is not null) {
                 _db.EntityDescriptions.Remove(existing);
             }
             return;
         }
 
-        if (existing is null)
-        {
+        if (existing is null) {
             _db.EntityDescriptions.Add(new EntityDescriptionRow { EntityId = entityId, Value = value.Trim(), UpdatedAt = now });
-        }
-        else
-        {
+        } else {
             existing.Value = value.Trim();
             existing.UpdatedAt = now;
         }
@@ -171,22 +148,17 @@ public sealed class EntityMetadataApplyService
         IReadOnlyDictionary<string, string> externalIds,
         IReadOnlyList<string> urls,
         DateTimeOffset now,
-        CancellationToken cancellationToken)
-    {
-        foreach (var (provider, rawValue) in externalIds)
-        {
-            if (string.IsNullOrWhiteSpace(provider) || string.IsNullOrWhiteSpace(rawValue))
-            {
+        CancellationToken cancellationToken) {
+        foreach (var (provider, rawValue) in externalIds) {
+            if (string.IsNullOrWhiteSpace(provider) || string.IsNullOrWhiteSpace(rawValue)) {
                 continue;
             }
 
             var existing = await _db.EntityExternalIds
                 .FirstOrDefaultAsync(row => row.EntityId == entityId && row.Provider == provider, cancellationToken);
             var url = urls.FirstOrDefault(candidate => candidate.Contains(rawValue, StringComparison.OrdinalIgnoreCase));
-            if (existing is null)
-            {
-                _db.EntityExternalIds.Add(new EntityExternalIdRow
-                {
+            if (existing is null) {
+                _db.EntityExternalIds.Add(new EntityExternalIdRow {
                     Id = Guid.NewGuid(),
                     EntityId = entityId,
                     Provider = provider.Trim(),
@@ -195,9 +167,7 @@ public sealed class EntityMetadataApplyService
                     CreatedAt = now,
                     UpdatedAt = now
                 });
-            }
-            else
-            {
+            } else {
                 existing.Value = rawValue.Trim();
                 existing.Url = url ?? existing.Url;
                 existing.UpdatedAt = now;
@@ -205,8 +175,7 @@ public sealed class EntityMetadataApplyService
         }
     }
 
-    private async Task UpsertUrlsAsync(Guid entityId, IReadOnlyList<string> urls, DateTimeOffset now, CancellationToken cancellationToken)
-    {
+    private async Task UpsertUrlsAsync(Guid entityId, IReadOnlyList<string> urls, DateTimeOffset now, CancellationToken cancellationToken) {
         var existing = await _db.EntityUrls
             .Where(row => row.EntityId == entityId)
             .Select(row => row.Url)
@@ -214,15 +183,12 @@ public sealed class EntityMetadataApplyService
         var seen = existing.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var sortOrder = existing.Length;
 
-        foreach (var url in urls.Where(url => !string.IsNullOrWhiteSpace(url)).Select(url => url.Trim()))
-        {
-            if (!seen.Add(url))
-            {
+        foreach (var url in urls.Where(url => !string.IsNullOrWhiteSpace(url)).Select(url => url.Trim())) {
+            if (!seen.Add(url)) {
                 continue;
             }
 
-            _db.EntityUrls.Add(new EntityUrlRow
-            {
+            _db.EntityUrls.Add(new EntityUrlRow {
                 Id = Guid.NewGuid(),
                 EntityId = entityId,
                 Url = url,
@@ -232,39 +198,33 @@ public sealed class EntityMetadataApplyService
         }
     }
 
-    private async Task ReplaceTagsAsync(Guid entityId, IReadOnlyList<string> tags, DateTimeOffset now, CancellationToken cancellationToken)
-    {
+    private async Task ReplaceTagsAsync(Guid entityId, IReadOnlyList<string> tags, DateTimeOffset now, CancellationToken cancellationToken) {
         await RemoveRelationshipAsync(entityId, "tags", cancellationToken);
 
         var order = 0;
-        foreach (var name in tags.Where(value => !string.IsNullOrWhiteSpace(value)).Select(value => value.Trim()).Distinct(StringComparer.OrdinalIgnoreCase))
-        {
+        foreach (var name in tags.Where(value => !string.IsNullOrWhiteSpace(value)).Select(value => value.Trim()).Distinct(StringComparer.OrdinalIgnoreCase)) {
             var tag = await FindEntityByKindAndTitleAsync("tag", name, cancellationToken)
                 ?? CreateEntity("tag", name, now);
             AddRelationship(entityId, "tags", "Tags", tag.Id, tag.KindCode, order++, null, now);
         }
     }
 
-    private async Task SetStudioAsync(Guid entityId, string studioName, DateTimeOffset now, CancellationToken cancellationToken)
-    {
+    private async Task SetStudioAsync(Guid entityId, string studioName, DateTimeOffset now, CancellationToken cancellationToken) {
         var studio = await FindEntityByKindAndTitleAsync("studio", studioName.Trim(), cancellationToken)
             ?? CreateEntity("studio", studioName.Trim(), now);
         await RemoveRelationshipAsync(entityId, "studio", cancellationToken);
         AddRelationship(entityId, "studio", "Studio", studio.Id, studio.KindCode, 0, null, now);
     }
 
-    private async Task ReplaceCreditsAsync(Guid entityId, IReadOnlyList<CreditPatch> credits, DateTimeOffset now, CancellationToken cancellationToken)
-    {
+    private async Task ReplaceCreditsAsync(Guid entityId, IReadOnlyList<CreditPatch> credits, DateTimeOffset now, CancellationToken cancellationToken) {
         await RemoveRelationshipAsync(entityId, "cast", cancellationToken);
 
         var order = 0;
         var resolvedPeople = new Dictionary<string, EntityRow>(StringComparer.OrdinalIgnoreCase);
         var linkedCredits = new Dictionary<Guid, CreditRelationshipAccumulator>();
-        foreach (var credit in credits.Where(credit => !string.IsNullOrWhiteSpace(credit.Name)))
-        {
+        foreach (var credit in credits.Where(credit => !string.IsNullOrWhiteSpace(credit.Name))) {
             var personName = credit.Name.Trim();
-            if (!resolvedPeople.TryGetValue(personName, out var person))
-            {
+            if (!resolvedPeople.TryGetValue(personName, out var person)) {
                 person = await FindEntityByKindAndTitleAsync("person", personName, cancellationToken)
                     ?? CreateEntity("person", personName, now);
                 resolvedPeople[personName] = person;
@@ -274,8 +234,7 @@ public sealed class EntityMetadataApplyService
             var character = string.IsNullOrWhiteSpace(credit.Character) ? null : credit.Character.Trim();
             var fallbackSortOrder = order++;
             var sortOrder = credit.SortOrder ?? fallbackSortOrder;
-            if (!linkedCredits.TryGetValue(person.Id, out var accumulator))
-            {
+            if (!linkedCredits.TryGetValue(person.Id, out var accumulator)) {
                 accumulator = new CreditRelationshipAccumulator(person, sortOrder);
                 linkedCredits[person.Id] = accumulator;
             }
@@ -283,10 +242,8 @@ public sealed class EntityMetadataApplyService
             accumulator.Add(role, character, sortOrder);
         }
 
-        foreach (var credit in linkedCredits.Values.OrderBy(credit => credit.SortOrder).ThenBy(credit => credit.Person.Title))
-        {
-            var metadata = JsonSerializer.Serialize(new
-            {
+        foreach (var credit in linkedCredits.Values.OrderBy(credit => credit.SortOrder).ThenBy(credit => credit.Person.Title)) {
+            var metadata = JsonSerializer.Serialize(new {
                 role = credit.Role,
                 character = credit.Character,
                 roles = credit.Roles,
@@ -296,10 +253,8 @@ public sealed class EntityMetadataApplyService
         }
     }
 
-    private sealed class CreditRelationshipAccumulator
-    {
-        public CreditRelationshipAccumulator(EntityRow person, int sortOrder)
-        {
+    private sealed class CreditRelationshipAccumulator {
+        public CreditRelationshipAccumulator(EntityRow person, int sortOrder) {
             Person = person;
             SortOrder = sortOrder;
         }
@@ -316,34 +271,28 @@ public sealed class EntityMetadataApplyService
 
         public List<string> Characters { get; } = [];
 
-        public void Add(string role, string? character, int sortOrder)
-        {
-            if (sortOrder < SortOrder)
-            {
+        public void Add(string role, string? character, int sortOrder) {
+            if (sortOrder < SortOrder) {
                 SortOrder = sortOrder;
             }
 
             Role ??= role;
             AddDistinct(Roles, role);
 
-            if (!string.IsNullOrWhiteSpace(character))
-            {
+            if (!string.IsNullOrWhiteSpace(character)) {
                 Character ??= character;
                 AddDistinct(Characters, character);
             }
         }
 
-        private static void AddDistinct(List<string> values, string value)
-        {
-            if (!values.Contains(value, StringComparer.OrdinalIgnoreCase))
-            {
+        private static void AddDistinct(List<string> values, string value) {
+            if (!values.Contains(value, StringComparer.OrdinalIgnoreCase)) {
                 values.Add(value);
             }
         }
     }
 
-    private async Task RemoveRelationshipAsync(Guid entityId, string code, CancellationToken cancellationToken)
-    {
+    private async Task RemoveRelationshipAsync(Guid entityId, string code, CancellationToken cancellationToken) {
         var existing = await _db.EntityRelationshipLinks
             .Where(row => row.EntityId == entityId && row.RelationshipCode == code)
             .ToArrayAsync(cancellationToken);
@@ -358,10 +307,8 @@ public sealed class EntityMetadataApplyService
         string targetKindCode,
         int sortOrder,
         string? metadataJson,
-        DateTimeOffset now)
-    {
-        _db.EntityRelationshipLinks.Add(new EntityRelationshipLinkRow
-        {
+        DateTimeOffset now) {
+        _db.EntityRelationshipLinks.Add(new EntityRelationshipLinkRow {
             EntityId = entityId,
             RelationshipCode = code,
             Label = label,
@@ -373,17 +320,12 @@ public sealed class EntityMetadataApplyService
         });
     }
 
-    private async Task UpsertDatesAsync(Guid entityId, IReadOnlyDictionary<string, string> dates, DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        foreach (var (code, value) in dates.Where(pair => !string.IsNullOrWhiteSpace(pair.Key) && !string.IsNullOrWhiteSpace(pair.Value)))
-        {
+    private async Task UpsertDatesAsync(Guid entityId, IReadOnlyDictionary<string, string> dates, DateTimeOffset now, CancellationToken cancellationToken) {
+        foreach (var (code, value) in dates.Where(pair => !string.IsNullOrWhiteSpace(pair.Key) && !string.IsNullOrWhiteSpace(pair.Value))) {
             var existing = await _db.EntityDates.FindAsync([entityId, code], cancellationToken);
-            if (existing is null)
-            {
+            if (existing is null) {
                 _db.EntityDates.Add(new EntityDateRow { EntityId = entityId, Code = code, Value = value, SortableValue = ParseDateOnly(value), UpdatedAt = now });
-            }
-            else
-            {
+            } else {
                 existing.Value = value;
                 existing.SortableValue = ParseDateOnly(value);
                 existing.UpdatedAt = now;
@@ -391,34 +333,24 @@ public sealed class EntityMetadataApplyService
         }
     }
 
-    private async Task UpsertStatsAsync(Guid entityId, IReadOnlyDictionary<string, int> stats, DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        foreach (var (code, value) in stats)
-        {
+    private async Task UpsertStatsAsync(Guid entityId, IReadOnlyDictionary<string, int> stats, DateTimeOffset now, CancellationToken cancellationToken) {
+        foreach (var (code, value) in stats) {
             var existing = await _db.EntityStats.FindAsync([entityId, code], cancellationToken);
-            if (existing is null)
-            {
+            if (existing is null) {
                 _db.EntityStats.Add(new EntityStatRow { EntityId = entityId, Code = code, Value = value, UpdatedAt = now });
-            }
-            else
-            {
+            } else {
                 existing.Value = value;
                 existing.UpdatedAt = now;
             }
         }
     }
 
-    private async Task UpsertPositionsAsync(EntityRow entity, IReadOnlyDictionary<string, int> positions, DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        foreach (var (code, value) in positions)
-        {
+    private async Task UpsertPositionsAsync(EntityRow entity, IReadOnlyDictionary<string, int> positions, DateTimeOffset now, CancellationToken cancellationToken) {
+        foreach (var (code, value) in positions) {
             var existing = await _db.EntityPositions.FindAsync([entity.Id, code], cancellationToken);
-            if (existing is null)
-            {
+            if (existing is null) {
                 _db.EntityPositions.Add(new EntityPositionRow { EntityId = entity.Id, Code = code, Value = value, UpdatedAt = now });
-            }
-            else
-            {
+            } else {
                 existing.Value = value;
                 existing.UpdatedAt = now;
             }
@@ -431,19 +363,16 @@ public sealed class EntityMetadataApplyService
         EntityRow entity,
         IReadOnlyDictionary<string, int> positions,
         DateTimeOffset now,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var sortOrder = StructuralSortOrder(entity.KindCode, positions);
-        if (sortOrder is null)
-        {
+        if (sortOrder is null) {
             return;
         }
 
         entity.SortOrder = sortOrder.Value;
         entity.UpdatedAt = now;
 
-        if (entity.ParentEntityId is null)
-        {
+        if (entity.ParentEntityId is null) {
             return;
         }
 
@@ -452,33 +381,26 @@ public sealed class EntityMetadataApplyService
                    row.ChildEntityId == entity.Id &&
                    row.IsStructural,
             cancellationToken);
-        if (link is not null)
-        {
+        if (link is not null) {
             link.SortOrder = sortOrder.Value;
         }
     }
 
-    private static int? StructuralSortOrder(string kindCode, IReadOnlyDictionary<string, int> positions)
-    {
-        if (kindCode.Equals(EntityKindRegistry.VideoSeason.Code, StringComparison.OrdinalIgnoreCase))
-        {
+    private static int? StructuralSortOrder(string kindCode, IReadOnlyDictionary<string, int> positions) {
+        if (kindCode.Equals(EntityKindRegistry.VideoSeason.Code, StringComparison.OrdinalIgnoreCase)) {
             return PositionValue(positions, "season", "sort");
         }
 
-        if (kindCode.Equals(EntityKindRegistry.Video.Code, StringComparison.OrdinalIgnoreCase))
-        {
+        if (kindCode.Equals(EntityKindRegistry.Video.Code, StringComparison.OrdinalIgnoreCase)) {
             return PositionValue(positions, "episode", "absolute-episode", "sort");
         }
 
         return PositionValue(positions, "track", "page", "chapter", "volume", "sort");
     }
 
-    private static int? PositionValue(IReadOnlyDictionary<string, int> positions, params string[] codes)
-    {
-        foreach (var code in codes)
-        {
-            if (positions.TryGetValue(code, out var value))
-            {
+    private static int? PositionValue(IReadOnlyDictionary<string, int> positions, params string[] codes) {
+        foreach (var code in codes) {
+            if (positions.TryGetValue(code, out var value)) {
                 return value;
             }
         }
@@ -486,19 +408,16 @@ public sealed class EntityMetadataApplyService
         return null;
     }
 
-    private static IReadOnlyDictionary<string, int> NormalizePositions(IReadOnlyDictionary<string, int> positions)
-    {
+    private static IReadOnlyDictionary<string, int> NormalizePositions(IReadOnlyDictionary<string, int> positions) {
         var normalized = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (code, value) in positions)
-        {
+        foreach (var (code, value) in positions) {
             normalized[NormalizePositionCode(code)] = value;
         }
 
         return normalized;
     }
 
-    private static string NormalizePositionCode(string code) => code.Trim() switch
-    {
+    private static string NormalizePositionCode(string code) => code.Trim() switch {
         var value when value.Equals("seasonNumber", StringComparison.OrdinalIgnoreCase) => "season",
         var value when value.Equals("episodeNumber", StringComparison.OrdinalIgnoreCase) => "episode",
         var value when value.Equals("absoluteEpisodeNumber", StringComparison.OrdinalIgnoreCase) => "absolute-episode",
@@ -510,15 +429,11 @@ public sealed class EntityMetadataApplyService
         var value => value
     };
 
-    private async Task UpsertClassificationAsync(Guid entityId, string? value, DateTimeOffset now, CancellationToken cancellationToken)
-    {
+    private async Task UpsertClassificationAsync(Guid entityId, string? value, DateTimeOffset now, CancellationToken cancellationToken) {
         var existing = await _db.EntityClassifications.FindAsync([entityId], cancellationToken);
-        if (existing is null)
-        {
+        if (existing is null) {
             _db.EntityClassifications.Add(new EntityClassificationRow { EntityId = entityId, Value = value, System = "plugin", UpdatedAt = now });
-        }
-        else
-        {
+        } else {
             existing.Value = value;
             existing.System = "plugin";
             existing.UpdatedAt = now;
@@ -529,12 +444,9 @@ public sealed class EntityMetadataApplyService
         Guid entityId,
         IReadOnlyDictionary<string, string?> selectedImages,
         DateTimeOffset now,
-        CancellationToken cancellationToken)
-    {
-        foreach (var (roleCode, url) in selectedImages)
-        {
-            if (string.IsNullOrWhiteSpace(url) || !roleCode.TryDecodeAs<EntityFileRole>(out var role))
-            {
+        CancellationToken cancellationToken) {
+        foreach (var (roleCode, url) in selectedImages) {
+            if (string.IsNullOrWhiteSpace(url) || !roleCode.TryDecodeAs<EntityFileRole>(out var role)) {
                 continue;
             }
 
@@ -547,10 +459,8 @@ public sealed class EntityMetadataApplyService
 
             var publicPath = $"/assets/{relativePath.Replace(Path.DirectorySeparatorChar, '/')}";
             var existing = await FindEntityFileAsync(entityId, role, cancellationToken);
-            if (existing is null)
-            {
-                _db.EntityFiles.Add(new EntityFileRow
-                {
+            if (existing is null) {
+                _db.EntityFiles.Add(new EntityFileRow {
                     Id = Guid.NewGuid(),
                     EntityId = entityId,
                     Role = role,
@@ -559,9 +469,7 @@ public sealed class EntityMetadataApplyService
                     CreatedAt = now,
                     UpdatedAt = now
                 });
-            }
-            else
-            {
+            } else {
                 existing.Path = publicPath;
                 existing.MimeType = MimeTypeFromExtension(ext);
                 existing.UpdatedAt = now;
@@ -576,23 +484,18 @@ public sealed class EntityMetadataApplyService
     private async Task CascadeRelationshipImagesAsync(
         IReadOnlyList<EntityMetadataProposal> relationships,
         DateTimeOffset now,
-        CancellationToken cancellationToken)
-    {
-        foreach (var child in relationships)
-        {
-            if (child.Images.Count == 0 || string.IsNullOrWhiteSpace(child.Patch.Title))
-            {
+        CancellationToken cancellationToken) {
+        foreach (var child in relationships) {
+            if (child.Images.Count == 0 || string.IsNullOrWhiteSpace(child.Patch.Title)) {
                 continue;
             }
 
-            if (child.TargetKind is not ("person" or "studio"))
-            {
+            if (child.TargetKind is not ("person" or "studio")) {
                 continue;
             }
 
             var linkedEntity = await FindEntityByKindAndTitleAsync(child.TargetKind, child.Patch.Title.Trim(), cancellationToken);
-            if (linkedEntity is null)
-            {
+            if (linkedEntity is null) {
                 continue;
             }
 
@@ -601,16 +504,14 @@ public sealed class EntityMetadataApplyService
                 cancellationToken,
                 EntityFileRole.Poster,
                 EntityFileRole.Logo);
-            if (hasFile)
-            {
+            if (hasFile) {
                 continue;
             }
 
             var image = child.Images.FirstOrDefault(img => img.Kind is "poster") ?? child.Images.FirstOrDefault(img => img.Kind is "logo") ?? child.Images[0];
             var role = child.TargetKind == "studio" ? EntityFileRole.Logo : EntityFileRole.Poster;
 
-            try
-            {
+            try {
                 var bytes = await _http.GetByteArrayAsync(image.Url, cancellationToken);
                 var ext = ExtensionFromUrl(image.Url);
                 var relativePath = Path.Combine("plugins", "artwork", linkedEntity.Id.ToString(), $"{role.ToString().ToLowerInvariant()}-{ShortHash(image.Url)}{ext}");
@@ -619,8 +520,7 @@ public sealed class EntityMetadataApplyService
                 await File.WriteAllBytesAsync(physicalPath, bytes, cancellationToken);
 
                 var publicPath = $"/assets/{relativePath.Replace(Path.DirectorySeparatorChar, '/')}";
-                _db.EntityFiles.Add(new EntityFileRow
-                {
+                _db.EntityFiles.Add(new EntityFileRow {
                     Id = Guid.NewGuid(),
                     EntityId = linkedEntity.Id,
                     Role = role,
@@ -631,9 +531,7 @@ public sealed class EntityMetadataApplyService
                 });
 
                 linkedEntity.UpdatedAt = now;
-            }
-            catch (HttpRequestException)
-            {
+            } catch (HttpRequestException) {
             }
         }
     }
@@ -644,26 +542,21 @@ public sealed class EntityMetadataApplyService
     private async Task ApplyStructuralChildrenAsync(
         IReadOnlyList<EntityMetadataProposal> children,
         DateTimeOffset now,
-        CancellationToken cancellationToken)
-    {
-        foreach (var child in children)
-        {
-            if (child.TargetEntityId is null)
-            {
+        CancellationToken cancellationToken) {
+        foreach (var child in children) {
+            if (child.TargetEntityId is null) {
                 continue;
             }
 
             var childEntity = await _db.Entities
                 .FirstOrDefaultAsync(row => row.Id == child.TargetEntityId.Value && row.DeletedAt == null, cancellationToken);
-            if (childEntity is null)
-            {
+            if (childEntity is null) {
                 continue;
             }
 
             await ApplyPatchToEntityAsync(childEntity, child.Patch, child.Images, now, cancellationToken);
             var relationshipProposals = RelationshipProposals(child);
-            if (relationshipProposals.Count > 0 && (child.Patch.Credits.Count > 0 || !string.IsNullOrWhiteSpace(child.Patch.Studio)))
-            {
+            if (relationshipProposals.Count > 0 && (child.Patch.Credits.Count > 0 || !string.IsNullOrWhiteSpace(child.Patch.Studio))) {
                 await CascadeRelationshipImagesAsync(relationshipProposals, now, cancellationToken);
             }
 
@@ -676,78 +569,62 @@ public sealed class EntityMetadataApplyService
         EntityMetadataPatch patch,
         IReadOnlyList<ImageCandidate> images,
         DateTimeOffset now,
-        CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrWhiteSpace(patch.Title))
-        {
+        CancellationToken cancellationToken) {
+        if (!string.IsNullOrWhiteSpace(patch.Title)) {
             entity.Title = patch.Title.Trim();
         }
 
-        if (!string.IsNullOrWhiteSpace(patch.Description))
-        {
+        if (!string.IsNullOrWhiteSpace(patch.Description)) {
             await UpsertDescriptionAsync(entity.Id, patch.Description, now, cancellationToken);
         }
 
-        if (patch.ExternalIds.Count > 0)
-        {
+        if (patch.ExternalIds.Count > 0) {
             await UpsertExternalIdsAsync(entity.Id, patch.ExternalIds, patch.Urls, now, cancellationToken);
         }
 
-        if (patch.Urls.Count > 0)
-        {
+        if (patch.Urls.Count > 0) {
             await UpsertUrlsAsync(entity.Id, patch.Urls, now, cancellationToken);
         }
 
-        if (patch.Tags.Count > 0)
-        {
+        if (patch.Tags.Count > 0) {
             await ReplaceTagsAsync(entity.Id, patch.Tags, now, cancellationToken);
         }
 
-        if (!string.IsNullOrWhiteSpace(patch.Studio))
-        {
+        if (!string.IsNullOrWhiteSpace(patch.Studio)) {
             await SetStudioAsync(entity.Id, patch.Studio, now, cancellationToken);
         }
 
-        if (patch.Credits.Count > 0)
-        {
+        if (patch.Credits.Count > 0) {
             await ReplaceCreditsAsync(entity.Id, patch.Credits, now, cancellationToken);
         }
 
-        if (patch.Dates.Count > 0)
-        {
+        if (patch.Dates.Count > 0) {
             await UpsertDatesAsync(entity.Id, patch.Dates, now, cancellationToken);
         }
 
-        if (patch.Stats.Count > 0)
-        {
+        if (patch.Stats.Count > 0) {
             await UpsertStatsAsync(entity.Id, patch.Stats, now, cancellationToken);
         }
 
-        if (patch.Positions.Count > 0)
-        {
+        if (patch.Positions.Count > 0) {
             var normalizedPositions = NormalizePositions(patch.Positions);
             await UpsertPositionsAsync(entity, normalizedPositions, now, cancellationToken);
         }
 
-        if (!string.IsNullOrWhiteSpace(patch.Classification))
-        {
+        if (!string.IsNullOrWhiteSpace(patch.Classification)) {
             await UpsertClassificationAsync(entity.Id, patch.Classification, now, cancellationToken);
         }
 
-        if (images.Count > 0)
-        {
+        if (images.Count > 0) {
             var image = images.FirstOrDefault(i => i.Kind is "still") ?? images.FirstOrDefault(i => i.Kind is "poster") ?? images[0];
-            var role = image.Kind switch
-            {
+            var role = image.Kind switch {
                 "still" => EntityFileRole.Thumbnail,
                 "poster" => EntityFileRole.Poster,
                 _ => EntityFileRole.Thumbnail
             };
             var hasFile = await HasEntityFileWithAnyRoleAsync(entity.Id, cancellationToken, role);
-            if (!hasFile)
-            {
-                try
-                {
+            if (!hasFile) {
+                try {
                     var bytes = await _http.GetByteArrayAsync(image.Url, cancellationToken);
                     var ext = ExtensionFromUrl(image.Url);
                     var relativePath = Path.Combine("plugins", "artwork", entity.Id.ToString(), $"{role.ToString().ToLowerInvariant()}-{ShortHash(image.Url)}{ext}");
@@ -756,8 +633,7 @@ public sealed class EntityMetadataApplyService
                     await File.WriteAllBytesAsync(physicalPath, bytes, cancellationToken);
 
                     var publicPath = $"/assets/{relativePath.Replace(Path.DirectorySeparatorChar, '/')}";
-                    _db.EntityFiles.Add(new EntityFileRow
-                    {
+                    _db.EntityFiles.Add(new EntityFileRow {
                         Id = Guid.NewGuid(),
                         EntityId = entity.Id,
                         Role = role,
@@ -766,8 +642,7 @@ public sealed class EntityMetadataApplyService
                         CreatedAt = now,
                         UpdatedAt = now
                     });
-                }
-                catch (HttpRequestException) { }
+                } catch (HttpRequestException) { }
             }
         }
 
@@ -783,11 +658,9 @@ public sealed class EntityMetadataApplyService
             .Where(child => !IsRelationshipMetadataKind(child.TargetKind))
             .ToArray();
 
-    private static IReadOnlyList<EntityMetadataProposal> RelationshipProposals(EntityMetadataProposal proposal)
-    {
+    private static IReadOnlyList<EntityMetadataProposal> RelationshipProposals(EntityMetadataProposal proposal) {
         var relationships = new List<EntityMetadataProposal>();
-        if (proposal.Relationships is { Count: > 0 })
-        {
+        if (proposal.Relationships is { Count: > 0 }) {
             relationships.AddRange(proposal.Relationships);
         }
 
@@ -816,10 +689,8 @@ public sealed class EntityMetadataApplyService
             row => row.KindCode == kind && row.Title.ToLower() == title.ToLower() && row.DeletedAt == null,
             cancellationToken);
 
-    private EntityRow CreateEntity(string kind, string title, DateTimeOffset now)
-    {
-        var entity = new EntityRow
-        {
+    private EntityRow CreateEntity(string kind, string title, DateTimeOffset now) {
+        var entity = new EntityRow {
             Id = Guid.NewGuid(),
             KindCode = kind,
             Title = title,
@@ -836,16 +707,14 @@ public sealed class EntityMetadataApplyService
     private static string ShortHash(string value) =>
         Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(value)))[..12].ToLowerInvariant();
 
-    private static string ExtensionFromUrl(string url)
-    {
+    private static string ExtensionFromUrl(string url) {
         var path = Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.AbsolutePath : url;
         var ext = Path.GetExtension(path);
         return string.IsNullOrWhiteSpace(ext) ? ".jpg" : ext.ToLowerInvariant();
     }
 
     private static string? MimeTypeFromExtension(string ext) =>
-        ext.ToLowerInvariant() switch
-        {
+        ext.ToLowerInvariant() switch {
             ".jpg" or ".jpeg" => "image/jpeg",
             ".png" => "image/png",
             ".webp" => "image/webp",

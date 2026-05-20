@@ -5,8 +5,7 @@ namespace Obscura.Contracts.Playback;
 /// <summary>
 /// Jellyfin-compatible playback event payload for start, progress, ping, and stop calls.
 /// </summary>
-public sealed record PlaybackSessionRequest
-{
+public sealed record PlaybackSessionRequest {
     [JsonPropertyName("ItemId")]
     public Guid ItemId { get; init; }
 

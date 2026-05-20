@@ -3,18 +3,15 @@ using Obscura.Infrastructure.Processes;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class ThumbnailServiceTests : IDisposable
-{
+public sealed class ThumbnailServiceTests : IDisposable {
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"obscura-thumbnails-{Guid.NewGuid():N}");
 
-    public ThumbnailServiceTests()
-    {
+    public ThumbnailServiceTests() {
         Directory.CreateDirectory(_root);
     }
 
     [Fact]
-    public async Task TiledJpegComposerWritesAbsoluteConcatFramePaths()
-    {
+    public async Task TiledJpegComposerWritesAbsoluteConcatFramePaths() {
         var frameDir = Path.Combine(_root, "relative-root", "frames");
         var outputDir = Path.Combine(_root, "relative-root", "tiles");
         Directory.CreateDirectory(frameDir);
@@ -34,16 +31,14 @@ public sealed class ThumbnailServiceTests : IDisposable
             CancellationToken.None);
 
         Assert.Equal(1, tileCount);
-        Assert.All(process.ConcatLines, line =>
-        {
+        Assert.All(process.ConcatLines, line => {
             Assert.StartsWith("file '", line, StringComparison.Ordinal);
             Assert.True(Path.IsPathRooted(line[6..^1]));
         });
     }
 
     [Fact]
-    public void AssetPathsNormalizeRelativeDataDirectoriesToAbsoluteCacheRoots()
-    {
+    public void AssetPathsNormalizeRelativeDataDirectoriesToAbsoluteCacheRoots() {
         var relativeDataDir = Path.GetRelativePath(
             Directory.GetCurrentDirectory(),
             Path.Combine(_root, "data"));
@@ -55,24 +50,20 @@ public sealed class ThumbnailServiceTests : IDisposable
             paths.CacheRoot);
     }
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_root))
-        {
+    public void Dispose() {
+        if (Directory.Exists(_root)) {
             Directory.Delete(_root, recursive: true);
         }
     }
 
-    private sealed class CapturingProcessExecutor : ProcessExecutor
-    {
+    private sealed class CapturingProcessExecutor : ProcessExecutor {
         public IReadOnlyList<string> ConcatLines { get; private set; } = [];
 
         public override async Task<ProcessExecutionResult> RunAsync(
             string fileName,
             IReadOnlyList<string> arguments,
             IReadOnlyDictionary<string, string>? environment,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             var inputIndex = arguments.ToList().IndexOf("-i");
             Assert.True(inputIndex >= 0);
             ConcatLines = await File.ReadAllLinesAsync(arguments[inputIndex + 1], cancellationToken);

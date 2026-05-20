@@ -11,8 +11,7 @@ namespace Obscura.Infrastructure.Videos;
 /// <summary>
 /// Filesystem-backed implementation that resolves generated HLS playback assets from the cache directory.
 /// </summary>
-public sealed class HlsAssetService : IHlsAssetService
-{
+public sealed class HlsAssetService : IHlsAssetService {
     private const int SegmentDurationSeconds = 6;
     private const int VirtualCacheFormatVersion = 5;
     private const int ActiveGenerationReuseWindowSegments = 12;
@@ -30,8 +29,7 @@ public sealed class HlsAssetService : IHlsAssetService
     /// Creates an HLS asset resolver rooted at the configured cache directory.
     /// </summary>
     /// <param name="options">Cache-root options for generated HLS packages.</param>
-    public HlsAssetService(HlsAssetServiceOptions options)
-    {
+    public HlsAssetService(HlsAssetServiceOptions options) {
         _options = options;
     }
 
@@ -47,8 +45,7 @@ public sealed class HlsAssetService : IHlsAssetService
         IVideoSourceService sources,
         ProcessExecutor processes,
         ILogger<HlsAssetService> logger)
-        : this(options, sources, processes, logger, null)
-    {
+        : this(options, sources, processes, logger, null) {
     }
 
     /// <summary>
@@ -65,8 +62,7 @@ public sealed class HlsAssetService : IHlsAssetService
         IVideoSourceService sources,
         ProcessExecutor processes,
         ILogger<HlsAssetService> logger,
-        ObscuraDbContext? db)
-    {
+        ObscuraDbContext? db) {
         _options = options;
         _sources = sources;
         _processes = processes;
@@ -79,37 +75,30 @@ public sealed class HlsAssetService : IHlsAssetService
         Guid id,
         string assetPath,
         int? audioStreamIndex,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var normalizedAssetPath = NormalizeAssetPath(assetPath);
-        if (normalizedAssetPath is null)
-        {
+        if (normalizedAssetPath is null) {
             return null;
         }
 
         var virtualAsset = await TryGetVirtualAssetAsync(id, normalizedAssetPath, audioStreamIndex, cancellationToken);
-        if (virtualAsset is not null)
-        {
+        if (virtualAsset is not null) {
             return virtualAsset;
         }
 
         return FindAsset(id, normalizedAssetPath);
     }
 
-    private IEnumerable<string> CandidatePackageRoots(Guid id)
-    {
+    private IEnumerable<string> CandidatePackageRoots(Guid id) {
         var cacheRoot = Path.GetFullPath(_options.CacheRoot);
         yield return Path.Combine(cacheRoot, "hls2", id.ToString());
         yield return Path.Combine(cacheRoot, "hls", id.ToString());
     }
 
-    private HlsAsset? FindAsset(Guid id, string normalizedAssetPath)
-    {
-        foreach (var packageRoot in CandidatePackageRoots(id))
-        {
+    private HlsAsset? FindAsset(Guid id, string normalizedAssetPath) {
+        foreach (var packageRoot in CandidatePackageRoots(id)) {
             var resolved = ResolveInside(packageRoot, normalizedAssetPath);
-            if (resolved is not null && File.Exists(resolved))
-            {
+            if (resolved is not null && File.Exists(resolved)) {
                 return new HlsAsset(
                     resolved,
                     MimeForExtension(Path.GetExtension(resolved)),
@@ -124,16 +113,13 @@ public sealed class HlsAssetService : IHlsAssetService
         Guid id,
         string normalizedAssetPath,
         int? requestedAudioStreamIndex,
-        CancellationToken cancellationToken)
-    {
-        if (_sources is null || _processes is null)
-        {
+        CancellationToken cancellationToken) {
+        if (_sources is null || _processes is null) {
             return null;
         }
 
         var source = await _sources.GetSourceAsync(id, cancellationToken);
-        if (source is null || source.DurationSeconds is not > 0)
-        {
+        if (source is null || source.DurationSeconds is not > 0) {
             return null;
         }
 
@@ -142,8 +128,7 @@ public sealed class HlsAssetService : IHlsAssetService
         var selectedAudioStreamIndex = SelectAudioStreamIndex(source, requestedAudioStreamIndex);
         var audioCacheKey = AudioCacheKey(selectedAudioStreamIndex);
 
-        if (normalizedAssetPath.Equals("master.m3u8", StringComparison.OrdinalIgnoreCase))
-        {
+        if (normalizedAssetPath.Equals("master.m3u8", StringComparison.OrdinalIgnoreCase)) {
             var trickplayStreams = await GetTrickplayStreamsAsync(id, cancellationToken);
             return await WriteTextAssetAsync(
                 VirtualPath(id, audioCacheKey, "master.m3u8"),
@@ -155,8 +140,7 @@ public sealed class HlsAssetService : IHlsAssetService
         var parts = normalizedAssetPath.Split('/');
         if (parts.Length == 3 &&
             parts[0].Equals("v", StringComparison.OrdinalIgnoreCase) &&
-            IsVirtualVariantPlaylist(parts[2]))
-        {
+            IsVirtualVariantPlaylist(parts[2])) {
             var rendition = ResolveRendition(renditions, parts[1]);
             if (rendition is null) return null;
 
@@ -167,18 +151,15 @@ public sealed class HlsAssetService : IHlsAssetService
                 cancellationToken);
         }
 
-        if (parts.Length == 3 && parts[0].Equals("v", StringComparison.OrdinalIgnoreCase))
-        {
+        if (parts.Length == 3 && parts[0].Equals("v", StringComparison.OrdinalIgnoreCase)) {
             var rendition = ResolveRendition(renditions, parts[1]);
             var segmentIndex = ParseSegmentIndex(parts[2]);
-            if (rendition is null || segmentIndex is null)
-            {
+            if (rendition is null || segmentIndex is null) {
                 return null;
             }
 
             string segmentPath;
-            try
-            {
+            try {
                 segmentPath = await GetVirtualSegmentAsync(
                     id,
                     source,
@@ -187,9 +168,7 @@ public sealed class HlsAssetService : IHlsAssetService
                     selectedAudioStreamIndex,
                     segmentIndex.Value,
                     cancellationToken);
-            }
-            catch (FileNotFoundException ex)
-            {
+            } catch (FileNotFoundException ex) {
                 _logger?.LogWarning(
                     ex,
                     "Virtual HLS segment {SegmentIndex} was not generated for {VideoId}/{Rendition}.",
@@ -209,16 +188,12 @@ public sealed class HlsAssetService : IHlsAssetService
         Guid id,
         VideoSourceFile source,
         IReadOnlyList<VirtualHlsRendition> renditions,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var refreshLock = VirtualCacheRefreshLocks.GetOrAdd(id, _ => new SemaphoreSlim(1, 1));
         await refreshLock.WaitAsync(cancellationToken);
-        try
-        {
+        try {
             await EnsureVirtualCacheUnderLockAsync(id, source, renditions, cancellationToken);
-        }
-        finally
-        {
+        } finally {
             refreshLock.Release();
         }
     }
@@ -227,8 +202,7 @@ public sealed class HlsAssetService : IHlsAssetService
         Guid id,
         VideoSourceFile source,
         IReadOnlyList<VirtualHlsRendition> renditions,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var root = VirtualRoot(id);
         var metaPath = Path.Combine(root, "metadata.json");
         var sourceInfo = new FileInfo(source.Path);
@@ -243,19 +217,14 @@ public sealed class HlsAssetService : IHlsAssetService
             transcoderProfile.ToString(),
             VirtualCacheFormatVersion);
 
-        if (File.Exists(metaPath))
-        {
-            try
-            {
+        if (File.Exists(metaPath)) {
+            try {
                 var existing = JsonSerializer.Deserialize<VirtualCacheMetadata>(
                     await File.ReadAllTextAsync(metaPath, cancellationToken));
-                if (IsSameVirtualCache(existing, nextMeta))
-                {
+                if (IsSameVirtualCache(existing, nextMeta)) {
                     return;
                 }
-            }
-            catch
-            {
+            } catch {
                 // Invalid metadata is treated as stale cache.
             }
 
@@ -273,8 +242,7 @@ public sealed class HlsAssetService : IHlsAssetService
         string path,
         string content,
         string extension,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         await File.WriteAllTextAsync(path, content, cancellationToken);
         return new HlsAsset(path, MimeForExtension(extension), CacheControlForExtension(extension));
@@ -287,23 +255,19 @@ public sealed class HlsAssetService : IHlsAssetService
         string audioCacheKey,
         int? audioStreamIndex,
         int segmentIndex,
-        CancellationToken cancellationToken)
-    {
-        if (segmentIndex < 0 || segmentIndex >= SegmentCount(source.DurationSeconds!.Value))
-        {
+        CancellationToken cancellationToken) {
+        if (segmentIndex < 0 || segmentIndex >= SegmentCount(source.DurationSeconds!.Value)) {
             throw new FileNotFoundException("HLS segment index is outside the video duration.");
         }
 
         var outputPath = VirtualPath(id, audioCacheKey, "v", rendition.Name, $"seg_{segmentIndex:00000}.ts");
-        if (File.Exists(outputPath) && new FileInfo(outputPath).Length > 0)
-        {
+        if (File.Exists(outputPath) && new FileInfo(outputPath).Length > 0) {
             return outputPath;
         }
 
         var generationStartSegment = PrerollSegmentIndex(segmentIndex);
         var generation = FindActiveRenditionGeneration(id, rendition, audioCacheKey, segmentIndex);
-        if (generation is null)
-        {
+        if (generation is null) {
             CancelActiveAudioGenerations(id, audioCacheKey);
             generation = StartVirtualRenditionGeneration(id, source, rendition, audioCacheKey, audioStreamIndex, generationStartSegment);
         }
@@ -319,16 +283,13 @@ public sealed class HlsAssetService : IHlsAssetService
         Guid id,
         VirtualHlsRendition rendition,
         string audioCacheKey,
-        int segmentIndex)
-    {
+        int segmentIndex) {
         var prefix = $"{id}/{audioCacheKey}/{rendition.Name}/";
-        foreach (var (key, generation) in ActiveRenditions)
-        {
+        foreach (var (key, generation) in ActiveRenditions) {
             if (key.StartsWith(prefix, StringComparison.Ordinal) &&
                 segmentIndex >= generation.StartSegment &&
                 segmentIndex <= generation.EndSegment &&
-                ShouldReuseActiveGeneration(generation, segmentIndex))
-            {
+                ShouldReuseActiveGeneration(generation, segmentIndex)) {
                 return generation;
             }
         }
@@ -336,10 +297,8 @@ public sealed class HlsAssetService : IHlsAssetService
         return null;
     }
 
-    private static bool ShouldReuseActiveGeneration(VirtualRenditionGeneration generation, int segmentIndex)
-    {
-        if (segmentIndex - generation.StartSegment <= ActiveGenerationReuseWindowSegments)
-        {
+    private static bool ShouldReuseActiveGeneration(VirtualRenditionGeneration generation, int segmentIndex) {
+        if (segmentIndex - generation.StartSegment <= ActiveGenerationReuseWindowSegments) {
             return true;
         }
 
@@ -349,16 +308,13 @@ public sealed class HlsAssetService : IHlsAssetService
 
     private static void CancelActiveAudioGenerations(
         Guid id,
-        string audioCacheKey)
-    {
+        string audioCacheKey) {
         var prefix = $"{id}/{audioCacheKey}/";
         CancelActiveGenerationsByPrefix(prefix);
     }
 
-    internal static int CancelActiveGenerationsForItem(Guid id)
-    {
-        if (id == Guid.Empty)
-        {
+    internal static int CancelActiveGenerationsForItem(Guid id) {
+        if (id == Guid.Empty) {
             return 0;
         }
 
@@ -368,13 +324,10 @@ public sealed class HlsAssetService : IHlsAssetService
     internal static int CancelAllActiveGenerations() =>
         CancelActiveGenerationsByPrefix(string.Empty);
 
-    private static int CancelActiveGenerationsByPrefix(string prefix)
-    {
+    private static int CancelActiveGenerationsByPrefix(string prefix) {
         var cancelled = 0;
-        foreach (var (key, generation) in ActiveRenditions)
-        {
-            if (key.StartsWith(prefix, StringComparison.Ordinal) && ActiveRenditions.TryRemove(key, out var removed))
-            {
+        foreach (var (key, generation) in ActiveRenditions) {
+            if (key.StartsWith(prefix, StringComparison.Ordinal) && ActiveRenditions.TryRemove(key, out var removed)) {
                 removed.Cancellation.Cancel();
                 cancelled++;
             }
@@ -389,12 +342,10 @@ public sealed class HlsAssetService : IHlsAssetService
         VirtualHlsRendition rendition,
         string audioCacheKey,
         int? audioStreamIndex,
-        int startSegment)
-    {
+        int startSegment) {
         var endSegment = SegmentCount(source.DurationSeconds!.Value) - 1;
         var key = $"{id}/{audioCacheKey}/{rendition.Name}/{startSegment}";
-        return ActiveRenditions.GetOrAdd(key, _ =>
-        {
+        return ActiveRenditions.GetOrAdd(key, _ => {
             var stagingDirectory = VirtualPath(id, audioCacheKey, "v", rendition.Name, $".gen_{startSegment:00000}_{Guid.NewGuid():N}");
             var cancellation = new CancellationTokenSource();
             var generation = new VirtualRenditionGeneration(
@@ -403,8 +354,7 @@ public sealed class HlsAssetService : IHlsAssetService
                 stagingDirectory,
                 cancellation,
                 Task.CompletedTask);
-            generation = generation with
-            {
+            generation = generation with {
                 Task = GenerateVirtualRenditionAsync(
                     id,
                     source,
@@ -429,10 +379,8 @@ public sealed class HlsAssetService : IHlsAssetService
         int startSegment,
         string stagingDirectory,
         string generationKey,
-        CancellationToken cancellationToken)
-    {
-        if (_processes is null)
-        {
+        CancellationToken cancellationToken) {
+        if (_processes is null) {
             throw new InvalidOperationException("HLS rendition generation requires a process executor.");
         }
 
@@ -443,8 +391,7 @@ public sealed class HlsAssetService : IHlsAssetService
         var transcoderProfile = ResolveTranscoderProfile(transcoderOptions);
 
         ProcessExecutionResult result;
-        try
-        {
+        try {
             result = await _processes.RunAsync(
                 transcoderOptions.FfmpegPath,
                 VirtualRenditionArguments(
@@ -459,8 +406,7 @@ public sealed class HlsAssetService : IHlsAssetService
                 environment: null,
                 cancellationToken);
 
-            if (result.ExitCode != 0 && transcoderProfile != HlsTranscoderProfile.Software)
-            {
+            if (result.ExitCode != 0 && transcoderProfile != HlsTranscoderProfile.Software) {
                 _logger?.LogWarning(
                     "Virtual HLS generation using {TranscoderProfile} failed for {VideoId} rendition {Rendition}; retrying with software x264. Error: {Error}",
                     transcoderProfile,
@@ -483,14 +429,11 @@ public sealed class HlsAssetService : IHlsAssetService
                     environment: null,
                     cancellationToken);
             }
-        }
-        finally
-        {
+        } finally {
             ActiveRenditions.TryRemove(generationKey, out var _);
         }
 
-        if (result.ExitCode != 0)
-        {
+        if (result.ExitCode != 0) {
             _logger?.LogWarning(
                 "Virtual HLS rendition generation failed for {VideoId} rendition {Rendition}: {Error}",
                 id,
@@ -499,8 +442,7 @@ public sealed class HlsAssetService : IHlsAssetService
             throw new InvalidOperationException("HLS rendition generation failed.");
         }
 
-        foreach (var segmentPath in Directory.EnumerateFiles(stagingDirectory, "seg_*.ts"))
-        {
+        foreach (var segmentPath in Directory.EnumerateFiles(stagingDirectory, "seg_*.ts")) {
             CopySegmentToCanonical(id, rendition, audioCacheKey, segmentPath);
         }
     }
@@ -512,42 +454,32 @@ public sealed class HlsAssetService : IHlsAssetService
         int segmentIndex,
         string outputPath,
         VirtualRenditionGeneration generation,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var stagedPath = Path.Combine(generation.StagingDirectory, $"seg_{segmentIndex:00000}.ts");
-        while (true)
-        {
-            if (File.Exists(outputPath) && new FileInfo(outputPath).Length > 0)
-            {
+        while (true) {
+            if (File.Exists(outputPath) && new FileInfo(outputPath).Length > 0) {
                 return;
             }
 
-            if (File.Exists(stagedPath) && new FileInfo(stagedPath).Length > 0)
-            {
+            if (File.Exists(stagedPath) && new FileInfo(stagedPath).Length > 0) {
                 CopySegmentToCanonical(id, rendition, audioCacheKey, stagedPath);
                 return;
             }
 
-            if (generation.Task.IsCompleted)
-            {
-                try
-                {
+            if (generation.Task.IsCompleted) {
+                try {
                     await generation.Task;
-                }
-                catch (OperationCanceledException ex)
-                {
+                } catch (OperationCanceledException ex) {
                     throw new FileNotFoundException(
                         $"HLS rendition generation was replaced before segment {segmentIndex} was produced for {id}/{rendition.Name}.",
                         ex);
                 }
 
-                if (File.Exists(outputPath) && new FileInfo(outputPath).Length > 0)
-                {
+                if (File.Exists(outputPath) && new FileInfo(outputPath).Length > 0) {
                     return;
                 }
 
-                if (File.Exists(stagedPath) && new FileInfo(stagedPath).Length > 0)
-                {
+                if (File.Exists(stagedPath) && new FileInfo(stagedPath).Length > 0) {
                     CopySegmentToCanonical(id, rendition, audioCacheKey, stagedPath);
                     return;
                 }
@@ -564,16 +496,13 @@ public sealed class HlsAssetService : IHlsAssetService
         Guid id,
         VirtualHlsRendition rendition,
         string audioCacheKey,
-        string stagedPath)
-    {
-        if (!File.Exists(stagedPath) || new FileInfo(stagedPath).Length == 0)
-        {
+        string stagedPath) {
+        if (!File.Exists(stagedPath) || new FileInfo(stagedPath).Length == 0) {
             return;
         }
 
         var outputPath = VirtualPath(id, audioCacheKey, "v", rendition.Name, Path.GetFileName(stagedPath));
-        if (File.Exists(outputPath) && new FileInfo(outputPath).Length > 0)
-        {
+        if (File.Exists(outputPath) && new FileInfo(outputPath).Length > 0) {
             return;
         }
 
@@ -583,13 +512,11 @@ public sealed class HlsAssetService : IHlsAssetService
         File.Move(tempPath, outputPath, overwrite: true);
     }
 
-    private static string? NormalizeAssetPath(string assetPath)
-    {
+    private static string? NormalizeAssetPath(string assetPath) {
         var normalized = assetPath.Replace('\\', '/').TrimStart('/');
         if (string.IsNullOrWhiteSpace(normalized) ||
             normalized.Contains("..", StringComparison.Ordinal) ||
-            Path.IsPathRooted(normalized))
-        {
+            Path.IsPathRooted(normalized)) {
             return null;
         }
 
@@ -600,8 +527,7 @@ public sealed class HlsAssetService : IHlsAssetService
         assetName.Equals("index.m3u8", StringComparison.OrdinalIgnoreCase) ||
         assetName.Equals("stream.m3u8", StringComparison.OrdinalIgnoreCase);
 
-    private static string? ResolveInside(string root, string assetPath)
-    {
+    private static string? ResolveInside(string root, string assetPath) {
         var rootFullPath = Path.GetFullPath(root);
         var resolved = Path.GetFullPath(Path.Combine(rootFullPath, assetPath));
         var rootWithSeparator = rootFullPath.EndsWith(Path.DirectorySeparatorChar)
@@ -623,16 +549,14 @@ public sealed class HlsAssetService : IHlsAssetService
     private static string AudioCacheKey(int? audioStreamIndex) =>
         audioStreamIndex is null ? "audio_default" : $"audio_{audioStreamIndex.Value:00000}";
 
-    private static int? SelectAudioStreamIndex(VideoSourceFile source, int? requestedAudioStreamIndex)
-    {
+    private static int? SelectAudioStreamIndex(VideoSourceFile source, int? requestedAudioStreamIndex) {
         var audioStreams = source.Streams?
             .Where(stream => stream.Type.Equals("Audio", StringComparison.OrdinalIgnoreCase))
             .OrderBy(stream => stream.StreamIndex)
             .ToList() ?? [];
 
         if (requestedAudioStreamIndex is not null &&
-            (audioStreams.Count == 0 || audioStreams.Any(stream => stream.StreamIndex == requestedAudioStreamIndex.Value)))
-        {
+            (audioStreams.Count == 0 || audioStreams.Any(stream => stream.StreamIndex == requestedAudioStreamIndex.Value))) {
             return requestedAudioStreamIndex.Value;
         }
 
@@ -640,8 +564,7 @@ public sealed class HlsAssetService : IHlsAssetService
             audioStreams.FirstOrDefault()?.StreamIndex;
     }
 
-    private static IReadOnlyList<VirtualHlsRendition> RenditionsFor(VideoSourceFile source)
-    {
+    private static IReadOnlyList<VirtualHlsRendition> RenditionsFor(VideoSourceFile source) {
         var sourceHeight = NormalizeRenditionHeight(source.Height ?? 720);
         var sourceBitrate = SourceVideoBitrate(source);
         return JellyfinQualityOptions(sourceBitrate, source.VideoCodec)
@@ -660,10 +583,8 @@ public sealed class HlsAssetService : IHlsAssetService
 
     private static VirtualHlsRendition? ResolveHeightRenditionAlias(
         IReadOnlyList<VirtualHlsRendition> renditions,
-        string name)
-    {
-        if (!name.EndsWith('p') || !int.TryParse(name[..^1], out var height))
-        {
+        string name) {
+        if (!name.EndsWith('p') || !int.TryParse(name[..^1], out var height)) {
             return null;
         }
 
@@ -677,11 +598,9 @@ public sealed class HlsAssetService : IHlsAssetService
         VideoSourceFile source,
         IReadOnlyList<VirtualHlsRendition> renditions,
         IReadOnlyList<VirtualTrickplayStream> trickplayStreams,
-        int? audioStreamIndex)
-    {
+        int? audioStreamIndex) {
         var lines = new List<string> { "#EXTM3U", "#EXT-X-VERSION:6" };
-        foreach (var rendition in renditions)
-        {
+        foreach (var rendition in renditions) {
             var width = ScaledWidth(source.Width, source.Height, rendition.Height);
             var resolution = width is null ? "" : $",RESOLUTION={width}x{rendition.Height}";
             var codecs = H264CodecForHeight(rendition.Height);
@@ -691,8 +610,7 @@ public sealed class HlsAssetService : IHlsAssetService
             lines.Add(AppendAudioStreamQuery($"hls/{rendition.Name}/stream.m3u8", audioStreamIndex));
         }
 
-        foreach (var stream in trickplayStreams)
-        {
+        foreach (var stream in trickplayStreams) {
             lines.Add(
                 $"#EXT-X-IMAGE-STREAM-INF:BANDWIDTH={Math.Max(0, stream.Bandwidth)},RESOLUTION={stream.Width}x{stream.Height},CODECS=\"jpeg\",URI=\"Trickplay/{stream.Width}/tiles.m3u8\"");
         }
@@ -703,10 +621,8 @@ public sealed class HlsAssetService : IHlsAssetService
 
     private async Task<IReadOnlyList<VirtualTrickplayStream>> GetTrickplayStreamsAsync(
         Guid id,
-        CancellationToken cancellationToken)
-    {
-        if (_db is null)
-        {
+        CancellationToken cancellationToken) {
+        if (_db is null) {
             return [];
         }
 
@@ -717,8 +633,7 @@ public sealed class HlsAssetService : IHlsAssetService
             .ToListAsync(cancellationToken);
     }
 
-    private static string BuildVirtualVariantPlaylist(double durationSeconds, int? audioStreamIndex)
-    {
+    private static string BuildVirtualVariantPlaylist(double durationSeconds, int? audioStreamIndex) {
         var total = SegmentCount(durationSeconds);
         var durations = Enumerable.Range(0, total)
             .Select(index => SegmentDuration(durationSeconds, index))
@@ -736,8 +651,7 @@ public sealed class HlsAssetService : IHlsAssetService
             "#EXT-X-INDEPENDENT-SEGMENTS"
         };
 
-        for (var index = 0; index < total; index++)
-        {
+        for (var index = 0; index < total; index++) {
             lines.Add($"#EXTINF:{SegmentDuration(durationSeconds, index):0.000000},");
             lines.Add(AppendAudioStreamQuery($"seg_{index:00000}.ts", audioStreamIndex));
         }
@@ -758,8 +672,7 @@ public sealed class HlsAssetService : IHlsAssetService
         string playlistPath,
         string segmentPattern,
         HlsTranscoderProfile transcoderProfile,
-        string vaapiDevice)
-    {
+        string vaapiDevice) {
         var gop = Math.Max(1, (int)Math.Ceiling(SegmentDurationSeconds * (source.FrameRate ?? 24)));
         var startSeconds = startSegment * SegmentDurationSeconds;
         var arguments = new List<string>
@@ -773,8 +686,7 @@ public sealed class HlsAssetService : IHlsAssetService
             startSeconds.ToString("0.000")
         };
 
-        if (transcoderProfile == HlsTranscoderProfile.Vaapi)
-        {
+        if (transcoderProfile == HlsTranscoderProfile.Vaapi) {
             arguments.AddRange(["-vaapi_device", vaapiDevice]);
         }
 
@@ -850,10 +762,8 @@ public sealed class HlsAssetService : IHlsAssetService
     private static IReadOnlyList<string> VideoFilterArguments(
         VideoSourceFile source,
         VirtualHlsRendition rendition,
-        HlsTranscoderProfile transcoderProfile)
-    {
-        if (transcoderProfile == HlsTranscoderProfile.Vaapi)
-        {
+        HlsTranscoderProfile transcoderProfile) {
+        if (transcoderProfile == HlsTranscoderProfile.Vaapi) {
             var width = ScaledWidth(source.Width, source.Height, rendition.Height);
             var scaleWidth = width?.ToString() ?? "-2";
             return
@@ -873,10 +783,8 @@ public sealed class HlsAssetService : IHlsAssetService
 
     private static IReadOnlyList<string> VideoEncoderArguments(
         VirtualHlsRendition rendition,
-        HlsTranscoderProfile transcoderProfile)
-    {
-        var encoder = transcoderProfile switch
-        {
+        HlsTranscoderProfile transcoderProfile) {
+        var encoder = transcoderProfile switch {
             HlsTranscoderProfile.VideoToolbox => "h264_videotoolbox",
             HlsTranscoderProfile.Vaapi => "h264_vaapi",
             HlsTranscoderProfile.Nvenc => "h264_nvenc",
@@ -890,8 +798,7 @@ public sealed class HlsAssetService : IHlsAssetService
             encoder
         };
 
-        if (transcoderProfile == HlsTranscoderProfile.Software)
-        {
+        if (transcoderProfile == HlsTranscoderProfile.Software) {
             arguments.AddRange(
             [
                 "-preset",
@@ -903,11 +810,8 @@ public sealed class HlsAssetService : IHlsAssetService
                 "-pix_fmt",
                 "yuv420p"
             ]);
-        }
-        else
-        {
-            if (transcoderProfile == HlsTranscoderProfile.VideoToolbox)
-            {
+        } else {
+            if (transcoderProfile == HlsTranscoderProfile.VideoToolbox) {
                 arguments.AddRange(["-allow_sw", "1"]);
             }
 
@@ -917,8 +821,7 @@ public sealed class HlsAssetService : IHlsAssetService
                 "main"
             ]);
 
-            if (transcoderProfile != HlsTranscoderProfile.Vaapi)
-            {
+            if (transcoderProfile != HlsTranscoderProfile.Vaapi) {
                 arguments.AddRange(["-pix_fmt", transcoderProfile == HlsTranscoderProfile.Qsv ? "nv12" : "yuv420p"]);
             }
         }
@@ -941,8 +844,7 @@ public sealed class HlsAssetService : IHlsAssetService
             ? 0
             : (int)Math.Ceiling(durationSeconds / SegmentDurationSeconds);
 
-    private static double SegmentDuration(double durationSeconds, int index)
-    {
+    private static double SegmentDuration(double durationSeconds, int index) {
         var total = SegmentCount(durationSeconds);
         if (index < 0 || index >= total) return 0;
         if (index < total - 1) return SegmentDurationSeconds;
@@ -950,12 +852,10 @@ public sealed class HlsAssetService : IHlsAssetService
         return duration > 0 ? duration : SegmentDurationSeconds;
     }
 
-    private static int ToBitsPerSecond(string rate)
-    {
+    private static int ToBitsPerSecond(string rate) {
         var value = rate.Trim();
         var unit = value[^1];
-        if (unit is 'k' or 'K' or 'm' or 'M')
-        {
+        if (unit is 'k' or 'K' or 'm' or 'M') {
             var number = int.TryParse(value[..^1], out var parsed) ? parsed : 0;
             return unit is 'm' or 'M' ? number * 1_000_000 : number * 1_000;
         }
@@ -965,17 +865,14 @@ public sealed class HlsAssetService : IHlsAssetService
 
     private static IReadOnlyList<JellyfinQualityOption> JellyfinQualityOptions(
         int sourceVideoBitrate,
-        string? videoCodec)
-    {
+        string? videoCodec) {
         var options = JellyfinQualityPresetOptions();
-        if (sourceVideoBitrate <= 0)
-        {
+        if (sourceVideoBitrate <= 0) {
             return options;
         }
 
         var comparableBitrate = sourceVideoBitrate;
-        if (IsEfficientVideoCodec(videoCodec) && comparableBitrate <= 20_000_000)
-        {
+        if (IsEfficientVideoCodec(videoCodec) && comparableBitrate <= 20_000_000) {
             comparableBitrate = (int)Math.Round(comparableBitrate * 1.5);
         }
 
@@ -983,8 +880,7 @@ public sealed class HlsAssetService : IHlsAssetService
         var nextHigher = options
             .Where(option => option.Bitrate > comparableBitrate)
             .LastOrDefault();
-        if (nextHigher is not null)
-        {
+        if (nextHigher is not null) {
             selected.Add(nextHigher);
         }
 
@@ -1012,8 +908,7 @@ public sealed class HlsAssetService : IHlsAssetService
 
     private static VirtualHlsRendition RenditionForQualityOption(
         JellyfinQualityOption option,
-        int sourceHeight)
-    {
+        int sourceHeight) {
         var height = Math.Min(sourceHeight, option.MaxHeight);
         var videoBitrate = ToRate(option.Bitrate);
         var maxRate = ToRate((int)Math.Round(option.Bitrate * 1.15));
@@ -1050,8 +945,7 @@ public sealed class HlsAssetService : IHlsAssetService
             : $"{Math.Max(1, bitsPerSecond / 1_000)}k";
 
     private static int CrfForHeight(int height) =>
-        height switch
-        {
+        height switch {
             <= 480 => 22,
             <= 720 => 21,
             <= 1080 => 20,
@@ -1063,8 +957,7 @@ public sealed class HlsAssetService : IHlsAssetService
         Math.Max(2, height % 2 == 0 ? height : height - 1);
 
     private static string H264CodecForHeight(int height) =>
-        height switch
-        {
+        height switch {
             <= 480 => "avc1.4d401e",
             <= 720 => "avc1.4d401f",
             <= 1080 => "avc1.4d4029",
@@ -1072,18 +965,15 @@ public sealed class HlsAssetService : IHlsAssetService
             _ => "avc1.4d4033"
         };
 
-    private static int? ScaledWidth(int? sourceWidth, int? sourceHeight, int targetHeight)
-    {
+    private static int? ScaledWidth(int? sourceWidth, int? sourceHeight, int targetHeight) {
         if (sourceWidth is not > 0 || sourceHeight is not > 0 || targetHeight <= 0) return null;
         var width = (int)Math.Round((double)sourceWidth.Value / sourceHeight.Value * targetHeight);
         return width % 2 == 0 ? width : width - 1;
     }
 
-    private static int? ParseSegmentIndex(string fileName)
-    {
+    private static int? ParseSegmentIndex(string fileName) {
         if (!fileName.StartsWith("seg_", StringComparison.OrdinalIgnoreCase) ||
-            !fileName.EndsWith(".ts", StringComparison.OrdinalIgnoreCase))
-        {
+            !fileName.EndsWith(".ts", StringComparison.OrdinalIgnoreCase)) {
             return null;
         }
 
@@ -1103,46 +993,38 @@ public sealed class HlsAssetService : IHlsAssetService
         left.TranscoderProfile == right.TranscoderProfile &&
         left.FormatVersion == right.FormatVersion;
 
-    private static HlsTranscoderProfile ResolveTranscoderProfile(HlsAssetServiceOptions options)
-    {
-        if (options.TranscoderProfile != HlsTranscoderProfile.Auto)
-        {
+    private static HlsTranscoderProfile ResolveTranscoderProfile(HlsAssetServiceOptions options) {
+        if (options.TranscoderProfile != HlsTranscoderProfile.Auto) {
             return options.TranscoderProfile;
         }
 
-        if (OperatingSystem.IsMacOS())
-        {
+        if (OperatingSystem.IsMacOS()) {
             return HlsTranscoderProfile.VideoToolbox;
         }
 
-        if (OperatingSystem.IsLinux() && File.Exists(options.VaapiDevice))
-        {
+        if (OperatingSystem.IsLinux() && File.Exists(options.VaapiDevice)) {
             return HlsTranscoderProfile.Vaapi;
         }
 
         return HlsTranscoderProfile.Software;
     }
 
-    private async Task<HlsAssetServiceOptions> ResolveTranscoderOptionsAsync(CancellationToken cancellationToken)
-    {
-        if (_db is null)
-        {
+    private async Task<HlsAssetServiceOptions> ResolveTranscoderOptionsAsync(CancellationToken cancellationToken) {
+        if (_db is null) {
             return _options;
         }
 
         var settings = await _db.LibrarySettings
             .AsNoTracking()
             .OrderBy(row => row.CreatedAt)
-            .Select(row => new
-            {
+            .Select(row => new {
                 row.HlsTranscoderProfile,
                 row.HlsFfmpegPath,
                 row.HlsVaapiDevice
             })
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (settings is null)
-        {
+        if (settings is null) {
             return _options;
         }
 
@@ -1153,20 +1035,16 @@ public sealed class HlsAssetService : IHlsAssetService
             string.IsNullOrWhiteSpace(settings.HlsVaapiDevice) ? _options.VaapiDevice : settings.HlsVaapiDevice.Trim());
     }
 
-    private static void ResetStagingDirectory(string stagingDirectory)
-    {
-        if (Directory.Exists(stagingDirectory))
-        {
+    private static void ResetStagingDirectory(string stagingDirectory) {
+        if (Directory.Exists(stagingDirectory)) {
             Directory.Delete(stagingDirectory, recursive: true);
         }
 
         Directory.CreateDirectory(stagingDirectory);
     }
 
-    private static string MimeForExtension(string extension)
-    {
-        return extension.ToLowerInvariant() switch
-        {
+    private static string MimeForExtension(string extension) {
+        return extension.ToLowerInvariant() switch {
             ".m3u8" => "application/vnd.apple.mpegurl",
             ".ts" => "video/mp2t",
             ".mp4" or ".m4s" => "video/mp4",
@@ -1175,8 +1053,7 @@ public sealed class HlsAssetService : IHlsAssetService
         };
     }
 
-    private static string CacheControlForExtension(string extension)
-    {
+    private static string CacheControlForExtension(string extension) {
         return extension.Equals(".m3u8", StringComparison.OrdinalIgnoreCase)
             ? "public, max-age=60"
             : "public, max-age=31536000, immutable";

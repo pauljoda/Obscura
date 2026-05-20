@@ -9,11 +9,9 @@ using Obscura.Domain.Entities;
 
 namespace Obscura.Api.Tests;
 
-public sealed class JobEndpointServiceTests
-{
+public sealed class JobEndpointServiceTests {
     [Fact]
-    public async Task JobsEndpointListsJobsFromQueueService()
-    {
+    public async Task JobsEndpointListsJobsFromQueueService() {
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
 
@@ -26,8 +24,7 @@ public sealed class JobEndpointServiceTests
     }
 
     [Fact]
-    public async Task CreateJobEndpointQueuesThroughQueueService()
-    {
+    public async Task CreateJobEndpointQueuesThroughQueueService() {
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
 
@@ -42,8 +39,7 @@ public sealed class JobEndpointServiceTests
     }
 
     [Fact]
-    public async Task CreateJobEndpointRejectsUnknownJobType()
-    {
+    public async Task CreateJobEndpointRejectsUnknownJobType() {
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
 
@@ -53,8 +49,7 @@ public sealed class JobEndpointServiceTests
     }
 
     [Fact]
-    public async Task CancelJobsEndpointCancelsByOptionalType()
-    {
+    public async Task CancelJobsEndpointCancelsByOptionalType() {
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
 
@@ -65,8 +60,7 @@ public sealed class JobEndpointServiceTests
     }
 
     [Fact]
-    public async Task ClearFailuresEndpointClearsByOptionalType()
-    {
+    public async Task ClearFailuresEndpointClearsByOptionalType() {
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
 
@@ -78,28 +72,23 @@ public sealed class JobEndpointServiceTests
         Assert.Equal(2, payload.Cleared);
     }
 
-    private static WebApplicationFactory<Program> CreateFactory()
-    {
+    private static WebApplicationFactory<Program> CreateFactory() {
         return new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureServices(services =>
-                {
+            .WithWebHostBuilder(builder => {
+                builder.ConfigureServices(services => {
                     services.AddScoped<IJobQueueService, FakeJobQueueService>();
                 });
             });
     }
 
-    private sealed class FakeJobQueueService : IJobQueueService
-    {
+    private sealed class FakeJobQueueService : IJobQueueService {
         private static readonly Guid ExistingJobId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         private static readonly Guid CreatedJobId = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
         private static JobRunSnapshot Snap(Guid id, JobType type, JobRunStatus status) =>
             new(id, type, status, 0, null, "{}", null, null, null, DateTimeOffset.UnixEpoch, null, null);
 
-        public Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken)
-        {
+        public Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken) {
             IReadOnlyList<JobRunSnapshot> jobs = [Snap(ExistingJobId, JobType.ScanLibrary, JobRunStatus.Queued)];
             return Task.FromResult(jobs);
         }

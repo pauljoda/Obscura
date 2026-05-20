@@ -11,18 +11,15 @@ namespace Obscura.Application.Jobs.Handlers;
 /// </summary>
 public abstract class EntityFileJobHandler(
     ILogger logger,
-    ILibraryScanPersistence persistence) : IJobHandler
-{
+    ILibraryScanPersistence persistence) : IJobHandler {
     public abstract JobType Type { get; }
 
-    public async Task HandleAsync(JobContext context, CancellationToken cancellationToken)
-    {
+    public async Task HandleAsync(JobContext context, CancellationToken cancellationToken) {
         var entityId = ParseEntityId(context.Job.TargetEntityId);
         if (entityId is null) return;
 
         var filePath = await persistence.GetSourceFilePathAsync(entityId.Value, cancellationToken);
-        if (filePath is null || !ValidateFilePath(filePath))
-        {
+        if (filePath is null || !ValidateFilePath(filePath)) {
             logger.LogWarning("{JobType}: source file not found for {EntityId}", Type.ToCode(), entityId);
             await OnSourceFileNotFoundAsync(entityId.Value, cancellationToken);
             return;

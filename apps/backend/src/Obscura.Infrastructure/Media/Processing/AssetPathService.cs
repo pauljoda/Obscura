@@ -5,12 +5,10 @@ namespace Obscura.Infrastructure.Media.Processing;
 /// for database storage. Disk paths use the configured data directory;
 /// URL paths use the <c>/assets/</c> prefix that the API serves from the cache root.
 /// </summary>
-public sealed class AssetPathService
-{
+public sealed class AssetPathService {
     private readonly string _cacheRoot;
 
-    public AssetPathService(string dataDir)
-    {
+    public AssetPathService(string dataDir) {
         var resolvedDataDir = Path.GetFullPath(dataDir);
         _cacheRoot = Path.Combine(resolvedDataDir, "cache");
     }

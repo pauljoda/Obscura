@@ -6,8 +6,7 @@ namespace Obscura.Application.Organization;
 /// post-move path-prefix rewrite through this port. All filesystem move operations
 /// happen in the Application service itself.
 /// </summary>
-public interface IOrganizePersistence
-{
+public interface IOrganizePersistence {
     /// <summary>
     /// Lists watched library roots, optionally filtered to one root by identifier.
     /// </summary>

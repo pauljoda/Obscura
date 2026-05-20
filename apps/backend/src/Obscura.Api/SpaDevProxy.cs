@@ -6,8 +6,7 @@ namespace Obscura.Api;
 /// Svelte still gets full HMR. API, asset, and OpenAPI routes pass through
 /// to the normal .NET pipeline.
 /// </summary>
-public static class SpaDevProxy
-{
+public static class SpaDevProxy {
     private static readonly string[] ApiPrefixes =
     [
         "/api",
@@ -23,23 +22,18 @@ public static class SpaDevProxy
         "/UserPlayedItems"
     ];
 
-    public static void UseSpaDevServer(this WebApplication app, string viteUrl)
-    {
-        var client = new HttpClient(new SocketsHttpHandler
-        {
+    public static void UseSpaDevServer(this WebApplication app, string viteUrl) {
+        var client = new HttpClient(new SocketsHttpHandler {
             AllowAutoRedirect = false,
             UseCookies = false,
-        })
-        {
+        }) {
             Timeout = TimeSpan.FromSeconds(60),
         };
 
         var trimmedViteUrl = viteUrl.TrimEnd('/');
 
-        app.Use(async (context, next) =>
-        {
-            if (ShouldPassThroughToBackend(context.Request.Path))
-            {
+        app.Use(async (context, next) => {
+            if (ShouldPassThroughToBackend(context.Request.Path)) {
                 await InvokeBackendRequestAsync(context, next);
                 return;
             }
@@ -49,26 +43,22 @@ public static class SpaDevProxy
             using var request = new HttpRequestMessage(
                 new HttpMethod(context.Request.Method), targetUrl);
 
-            foreach (var header in context.Request.Headers)
-            {
+            foreach (var header in context.Request.Headers) {
                 if (string.Equals(header.Key, "Host", StringComparison.OrdinalIgnoreCase))
                     continue;
                 request.Headers.TryAddWithoutValidation(header.Key, header.Value.ToArray());
             }
 
             if (context.Request.ContentLength > 0 ||
-                context.Request.Headers.ContainsKey("Transfer-Encoding"))
-            {
+                context.Request.Headers.ContainsKey("Transfer-Encoding")) {
                 request.Content = new StreamContent(context.Request.Body);
-                if (context.Request.ContentType is not null)
-                {
+                if (context.Request.ContentType is not null) {
                     request.Content.Headers.TryAddWithoutValidation(
                         "Content-Type", context.Request.ContentType);
                 }
             }
 
-            try
-            {
+            try {
                 using var response = await client.SendAsync(
                     request, HttpCompletionOption.ResponseHeadersRead, context.RequestAborted);
 
@@ -82,13 +72,9 @@ public static class SpaDevProxy
                 context.Response.Headers.Remove("transfer-encoding");
 
                 await response.Content.CopyToAsync(context.Response.Body, context.RequestAborted);
-            }
-            catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
-            {
+            } catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested) {
                 // Browser disconnected — nothing to write.
-            }
-            catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
-            {
+            } catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException) {
                 if (context.Response.HasStarted) return;
                 context.Response.StatusCode = 503;
                 context.Response.ContentType = "text/html; charset=utf-8";
@@ -112,22 +98,17 @@ public static class SpaDevProxy
     /// are intentionally case-sensitive so lowercase SPA routes like
     /// <c>/videos</c> can still be refreshed directly in the browser.
     /// </summary>
-    public static bool ShouldPassThroughToBackend(PathString requestPath)
-    {
+    public static bool ShouldPassThroughToBackend(PathString requestPath) {
         var path = requestPath.Value ?? "";
 
-        foreach (var prefix in ApiPrefixes)
-        {
-            if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            {
+        foreach (var prefix in ApiPrefixes) {
+            if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) {
                 return true;
             }
         }
 
-        foreach (var prefix in JellyfinApiPrefixes)
-        {
-            if (path.StartsWith(prefix, StringComparison.Ordinal))
-            {
+        foreach (var prefix in JellyfinApiPrefixes) {
+            if (path.StartsWith(prefix, StringComparison.Ordinal)) {
                 return true;
             }
         }
@@ -139,14 +120,10 @@ public static class SpaDevProxy
     /// Invokes the backend route table and ignores cancellation that only means
     /// the browser abandoned the request during navigation or refresh.
     /// </summary>
-    public static async Task InvokeBackendRequestAsync(HttpContext context, Func<Task> next)
-    {
-        try
-        {
+    public static async Task InvokeBackendRequestAsync(HttpContext context, Func<Task> next) {
+        try {
             await next();
-        }
-        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
-        {
+        } catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested) {
             // Browser disconnected or navigated away. The request is already gone,
             // so there is no response to produce and no backend fault to surface.
         }

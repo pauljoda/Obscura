@@ -1,7 +1,6 @@
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class EntityFlagRow
-{
+public sealed class EntityFlagRow {
     public Guid EntityId { get; set; }
 
     public bool IsFavorite { get; set; }

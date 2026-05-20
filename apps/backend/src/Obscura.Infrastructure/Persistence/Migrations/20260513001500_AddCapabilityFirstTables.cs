@@ -3,26 +3,21 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Obscura.Infrastructure.Persistence.Migrations
-{
+namespace Obscura.Infrastructure.Persistence.Migrations {
     /// <inheritdoc />
-    public partial class AddCapabilityFirstTables : Migration
-    {
+    public partial class AddCapabilityFirstTables : Migration {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
+        protected override void Up(MigrationBuilder migrationBuilder) {
             migrationBuilder.CreateTable(
                 name: "entity_stats",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     code = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     value = table.Column<int>(type: "integer", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_stats", x => new { x.entity_id, x.code });
                     table.CheckConstraint("ck_entity_stats_value", "value >= 0");
                     table.ForeignKey(
@@ -37,8 +32,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "entity_dates",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     code = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     value = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
@@ -46,8 +40,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     precision = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: true),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_dates", x => new { x.entity_id, x.code });
                     table.ForeignKey(
                         name: "FK_entity_dates_entities_entity_id",
@@ -61,8 +54,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "entity_technical",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     duration_seconds = table.Column<double>(type: "double precision", nullable: true),
                     width = table.Column<int>(type: "integer", nullable: true),
@@ -76,8 +68,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     format = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_technical", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_entity_technical_entities_entity_id",
@@ -91,15 +82,13 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "entity_sources",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     code = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     value = table.Column<string>(type: "text", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_sources", x => new { x.entity_id, x.code });
                     table.ForeignKey(
                         name: "FK_entity_sources_entities_entity_id",
@@ -113,8 +102,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "entity_progress",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     current_entity_id = table.Column<Guid>(type: "uuid", nullable: true),
                     unit = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
@@ -124,8 +112,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     completed_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_progress", x => x.entity_id);
                     table.CheckConstraint("ck_entity_progress_bounds", "index >= 0 AND total >= 0");
                     table.ForeignKey(
@@ -147,16 +134,14 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "entity_positions",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     code = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     value = table.Column<int>(type: "integer", nullable: false),
                     label = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_positions", x => new { x.entity_id, x.code });
                     table.ForeignKey(
                         name: "FK_entity_positions_entities_entity_id",
@@ -170,15 +155,13 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "entity_classifications",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     value = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
                     system = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_classifications", x => x.entity_id);
                     table.ForeignKey(
                         name: "FK_entity_classifications_entities_entity_id",
@@ -197,8 +180,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+        protected override void Down(MigrationBuilder migrationBuilder) {
             migrationBuilder.DropTable(name: "entity_classifications", schema: "v2");
             migrationBuilder.DropTable(name: "entity_dates", schema: "v2");
             migrationBuilder.DropTable(name: "entity_positions", schema: "v2");

@@ -7,8 +7,7 @@ namespace Obscura.Application.Entities;
 /// persists it back. The implementation lives in Infrastructure (EF Core) and owns the
 /// row-to-domain hydration and unit-of-work boundary.
 /// </summary>
-public interface IEntityWriteRepository
-{
+public interface IEntityWriteRepository {
     /// <summary>
     /// Finds an active entity and hydrates its domain relationships plus mutable state capabilities.
     /// Returns null when no active entity exists for the given identifier.

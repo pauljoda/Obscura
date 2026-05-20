@@ -5,10 +5,8 @@ using Obscura.Contracts.System;
 
 namespace Obscura.Api.Endpoints;
 
-public static class JellyfinPlaybackEndpoints
-{
-    public static IEndpointRouteBuilder MapJellyfinPlaybackEndpoints(this IEndpointRouteBuilder routes)
-    {
+public static class JellyfinPlaybackEndpoints {
+    public static IEndpointRouteBuilder MapJellyfinPlaybackEndpoints(this IEndpointRouteBuilder routes) {
         routes.MapGet("/Items/{itemId:guid}/PlaybackInfo", (
             Guid itemId,
             IPlaybackInfoService playback,
@@ -112,11 +110,10 @@ public static class JellyfinPlaybackEndpoints
 
         routes.MapDelete("/Videos/ActiveEncodings", async (
             ITranscodeSessionService transcodes,
-            CancellationToken cancellationToken) =>
-        {
-            var killed = await transcodes.CancelAllAsync(cancellationToken);
-            return Results.Ok(new { killed });
-        })
+            CancellationToken cancellationToken) => {
+                var killed = await transcodes.CancelAllAsync(cancellationToken);
+                return Results.Ok(new { killed });
+            })
             .WithName("DeleteJellyfinActiveEncodings")
             .WithTags("Jellyfin Videos");
 
@@ -131,44 +128,40 @@ public static class JellyfinPlaybackEndpoints
         routes.MapPost("/Sessions/Playing", async (
             PlaybackSessionRequest request,
             IPlaybackSessionService sessions,
-            CancellationToken cancellationToken) =>
-        {
-            await sessions.StartAsync(request.ToApplication(), cancellationToken);
-            return Results.NoContent();
-        })
+            CancellationToken cancellationToken) => {
+                await sessions.StartAsync(request.ToApplication(), cancellationToken);
+                return Results.NoContent();
+            })
             .WithName("PostJellyfinSessionPlaying")
             .WithTags("Jellyfin Sessions");
 
         routes.MapPost("/Sessions/Playing/Progress", async (
             PlaybackSessionRequest request,
             IPlaybackSessionService sessions,
-            CancellationToken cancellationToken) =>
-        {
-            await sessions.ProgressAsync(request.ToApplication(), cancellationToken);
-            return Results.NoContent();
-        })
+            CancellationToken cancellationToken) => {
+                await sessions.ProgressAsync(request.ToApplication(), cancellationToken);
+                return Results.NoContent();
+            })
             .WithName("PostJellyfinSessionProgress")
             .WithTags("Jellyfin Sessions");
 
         routes.MapPost("/Sessions/Playing/Ping", async (
             PlaybackSessionRequest request,
             IPlaybackSessionService sessions,
-            CancellationToken cancellationToken) =>
-        {
-            await sessions.PingAsync(request.ToApplication(), cancellationToken);
-            return Results.NoContent();
-        })
+            CancellationToken cancellationToken) => {
+                await sessions.PingAsync(request.ToApplication(), cancellationToken);
+                return Results.NoContent();
+            })
             .WithName("PostJellyfinSessionPing")
             .WithTags("Jellyfin Sessions");
 
         routes.MapPost("/Sessions/Playing/Stopped", async (
             PlaybackSessionRequest request,
             IPlaybackSessionService sessions,
-            CancellationToken cancellationToken) =>
-        {
-            await sessions.StopAsync(request.ToApplication(), cancellationToken);
-            return Results.NoContent();
-        })
+            CancellationToken cancellationToken) => {
+                await sessions.StopAsync(request.ToApplication(), cancellationToken);
+                return Results.NoContent();
+            })
             .WithName("PostJellyfinSessionStopped")
             .WithTags("Jellyfin Sessions");
 
@@ -195,8 +188,7 @@ public static class JellyfinPlaybackEndpoints
         Guid itemId,
         IPlaybackInfoService playback,
         PlaybackInfoRequest? request,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var info = await playback.GetPlaybackInfoAsync(itemId, request?.ToApplication(), cancellationToken);
         return info is null
             ? Results.NotFound(new ApiProblem("playback_source_not_found", $"Item '{itemId}' has no playable source."))
@@ -206,16 +198,13 @@ public static class JellyfinPlaybackEndpoints
     private static async Task<IResult> StreamVideoAsync(
         Guid itemId,
         IVideoSourceService sourceFiles,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var source = await sourceFiles.GetSourceAsync(itemId, cancellationToken);
-        if (source is null)
-        {
+        if (source is null) {
             return Results.NotFound(new ApiProblem("video_stream_not_found", $"Video stream '{itemId}' was not found."));
         }
 
-        if (!source.DirectPlayable)
-        {
+        if (!source.DirectPlayable) {
             return Results.Json(
                 new ApiProblem("video_stream_not_direct_playable", "Direct playback is not available for this container."),
                 statusCode: StatusCodes.Status415UnsupportedMediaType);
@@ -230,11 +219,9 @@ public static class JellyfinPlaybackEndpoints
         int? audioStreamIndex,
         IHlsAssetService hlsAssets,
         HttpContext httpContext,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var hlsAsset = await hlsAssets.GetAssetAsync(itemId, asset, audioStreamIndex, cancellationToken);
-        if (hlsAsset is null)
-        {
+        if (hlsAsset is null) {
             return Results.NotFound(new ApiProblem("video_hls_not_found", $"Video HLS asset '{asset}' for '{itemId}' was not found."));
         }
 
@@ -247,11 +234,9 @@ public static class JellyfinPlaybackEndpoints
         int width,
         ITrickplayService trickplay,
         HttpContext httpContext,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var playlist = await trickplay.GetPlaylistAsync(itemId, width, cancellationToken);
-        if (playlist is null)
-        {
+        if (playlist is null) {
             return Results.NotFound(new ApiProblem("video_trickplay_not_found", $"Trickplay width '{width}' for '{itemId}' was not found."));
         }
 
@@ -265,11 +250,9 @@ public static class JellyfinPlaybackEndpoints
         int index,
         ITrickplayService trickplay,
         HttpContext httpContext,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var tile = await trickplay.GetTileAsync(itemId, width, index, cancellationToken);
-        if (tile is null)
-        {
+        if (tile is null) {
             return Results.NotFound(new ApiProblem("video_trickplay_tile_not_found", $"Trickplay tile '{index}' for '{itemId}' was not found."));
         }
 
@@ -280,8 +263,7 @@ public static class JellyfinPlaybackEndpoints
     private static async Task<IResult> MarkPlayedAsync(
         Guid itemId,
         IPlaybackSessionService sessions,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var result = await sessions.MarkPlayedAsync(itemId, cancellationToken);
         return result is null
             ? Results.NotFound(new ApiProblem("playback_item_not_found", $"Item '{itemId}' was not found."))
@@ -291,8 +273,7 @@ public static class JellyfinPlaybackEndpoints
     private static async Task<IResult> MarkUnplayedAsync(
         Guid itemId,
         IPlaybackSessionService sessions,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var result = await sessions.MarkUnplayedAsync(itemId, cancellationToken);
         return result is null
             ? Results.NotFound(new ApiProblem("playback_item_not_found", $"Item '{itemId}' was not found."))

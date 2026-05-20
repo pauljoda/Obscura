@@ -5,8 +5,7 @@ namespace Obscura.Application.Jobs.Ports;
 /// <summary>
 /// Port for collection membership operations during dynamic rule refresh.
 /// </summary>
-public interface ICollectionRefreshPersistence
-{
+public interface ICollectionRefreshPersistence {
     /// <summary>
     /// Gets a dynamic collection's metadata by its entity ID.
     /// Returns null if the collection doesn't exist or is not dynamic/hybrid mode.

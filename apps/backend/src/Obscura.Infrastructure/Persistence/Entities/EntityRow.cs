@@ -1,7 +1,6 @@
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class EntityRow
-{
+public sealed class EntityRow {
     public Guid Id { get; set; }
 
     public string KindCode { get; set; } = string.Empty;

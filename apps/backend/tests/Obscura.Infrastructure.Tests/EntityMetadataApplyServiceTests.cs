@@ -7,11 +7,9 @@ using Obscura.Infrastructure.Plugins;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class EntityMetadataApplyServiceTests
-{
+public sealed class EntityMetadataApplyServiceTests {
     [Fact]
-    public async Task ApplySelectedFieldsPersistsProviderIdentityAndCapabilityRows()
-    {
+    public async Task ApplySelectedFieldsPersistsProviderIdentityAndCapabilityRows() {
         await using var db = CreateContext();
         var entityId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         SeedEntity(db, entityId, "video", "Old Title");
@@ -74,8 +72,7 @@ public sealed class EntityMetadataApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplySeriesCascadePersistsEpisodeMetadataAndCredits()
-    {
+    public async Task ApplySeriesCascadePersistsEpisodeMetadataAndCredits() {
         await using var db = CreateContext();
         var seriesId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         var seasonId = Guid.Parse("33333333-3333-3333-3333-333333333333");
@@ -84,8 +81,7 @@ public sealed class EntityMetadataApplyServiceTests
         SeedEntity(db, seasonId, "video-season", "Old Season", parentEntityId: seriesId, sortOrder: 1);
         SeedEntity(db, episodeId, "video", "Old Episode");
         db.EntityChildLinks.AddRange(
-            new EntityChildLinkRow
-            {
+            new EntityChildLinkRow {
                 ParentEntityId = seriesId,
                 ChildEntityId = seasonId,
                 ChildKindCode = EntityKindRegistry.VideoSeason.Code,
@@ -93,8 +89,7 @@ public sealed class EntityMetadataApplyServiceTests
                 IsStructural = true,
                 CreatedAt = DateTimeOffset.UtcNow
             },
-            new EntityChildLinkRow
-            {
+            new EntityChildLinkRow {
                 ParentEntityId = seasonId,
                 ChildEntityId = episodeId,
                 ChildKindCode = EntityKindRegistry.Video.Code,
@@ -102,8 +97,7 @@ public sealed class EntityMetadataApplyServiceTests
                 IsStructural = true,
                 CreatedAt = DateTimeOffset.UtcNow
             });
-        db.EntityPositions.Add(new EntityPositionRow
-        {
+        db.EntityPositions.Add(new EntityPositionRow {
             EntityId = episodeId,
             Code = "episodeNumber",
             Value = 1,
@@ -195,8 +189,7 @@ public sealed class EntityMetadataApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplyProposalChildrenWithTargetEntityIdsRecursesThroughGenericStructure()
-    {
+    public async Task ApplyProposalChildrenWithTargetEntityIdsRecursesThroughGenericStructure() {
         await using var db = CreateContext();
         var parentId = Guid.Parse("55555555-5555-5555-5555-555555555555");
         var childId = Guid.Parse("66666666-6666-6666-6666-666666666666");
@@ -205,8 +198,7 @@ public sealed class EntityMetadataApplyServiceTests
         SeedEntity(db, childId, "video-season", "Old Season");
         SeedEntity(db, grandchildId, "video", "Old Episode");
         db.EntityChildLinks.AddRange(
-            new EntityChildLinkRow
-            {
+            new EntityChildLinkRow {
                 ParentEntityId = parentId,
                 ChildEntityId = childId,
                 ChildKindCode = "video-season",
@@ -214,8 +206,7 @@ public sealed class EntityMetadataApplyServiceTests
                 IsStructural = true,
                 CreatedAt = DateTimeOffset.UtcNow
             },
-            new EntityChildLinkRow
-            {
+            new EntityChildLinkRow {
                 ParentEntityId = childId,
                 ChildEntityId = grandchildId,
                 ChildKindCode = "video",
@@ -284,8 +275,7 @@ public sealed class EntityMetadataApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplyCascadePositionsUpdatesCanonicalPositionsAndStructuralSortOrder()
-    {
+    public async Task ApplyCascadePositionsUpdatesCanonicalPositionsAndStructuralSortOrder() {
         await using var db = CreateContext();
         var seriesId = Guid.Parse("88888888-8888-8888-8888-888888888888");
         var seasonId = Guid.Parse("99999999-9999-9999-9999-999999999999");
@@ -294,8 +284,7 @@ public sealed class EntityMetadataApplyServiceTests
         SeedEntity(db, seasonId, "video-season", "Season", parentEntityId: seriesId, sortOrder: 1);
         SeedEntity(db, episodeId, "video", "Episode", parentEntityId: seasonId, sortOrder: 1);
         db.EntityChildLinks.AddRange(
-            new EntityChildLinkRow
-            {
+            new EntityChildLinkRow {
                 ParentEntityId = seriesId,
                 ChildEntityId = seasonId,
                 ChildKindCode = "video-season",
@@ -303,8 +292,7 @@ public sealed class EntityMetadataApplyServiceTests
                 IsStructural = true,
                 CreatedAt = DateTimeOffset.UtcNow
             },
-            new EntityChildLinkRow
-            {
+            new EntityChildLinkRow {
                 ParentEntityId = seasonId,
                 ChildEntityId = episodeId,
                 ChildKindCode = "video",
@@ -372,8 +360,7 @@ public sealed class EntityMetadataApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplyStructuralChildCreditsDeduplicatesRepeatedPeople()
-    {
+    public async Task ApplyStructuralChildCreditsDeduplicatesRepeatedPeople() {
         await using var db = CreateContext();
         var seriesId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         var episodeId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
@@ -381,8 +368,7 @@ public sealed class EntityMetadataApplyServiceTests
         SeedEntity(db, seriesId, "video-series", "Series");
         SeedEntity(db, episodeId, "video", "Episode", parentEntityId: seriesId, sortOrder: 1);
         SeedEntity(db, personId, "person", "Returning Actor");
-        db.EntityChildLinks.Add(new EntityChildLinkRow
-        {
+        db.EntityChildLinks.Add(new EntityChildLinkRow {
             ParentEntityId = seriesId,
             ChildEntityId = episodeId,
             ChildKindCode = "video",
@@ -434,8 +420,7 @@ public sealed class EntityMetadataApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplyStructuralChildArtworkDeduplicatesRepeatedLinkedPersonImages()
-    {
+    public async Task ApplyStructuralChildArtworkDeduplicatesRepeatedLinkedPersonImages() {
         await using var db = CreateContext();
         var seriesId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
         var episodeId = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff");
@@ -443,8 +428,7 @@ public sealed class EntityMetadataApplyServiceTests
         SeedEntity(db, seriesId, "video-series", "Series");
         SeedEntity(db, episodeId, "video", "Episode", parentEntityId: seriesId, sortOrder: 1);
         SeedEntity(db, personId, "person", "Returning Actor");
-        db.EntityChildLinks.Add(new EntityChildLinkRow
-        {
+        db.EntityChildLinks.Add(new EntityChildLinkRow {
             ParentEntityId = seriesId,
             ChildEntityId = episodeId,
             ChildKindCode = "video",
@@ -511,15 +495,13 @@ public sealed class EntityMetadataApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplyDownloadsRelationshipArtworkFromSeparatedRelationshipProposals()
-    {
+    public async Task ApplyDownloadsRelationshipArtworkFromSeparatedRelationshipProposals() {
         await using var db = CreateContext();
         var seriesId = Guid.Parse("13131313-1313-1313-1313-131313131313");
         var episodeId = Guid.Parse("14141414-1414-1414-1414-141414141414");
         SeedEntity(db, seriesId, "video-series", "The Chair Company");
         SeedEntity(db, episodeId, "video", "Old Episode", parentEntityId: seriesId, sortOrder: 1);
-        db.EntityChildLinks.Add(new EntityChildLinkRow
-        {
+        db.EntityChildLinks.Add(new EntityChildLinkRow {
             ParentEntityId = seriesId,
             ChildEntityId = episodeId,
             ChildKindCode = "video",
@@ -585,8 +567,7 @@ public sealed class EntityMetadataApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplyRootCreditsAndStudioUseSeparatedRelationshipArtwork()
-    {
+    public async Task ApplyRootCreditsAndStudioUseSeparatedRelationshipArtwork() {
         await using var db = CreateContext();
         var movieId = Guid.Parse("15151515-1515-1515-1515-151515151515");
         SeedEntity(db, movieId, "video", "Old Movie");
@@ -618,8 +599,7 @@ public sealed class EntityMetadataApplyServiceTests
             TargetKind: "video",
             Confidence: 1,
             MatchReason: "external-id",
-            Patch: EmptyPatch() with
-            {
+            Patch: EmptyPatch() with {
                 Studio = "Chair Pictures",
                 Credits = [new CreditPatch("Lead Actor", "cast", "Lead", 0)]
             },
@@ -641,8 +621,7 @@ public sealed class EntityMetadataApplyServiceTests
     }
 
     [Fact]
-    public async Task ApplyMergesMultipleCreditRolesForSamePersonIntoOneRelationship()
-    {
+    public async Task ApplyMergesMultipleCreditRolesForSamePersonIntoOneRelationship() {
         await using var db = CreateContext();
         var episodeId = Guid.Parse("17171717-1717-1717-1717-171717171717");
         SeedEntity(db, episodeId, "video", "Old Episode");
@@ -655,8 +634,7 @@ public sealed class EntityMetadataApplyServiceTests
             TargetEntityId: episodeId,
             Confidence: 1,
             MatchReason: "external-id",
-            Patch: EmptyPatch() with
-            {
+            Patch: EmptyPatch() with {
                 Credits =
                 [
                     new CreditPatch("Tim Robinson", "cast", "Ron Trosper", 0),
@@ -682,8 +660,7 @@ public sealed class EntityMetadataApplyServiceTests
         Assert.Contains("Ron Trosper", credit.MetadataJson ?? string.Empty, StringComparison.Ordinal);
     }
 
-    private static ObscuraDbContext CreateContext()
-    {
+    private static ObscuraDbContext CreateContext() {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()
             .UseInMemoryDatabase($"metadata-apply-{Guid.NewGuid():N}")
             .Options;
@@ -697,10 +674,8 @@ public sealed class EntityMetadataApplyServiceTests
         string kind,
         string title,
         Guid? parentEntityId = null,
-        int? sortOrder = null)
-    {
-        db.Entities.Add(new EntityRow
-        {
+        int? sortOrder = null) {
+        db.Entities.Add(new EntityRow {
             Id = id,
             KindCode = kind,
             Title = title,
@@ -724,11 +699,9 @@ public sealed class EntityMetadataApplyServiceTests
         Positions: new Dictionary<string, int>(),
         Classification: null);
 
-    private sealed class FixedImageHandler : HttpMessageHandler
-    {
+    private sealed class FixedImageHandler : HttpMessageHandler {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
-            {
+            Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) {
                 Content = new ByteArrayContent([1, 2, 3])
             });
     }

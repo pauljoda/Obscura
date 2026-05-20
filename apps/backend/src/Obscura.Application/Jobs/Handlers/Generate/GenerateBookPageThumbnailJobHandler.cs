@@ -13,19 +13,16 @@ namespace Obscura.Application.Jobs.Handlers.Generate;
 public sealed class GenerateBookPageThumbnailJobHandler(
     ILogger<GenerateBookPageThumbnailJobHandler> logger,
     IMediaAssetGenerator assets,
-    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence)
-{
+    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence) {
     public override JobType Type => JobType.GenerateBookPageThumbnail;
 
-    protected override bool ValidateFilePath(string filePath)
-    {
+    protected override bool ValidateFilePath(string filePath) {
         var parts = filePath.Split("::", 2, StringSplitOptions.None);
         return parts.Length == 2 && File.Exists(parts[0]);
     }
 
     protected override async Task ExecuteAsync(
-        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken)
-    {
+        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken) {
         await context.ReportProgressAsync(20, "Extracting page", cancellationToken);
 
         var parts = filePath.Split("::", 2, StringSplitOptions.None);
@@ -33,10 +30,8 @@ public sealed class GenerateBookPageThumbnailJobHandler(
         var memberPath = parts[1];
 
         var tempPath = Path.Combine(Path.GetTempPath(), $"obscura-page-{entityId}{Path.GetExtension(memberPath)}");
-        try
-        {
-            if (!ExtractZipMember(archivePath, memberPath, tempPath))
-            {
+        try {
+            if (!ExtractZipMember(archivePath, memberPath, tempPath)) {
                 logger.LogWarning("GenerateBookPageThumbnail: failed to extract {Member} from {Archive}", memberPath, archivePath);
                 return;
             }
@@ -46,25 +41,20 @@ public sealed class GenerateBookPageThumbnailJobHandler(
             var thumbPath = assets.BookPageThumbnailPath(entityId);
             var success = await assets.GenerateImageThumbnailAsync(tempPath, thumbPath, 640, 3, cancellationToken);
 
-            if (success)
-            {
+            if (success) {
                 var size = new FileInfo(thumbPath).Length;
                 await Persistence.UpsertEntityFileAsync(entityId, EntityFileRole.Thumbnail, assets.BookPageThumbnailUrl(entityId), "image/jpeg", size, cancellationToken);
                 logger.LogInformation("GenerateBookPageThumbnail: created thumbnail for {Label}", context.Job.TargetLabel);
             }
-        }
-        finally
-        {
+        } finally {
             try { File.Delete(tempPath); } catch { }
         }
 
         await context.ReportProgressAsync(100, "Thumbnail complete", cancellationToken);
     }
 
-    private static bool ExtractZipMember(string archivePath, string memberPath, string outputPath)
-    {
-        try
-        {
+    private static bool ExtractZipMember(string archivePath, string memberPath, string outputPath) {
+        try {
             using var archive = ZipFile.OpenRead(archivePath);
             var entry = archive.GetEntry(memberPath);
             if (entry is null) return false;
@@ -72,9 +62,7 @@ public sealed class GenerateBookPageThumbnailJobHandler(
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
             entry.ExtractToFile(outputPath, overwrite: true);
             return true;
-        }
-        catch
-        {
+        } catch {
             return false;
         }
     }

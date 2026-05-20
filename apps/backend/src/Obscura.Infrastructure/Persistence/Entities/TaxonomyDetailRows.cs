@@ -1,7 +1,6 @@
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class PersonDetailRow
-{
+public sealed class PersonDetailRow {
     public Guid EntityId { get; set; }
     public string? Disambiguation { get; set; }
     public string? Gender { get; set; }
@@ -16,13 +15,11 @@ public sealed class PersonDetailRow
     public string? Piercings { get; set; }
 }
 
-public sealed class StudioDetailRow
-{
+public sealed class StudioDetailRow {
     public Guid EntityId { get; set; }
 }
 
-public sealed class TagDetailRow
-{
+public sealed class TagDetailRow {
     public Guid EntityId { get; set; }
     public bool IgnoreAutoTag { get; set; }
 }

@@ -10,25 +10,21 @@ namespace Obscura.Infrastructure.Organization;
 /// (library roots, active entities, canonical source files) and applies the post-move
 /// path-prefix rewrite across source files and source-capability rows in one commit.
 /// </summary>
-public sealed class EfOrganizePersistence : IOrganizePersistence
-{
+public sealed class EfOrganizePersistence : IOrganizePersistence {
     private readonly ObscuraDbContext _db;
 
-    public EfOrganizePersistence(ObscuraDbContext db)
-    {
+    public EfOrganizePersistence(ObscuraDbContext db) {
         _db = db;
     }
 
-    public async Task<IReadOnlyList<OrganizeLibraryRoot>> ListRootsAsync(Guid? rootId, CancellationToken cancellationToken)
-    {
+    public async Task<IReadOnlyList<OrganizeLibraryRoot>> ListRootsAsync(Guid? rootId, CancellationToken cancellationToken) {
         return await _db.LibraryRoots.AsNoTracking()
             .Where(root => rootId == null || root.Id == rootId)
             .Select(root => new OrganizeLibraryRoot(root.Id, root.Path))
             .ToArrayAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<OrganizeEntityRow>> ListActiveEntitiesAsync(Guid? entityId, CancellationToken cancellationToken)
-    {
+    public async Task<IReadOnlyList<OrganizeEntityRow>> ListActiveEntitiesAsync(Guid? entityId, CancellationToken cancellationToken) {
         return await _db.Entities.AsNoTracking()
             .Where(entity => entity.DeletedAt == null)
             .Where(entity => entityId == null || entity.Id == entityId)
@@ -38,10 +34,8 @@ public sealed class EfOrganizePersistence : IOrganizePersistence
 
     public async Task<IReadOnlyList<OrganizeSourceFile>> ListSourceFilesAsync(
         IReadOnlyCollection<Guid> entityIds,
-        CancellationToken cancellationToken)
-    {
-        if (entityIds.Count == 0)
-        {
+        CancellationToken cancellationToken) {
+        if (entityIds.Count == 0) {
             return [];
         }
 
@@ -55,27 +49,22 @@ public sealed class EfOrganizePersistence : IOrganizePersistence
             .ToArrayAsync(cancellationToken);
     }
 
-    public async Task ApplyPathPrefixRewriteAsync(string sourcePath, string targetPath, CancellationToken cancellationToken)
-    {
+    public async Task ApplyPathPrefixRewriteAsync(string sourcePath, string targetPath, CancellationToken cancellationToken) {
         var now = DateTimeOffset.UtcNow;
 
         var sourceFiles = await _db.EntityFiles
             .Where(file => file.Role == EntityFileRole.Source)
             .ToArrayAsync(cancellationToken);
-        foreach (var sourceFile in sourceFiles)
-        {
-            if (TryMapMovedPath(sourceFile.Path, sourcePath, targetPath, out var nextPath))
-            {
+        foreach (var sourceFile in sourceFiles) {
+            if (TryMapMovedPath(sourceFile.Path, sourcePath, targetPath, out var nextPath)) {
                 sourceFile.Path = nextPath;
                 sourceFile.UpdatedAt = now;
             }
         }
 
         var folderSources = await _db.EntitySources.ToArrayAsync(cancellationToken);
-        foreach (var source in folderSources)
-        {
-            if (TryMapMovedPath(source.Value, sourcePath, targetPath, out var nextPath))
-            {
+        foreach (var source in folderSources) {
+            if (TryMapMovedPath(source.Value, sourcePath, targetPath, out var nextPath)) {
                 source.Value = nextPath;
                 source.UpdatedAt = now;
             }
@@ -88,18 +77,15 @@ public sealed class EfOrganizePersistence : IOrganizePersistence
         string currentPath,
         string sourcePath,
         string targetPath,
-        out string mappedPath)
-    {
+        out string mappedPath) {
         var normalizedCurrent = Normalize(currentPath);
         var normalizedSource = Normalize(sourcePath);
-        if (SamePath(normalizedCurrent, normalizedSource))
-        {
+        if (SamePath(normalizedCurrent, normalizedSource)) {
             mappedPath = Normalize(targetPath);
             return true;
         }
 
-        if (IsSubPathOf(normalizedCurrent, normalizedSource))
-        {
+        if (IsSubPathOf(normalizedCurrent, normalizedSource)) {
             var relativePath = Path.GetRelativePath(normalizedSource, normalizedCurrent);
             mappedPath = Normalize(Path.Combine(targetPath, relativePath));
             return true;
@@ -117,8 +103,7 @@ public sealed class EfOrganizePersistence : IOrganizePersistence
             Path.TrimEndingDirectorySeparator(Normalize(right)),
             StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsSubPathOf(string path, string parent)
-    {
+    private static bool IsSubPathOf(string path, string parent) {
         var fullPath = Path.TrimEndingDirectorySeparator(Normalize(path));
         var fullParent = Path.TrimEndingDirectorySeparator(Normalize(parent));
         return fullPath.StartsWith(fullParent + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);

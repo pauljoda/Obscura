@@ -12,26 +12,18 @@ namespace Obscura.Application.Jobs;
 /// </summary>
 public sealed class JobScheduler(
     IServiceScopeFactory scopeFactory,
-    ILogger<JobScheduler> logger) : BackgroundService
-{
+    ILogger<JobScheduler> logger) : BackgroundService {
     private static readonly TimeSpan CheckInterval = TimeSpan.FromSeconds(60);
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
         logger.LogInformation("Job scheduler started.");
 
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
+        while (!stoppingToken.IsCancellationRequested) {
+            try {
                 await ScheduleRecurringScansAsync(stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
+            } catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) {
                 break;
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 logger.LogError(ex, "Scheduler tick failed.");
             }
 
@@ -39,53 +31,44 @@ public sealed class JobScheduler(
         }
     }
 
-    private async Task ScheduleRecurringScansAsync(CancellationToken cancellationToken)
-    {
+    private async Task ScheduleRecurringScansAsync(CancellationToken cancellationToken) {
         await using var scope = scopeFactory.CreateAsyncScope();
         var settings = scope.ServiceProvider.GetRequiredService<SettingsService>();
         var queue = scope.ServiceProvider.GetRequiredService<IJobQueueService>();
 
         var config = await settings.GetLibraryConfigAsync(cancellationToken);
-        if (!config.Settings.AutoScanEnabled || config.Settings.ScanIntervalMinutes <= 0)
-        {
+        if (!config.Settings.AutoScanEnabled || config.Settings.ScanIntervalMinutes <= 0) {
             return;
         }
 
         var scanInterval = TimeSpan.FromMinutes(config.Settings.ScanIntervalMinutes);
         var now = DateTimeOffset.UtcNow;
 
-        foreach (var root in config.Roots)
-        {
-            if (!root.Enabled)
-            {
+        foreach (var root in config.Roots) {
+            if (!root.Enabled) {
                 continue;
             }
 
             var lastScanned = root.LastScannedAt;
-            if (lastScanned is not null && now - lastScanned < scanInterval)
-            {
+            if (lastScanned is not null && now - lastScanned < scanInterval) {
                 continue;
             }
 
             var rootId = root.Id.ToString();
 
-            if (root.ScanVideos)
-            {
+            if (root.ScanVideos) {
                 await EnqueueScanIfNeeded(queue, JobType.ScanLibrary, rootId, root.Label, cancellationToken);
             }
 
-            if (root.ScanImages)
-            {
+            if (root.ScanImages) {
                 await EnqueueScanIfNeeded(queue, JobType.ScanGallery, rootId, root.Label, cancellationToken);
             }
 
-            if (root.ScanAudio)
-            {
+            if (root.ScanAudio) {
                 await EnqueueScanIfNeeded(queue, JobType.ScanAudio, rootId, root.Label, cancellationToken);
             }
 
-            if (root.ScanBooks)
-            {
+            if (root.ScanBooks) {
                 await EnqueueScanIfNeeded(queue, JobType.ScanBook, rootId, root.Label, cancellationToken);
             }
         }
@@ -96,10 +79,8 @@ public sealed class JobScheduler(
         JobType type,
         string rootId,
         string label,
-        CancellationToken cancellationToken)
-    {
-        if (await queue.HasPendingAsync(type, rootId, cancellationToken))
-        {
+        CancellationToken cancellationToken) {
+        if (await queue.HasPendingAsync(type, rootId, cancellationToken)) {
             return;
         }
 

@@ -2,11 +2,9 @@ using Obscura.Domain.Capabilities;
 
 namespace Obscura.Domain.Tests;
 
-public sealed class CapabilityStateTests
-{
+public sealed class CapabilityStateTests {
     [Fact]
-    public void FlagsPatchOnlyUpdatesProvidedValues()
-    {
+    public void FlagsPatchOnlyUpdatesProvidedValues() {
         var flags = new CapabilityFlags(isFavorite: false, isNsfw: true, isOrganized: false);
 
         flags.Patch(isFavorite: true, isNsfw: null, isOrganized: null);
@@ -17,8 +15,7 @@ public sealed class CapabilityStateTests
     }
 
     [Fact]
-    public void PlaybackUpdateAccumulatesDurationAndMarksCompletion()
-    {
+    public void PlaybackUpdateAccumulatesDurationAndMarksCompletion() {
         var playback = new CapabilityPlayback();
         var completedAt = DateTimeOffset.Parse("2026-05-19T10:00:00Z");
 
@@ -31,8 +28,7 @@ public sealed class CapabilityStateTests
     }
 
     [Fact]
-    public void MarkersAddUpdateAndDeleteByIdentifier()
-    {
+    public void MarkersAddUpdateAndDeleteByIdentifier() {
         var markers = new CapabilityMarkers();
 
         var id = markers.Add(" intro ", 5, 10);

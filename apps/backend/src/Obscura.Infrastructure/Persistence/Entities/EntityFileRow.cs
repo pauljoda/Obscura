@@ -2,8 +2,7 @@ using Obscura.Domain.Entities;
 
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class EntityFileRow
-{
+public sealed class EntityFileRow {
     /// <summary>File identifier.</summary>
     public Guid Id { get; set; }
 

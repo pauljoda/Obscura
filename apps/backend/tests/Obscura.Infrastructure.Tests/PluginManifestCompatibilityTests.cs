@@ -3,11 +3,9 @@ using Obscura.Infrastructure.Plugins;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class PluginManifestCompatibilityTests
-{
+public sealed class PluginManifestCompatibilityTests {
     [Fact]
-    public void FiltersToV2DotnetPluginsCompatibleWithCurrentAppVersion()
-    {
+    public void FiltersToV2DotnetPluginsCompatibleWithCurrentAppVersion() {
         var current = new Version(0, 22, 1);
         var candidates = new[]
         {

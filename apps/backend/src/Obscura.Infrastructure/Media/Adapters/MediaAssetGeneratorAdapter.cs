@@ -6,8 +6,7 @@ namespace Obscura.Infrastructure.Media.Adapters;
 /// <summary>
 /// Adapts the Infrastructure ThumbnailService and AssetPathService to the Application port interface.
 /// </summary>
-public sealed class MediaAssetGeneratorAdapter(ThumbnailService thumbnails, AssetPathService paths) : IMediaAssetGenerator
-{
+public sealed class MediaAssetGeneratorAdapter(ThumbnailService thumbnails, AssetPathService paths) : IMediaAssetGenerator {
     public Task<bool> GenerateVideoThumbnailAsync(
         string inputPath, string outputPath, double seekSeconds,
         int width, int height, int quality, CancellationToken cancellationToken) =>
@@ -58,8 +57,7 @@ public sealed class MediaAssetGeneratorAdapter(ThumbnailService thumbnails, Asse
         thumbnails.GenerateImageThumbnailAsync(inputPath, outputPath, targetWidth, quality, cancellationToken);
 
     public async Task<IReadOnlyList<string>> ExtractSubtitlesAsync(
-        string inputPath, string outputDir, IReadOnlyList<SubtitleStreamData> streams, CancellationToken cancellationToken)
-    {
+        string inputPath, string outputDir, IReadOnlyList<SubtitleStreamData> streams, CancellationToken cancellationToken) {
         var infraStreams = streams
             .Select(s => new SubtitleStreamInfo(s.StreamIndex, s.CodecName, s.Language, s.Title))
             .ToList();

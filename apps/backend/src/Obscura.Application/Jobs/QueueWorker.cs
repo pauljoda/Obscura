@@ -12,8 +12,7 @@ namespace Obscura.Application.Jobs;
 /// </summary>
 public sealed class QueueWorker(
     IServiceScopeFactory scopeFactory,
-    ILogger<QueueWorker> logger) : BackgroundService
-{
+    ILogger<QueueWorker> logger) : BackgroundService {
     private static readonly TimeSpan IdleDelay = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(30);
     private readonly string _workerId = $"{Environment.MachineName}-{Guid.NewGuid():N}";
@@ -22,8 +21,7 @@ public sealed class QueueWorker(
     /// Runs the worker loop until the host shuts down. Supports concurrent job processing
     /// controlled by the BackgroundWorkerConcurrency library setting.
     /// </summary>
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
         var concurrency = await LoadConcurrencyAsync(stoppingToken);
         using var semaphore = new SemaphoreSlim(concurrency, concurrency);
 
@@ -31,32 +29,25 @@ public sealed class QueueWorker(
             "Obscura .NET worker {WorkerId} started with concurrency {Concurrency}.",
             _workerId, concurrency);
 
-        while (!stoppingToken.IsCancellationRequested)
-        {
+        while (!stoppingToken.IsCancellationRequested) {
             await semaphore.WaitAsync(stoppingToken);
 
             JobRunSnapshot? job;
-            try
-            {
+            try {
                 await using var claimScope = scopeFactory.CreateAsyncScope();
                 var queue = claimScope.ServiceProvider.GetRequiredService<IJobQueueService>();
                 job = await queue.ClaimNextAsync(_workerId, stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
+            } catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) {
                 semaphore.Release();
                 throw;
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 semaphore.Release();
                 logger.LogError(ex, "Failed to claim next job.");
                 await Task.Delay(IdleDelay, stoppingToken);
                 continue;
             }
 
-            if (job is null)
-            {
+            if (job is null) {
                 semaphore.Release();
                 await Task.Delay(IdleDelay, stoppingToken);
                 continue;
@@ -67,15 +58,13 @@ public sealed class QueueWorker(
         }
     }
 
-    private async Task ProcessJobAsync(JobRunSnapshot job, CancellationToken stoppingToken)
-    {
+    private async Task ProcessJobAsync(JobRunSnapshot job, CancellationToken stoppingToken) {
         await using var scope = scopeFactory.CreateAsyncScope();
         var queue = scope.ServiceProvider.GetRequiredService<IJobQueueService>();
         var handlers = scope.ServiceProvider.GetServices<IJobHandler>();
         var handler = handlers.FirstOrDefault(h => h.Type == job.Type);
 
-        if (handler is null)
-        {
+        if (handler is null) {
             logger.LogWarning("No handler registered for job type '{JobType}'.", job.Type.ToCode());
             await queue.FailAsync(
                 job.Id,
@@ -86,8 +75,7 @@ public sealed class QueueWorker(
         }
 
         var timer = new JobPhaseTimer();
-        try
-        {
+        try {
             var context = new JobContext(job, queue);
             await handler.HandleAsync(context, stoppingToken);
             await queue.CompleteAsync(job.Id, "Completed", stoppingToken);
@@ -96,13 +84,9 @@ public sealed class QueueWorker(
             logger.LogInformation(
                 "[METRICS] {JobType} {Label} completed — {Timing}",
                 job.Type.ToCode(), job.TargetLabel ?? job.Id.ToString(), report.ToLogString());
-        }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-        {
+        } catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) {
             logger.LogInformation("Job {JobId} cancelled due to worker shutdown.", job.Id);
-        }
-        catch (Exception ex)
-        {
+        } catch (Exception ex) {
             var report = timer.Finish();
             logger.LogError(ex,
                 "[METRICS] {JobType} {Label} FAILED after {Elapsed:F2}s — {Timing}",
@@ -112,20 +96,15 @@ public sealed class QueueWorker(
         }
     }
 
-    private async Task<int> LoadConcurrencyAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
+    private async Task<int> LoadConcurrencyAsync(CancellationToken cancellationToken) {
+        try {
             await using var scope = scopeFactory.CreateAsyncScope();
             var settings = scope.ServiceProvider.GetService<SettingsService>();
-            if (settings is not null)
-            {
+            if (settings is not null) {
                 var config = await settings.GetLibraryConfigAsync(cancellationToken);
                 return Math.Max(1, config.Settings.BackgroundWorkerConcurrency);
             }
-        }
-        catch (Exception ex)
-        {
+        } catch (Exception ex) {
             logger.LogWarning(ex, "Could not load worker concurrency setting, defaulting to 1.");
         }
 

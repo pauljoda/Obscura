@@ -36,10 +36,8 @@ public sealed record PluginDescriptor(
 /// <summary>
 /// Discovers v2 plugin manifests, applies compatibility gates, and stores installed provider state.
 /// </summary>
-public sealed class PluginCatalogService
-{
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
-    {
+public sealed class PluginCatalogService {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) {
         PropertyNameCaseInsensitive = true,
         WriteIndented = false
     };
@@ -47,8 +45,7 @@ public sealed class PluginCatalogService
     private readonly ObscuraDbContext _db;
     private readonly PluginCatalogOptions _options;
 
-    public PluginCatalogService(ObscuraDbContext db, PluginCatalogOptions options)
-    {
+    public PluginCatalogService(ObscuraDbContext db, PluginCatalogOptions options) {
         _db = db;
         _options = options;
     }
@@ -56,8 +53,7 @@ public sealed class PluginCatalogService
     /// <summary>
     /// Lists locally discoverable v2 providers and overlays installed/auth state from the database.
     /// </summary>
-    public async Task<IReadOnlyList<PluginProvider>> ListProvidersAsync(CancellationToken cancellationToken)
-    {
+    public async Task<IReadOnlyList<PluginProvider>> ListProvidersAsync(CancellationToken cancellationToken) {
         var descriptors = await DiscoverAsync(cancellationToken);
         var configs = await _db.ProviderConfigs
             .AsNoTracking()
@@ -79,8 +75,7 @@ public sealed class PluginCatalogService
                 StringComparer.OrdinalIgnoreCase);
 
         return descriptors
-            .Select(descriptor =>
-            {
+            .Select(descriptor => {
                 configs.TryGetValue(descriptor.Manifest.Id, out var config);
                 credentialKeys.TryGetValue(descriptor.Manifest.Id, out var keys);
                 keys ??= [];
@@ -111,8 +106,7 @@ public sealed class PluginCatalogService
     public async Task<PluginDescriptor?> FindProviderAsync(
         string providerId,
         string? entityKind,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var descriptors = await DiscoverAsync(cancellationToken);
         return descriptors
             .Where(descriptor => descriptor.Manifest.Id.Equals(providerId, StringComparison.OrdinalIgnoreCase))
@@ -125,21 +119,17 @@ public sealed class PluginCatalogService
     /// <summary>
     /// Saves a provider config row so the plugin is visible as installed/enabled.
     /// </summary>
-    public async Task<PluginProvider?> InstallAsync(string providerId, CancellationToken cancellationToken)
-    {
+    public async Task<PluginProvider?> InstallAsync(string providerId, CancellationToken cancellationToken) {
         var descriptor = await FindProviderAsync(providerId, null, cancellationToken);
-        if (descriptor is null)
-        {
+        if (descriptor is null) {
             return null;
         }
 
         var now = DateTimeOffset.UtcNow;
         var config = await _db.ProviderConfigs
             .FirstOrDefaultAsync(row => row.ProviderCode == providerId, cancellationToken);
-        if (config is null)
-        {
-            config = new ProviderConfigRow
-            {
+        if (config is null) {
+            config = new ProviderConfigRow {
                 Id = Guid.NewGuid(),
                 ProviderCode = descriptor.Manifest.Id,
                 CreatedAt = now
@@ -165,12 +155,10 @@ public sealed class PluginCatalogService
     /// <summary>
     /// Removes installed provider state while leaving local plugin files untouched.
     /// </summary>
-    public async Task<bool> RemoveAsync(string providerId, CancellationToken cancellationToken)
-    {
+    public async Task<bool> RemoveAsync(string providerId, CancellationToken cancellationToken) {
         var config = await _db.ProviderConfigs
             .FirstOrDefaultAsync(row => row.ProviderCode == providerId, cancellationToken);
-        if (config is null)
-        {
+        if (config is null) {
             return false;
         }
 
@@ -185,11 +173,9 @@ public sealed class PluginCatalogService
     public async Task<bool> SaveAuthAsync(
         string providerId,
         IReadOnlyDictionary<string, string?> values,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var provider = await InstallAsync(providerId, cancellationToken);
-        if (provider is null)
-        {
+        if (provider is null) {
             return false;
         }
 
@@ -200,22 +186,17 @@ public sealed class PluginCatalogService
             .ToDictionaryAsync(row => row.CredentialKey, StringComparer.OrdinalIgnoreCase, cancellationToken);
         var now = DateTimeOffset.UtcNow;
 
-        foreach (var (key, value) in values)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                if (existing.TryGetValue(key, out var removed))
-                {
+        foreach (var (key, value) in values) {
+            if (string.IsNullOrWhiteSpace(value)) {
+                if (existing.TryGetValue(key, out var removed)) {
                     _db.ProviderCredentials.Remove(removed);
                 }
 
                 continue;
             }
 
-            if (!existing.TryGetValue(key, out var credential))
-            {
-                credential = new ProviderCredentialRow
-                {
+            if (!existing.TryGetValue(key, out var credential)) {
+                credential = new ProviderCredentialRow {
                     Id = Guid.NewGuid(),
                     ProviderConfigId = config.Id,
                     CredentialKey = key,
@@ -238,8 +219,7 @@ public sealed class PluginCatalogService
     /// </summary>
     public async Task<IReadOnlyDictionary<string, string>> GetAuthAsync(
         PluginManifestV2 manifest,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var config = await _db.ProviderConfigs
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.ProviderCode == manifest.Id && row.Enabled, cancellationToken);
@@ -250,17 +230,14 @@ public sealed class PluginCatalogService
                 .Where(row => row.ProviderConfigId == config.Id)
                 .ToDictionaryAsync(row => row.CredentialKey, row => row.EncryptedValue, StringComparer.OrdinalIgnoreCase, cancellationToken);
 
-        foreach (var field in manifest.Auth)
-        {
+        foreach (var field in manifest.Auth) {
             if (!stored.ContainsKey(field.Key) &&
-                TryResolveStoredCredential(stored, manifest.Id, field.Key, out var aliasedValue))
-            {
+                TryResolveStoredCredential(stored, manifest.Id, field.Key, out var aliasedValue)) {
                 stored[field.Key] = aliasedValue;
             }
 
             var value = ResolveEnvironmentCredential(manifest.Id, field.Key);
-            if (!string.IsNullOrWhiteSpace(value))
-            {
+            if (!string.IsNullOrWhiteSpace(value)) {
                 stored[field.Key] = value;
             }
         }
@@ -268,19 +245,15 @@ public sealed class PluginCatalogService
         return stored;
     }
 
-    private async Task<IReadOnlyList<PluginDescriptor>> DiscoverAsync(CancellationToken cancellationToken)
-    {
+    private async Task<IReadOnlyList<PluginDescriptor>> DiscoverAsync(CancellationToken cancellationToken) {
         var current = ParseVersion(_options.CurrentObscuraVersion);
         var descriptors = new List<PluginDescriptor>();
 
-        foreach (var root in _options.DevPaths.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            foreach (var manifestPath in EnumerateManifestPaths(root))
-            {
+        foreach (var root in _options.DevPaths.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase)) {
+            foreach (var manifestPath in EnumerateManifestPaths(root)) {
                 cancellationToken.ThrowIfCancellationRequested();
                 var manifest = await ReadManifestAsync(manifestPath, cancellationToken);
-                if (manifest is null || !IsCompatible(manifest, current))
-                {
+                if (manifest is null || !IsCompatible(manifest, current)) {
                     continue;
                 }
 
@@ -298,8 +271,7 @@ public sealed class PluginCatalogService
             .ToArray();
     }
 
-    private static IEnumerable<string> EnumerateManifestPaths(string root)
-    {
+    private static IEnumerable<string> EnumerateManifestPaths(string root) {
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "manifest.v2.json",
@@ -312,29 +284,21 @@ public sealed class PluginCatalogService
             .Where(path => names.Contains(Path.GetFileName(path)));
     }
 
-    private static async Task<PluginManifestV2?> ReadManifestAsync(string path, CancellationToken cancellationToken)
-    {
-        try
-        {
+    private static async Task<PluginManifestV2?> ReadManifestAsync(string path, CancellationToken cancellationToken) {
+        try {
             await using var stream = File.OpenRead(path);
             return await JsonSerializer.DeserializeAsync<PluginManifestV2>(stream, JsonOptions, cancellationToken);
-        }
-        catch (JsonException)
-        {
+        } catch (JsonException) {
             return null;
-        }
-        catch (IOException)
-        {
+        } catch (IOException) {
             return null;
         }
     }
 
-    private static bool IsCompatible(PluginManifestV2 manifest, Version current)
-    {
+    private static bool IsCompatible(PluginManifestV2 manifest, Version current) {
         if (manifest.ManifestVersion != 2 ||
             !manifest.Runtime.Equals("dotnet-process", StringComparison.OrdinalIgnoreCase) ||
-            !manifest.ApiTags.Contains("v2", StringComparer.OrdinalIgnoreCase))
-        {
+            !manifest.ApiTags.Contains("v2", StringComparer.OrdinalIgnoreCase)) {
             return false;
         }
 
@@ -352,12 +316,9 @@ public sealed class PluginCatalogService
         IReadOnlyDictionary<string, string> stored,
         string providerId,
         string key,
-        out string value)
-    {
-        foreach (var alias in CredentialKeyAliases(providerId, key))
-        {
-            if (stored.TryGetValue(alias, out value!) && !string.IsNullOrWhiteSpace(value))
-            {
+        out string value) {
+        foreach (var alias in CredentialKeyAliases(providerId, key)) {
+            if (stored.TryGetValue(alias, out value!) && !string.IsNullOrWhiteSpace(value)) {
                 return true;
             }
         }
@@ -366,16 +327,14 @@ public sealed class PluginCatalogService
         return false;
     }
 
-    private static IEnumerable<string> CredentialKeyAliases(string providerId, string key)
-    {
+    private static IEnumerable<string> CredentialKeyAliases(string providerId, string key) {
         yield return key;
         yield return key.ToUpperInvariant();
         yield return $"{providerId}_{key}";
         yield return $"{providerId.ToUpperInvariant()}_{key.ToUpperInvariant()}";
 
         if (key.Equals("apiKey", StringComparison.OrdinalIgnoreCase) ||
-            key.Equals("api_key", StringComparison.OrdinalIgnoreCase))
-        {
+            key.Equals("api_key", StringComparison.OrdinalIgnoreCase)) {
             yield return $"{providerId}_API_KEY";
             yield return $"{providerId.ToUpperInvariant()}_API_KEY";
         }
@@ -384,13 +343,10 @@ public sealed class PluginCatalogService
     private static bool HasEnvironmentCredential(string providerId, string key) =>
         !string.IsNullOrWhiteSpace(ResolveEnvironmentCredential(providerId, key));
 
-    private static string? ResolveEnvironmentCredential(string providerId, string key)
-    {
-        foreach (var name in EnvironmentCredentialKeys(providerId, key))
-        {
+    private static string? ResolveEnvironmentCredential(string providerId, string key) {
+        foreach (var name in EnvironmentCredentialKeys(providerId, key)) {
             var value = Environment.GetEnvironmentVariable(name);
-            if (!string.IsNullOrWhiteSpace(value))
-            {
+            if (!string.IsNullOrWhiteSpace(value)) {
                 return value;
             }
         }
@@ -401,19 +357,16 @@ public sealed class PluginCatalogService
     private static string EnvironmentCredentialKey(string providerId, string key) =>
         $"OBSCURA_PLUGIN_{providerId.Replace('-', '_').ToUpperInvariant()}_{key.Replace('-', '_').ToUpperInvariant()}";
 
-    private static IEnumerable<string> EnvironmentCredentialKeys(string providerId, string key)
-    {
+    private static IEnumerable<string> EnvironmentCredentialKeys(string providerId, string key) {
         yield return EnvironmentCredentialKey(providerId, key);
         if (key.Equals("apiKey", StringComparison.OrdinalIgnoreCase) ||
-            key.Equals("api_key", StringComparison.OrdinalIgnoreCase))
-        {
+            key.Equals("api_key", StringComparison.OrdinalIgnoreCase)) {
             yield return $"OBSCURA_PLUGIN_{providerId.Replace('-', '_').ToUpperInvariant()}_API_KEY";
             yield return $"{providerId.Replace('-', '_').ToUpperInvariant()}_API_KEY";
         }
     }
 
-    private static Version ParseVersion(string version)
-    {
+    private static Version ParseVersion(string version) {
         var normalized = version.Split('-', 2)[0];
         return Version.TryParse(normalized, out var parsed) ? parsed : new Version(0, 0, 0);
     }
@@ -424,10 +377,8 @@ public sealed class PluginCatalogService
 /// <summary>
 /// Executes v2 dotnet-process plugins as short-lived child processes.
 /// </summary>
-public sealed class DotnetPluginProcessRunner
-{
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
-    {
+public sealed class DotnetPluginProcessRunner {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) {
         PropertyNameCaseInsensitive = true,
         WriteIndented = false
     };
@@ -435,8 +386,7 @@ public sealed class DotnetPluginProcessRunner
     private readonly ProcessExecutor _processes;
     private readonly PluginCatalogOptions _options;
 
-    public DotnetPluginProcessRunner(ProcessExecutor processes, PluginCatalogOptions options)
-    {
+    public DotnetPluginProcessRunner(ProcessExecutor processes, PluginCatalogOptions options) {
         _processes = processes;
         _options = options;
     }
@@ -447,8 +397,7 @@ public sealed class DotnetPluginProcessRunner
     public async Task<IdentifyPluginResponse> IdentifyAsync(
         PluginDescriptor descriptor,
         IdentifyPluginRequest request,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var requestDirectory = Path.Combine(_options.CacheRoot, "plugins", "requests");
         Directory.CreateDirectory(requestDirectory);
         var requestPath = Path.Combine(requestDirectory, $"{Guid.NewGuid():N}.json");
@@ -457,16 +406,14 @@ public sealed class DotnetPluginProcessRunner
             JsonSerializer.Serialize(request, JsonOptions),
             cancellationToken);
 
-        try
-        {
+        try {
             var result = await _processes.RunAsync(
                 "dotnet",
                 [descriptor.EntryPath, requestPath],
                 environment: null,
                 cancellationToken);
 
-            if (result.ExitCode != 0)
-            {
+            if (result.ExitCode != 0) {
                 return new IdentifyPluginResponse(
                     false,
                     null,
@@ -477,28 +424,18 @@ public sealed class DotnetPluginProcessRunner
 
             return JsonSerializer.Deserialize<IdentifyPluginResponse>(result.StandardOutput, JsonOptions)
                 ?? new IdentifyPluginResponse(false, null, "Plugin returned an empty response.");
-        }
-        catch (JsonException ex)
-        {
+        } catch (JsonException ex) {
             return new IdentifyPluginResponse(false, null, $"Plugin returned invalid JSON: {ex.Message}");
-        }
-        finally
-        {
+        } finally {
             TryDelete(requestPath);
         }
     }
 
-    private static void TryDelete(string path)
-    {
-        try
-        {
+    private static void TryDelete(string path) {
+        try {
             File.Delete(path);
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
+        } catch (IOException) {
+        } catch (UnauthorizedAccessException) {
         }
     }
 }
@@ -506,8 +443,7 @@ public sealed class DotnetPluginProcessRunner
 /// <summary>
 /// Coordinates provider selection, ID-first match hints, plugin execution, and metadata application.
 /// </summary>
-public sealed class IdentifyPluginService
-{
+public sealed class IdentifyPluginService {
     private readonly ObscuraDbContext _db;
     private readonly PluginCatalogService _catalog;
     private readonly IdentifyMatchHintResolver _hints;
@@ -519,8 +455,7 @@ public sealed class IdentifyPluginService
         PluginCatalogService catalog,
         IdentifyMatchHintResolver hints,
         DotnetPluginProcessRunner runner,
-        EntityMetadataApplyService apply)
-    {
+        EntityMetadataApplyService apply) {
         _db = db;
         _catalog = catalog;
         _hints = hints;
@@ -531,8 +466,7 @@ public sealed class IdentifyPluginService
     /// <summary>
     /// Lists enabled v2 providers that can identify the requested entity kind.
     /// </summary>
-    public async Task<IReadOnlyList<PluginProvider>> ListProvidersAsync(string? entityKind, CancellationToken cancellationToken)
-    {
+    public async Task<IReadOnlyList<PluginProvider>> ListProvidersAsync(string? entityKind, CancellationToken cancellationToken) {
         var providers = await _catalog.ListProvidersAsync(cancellationToken);
         return providers
             .Where(provider => entityKind is null || provider.Supports.Any(support =>
@@ -547,19 +481,16 @@ public sealed class IdentifyPluginService
         Guid entityId,
         string providerId,
         IdentifyQuery? query,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var entity = await _db.Entities
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.Id == entityId && row.DeletedAt == null, cancellationToken);
-        if (entity is null)
-        {
+        if (entity is null) {
             return new IdentifyPluginResponse(false, null, $"Entity '{entityId}' was not found.");
         }
 
         var descriptor = await _catalog.FindProviderAsync(providerId, entity.KindCode, cancellationToken);
-        if (descriptor is null)
-        {
+        if (descriptor is null) {
             return new IdentifyPluginResponse(false, null, $"No compatible v2 provider '{providerId}' supports '{entity.KindCode}'.");
         }
 
@@ -568,8 +499,7 @@ public sealed class IdentifyPluginService
             .Where(field => field.Required && !auth.ContainsKey(field.Key))
             .Select(field => field.Key)
             .ToArray();
-        if (missingAuth.Length > 0)
-        {
+        if (missingAuth.Length > 0) {
             return new IdentifyPluginResponse(false, null, $"Missing required plugin credentials: {string.Join(", ", missingAuth)}.");
         }
 
@@ -598,21 +528,18 @@ public sealed class IdentifyPluginService
     private static string ResolveAction(
         PluginManifestV2 manifest,
         IdentifyQuery? query,
-        IdentifyMatchHints hints)
-    {
+        IdentifyMatchHints hints) {
         var supports = manifest.Supports
             .SelectMany(support => support.Actions)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var hasExplicitId = query?.ExternalIds?.ContainsKey(manifest.Id) == true ||
             hints.ExternalIds.ContainsKey(manifest.Id);
 
-        if (hasExplicitId && supports.Contains("lookup-id"))
-        {
+        if (hasExplicitId && supports.Contains("lookup-id")) {
             return "lookup-id";
         }
 
-        if ((!string.IsNullOrWhiteSpace(query?.Url) || hints.Urls.Count > 0) && supports.Contains("lookup-url"))
-        {
+        if ((!string.IsNullOrWhiteSpace(query?.Url) || hints.Urls.Count > 0) && supports.Contains("lookup-url")) {
             return "lookup-url";
         }
 
@@ -627,10 +554,8 @@ public sealed class IdentifyPluginService
         IReadOnlyList<IdentifyEntitySnapshot> ancestors,
         EntityChildLinkRow? parentLink,
         HashSet<Guid> visited,
-        CancellationToken cancellationToken)
-    {
-        if (!visited.Add(entity.Id))
-        {
+        CancellationToken cancellationToken) {
+        if (!visited.Add(entity.Id)) {
             return new IdentifyPluginResponse(false, null, $"Cycle detected while identifying entity '{entity.Id}'.");
         }
 
@@ -649,8 +574,7 @@ public sealed class IdentifyPluginService
             StructuralContext: structuralContext);
 
         var response = await _runner.IdentifyAsync(descriptor, request, cancellationToken);
-        if (!response.Ok || response.Result is null)
-        {
+        if (!response.Ok || response.Result is null) {
             visited.Remove(entity.Id);
             return response;
         }
@@ -674,13 +598,10 @@ public sealed class IdentifyPluginService
         IReadOnlyDictionary<string, string> auth,
         IReadOnlyList<IdentifyEntitySnapshot> ancestorPath,
         HashSet<Guid> visited,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var existingChildren = await LoadStructuralChildrenAsync(entity.Id, cancellationToken);
-        if (existingChildren.Count == 0)
-        {
-            return providerProposal with
-            {
+        if (existingChildren.Count == 0) {
+            return providerProposal with {
                 TargetKind = entity.KindCode,
                 TargetEntityId = entity.Id,
                 Children = StructuralChildProposals(providerProposal),
@@ -691,13 +612,11 @@ public sealed class IdentifyPluginService
         var structuralChildren = new List<EntityMetadataProposal>();
         var usedProviderChildren = new HashSet<string>(StringComparer.Ordinal);
         var providerStructuralChildren = StructuralChildProposals(providerProposal);
-        foreach (var child in existingChildren)
-        {
+        foreach (var child in existingChildren) {
             var positions = await ResolveStructuralPositionsAsync(child.Entity.Id, child.Link, cancellationToken);
             var providerChild = providerStructuralChildren
                 .Where(candidate => IsKindCompatible(child.Entity.KindCode, candidate.TargetKind))
-                .Select(candidate => new
-                {
+                .Select(candidate => new {
                     Proposal = candidate,
                     Score = ScoreProposalMatch(child.Entity, child.Link, positions, candidate)
                 })
@@ -705,8 +624,7 @@ public sealed class IdentifyPluginService
                 .OrderByDescending(candidate => candidate.Score)
                 .FirstOrDefault(candidate => !usedProviderChildren.Contains(candidate.Proposal.ProposalId));
 
-            if (providerChild is not null)
-            {
+            if (providerChild is not null) {
                 usedProviderChildren.Add(providerChild.Proposal.ProposalId);
                 structuralChildren.Add(await BuildStructuralProposalAsync(
                     child.Entity,
@@ -719,8 +637,7 @@ public sealed class IdentifyPluginService
                 continue;
             }
 
-            if (!SupportsKind(descriptor.Manifest, child.Entity.KindCode))
-            {
+            if (!SupportsKind(descriptor.Manifest, child.Entity.KindCode)) {
                 continue;
             }
 
@@ -733,14 +650,12 @@ public sealed class IdentifyPluginService
                 parentLink: child.Link,
                 visited,
                 cancellationToken);
-            if (childResponse.Ok && childResponse.Result is not null)
-            {
+            if (childResponse.Ok && childResponse.Result is not null) {
                 structuralChildren.Add(childResponse.Result);
             }
         }
 
-        return providerProposal with
-        {
+        return providerProposal with {
             TargetKind = entity.KindCode,
             TargetEntityId = entity.Id,
             Children = structuralChildren,
@@ -748,14 +663,12 @@ public sealed class IdentifyPluginService
         };
     }
 
-    private async Task<IReadOnlyList<StructuralChild>> LoadStructuralChildrenAsync(Guid parentEntityId, CancellationToken cancellationToken)
-    {
+    private async Task<IReadOnlyList<StructuralChild>> LoadStructuralChildrenAsync(Guid parentEntityId, CancellationToken cancellationToken) {
         var links = await _db.EntityChildLinks
             .AsNoTracking()
             .Where(link => link.ParentEntityId == parentEntityId)
             .ToArrayAsync(cancellationToken);
-        if (links.Length == 0)
-        {
+        if (links.Length == 0) {
             return [];
         }
 
@@ -777,11 +690,9 @@ public sealed class IdentifyPluginService
     private async Task<IReadOnlyDictionary<string, int>> ResolveStructuralPositionsAsync(
         Guid entityId,
         EntityChildLinkRow? parentLink,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var positions = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        if (parentLink?.SortOrder is { } sortOrder)
-        {
+        if (parentLink?.SortOrder is { } sortOrder) {
             positions["sortOrder"] = sortOrder;
         }
 
@@ -789,8 +700,7 @@ public sealed class IdentifyPluginService
             .AsNoTracking()
             .Where(row => row.EntityId == entityId)
             .ToArrayAsync(cancellationToken);
-        foreach (var row in persisted)
-        {
+        foreach (var row in persisted) {
             positions[row.Code] = row.Value;
         }
 
@@ -799,8 +709,7 @@ public sealed class IdentifyPluginService
             .Where(row => row.Id == entityId && row.KindCode == EntityKindRegistry.VideoSeason.Code)
             .Select(row => row.SortOrder)
             .FirstOrDefaultAsync(cancellationToken);
-        if (seasonNumber is { } value)
-        {
+        if (seasonNumber is { } value) {
             positions["seasonNumber"] = value;
         }
 
@@ -815,11 +724,9 @@ public sealed class IdentifyPluginService
             .Where(child => !IsRelationshipMetadataKind(child.TargetKind))
             .ToArray();
 
-    private static IReadOnlyList<EntityMetadataProposal> RelationshipProposals(EntityMetadataProposal proposal)
-    {
+    private static IReadOnlyList<EntityMetadataProposal> RelationshipProposals(EntityMetadataProposal proposal) {
         var relationships = new List<EntityMetadataProposal>();
-        if (proposal.Relationships is { Count: > 0 })
-        {
+        if (proposal.Relationships is { Count: > 0 }) {
             relationships.AddRange(proposal.Relationships);
         }
 
@@ -843,27 +750,21 @@ public sealed class IdentifyPluginService
         EntityRow entity,
         EntityChildLinkRow link,
         IReadOnlyDictionary<string, int> positions,
-        EntityMetadataProposal proposal)
-    {
+        EntityMetadataProposal proposal) {
         var score = 0;
         if (!string.IsNullOrWhiteSpace(proposal.Patch.Title) &&
-            proposal.Patch.Title.Equals(entity.Title, StringComparison.OrdinalIgnoreCase))
-        {
+            proposal.Patch.Title.Equals(entity.Title, StringComparison.OrdinalIgnoreCase)) {
             score += 10;
         }
 
-        foreach (var (key, value) in proposal.Patch.Positions)
-        {
-            if (positions.TryGetValue(key, out var existing) && existing == value)
-            {
+        foreach (var (key, value) in proposal.Patch.Positions) {
+            if (positions.TryGetValue(key, out var existing) && existing == value) {
                 score += 20;
             }
         }
 
-        if (link.SortOrder is { } sortOrder)
-        {
-            if (proposal.Patch.Positions.Values.Contains(sortOrder))
-            {
+        if (link.SortOrder is { } sortOrder) {
+            if (proposal.Patch.Positions.Values.Contains(sortOrder)) {
                 score += 5;
             }
         }
@@ -877,12 +778,10 @@ public sealed class IdentifyPluginService
 /// <summary>
 /// In-memory bulk identify session store for review data that should not survive process restarts.
 /// </summary>
-public sealed class IdentifySessionStore
-{
+public sealed class IdentifySessionStore {
     private readonly ConcurrentDictionary<Guid, IdentifyBulkSession> _sessions = new();
 
-    public IdentifyBulkSession Create(IReadOnlyList<Guid> entityIds, string provider)
-    {
+    public IdentifyBulkSession Create(IReadOnlyList<Guid> entityIds, string provider) {
         var session = new IdentifyBulkSession(Guid.NewGuid(), provider, entityIds, [], "running", DateTimeOffset.UtcNow);
         _sessions[session.Id] = session;
         return session;
@@ -890,10 +789,8 @@ public sealed class IdentifySessionStore
 
     public IdentifyBulkSession? Get(Guid id) => _sessions.TryGetValue(id, out var session) ? session : null;
 
-    public void Complete(Guid id, IReadOnlyList<IdentifyBulkResult> results)
-    {
-        if (_sessions.TryGetValue(id, out var session))
-        {
+    public void Complete(Guid id, IReadOnlyList<IdentifyBulkResult> results) {
+        if (_sessions.TryGetValue(id, out var session)) {
             _sessions[id] = session with { Results = results, Status = "completed" };
         }
     }

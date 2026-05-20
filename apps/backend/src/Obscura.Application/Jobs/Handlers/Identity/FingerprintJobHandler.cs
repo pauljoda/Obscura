@@ -13,25 +13,21 @@ public sealed class FingerprintJobHandler(
     JobType jobType,
     ILogger<FingerprintJobHandler> logger,
     IMediaHashing hashing,
-    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence)
-{
+    ILibraryScanPersistence persistence) : EntityFileJobHandler(logger, persistence) {
     public override JobType Type => jobType;
 
     protected override async Task ExecuteAsync(
-        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken)
-    {
+        JobContext context, Guid entityId, string filePath, CancellationToken cancellationToken) {
         var timer = new JobPhaseTimer();
         await context.ReportProgressAsync(10, "Computing hashes", cancellationToken);
 
         FileHashData hashes;
-        using (timer.Phase("hash"))
-        {
+        using (timer.Phase("hash")) {
             hashes = await hashing.ComputeHashesAsync(filePath, cancellationToken);
         }
 
         Guid? sourceFileId;
-        using (timer.Phase("persist"))
-        {
+        using (timer.Phase("persist")) {
             sourceFileId = await Persistence.GetSourceFileIdAsync(entityId, cancellationToken);
             await Persistence.UpsertEntityFingerprintAsync(entityId, FingerprintAlgorithm.Md5, hashes.Md5, sourceFileId, cancellationToken);
             await Persistence.UpsertEntityFingerprintAsync(entityId, FingerprintAlgorithm.Oshash, hashes.Oshash, sourceFileId, cancellationToken);

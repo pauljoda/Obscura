@@ -10,10 +10,8 @@ using Obscura.Domain.Entities;
 
 namespace Obscura.Api.Endpoints;
 
-public static class EntityEndpoints
-{
-    public static IEndpointRouteBuilder MapEntityEndpoints(this IEndpointRouteBuilder routes)
-    {
+public static class EntityEndpoints {
+    public static IEndpointRouteBuilder MapEntityEndpoints(this IEndpointRouteBuilder routes) {
         var group = routes.MapGroup("/api/entities")
             .WithTags("Entities");
 
@@ -23,15 +21,13 @@ public static class EntityEndpoints
             bool? hideNsfw,
             HttpContext httpContext,
             IEntityReadService entities,
-            CancellationToken cancellationToken) =>
-        {
-            if (!TryGetKind(httpContext.Request.Query["kind"].ToString(), out var kind, out var error))
-            {
-                return error;
-            }
+            CancellationToken cancellationToken) => {
+                if (!TryGetKind(httpContext.Request.Query["kind"].ToString(), out var kind, out var error)) {
+                    return error;
+                }
 
-            return Results.Ok(await entities.ListAsync(kind, query, cursor, hideNsfw, cancellationToken));
-        })
+                return Results.Ok(await entities.ListAsync(kind, query, cursor, hideNsfw, cancellationToken));
+            })
             .WithName("ListEntities")
             .Produces<EntityListResponse>()
             .Produces<ApiProblem>(StatusCodes.Status400BadRequest);
@@ -151,8 +147,7 @@ public static class EntityEndpoints
         string listName,
         string detailName,
         Type listResponseType,
-        Type detailResponseType)
-    {
+        Type detailResponseType) {
         var group = routes.MapGroup(prefix)
             .WithTags(tag);
 
@@ -181,8 +176,7 @@ public static class EntityEndpoints
     private static async Task<IResult> GetEntityAsync(
         Guid id,
         IEntityReadService entities,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var entity = await entities.GetAsync(id, cancellationToken);
         return entity is null
             ? Results.NotFound(new ApiProblem("entity_not_found", $"Entity '{id}' was not found."))
@@ -193,8 +187,7 @@ public static class EntityEndpoints
         Guid id,
         string kind,
         IEntityReadService entities,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var entity = await entities.GetDetailAsync(id, kind, cancellationToken);
         return entity is null
             ? Results.NotFound(new ApiProblem("entity_not_found", $"Entity '{id}' was not found."))
@@ -206,17 +199,14 @@ public static class EntityEndpoints
             ? Results.NotFound(new ApiProblem("entity_not_found", $"Entity '{id}' was not found."))
             : Results.Ok(card);
 
-    private static bool TryGetKind(string? value, out string? kind, out IResult error)
-    {
+    private static bool TryGetKind(string? value, out string? kind, out IResult error) {
         kind = null;
         error = Results.Empty;
-        if (string.IsNullOrWhiteSpace(value))
-        {
+        if (string.IsNullOrWhiteSpace(value)) {
             return true;
         }
 
-        if (EntityKindRegistry.TryGet(value, out var resolved))
-        {
+        if (EntityKindRegistry.TryGet(value, out var resolved)) {
             kind = resolved.ToCode();
             return true;
         }

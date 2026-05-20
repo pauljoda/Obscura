@@ -7,8 +7,7 @@ namespace Obscura.Application.Entities;
 /// row-optimized browse/thumbnail projection plus a domain-hydration projection for
 /// card and detail reads.
 /// </summary>
-public interface IEntityReadService
-{
+public interface IEntityReadService {
     /// <summary>
     /// Lists active entities as thumbnail read models, optionally scoped by kind,
     /// search text, NSFW visibility, and cursor.

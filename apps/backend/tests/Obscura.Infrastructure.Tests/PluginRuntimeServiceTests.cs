@@ -9,13 +9,11 @@ using Obscura.Infrastructure.Processes;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class PluginRuntimeServiceTests : IDisposable
-{
+public sealed class PluginRuntimeServiceTests : IDisposable {
     private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), $"obscura-plugin-tests-{Guid.NewGuid():N}");
 
     [Fact]
-    public async Task CatalogDiscoversOnlyCompatibleV2DotnetManifests()
-    {
+    public async Task CatalogDiscoversOnlyCompatibleV2DotnetManifests() {
         var pluginDir = Path.Combine(_tempRoot, "tmdb");
         Directory.CreateDirectory(pluginDir);
         await File.WriteAllTextAsync(
@@ -60,8 +58,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task CatalogReusesAliasedProviderCredentialKeysForAuthFields()
-    {
+    public async Task CatalogReusesAliasedProviderCredentialKeysForAuthFields() {
         var pluginDir = Path.Combine(_tempRoot, "tmdb");
         Directory.CreateDirectory(pluginDir);
         await File.WriteAllTextAsync(
@@ -91,8 +88,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
             """);
         await using var db = CreateContext();
         var now = DateTimeOffset.UtcNow;
-        var config = new ProviderConfigRow
-        {
+        var config = new ProviderConfigRow {
             Id = Guid.NewGuid(),
             ProviderCode = "tmdb",
             DisplayName = "TMDB",
@@ -103,8 +99,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
             UpdatedAt = now
         };
         db.ProviderConfigs.Add(config);
-        db.ProviderCredentials.Add(new ProviderCredentialRow
-        {
+        db.ProviderCredentials.Add(new ProviderCredentialRow {
             Id = Guid.NewGuid(),
             ProviderConfigId = config.Id,
             CredentialKey = "TMDB_API_KEY",
@@ -124,8 +119,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ProcessRunnerWritesRequestFileAndReadsStdoutResponse()
-    {
+    public async Task ProcessRunnerWritesRequestFileAndReadsStdoutResponse() {
         var executor = new CapturingProcessExecutor();
         var runner = new DotnetPluginProcessRunner(
             executor,
@@ -169,8 +163,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task IdentifyTraversesGenericStructuralChildrenWhenProviderSupportsChildKinds()
-    {
+    public async Task IdentifyTraversesGenericStructuralChildrenWhenProviderSupportsChildKinds() {
         var pluginDir = Path.Combine(_tempRoot, "tmdb");
         Directory.CreateDirectory(pluginDir);
         await File.WriteAllTextAsync(
@@ -202,8 +195,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
 
         await using var db = CreateContext();
         var now = DateTimeOffset.UtcNow;
-        var providerConfig = new ProviderConfigRow
-        {
+        var providerConfig = new ProviderConfigRow {
             Id = Guid.NewGuid(),
             ProviderCode = "tmdb",
             DisplayName = "TMDB",
@@ -216,8 +208,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
         var seriesId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         var seasonId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
         db.ProviderConfigs.Add(providerConfig);
-        db.ProviderCredentials.Add(new ProviderCredentialRow
-        {
+        db.ProviderCredentials.Add(new ProviderCredentialRow {
             Id = Guid.NewGuid(),
             ProviderConfigId = providerConfig.Id,
             CredentialKey = "apiKey",
@@ -228,8 +219,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
         db.Entities.AddRange(
             new EntityRow { Id = seriesId, KindCode = "video-series", Title = "Example Series", CreatedAt = now, UpdatedAt = now },
             new EntityRow { Id = seasonId, KindCode = "video-season", Title = "Season 1", ParentEntityId = seriesId, SortOrder = 1, CreatedAt = now, UpdatedAt = now });
-        db.EntityChildLinks.Add(new EntityChildLinkRow
-        {
+        db.EntityChildLinks.Add(new EntityChildLinkRow {
             ParentEntityId = seriesId,
             ChildEntityId = seasonId,
             ChildKindCode = "video-season",
@@ -261,8 +251,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task IdentifyMatchesProviderChildrenWhilePreservingRelationshipProposals()
-    {
+    public async Task IdentifyMatchesProviderChildrenWhilePreservingRelationshipProposals() {
         var pluginDir = Path.Combine(_tempRoot, "tmdb");
         Directory.CreateDirectory(pluginDir);
         await File.WriteAllTextAsync(
@@ -293,8 +282,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
 
         await using var db = CreateContext();
         var now = DateTimeOffset.UtcNow;
-        var providerConfig = new ProviderConfigRow
-        {
+        var providerConfig = new ProviderConfigRow {
             Id = Guid.NewGuid(),
             ProviderCode = "tmdb",
             DisplayName = "TMDB",
@@ -308,8 +296,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
         var seasonId = Guid.Parse("17171717-1717-1717-1717-171717171717");
         var episodeId = Guid.Parse("18181818-1818-1818-1818-181818181818");
         db.ProviderConfigs.Add(providerConfig);
-        db.ProviderCredentials.Add(new ProviderCredentialRow
-        {
+        db.ProviderCredentials.Add(new ProviderCredentialRow {
             Id = Guid.NewGuid(),
             ProviderConfigId = providerConfig.Id,
             CredentialKey = "apiKey",
@@ -322,8 +309,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
             new EntityRow { Id = seasonId, KindCode = "video-season", Title = "Season 1", ParentEntityId = seriesId, SortOrder = 1, CreatedAt = now, UpdatedAt = now },
             new EntityRow { Id = episodeId, KindCode = "video", Title = "Old Episode", ParentEntityId = seasonId, SortOrder = 2, CreatedAt = now, UpdatedAt = now });
         db.EntityChildLinks.AddRange(
-            new EntityChildLinkRow
-            {
+            new EntityChildLinkRow {
                 ParentEntityId = seriesId,
                 ChildEntityId = seasonId,
                 ChildKindCode = "video-season",
@@ -331,8 +317,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
                 IsStructural = true,
                 CreatedAt = now
             },
-            new EntityChildLinkRow
-            {
+            new EntityChildLinkRow {
                 ParentEntityId = seasonId,
                 ChildEntityId = episodeId,
                 ChildKindCode = "video",
@@ -366,16 +351,13 @@ public sealed class PluginRuntimeServiceTests : IDisposable
         Assert.Equal("Guest Actor", Assert.Single(episode.Relationships).Patch.Title);
     }
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_tempRoot))
-        {
+    public void Dispose() {
+        if (Directory.Exists(_tempRoot)) {
             Directory.Delete(_tempRoot, recursive: true);
         }
     }
 
-    private static ObscuraDbContext CreateContext()
-    {
+    private static ObscuraDbContext CreateContext() {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()
             .UseInMemoryDatabase($"plugin-runtime-{Guid.NewGuid():N}")
             .Options;
@@ -383,8 +365,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
         return new ObscuraDbContext(options);
     }
 
-    private sealed class CapturingProcessExecutor : ProcessExecutor
-    {
+    private sealed class CapturingProcessExecutor : ProcessExecutor {
         public string? FileName { get; private set; }
         public IReadOnlyList<string> Arguments { get; private set; } = [];
         public IdentifyPluginRequest? CapturedRequest { get; private set; }
@@ -393,8 +374,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
             string fileName,
             IReadOnlyList<string> arguments,
             IReadOnlyDictionary<string, string>? environment,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             FileName = fileName;
             Arguments = arguments.ToArray();
             var requestJson = await File.ReadAllTextAsync(arguments[1], cancellationToken);
@@ -433,16 +413,14 @@ public sealed class PluginRuntimeServiceTests : IDisposable
         }
     }
 
-    private sealed class StructuralContextCapturingProcessExecutor : ProcessExecutor
-    {
+    private sealed class StructuralContextCapturingProcessExecutor : ProcessExecutor {
         public List<IdentifyPluginRequest> Requests { get; } = [];
 
         public override async Task<ProcessExecutionResult> RunAsync(
             string fileName,
             IReadOnlyList<string> arguments,
             IReadOnlyDictionary<string, string>? environment,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             var requestJson = await File.ReadAllTextAsync(arguments[1], cancellationToken);
             var request = JsonSerializer.Deserialize<IdentifyPluginRequest>(
                 requestJson,
@@ -481,16 +459,14 @@ public sealed class PluginRuntimeServiceTests : IDisposable
         }
     }
 
-    private sealed class FullTreeProcessExecutor : ProcessExecutor
-    {
+    private sealed class FullTreeProcessExecutor : ProcessExecutor {
         public List<IdentifyPluginRequest> Requests { get; } = [];
 
         public override async Task<ProcessExecutionResult> RunAsync(
             string fileName,
             IReadOnlyList<string> arguments,
             IReadOnlyDictionary<string, string>? environment,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             var requestJson = await File.ReadAllTextAsync(arguments[1], cancellationToken);
             var request = JsonSerializer.Deserialize<IdentifyPluginRequest>(
                 requestJson,
@@ -513,8 +489,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
                 "video-episode",
                 1,
                 "cascade",
-                EmptyPatch() with
-                {
+                EmptyPatch() with {
                     Title = "The Chair Company S01E02",
                     Positions = new Dictionary<string, int> { ["seasonNumber"] = 1, ["episodeNumber"] = 2 },
                     Credits = [new CreditPatch("Guest Actor", "guest", "Visitor", 0)]
@@ -529,8 +504,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
                 "video-season",
                 1,
                 "cascade",
-                EmptyPatch() with
-                {
+                EmptyPatch() with {
                     Title = "Season 1",
                     Positions = new Dictionary<string, int> { ["seasonNumber"] = 1 }
                 },
@@ -555,8 +529,7 @@ public sealed class PluginRuntimeServiceTests : IDisposable
                     "video-series",
                     1,
                     "external-id",
-                    EmptyPatch() with
-                    {
+                    EmptyPatch() with {
                         Title = "The Chair Company",
                         Studio = "Chair Pictures",
                         Credits = [new CreditPatch("Series Actor", "cast", "Ron", 0)]

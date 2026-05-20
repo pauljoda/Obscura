@@ -9,19 +9,16 @@ using Obscura.Infrastructure.Videos;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class HlsAssetServiceTests : IDisposable
-{
+public sealed class HlsAssetServiceTests : IDisposable {
     private const string SegmentLengthText = "6";
     private readonly string _cacheRoot = Path.Combine(Path.GetTempPath(), $"obscura-hls-assets-{Guid.NewGuid():N}");
 
-    public HlsAssetServiceTests()
-    {
+    public HlsAssetServiceTests() {
         Directory.CreateDirectory(_cacheRoot);
     }
 
     [Fact]
-    public async Task ResolvesHls2ManifestAndSegmentAssets()
-    {
+    public async Task ResolvesHls2ManifestAndSegmentAssets() {
         var videoId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var packageDir = Path.Combine(_cacheRoot, "hls2", videoId.ToString(), "v", "720p");
         Directory.CreateDirectory(packageDir);
@@ -43,8 +40,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task RejectsTraversalOutsidePackageRoot()
-    {
+    public async Task RejectsTraversalOutsidePackageRoot() {
         var videoId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         var service = new HlsAssetService(new HlsAssetServiceOptions(_cacheRoot));
 
@@ -54,8 +50,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task VirtualManifestIsVodAndCoversFullDuration()
-    {
+    public async Task VirtualManifestIsVodAndCoversFullDuration() {
         var videoId = Guid.Parse("33333333-3333-3333-3333-333333333333");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
         await File.WriteAllTextAsync(sourcePath, "source");
@@ -98,20 +93,17 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task VirtualManifestAdvertisesGeneratedTrickplayPlaylist()
-    {
+    public async Task VirtualManifestAdvertisesGeneratedTrickplayPlaylist() {
         await using var db = CreateContext();
         var videoId = Guid.Parse("55555555-5555-5555-5555-555555555555");
-        db.Entities.Add(new EntityRow
-        {
+        db.Entities.Add(new EntityRow {
             Id = videoId,
             KindCode = EntityKindRegistry.Video.Code,
             Title = "Video",
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         });
-        db.TrickplayInfos.Add(new TrickplayInfoRow
-        {
+        db.TrickplayInfos.Add(new TrickplayInfoRow {
             EntityId = videoId,
             Width = 280,
             Height = 158,
@@ -148,8 +140,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentVirtualCacheRefreshesDoNotRaceDirectoryDeletion()
-    {
+    public async Task ConcurrentVirtualCacheRefreshesDoNotRaceDirectoryDeletion() {
         var videoId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
         await File.WriteAllTextAsync(sourcePath, "source");
@@ -195,8 +186,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task VirtualCacheWithoutFormatVersionIsRefreshed()
-    {
+    public async Task VirtualCacheWithoutFormatVersionIsRefreshed() {
         var videoId = Guid.Parse("88888888-8888-8888-8888-888888888888");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
         await File.WriteAllTextAsync(sourcePath, "source");
@@ -237,8 +227,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task VirtualSegmentStartsContinuousRenditionGeneration()
-    {
+    public async Task VirtualSegmentStartsContinuousRenditionGeneration() {
         var videoId = Guid.Parse("44444444-4444-4444-4444-444444444444");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
         await File.WriteAllTextAsync(sourcePath, "source");
@@ -268,8 +257,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task VirtualSegmentsUseVideoToolboxEncoderWhenConfigured()
-    {
+    public async Task VirtualSegmentsUseVideoToolboxEncoderWhenConfigured() {
         var videoId = Guid.Parse("42424242-4242-4242-4242-424242424242");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
         await File.WriteAllTextAsync(sourcePath, "source");
@@ -297,8 +285,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task VirtualSegmentsUseVaapiEncoderWhenConfigured()
-    {
+    public async Task VirtualSegmentsUseVaapiEncoderWhenConfigured() {
         var videoId = Guid.Parse("43434343-4343-4343-4343-434343434343");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
         await File.WriteAllTextAsync(sourcePath, "source");
@@ -329,14 +316,12 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task VirtualSegmentsUseSavedHlsTranscoderSettings()
-    {
+    public async Task VirtualSegmentsUseSavedHlsTranscoderSettings() {
         await using var db = CreateContext();
         var videoId = Guid.Parse("45454545-4545-4545-4545-454545454545");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
         await File.WriteAllTextAsync(sourcePath, "source");
-        db.LibrarySettings.Add(new LibrarySettingsRow
-        {
+        db.LibrarySettings.Add(new LibrarySettingsRow {
             Id = Guid.NewGuid(),
             HlsTranscoderProfile = "Vaapi",
             HlsFfmpegPath = "/usr/local/bin/ffmpeg-gpu",
@@ -370,8 +355,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task VirtualSegmentsAreGeneratedByOneContinuousHlsMuxer()
-    {
+    public async Task VirtualSegmentsAreGeneratedByOneContinuousHlsMuxer() {
         var videoId = Guid.Parse("77777777-7777-7777-7777-777777777777");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
         await File.WriteAllTextAsync(sourcePath, "source");
@@ -411,8 +395,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task FarVirtualSegmentStartsGenerationWithOneSegmentPreroll()
-    {
+    public async Task FarVirtualSegmentStartsGenerationWithOneSegmentPreroll() {
         var videoId = Guid.Parse("99999999-9999-9999-9999-999999999999");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
         await File.WriteAllTextAsync(sourcePath, "source");
@@ -444,8 +427,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task FarVirtualSegmentPrerollsSoRequestedSegmentIsGenerated()
-    {
+    public async Task FarVirtualSegmentPrerollsSoRequestedSegmentIsGenerated() {
         var videoId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
         await File.WriteAllTextAsync(sourcePath, "source");
@@ -477,8 +459,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task FarVirtualSegmentStartsSeparateGenerationWhenInitialGenerationIsStillRunning()
-    {
+    public async Task FarVirtualSegmentStartsSeparateGenerationWhenInitialGenerationIsStillRunning() {
         var videoId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
         await File.WriteAllTextAsync(sourcePath, "source");
@@ -509,21 +490,18 @@ public sealed class HlsAssetServiceTests : IDisposable
         Assert.NotNull(farSegment);
         Assert.Equal("seg_00020.ts", Path.GetFileName(farSegment.Path));
         Assert.Equal(2, process.ArgumentHistory.Count);
-        Assert.Contains(process.ArgumentHistory, arguments =>
-        {
+        Assert.Contains(process.ArgumentHistory, arguments => {
             var startNumberIndex = arguments.ToList().IndexOf("-start_number");
             return startNumberIndex >= 0 && arguments[startNumberIndex + 1] == "0";
         });
-        Assert.Contains(process.ArgumentHistory, arguments =>
-        {
+        Assert.Contains(process.ArgumentHistory, arguments => {
             var startNumberIndex = arguments.ToList().IndexOf("-start_number");
             return startNumberIndex >= 0 && arguments[startNumberIndex + 1] == "19";
         });
     }
 
     [Fact]
-    public async Task FarVirtualSegmentCancelsOtherActiveRenditionsForSameAudioTrack()
-    {
+    public async Task FarVirtualSegmentCancelsOtherActiveRenditionsForSameAudioTrack() {
         var videoId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
         await File.WriteAllTextAsync(sourcePath, "source");
@@ -560,8 +538,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task CancellingPlaybackSessionCancelsActiveVirtualGenerationForItem()
-    {
+    public async Task CancellingPlaybackSessionCancelsActiveVirtualGenerationForItem() {
         var videoId = Guid.Parse("fefefefe-fefe-fefe-fefe-fefefefefefe");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
         await File.WriteAllTextAsync(sourcePath, "source");
@@ -591,8 +568,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task VirtualSegmentsUseDefaultSourceAudioStream()
-    {
+    public async Task VirtualSegmentsUseDefaultSourceAudioStream() {
         var videoId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
         await File.WriteAllTextAsync(sourcePath, "source");
@@ -625,8 +601,7 @@ public sealed class HlsAssetServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task MissingVirtualSegmentReturnsNullAsset()
-    {
+    public async Task MissingVirtualSegmentReturnsNullAsset() {
         var videoId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
         await File.WriteAllTextAsync(sourcePath, "source");
@@ -648,32 +623,24 @@ public sealed class HlsAssetServiceTests : IDisposable
         Assert.Null(segment);
     }
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_cacheRoot))
-        {
+    public void Dispose() {
+        if (Directory.Exists(_cacheRoot)) {
             DeleteDirectoryWithRetry(_cacheRoot);
         }
     }
 
-    private static void DeleteDirectoryWithRetry(string path)
-    {
-        for (var attempt = 0; attempt < 5; attempt++)
-        {
-            try
-            {
+    private static void DeleteDirectoryWithRetry(string path) {
+        for (var attempt = 0; attempt < 5; attempt++) {
+            try {
                 Directory.Delete(path, recursive: true);
                 return;
-            }
-            catch (IOException) when (attempt < 4)
-            {
+            } catch (IOException) when (attempt < 4) {
                 Thread.Sleep(50);
             }
         }
     }
 
-    private static ObscuraDbContext CreateContext()
-    {
+    private static ObscuraDbContext CreateContext() {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()
             .UseInMemoryDatabase($"hls-assets-{Guid.NewGuid():N}")
             .Options;
@@ -681,38 +648,31 @@ public sealed class HlsAssetServiceTests : IDisposable
         return new ObscuraDbContext(options);
     }
 
-    private sealed class FakeVideoSourceService : IVideoSourceService
-    {
+    private sealed class FakeVideoSourceService : IVideoSourceService {
         private readonly VideoSourceFile _source;
 
-        public FakeVideoSourceService(VideoSourceFile source)
-        {
+        public FakeVideoSourceService(VideoSourceFile source) {
             _source = source;
         }
 
-        public Task<VideoSourceFile?> GetSourceAsync(Guid id, CancellationToken cancellationToken)
-        {
+        public Task<VideoSourceFile?> GetSourceAsync(Guid id, CancellationToken cancellationToken) {
             return Task.FromResult(id == _source.EntityId ? _source : null);
         }
     }
 
-    private sealed class CoordinatedVideoSourceService : IVideoSourceService
-    {
+    private sealed class CoordinatedVideoSourceService : IVideoSourceService {
         private readonly VideoSourceFile _source;
         private readonly int _expectedCalls;
         private readonly TaskCompletionSource _allArrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private int _calls;
 
-        public CoordinatedVideoSourceService(VideoSourceFile source, int expectedCalls)
-        {
+        public CoordinatedVideoSourceService(VideoSourceFile source, int expectedCalls) {
             _source = source;
             _expectedCalls = expectedCalls;
         }
 
-        public async Task<VideoSourceFile?> GetSourceAsync(Guid id, CancellationToken cancellationToken)
-        {
-            if (Interlocked.Increment(ref _calls) >= _expectedCalls)
-            {
+        public async Task<VideoSourceFile?> GetSourceAsync(Guid id, CancellationToken cancellationToken) {
+            if (Interlocked.Increment(ref _calls) >= _expectedCalls) {
                 _allArrived.TrySetResult();
             }
 
@@ -721,8 +681,7 @@ public sealed class HlsAssetServiceTests : IDisposable
         }
     }
 
-    private sealed class ManifestWritingProcessExecutor : ProcessExecutor
-    {
+    private sealed class ManifestWritingProcessExecutor : ProcessExecutor {
         public bool WasCalled { get; private set; }
         public IReadOnlyList<string> LastArguments { get; private set; } = [];
         public List<string> FileNameHistory { get; } = [];
@@ -732,8 +691,7 @@ public sealed class HlsAssetServiceTests : IDisposable
             string fileName,
             IReadOnlyList<string> arguments,
             IReadOnlyDictionary<string, string>? environment,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             WasCalled = true;
             LastArguments = arguments;
             FileNameHistory.Add(fileName);
@@ -742,8 +700,7 @@ public sealed class HlsAssetServiceTests : IDisposable
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
             var segmentPatternIndex = arguments.ToList().IndexOf("-hls_segment_filename");
             if (segmentPatternIndex >= 0 &&
-                segmentPatternIndex < arguments.Count - 1)
-            {
+                segmentPatternIndex < arguments.Count - 1) {
                 var segmentPattern = arguments[segmentPatternIndex + 1];
                 var startNumberIndex = arguments.ToList().IndexOf("-start_number");
                 var startNumber = startNumberIndex >= 0 &&
@@ -751,8 +708,7 @@ public sealed class HlsAssetServiceTests : IDisposable
                     int.TryParse(arguments[startNumberIndex + 1], out var parsedStart)
                         ? parsedStart
                         : 0;
-                for (var index = startNumber; index < startNumber + 5; index++)
-                {
+                for (var index = startNumber; index < startNumber + 5; index++) {
                     await File.WriteAllTextAsync(
                         segmentPattern.Replace("%05d", index.ToString("00000")),
                         "segment",
@@ -765,14 +721,12 @@ public sealed class HlsAssetServiceTests : IDisposable
         }
     }
 
-    private sealed class MissingSegmentProcessExecutor : ProcessExecutor
-    {
+    private sealed class MissingSegmentProcessExecutor : ProcessExecutor {
         public override async Task<ProcessExecutionResult> RunAsync(
             string fileName,
             IReadOnlyList<string> arguments,
             IReadOnlyDictionary<string, string>? environment,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             var outputPath = arguments[^1];
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
             await File.WriteAllTextAsync(outputPath, "playlist", cancellationToken);
@@ -780,16 +734,14 @@ public sealed class HlsAssetServiceTests : IDisposable
         }
     }
 
-    private sealed class WritesOnlyNextSegmentProcessExecutor : ProcessExecutor
-    {
+    private sealed class WritesOnlyNextSegmentProcessExecutor : ProcessExecutor {
         public List<IReadOnlyList<string>> ArgumentHistory { get; } = [];
 
         public override async Task<ProcessExecutionResult> RunAsync(
             string fileName,
             IReadOnlyList<string> arguments,
             IReadOnlyDictionary<string, string>? environment,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             ArgumentHistory.Add(arguments);
             var outputPath = arguments[^1];
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
@@ -799,8 +751,7 @@ public sealed class HlsAssetServiceTests : IDisposable
                 startNumberIndex >= 0 &&
                 segmentPatternIndex < arguments.Count - 1 &&
                 startNumberIndex < arguments.Count - 1 &&
-                int.TryParse(arguments[startNumberIndex + 1], out var startNumber))
-            {
+                int.TryParse(arguments[startNumberIndex + 1], out var startNumber)) {
                 var segmentPattern = arguments[segmentPatternIndex + 1];
                 await File.WriteAllTextAsync(
                     segmentPattern.Replace("%05d", (startNumber + 1).ToString("00000")),
@@ -813,15 +764,13 @@ public sealed class HlsAssetServiceTests : IDisposable
         }
     }
 
-    private sealed class BlockingInitialSegmentProcessExecutor : ProcessExecutor
-    {
+    private sealed class BlockingInitialSegmentProcessExecutor : ProcessExecutor {
         private readonly TaskCompletionSource _releaseInitialGeneration = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public TaskCompletionSource InitialGenerationStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public List<IReadOnlyList<string>> ArgumentHistory { get; } = [];
 
-        public void ReleaseInitialGeneration()
-        {
+        public void ReleaseInitialGeneration() {
             _releaseInitialGeneration.TrySetResult();
         }
 
@@ -829,8 +778,7 @@ public sealed class HlsAssetServiceTests : IDisposable
             string fileName,
             IReadOnlyList<string> arguments,
             IReadOnlyDictionary<string, string>? environment,
-            CancellationToken cancellationToken)
-        {
+            CancellationToken cancellationToken) {
             ArgumentHistory.Add(arguments);
             var outputPath = arguments[^1];
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
@@ -846,14 +794,12 @@ public sealed class HlsAssetServiceTests : IDisposable
                     ? parsedStart
                     : 0;
 
-            if (startNumber == 0)
-            {
+            if (startNumber == 0) {
                 InitialGenerationStarted.TrySetResult();
                 await _releaseInitialGeneration.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
             }
 
-            if (segmentPattern is not null)
-            {
+            if (segmentPattern is not null) {
                 var segmentToWrite = startNumber == 0 ? startNumber : startNumber + 1;
                 await File.WriteAllTextAsync(
                     segmentPattern.Replace("%05d", segmentToWrite.ToString("00000")),

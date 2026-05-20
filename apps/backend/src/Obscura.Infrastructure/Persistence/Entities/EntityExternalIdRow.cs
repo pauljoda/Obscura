@@ -1,7 +1,6 @@
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class EntityExternalIdRow
-{
+public sealed class EntityExternalIdRow {
     public Guid Id { get; set; }
 
     public Guid EntityId { get; set; }

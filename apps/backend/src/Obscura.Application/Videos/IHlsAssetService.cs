@@ -3,8 +3,7 @@ namespace Obscura.Application.Videos;
 /// <summary>
 /// Application port for locating generated HLS manifests, playlists, and media segments.
 /// </summary>
-public interface IHlsAssetService
-{
+public interface IHlsAssetService {
     /// <summary>
     /// Finds a generated HLS asset within the cache package for one video.
     /// </summary>

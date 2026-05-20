@@ -7,24 +7,21 @@ namespace Obscura.Application.Settings;
 /// clamping, default derivation, and the local directory browser. Delegates raw row
 /// persistence to <see cref="ISettingsPersistence"/>.
 /// </summary>
-public sealed class SettingsService
-{
+public sealed class SettingsService {
     private readonly ISettingsPersistence _persistence;
 
     /// <summary>
     /// Creates the service over the settings persistence port.
     /// </summary>
     /// <param name="persistence">Persistence adapter implemented by Infrastructure.</param>
-    public SettingsService(ISettingsPersistence persistence)
-    {
+    public SettingsService(ISettingsPersistence persistence) {
         _persistence = persistence;
     }
 
     /// <summary>
     /// Returns the small shell-settings subset used by the top-level app chrome.
     /// </summary>
-    public async Task<SettingsResponse> GetAsync(CancellationToken cancellationToken)
-    {
+    public async Task<SettingsResponse> GetAsync(CancellationToken cancellationToken) {
         var state = await _persistence.GetLibrarySettingsAsync(cancellationToken);
         return ToShell(state);
     }
@@ -32,11 +29,9 @@ public sealed class SettingsService
     /// <summary>
     /// Applies a partial update to the shell-settings subset and returns the new state.
     /// </summary>
-    public async Task<SettingsResponse> UpdateAsync(SettingsUpdateRequest request, CancellationToken cancellationToken)
-    {
+    public async Task<SettingsResponse> UpdateAsync(SettingsUpdateRequest request, CancellationToken cancellationToken) {
         var state = await _persistence.GetLibrarySettingsAsync(cancellationToken);
-        var next = state with
-        {
+        var next = state with {
             HideNsfw = request.HideNsfw ?? state.HideNsfw,
             ShowCastControls = request.EnableCastControls ?? state.ShowCastControls,
         };
@@ -48,8 +43,7 @@ public sealed class SettingsService
     /// <summary>
     /// Returns the full library settings + watched roots payload for the library settings page.
     /// </summary>
-    public async Task<LibraryConfigResponse> GetLibraryConfigAsync(CancellationToken cancellationToken)
-    {
+    public async Task<LibraryConfigResponse> GetLibraryConfigAsync(CancellationToken cancellationToken) {
         var settings = await _persistence.GetLibrarySettingsAsync(cancellationToken);
         var roots = await _persistence.ListLibraryRootsAsync(cancellationToken);
         return new LibraryConfigResponse(settings, roots);
@@ -61,8 +55,7 @@ public sealed class SettingsService
     /// </summary>
     public async Task<LibrarySettings> UpdateLibrarySettingsAsync(
         LibrarySettingsUpdateRequest request,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var state = await _persistence.GetLibrarySettingsAsync(cancellationToken);
         var next = ApplyLibraryPatch(state, request);
         return await _persistence.SaveLibrarySettingsAsync(next, cancellationToken);
@@ -73,15 +66,13 @@ public sealed class SettingsService
     /// Falls back to the user profile directory or the filesystem root when no readable path is
     /// supplied.
     /// </summary>
-    public Task<LibraryBrowseResponse> BrowseLibraryPathAsync(string? path, CancellationToken cancellationToken)
-    {
+    public Task<LibraryBrowseResponse> BrowseLibraryPathAsync(string? path, CancellationToken cancellationToken) {
         cancellationToken.ThrowIfCancellationRequested();
         var requestedPath = string.IsNullOrWhiteSpace(path)
             ? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
             : path;
         var directory = new DirectoryInfo(requestedPath);
-        if (!directory.Exists)
-        {
+        if (!directory.Exists) {
             directory = new DirectoryInfo(Path.GetPathRoot(requestedPath) ?? "/");
         }
 
@@ -103,16 +94,14 @@ public sealed class SettingsService
     /// </summary>
     public Task<LibraryRoot> CreateLibraryRootAsync(
         LibraryRootCreateRequest request,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Path);
 
         var now = DateTimeOffset.UtcNow;
         var label = string.IsNullOrWhiteSpace(request.Label)
             ? new DirectoryInfo(request.Path).Name
             : request.Label.Trim();
-        if (string.IsNullOrWhiteSpace(label))
-        {
+        if (string.IsNullOrWhiteSpace(label)) {
             label = request.Path;
         }
 
@@ -140,16 +129,13 @@ public sealed class SettingsService
     public async Task<LibraryRoot?> UpdateLibraryRootAsync(
         Guid id,
         LibraryRootUpdateRequest request,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var current = await _persistence.GetLibraryRootAsync(id, cancellationToken);
-        if (current is null)
-        {
+        if (current is null) {
             return null;
         }
 
-        var next = current with
-        {
+        var next = current with {
             Path = !string.IsNullOrWhiteSpace(request.Path) ? request.Path : current.Path,
             Label = request.Label ?? current.Label,
             Enabled = request.Enabled ?? current.Enabled,
@@ -175,8 +161,7 @@ public sealed class SettingsService
         new(HideNsfw: state.HideNsfw, EnableCastControls: state.ShowCastControls);
 
     private static LibrarySettings ApplyLibraryPatch(LibrarySettings state, LibrarySettingsUpdateRequest request) =>
-        state with
-        {
+        state with {
             AutoScanEnabled = request.AutoScanEnabled ?? state.AutoScanEnabled,
             ScanIntervalMinutes = request.ScanIntervalMinutes is { } scanInterval
                 ? Math.Clamp(scanInterval, 5, 1440)
@@ -223,10 +208,8 @@ public sealed class SettingsService
             HlsVaapiDevice = NormalizeOptionalPath(request.HlsVaapiDevice, state.HlsVaapiDevice),
         };
 
-    private static string NormalizeOptionalPath(string? value, string current)
-    {
-        if (value is null)
-        {
+    private static string NormalizeOptionalPath(string? value, string current) {
+        if (value is null) {
             return current;
         }
 

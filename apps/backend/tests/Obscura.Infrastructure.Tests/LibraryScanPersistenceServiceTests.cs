@@ -7,16 +7,13 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class LibraryScanPersistenceServiceTests
-{
+public sealed class LibraryScanPersistenceServiceTests {
     [Fact]
-    public async Task DownstreamNeedsProbeWhenTechnicalRowsLackMediaSources()
-    {
+    public async Task DownstreamNeedsProbeWhenTechnicalRowsLackMediaSources() {
         await using var db = CreateContext();
         var videoId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         SeedVideo(db, videoId);
-        db.EntityTechnical.Add(new EntityTechnicalRow
-        {
+        db.EntityTechnical.Add(new EntityTechnicalRow {
             EntityId = videoId,
             DurationSeconds = 60,
             Width = 1920,
@@ -32,13 +29,11 @@ public sealed class LibraryScanPersistenceServiceTests
     }
 
     [Fact]
-    public async Task DownstreamNeedsTrickplayWhenThumbnailExistsWithoutTrickplayInfo()
-    {
+    public async Task DownstreamNeedsTrickplayWhenThumbnailExistsWithoutTrickplayInfo() {
         await using var db = CreateContext();
         var videoId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         SeedVideo(db, videoId);
-        db.EntityFiles.Add(new EntityFileRow
-        {
+        db.EntityFiles.Add(new EntityFileRow {
             Id = Guid.NewGuid(),
             EntityId = videoId,
             Role = EntityFileRole.Thumbnail,
@@ -56,29 +51,25 @@ public sealed class LibraryScanPersistenceServiceTests
     }
 
     [Fact]
-    public async Task UpsertVideosBatchMaterializesSeasonHierarchyAndReusesMigratedSeries()
-    {
+    public async Task UpsertVideosBatchMaterializesSeasonHierarchyAndReusesMigratedSeries() {
         await using var db = CreateContext();
         var seriesId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var rootId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         var now = DateTimeOffset.UtcNow;
-        db.Entities.Add(new EntityRow
-        {
+        db.Entities.Add(new EntityRow {
             Id = seriesId,
             KindCode = EntityKindRegistry.VideoSeries.Code,
             Title = "The Chair Company",
             CreatedAt = now,
             UpdatedAt = now
         });
-        db.EntitySources.Add(new EntitySourceRow
-        {
+        db.EntitySources.Add(new EntitySourceRow {
             EntityId = seriesId,
             Code = "folder",
             Value = "/media/The Chair Company",
             UpdatedAt = now
         });
-        db.EntityRatings.Add(new EntityRatingRow
-        {
+        db.EntityRatings.Add(new EntityRatingRow {
             EntityId = seriesId,
             Value = 4,
             UpdatedAt = now
@@ -136,8 +127,7 @@ public sealed class LibraryScanPersistenceServiceTests
             position.Value == 1);
     }
 
-    private static ObscuraDbContext CreateContext()
-    {
+    private static ObscuraDbContext CreateContext() {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()
             .UseInMemoryDatabase($"library-scan-persistence-{Guid.NewGuid():N}")
             .Options;
@@ -145,18 +135,15 @@ public sealed class LibraryScanPersistenceServiceTests
         return new ObscuraDbContext(options);
     }
 
-    private static void SeedVideo(ObscuraDbContext db, Guid videoId)
-    {
-        db.Entities.Add(new EntityRow
-        {
+    private static void SeedVideo(ObscuraDbContext db, Guid videoId) {
+        db.Entities.Add(new EntityRow {
             Id = videoId,
             KindCode = EntityKindRegistry.Video.Code,
             Title = "Video",
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         });
-        db.EntityFiles.Add(new EntityFileRow
-        {
+        db.EntityFiles.Add(new EntityFileRow {
             Id = Guid.NewGuid(),
             EntityId = videoId,
             Role = EntityFileRole.Source,

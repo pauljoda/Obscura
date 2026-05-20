@@ -10,8 +10,7 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class ObscuraDbContextModelTests
-{
+public sealed class ObscuraDbContextModelTests {
     [Theory]
     [InlineData(typeof(EntityKindRow), "entity_kinds")]
     [InlineData(typeof(EntityRow), "entities")]
@@ -53,8 +52,7 @@ public sealed class ObscuraDbContextModelTests
     [InlineData(typeof(FingerprintSubmissionRow), "fingerprint_submissions")]
     [InlineData(typeof(DatabaseBackupRow), "database_backups")]
     [InlineData(typeof(JobRunRow), "job_runs")]
-    public void V2ModelMapsGlobalEntityTablesToV2Schema(Type entityType, string tableName)
-    {
+    public void V2ModelMapsGlobalEntityTablesToV2Schema(Type entityType, string tableName) {
         using var db = CreateContext();
         var modelEntity = db.Model.FindEntityType(entityType);
 
@@ -64,8 +62,7 @@ public sealed class ObscuraDbContextModelTests
     }
 
     [Fact]
-    public void RatingCapabilityUsesEntityIdAsItsPrimaryKey()
-    {
+    public void RatingCapabilityUsesEntityIdAsItsPrimaryKey() {
         using var db = CreateContext();
         var modelEntity = db.Model.FindEntityType(typeof(EntityRatingRow));
 
@@ -74,8 +71,7 @@ public sealed class ObscuraDbContextModelTests
     }
 
     [Fact]
-    public void EntityKindSeedDataIncludesStructuralHierarchyKinds()
-    {
+    public void EntityKindSeedDataIncludesStructuralHierarchyKinds() {
         using var db = CreateContext();
         var modelEntity = db.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(EntityKindRow));
 
@@ -91,8 +87,7 @@ public sealed class ObscuraDbContextModelTests
     }
 
     [Fact]
-    public void EntityChildLinksHaveCanonicalStructuralChildIndex()
-    {
+    public void EntityChildLinksHaveCanonicalStructuralChildIndex() {
         using var db = CreateContext();
         var modelEntity = db.Model.FindEntityType(typeof(EntityChildLinkRow));
 
@@ -107,8 +102,7 @@ public sealed class ObscuraDbContextModelTests
     }
 
     [Fact]
-    public void EntityRelationshipLinksUseGenericReferenceShape()
-    {
+    public void EntityRelationshipLinksUseGenericReferenceShape() {
         using var db = CreateContext();
         var modelEntity = db.Model.FindEntityType(typeof(EntityRelationshipLinkRow));
 
@@ -122,8 +116,7 @@ public sealed class ObscuraDbContextModelTests
     }
 
     [Fact]
-    public void EntityRowsExposeNullableParentAndSortOrder()
-    {
+    public void EntityRowsExposeNullableParentAndSortOrder() {
         using var db = CreateContext();
         var modelEntity = db.Model.FindEntityType(typeof(EntityRow));
 
@@ -148,8 +141,7 @@ public sealed class ObscuraDbContextModelTests
     [InlineData(typeof(BookChapterDetailRow), "volume_entity_id")]
     [InlineData(typeof(StudioDetailRow), "parent_studio_entity_id")]
     [InlineData(typeof(TagDetailRow), "parent_tag_entity_id")]
-    public void DetailRowsDoNotKeepParentSpecificRelationshipColumns(Type entityType, string columnName)
-    {
+    public void DetailRowsDoNotKeepParentSpecificRelationshipColumns(Type entityType, string columnName) {
         using var db = CreateContext();
         var modelEntity = db.Model.FindEntityType(entityType);
 
@@ -158,8 +150,7 @@ public sealed class ObscuraDbContextModelTests
     }
 
     [Fact]
-    public void VideoSeriesDetailsDoNotStoreRenderingMode()
-    {
+    public void VideoSeriesDetailsDoNotStoreRenderingMode() {
         Assert.Null(typeof(VideoSeriesDetailRow).GetProperty("RenderingMode"));
 
         using var db = CreateContext();
@@ -170,8 +161,7 @@ public sealed class ObscuraDbContextModelTests
     }
 
     [Fact]
-    public void EntityKindsSeedStorageMetadata()
-    {
+    public void EntityKindsSeedStorageMetadata() {
         using var db = CreateContext();
         var modelEntity = db.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(EntityKindRow));
 
@@ -185,8 +175,7 @@ public sealed class ObscuraDbContextModelTests
     }
 
     [Fact]
-    public void GalleryDetailsDoNotKeepPhotographerMetadata()
-    {
+    public void GalleryDetailsDoNotKeepPhotographerMetadata() {
         Assert.Null(typeof(Gallery).GetProperty("Photographer"));
         Assert.Null(typeof(GalleryDetailRow).GetProperty("Photographer"));
 
@@ -198,8 +187,7 @@ public sealed class ObscuraDbContextModelTests
     }
 
     [Fact]
-    public void CapabilityFirstMigrationIsDiscoverableByEfMigrator()
-    {
+    public void CapabilityFirstMigrationIsDiscoverableByEfMigrator() {
         using var db = CreateContext();
         var migrations = db.GetService<IMigrationsAssembly>().Migrations.Keys;
 
@@ -229,8 +217,7 @@ public sealed class ObscuraDbContextModelTests
     [InlineData(typeof(LibrarySettingsRow), nameof(LibrarySettingsRow.HideNsfw), "hide_nsfw")]
     [InlineData(typeof(DatabaseBackupRow), nameof(DatabaseBackupRow.BackupPath), "backup_path")]
     [InlineData(typeof(JobRunRow), nameof(JobRunRow.AvailableAt), "available_at")]
-    public void V2ModelUsesSnakeCaseColumns(Type entityType, string propertyName, string columnName)
-    {
+    public void V2ModelUsesSnakeCaseColumns(Type entityType, string propertyName, string columnName) {
         using var db = CreateContext();
         var modelEntity = db.Model.FindEntityType(entityType);
 
@@ -256,8 +243,7 @@ public sealed class ObscuraDbContextModelTests
     [InlineData(typeof(JobRunRow), nameof(JobRunRow.Status), typeof(JobRunStatus))]
     [InlineData(typeof(LibrarySettingsRow), nameof(LibrarySettingsRow.SubtitleStyle), typeof(SubtitleStyle))]
     [InlineData(typeof(LibrarySettingsRow), nameof(LibrarySettingsRow.DefaultPlaybackMode), typeof(PlaybackMode))]
-    public void V2ModelUsesEnumsForClosedChoiceCodes(Type entityType, string propertyName, Type clrType)
-    {
+    public void V2ModelUsesEnumsForClosedChoiceCodes(Type entityType, string propertyName, Type clrType) {
         using var db = CreateContext();
         var modelEntity = db.Model.FindEntityType(entityType);
 
@@ -267,8 +253,7 @@ public sealed class ObscuraDbContextModelTests
         Assert.Equal(clrType, property.ClrType);
     }
 
-    private static ObscuraDbContext CreateContext()
-    {
+    private static ObscuraDbContext CreateContext() {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()
             .UseNpgsql("Host=localhost;Database=obscura;Username=obscura;Password=obscura")
             .Options;

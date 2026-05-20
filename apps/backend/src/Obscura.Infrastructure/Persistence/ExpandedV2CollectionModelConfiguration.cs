@@ -4,12 +4,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Persistence;
 
-internal static partial class ExpandedV2ModelConfiguration
-{
-    private static void ConfigureCollections(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<CollectionDetailRow>(entity =>
-        {
+internal static partial class ExpandedV2ModelConfiguration {
+    private static void ConfigureCollections(ModelBuilder modelBuilder) {
+        modelBuilder.Entity<CollectionDetailRow>(entity => {
             entity.ToTable("collection_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -29,8 +26,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<CollectionDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<CollectionItemDetailRow>(entity =>
-        {
+        modelBuilder.Entity<CollectionItemDetailRow>(entity => {
             entity.ToTable("collection_item_details");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();

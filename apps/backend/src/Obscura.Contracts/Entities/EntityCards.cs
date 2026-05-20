@@ -11,8 +11,7 @@ public sealed record EntityCreditMetadata(Guid PersonId, string? Role, string? C
 /// Carries the fields common to all entities so detail routes can be returned as a single
 /// strongly typed contract instead of <see cref="object"/>.
 /// </summary>
-public interface IEntityCard
-{
+public interface IEntityCard {
     /// <summary>Global entity identifier.</summary>
     Guid Id { get; }
 

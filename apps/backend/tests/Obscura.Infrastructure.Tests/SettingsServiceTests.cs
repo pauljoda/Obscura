@@ -6,11 +6,9 @@ using Obscura.Infrastructure.Settings;
 
 namespace Obscura.Infrastructure.Tests;
 
-public sealed class SettingsServiceTests
-{
+public sealed class SettingsServiceTests {
     [Fact]
-    public async Task GetCreatesDefaultRowWhenFreshStartHasNotPreservedSettings()
-    {
+    public async Task GetCreatesDefaultRowWhenFreshStartHasNotPreservedSettings() {
         await using var db = CreateContext();
         var service = new SettingsService(new EfSettingsPersistence(db));
 
@@ -22,8 +20,7 @@ public sealed class SettingsServiceTests
     }
 
     [Fact]
-    public async Task UpdatePersistsSettingsToV2LibrarySettings()
-    {
+    public async Task UpdatePersistsSettingsToV2LibrarySettings() {
         await using var db = CreateContext();
         var service = new SettingsService(new EfSettingsPersistence(db));
 
@@ -35,8 +32,7 @@ public sealed class SettingsServiceTests
     }
 
     [Fact]
-    public async Task UpdateLibrarySettingsPersistsPreferredAudioLanguages()
-    {
+    public async Task UpdateLibrarySettingsPersistsPreferredAudioLanguages() {
         await using var db = CreateContext();
         var service = new SettingsService(new EfSettingsPersistence(db));
 
@@ -52,8 +48,7 @@ public sealed class SettingsServiceTests
     }
 
     [Fact]
-    public async Task UpdateLibrarySettingsPersistsHlsTranscoderSettings()
-    {
+    public async Task UpdateLibrarySettingsPersistsHlsTranscoderSettings() {
         await using var db = CreateContext();
         var service = new SettingsService(new EfSettingsPersistence(db));
 
@@ -73,8 +68,7 @@ public sealed class SettingsServiceTests
         Assert.Equal("/dev/dri/renderD129", row.HlsVaapiDevice);
     }
 
-    private static ObscuraDbContext CreateContext()
-    {
+    private static ObscuraDbContext CreateContext() {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()
             .UseInMemoryDatabase($"settings-{Guid.NewGuid():N}")
             .Options;

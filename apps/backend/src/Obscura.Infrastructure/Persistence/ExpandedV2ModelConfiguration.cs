@@ -4,10 +4,8 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Persistence;
 
-internal static partial class ExpandedV2ModelConfiguration
-{
-    public static void ConfigureExpandedV2Model(this ModelBuilder modelBuilder)
-    {
+internal static partial class ExpandedV2ModelConfiguration {
+    public static void ConfigureExpandedV2Model(this ModelBuilder modelBuilder) {
         ConfigureEntityCapabilities(modelBuilder);
         ConfigureMediaDetails(modelBuilder);
         ConfigureMediaPlaybackModel(modelBuilder);

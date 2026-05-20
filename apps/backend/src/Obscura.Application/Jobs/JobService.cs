@@ -7,8 +7,7 @@ namespace Obscura.Application.Jobs;
 /// <summary>
 /// Application use-case service for listing, creating, and bulk-orchestrating background jobs.
 /// </summary>
-public sealed class JobService
-{
+public sealed class JobService {
     private readonly IJobQueueService _queue;
     private readonly IMaintenancePersistence _maintenance;
     private readonly ILibraryScanPersistence _scanPersistence;
@@ -22,8 +21,7 @@ public sealed class JobService
     public JobService(
         IJobQueueService queue,
         IMaintenancePersistence maintenance,
-        ILibraryScanPersistence scanPersistence)
-    {
+        ILibraryScanPersistence scanPersistence) {
         _queue = queue;
         _maintenance = maintenance;
         _scanPersistence = scanPersistence;
@@ -32,8 +30,7 @@ public sealed class JobService
     /// <summary>
     /// Lists recent job runs for the operations dashboard.
     /// </summary>
-    public async Task<JobListResponse> ListAsync(CancellationToken cancellationToken)
-    {
+    public async Task<JobListResponse> ListAsync(CancellationToken cancellationToken) {
         var items = (await _queue.ListAsync(cancellationToken)).Select(ToContract).ToArray();
         var counts = (await _queue.GetQueueCountsAsync(cancellationToken))
             .Select(c => new JobQueueCountDto(c.TypeCode, c.StatusCode, c.Count))
@@ -44,8 +41,7 @@ public sealed class JobService
     /// <summary>
     /// Creates a job from a typed queue operation.
     /// </summary>
-    public async Task<JobCreateResponse> CreateAsync(JobType type, CancellationToken cancellationToken)
-    {
+    public async Task<JobCreateResponse> CreateAsync(JobType type, CancellationToken cancellationToken) {
         var job = await _queue.EnqueueAsync(type, cancellationToken);
         return new JobCreateResponse(ToContract(job));
     }
@@ -53,8 +49,7 @@ public sealed class JobService
     /// <summary>
     /// Cancels queued or running jobs, optionally scoped to one typed operation.
     /// </summary>
-    public async Task<JobCancelResponse> CancelAsync(JobType? type, CancellationToken cancellationToken)
-    {
+    public async Task<JobCancelResponse> CancelAsync(JobType? type, CancellationToken cancellationToken) {
         var cancelled = await _queue.CancelAsync(type, cancellationToken);
         return new JobCancelResponse(cancelled);
     }
@@ -62,8 +57,7 @@ public sealed class JobService
     /// <summary>
     /// Cancels a single queued or running job by identifier.
     /// </summary>
-    public async Task<JobCancelResponse> CancelRunAsync(Guid id, CancellationToken cancellationToken)
-    {
+    public async Task<JobCancelResponse> CancelRunAsync(Guid id, CancellationToken cancellationToken) {
         var cancelled = await _queue.CancelRunAsync(id, cancellationToken);
         return new JobCancelResponse(cancelled ? 1 : 0);
     }
@@ -73,8 +67,7 @@ public sealed class JobService
     /// </summary>
     public async Task<JobFailureClearResponse> ClearFailuresAsync(
         JobType? type,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var cleared = await _queue.ClearFailuresAsync(type, cancellationToken);
         return new JobFailureClearResponse(cleared);
     }
@@ -84,8 +77,7 @@ public sealed class JobService
     /// already have a matching job pending. Used by the operations dashboard "rebuild previews"
     /// maintenance action.
     /// </summary>
-    public async Task<BulkJobResponse> RebuildPreviewsAsync(CancellationToken cancellationToken)
-    {
+    public async Task<BulkJobResponse> RebuildPreviewsAsync(CancellationToken cancellationToken) {
         var previewKinds = new (EntityKind Kind, JobType JobType)[]
         {
             (EntityKind.Video, JobType.GeneratePreview),
@@ -95,14 +87,11 @@ public sealed class JobService
         };
 
         int enqueued = 0, skipped = 0;
-        foreach (var (kind, jobType) in previewKinds)
-        {
+        foreach (var (kind, jobType) in previewKinds) {
             var entityIds = await _maintenance.GetActiveEntityIdsByKindAsync(kind, cancellationToken);
-            foreach (var entityId in entityIds)
-            {
+            foreach (var entityId in entityIds) {
                 var id = entityId.ToString();
-                if (await _queue.HasPendingAsync(jobType, id, cancellationToken))
-                {
+                if (await _queue.HasPendingAsync(jobType, id, cancellationToken)) {
                     skipped++;
                     continue;
                 }
@@ -125,8 +114,7 @@ public sealed class JobService
     /// stored MD5 fingerprint and does not already have a fingerprint job pending. Used by the
     /// operations dashboard "backfill fingerprints" maintenance action.
     /// </summary>
-    public async Task<BulkJobResponse> BackfillFingerprintsAsync(CancellationToken cancellationToken)
-    {
+    public async Task<BulkJobResponse> BackfillFingerprintsAsync(CancellationToken cancellationToken) {
         var fingerprintKinds = new (EntityKind Kind, JobType JobType)[]
         {
             (EntityKind.Video, JobType.FingerprintVideo),
@@ -135,23 +123,19 @@ public sealed class JobService
         };
 
         int enqueued = 0, skipped = 0;
-        foreach (var (kind, jobType) in fingerprintKinds)
-        {
+        foreach (var (kind, jobType) in fingerprintKinds) {
             var entityIds = await _maintenance.GetActiveEntityIdsByKindAsync(kind, cancellationToken);
-            foreach (var entityId in entityIds)
-            {
+            foreach (var entityId in entityIds) {
                 if (await _scanPersistence.HasEntityFingerprintAsync(
                         entityId,
                         FingerprintAlgorithm.Md5,
-                        cancellationToken))
-                {
+                        cancellationToken)) {
                     skipped++;
                     continue;
                 }
 
                 var id = entityId.ToString();
-                if (await _queue.HasPendingAsync(jobType, id, cancellationToken))
-                {
+                if (await _queue.HasPendingAsync(jobType, id, cancellationToken)) {
                     skipped++;
                     continue;
                 }

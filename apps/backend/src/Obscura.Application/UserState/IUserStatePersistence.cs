@@ -5,8 +5,7 @@ namespace Obscura.Application.UserState;
 /// Implementations live in Infrastructure and use the <c>ui_preferences</c> EF Core table as
 /// the underlying store.
 /// </summary>
-public interface IUserStatePersistence
-{
+public interface IUserStatePersistence {
     /// <summary>
     /// Loads the raw JSON value stored under <paramref name="key"/>. Returns null when no row
     /// exists or the stored value is empty.

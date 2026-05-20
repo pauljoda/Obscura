@@ -2,15 +2,12 @@ using System.Net;
 
 namespace Obscura.Infrastructure.Database;
 
-public static class PostgresConnectionString
-{
-    public static string Normalize(string connectionString)
-    {
+public static class PostgresConnectionString {
+    public static string Normalize(string connectionString) {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
         if (!Uri.TryCreate(connectionString, UriKind.Absolute, out var uri) ||
-            (uri.Scheme != "postgresql" && uri.Scheme != "postgres"))
-        {
+            (uri.Scheme != "postgresql" && uri.Scheme != "postgres")) {
             return connectionString;
         }
 

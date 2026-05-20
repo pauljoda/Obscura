@@ -7,8 +7,7 @@ namespace Obscura.Application.UserState;
 /// playlist-session lifecycle: read the stored JSON document, stamp <c>updatedAt</c> on save,
 /// and clear it on delete. Raw persistence is delegated to <see cref="IUserStatePersistence"/>.
 /// </summary>
-public sealed class UserStateService
-{
+public sealed class UserStateService {
     private const string PlaylistSessionKey = "ui:playlist-session";
 
     private readonly IUserStatePersistence _persistence;
@@ -16,8 +15,7 @@ public sealed class UserStateService
     /// <summary>
     /// Creates the service over the user-state persistence port.
     /// </summary>
-    public UserStateService(IUserStatePersistence persistence)
-    {
+    public UserStateService(IUserStatePersistence persistence) {
         _persistence = persistence;
     }
 
@@ -34,8 +32,7 @@ public sealed class UserStateService
     /// </summary>
     /// <param name="session">Parsed JSON object the client posted.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
-    public async Task<string> SavePlaylistSessionAsync(JsonObject session, CancellationToken cancellationToken)
-    {
+    public async Task<string> SavePlaylistSessionAsync(JsonObject session, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(session);
 
         session["updatedAt"] = DateTimeOffset.UtcNow;

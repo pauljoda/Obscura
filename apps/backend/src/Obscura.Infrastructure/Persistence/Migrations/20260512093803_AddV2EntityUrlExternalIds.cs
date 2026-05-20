@@ -3,19 +3,15 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Obscura.Infrastructure.Persistence.Migrations
-{
+namespace Obscura.Infrastructure.Persistence.Migrations {
     /// <inheritdoc />
-    public partial class AddV2EntityUrlExternalIds : Migration
-    {
+    public partial class AddV2EntityUrlExternalIds : Migration {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
+        protected override void Up(MigrationBuilder migrationBuilder) {
             migrationBuilder.CreateTable(
                 name: "entity_external_ids",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     provider = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
@@ -24,8 +20,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_external_ids", x => x.id);
                     table.ForeignKey(
                         name: "FK_entity_external_ids_entities_entity_id",
@@ -39,8 +34,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateTable(
                 name: "entity_urls",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     entity_id = table.Column<Guid>(type: "uuid", nullable: false),
                     url = table.Column<string>(type: "text", nullable: false),
@@ -48,8 +42,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     sort_order = table.Column<int>(type: "integer", nullable: false),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_entity_urls", x => x.id);
                     table.ForeignKey(
                         name: "FK_entity_urls_entities_entity_id",
@@ -88,8 +81,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+        protected override void Down(MigrationBuilder migrationBuilder) {
             migrationBuilder.DropTable(
                 name: "entity_external_ids",
                 schema: "v2");

@@ -9,16 +9,14 @@ namespace Obscura.Infrastructure.Plugins;
 /// <summary>
 /// Builds ID-first identify hints from persisted entity metadata.
 /// </summary>
-public sealed partial class IdentifyMatchHintResolver
-{
+public sealed partial class IdentifyMatchHintResolver {
     private readonly ObscuraDbContext _db;
 
     /// <summary>
     /// Creates a resolver over v2 entity capability rows.
     /// </summary>
     /// <param name="db">Database context containing entity links and source files.</param>
-    public IdentifyMatchHintResolver(ObscuraDbContext db)
-    {
+    public IdentifyMatchHintResolver(ObscuraDbContext db) {
         _db = db;
     }
 
@@ -33,16 +31,14 @@ public sealed partial class IdentifyMatchHintResolver
     public async Task<IdentifyMatchHints> ResolveAsync(
         Guid entityId,
         string provider,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var title = await _db.Entities
             .AsNoTracking()
             .Where(entity => entity.Id == entityId && entity.DeletedAt == null)
             .Select(entity => entity.Title)
             .SingleOrDefaultAsync(cancellationToken);
 
-        if (title is null)
-        {
+        if (title is null) {
             return new IdentifyMatchHints(new Dictionary<string, string>(), [], null, null);
         }
 
@@ -58,8 +54,7 @@ public sealed partial class IdentifyMatchHintResolver
             .Select(row => row.Url)
             .ToArrayAsync(cancellationToken);
 
-        if (!externalIds.ContainsKey(provider) && TryParseProviderId(provider, urls, out var parsedId))
-        {
+        if (!externalIds.ContainsKey(provider) && TryParseProviderId(provider, urls, out var parsedId)) {
             externalIds[provider] = parsedId;
         }
 
@@ -73,19 +68,15 @@ public sealed partial class IdentifyMatchHintResolver
         return new IdentifyMatchHints(externalIds, urls, title, filePath);
     }
 
-    private static bool TryParseProviderId(string provider, IReadOnlyList<string> urls, out string id)
-    {
+    private static bool TryParseProviderId(string provider, IReadOnlyList<string> urls, out string id) {
         id = string.Empty;
-        if (!string.Equals(provider, "tmdb", StringComparison.OrdinalIgnoreCase))
-        {
+        if (!string.Equals(provider, "tmdb", StringComparison.OrdinalIgnoreCase)) {
             return false;
         }
 
-        foreach (var url in urls)
-        {
+        foreach (var url in urls) {
             var match = TmdbUrlRegex().Match(url);
-            if (!match.Success)
-            {
+            if (!match.Success) {
                 continue;
             }
 

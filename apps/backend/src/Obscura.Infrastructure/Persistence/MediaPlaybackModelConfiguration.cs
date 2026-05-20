@@ -3,12 +3,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Persistence;
 
-internal static partial class ExpandedV2ModelConfiguration
-{
-    private static void ConfigureMediaPlaybackModel(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<MediaSourceRow>(entity =>
-        {
+internal static partial class ExpandedV2ModelConfiguration {
+    private static void ConfigureMediaPlaybackModel(ModelBuilder modelBuilder) {
+        modelBuilder.Entity<MediaSourceRow>(entity => {
             entity.ToTable("media_sources");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
@@ -33,8 +30,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityFileRow>().WithMany().HasForeignKey(row => row.EntityFileId).OnDelete(DeleteBehavior.SetNull);
         });
 
-        modelBuilder.Entity<MediaStreamRow>(entity =>
-        {
+        modelBuilder.Entity<MediaStreamRow>(entity => {
             entity.ToTable("media_streams");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
@@ -59,8 +55,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithMany().HasForeignKey(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<TrickplayInfoRow>(entity =>
-        {
+        modelBuilder.Entity<TrickplayInfoRow>(entity => {
             entity.ToTable("trickplay_infos");
             entity.HasKey(row => new { row.EntityId, row.Width });
             entity.Property(row => row.EntityId).HasColumnName("entity_id");
@@ -74,8 +69,7 @@ internal static partial class ExpandedV2ModelConfiguration
             entity.Property(row => row.CreatedAt).HasColumnName("created_at");
             entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
             entity.HasOne<EntityRow>().WithMany().HasForeignKey(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
-            entity.ToTable(table =>
-            {
+            entity.ToTable(table => {
                 table.HasCheckConstraint("ck_trickplay_infos_width", "width > 0");
                 table.HasCheckConstraint("ck_trickplay_infos_height", "height > 0");
                 table.HasCheckConstraint("ck_trickplay_infos_tiles", "tile_width > 0 AND tile_height > 0");

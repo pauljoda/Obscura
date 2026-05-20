@@ -3,8 +3,7 @@ namespace Obscura.Application.Jobs.Ports;
 /// <summary>
 /// Port for discovering media files on the filesystem.
 /// </summary>
-public interface IFileDiscovery
-{
+public interface IFileDiscovery {
     Task<IReadOnlyList<string>> DiscoverFilesAsync(
         string rootPath,
         MediaCategory category,
@@ -18,8 +17,7 @@ public interface IFileDiscovery
         CancellationToken cancellationToken);
 }
 
-public enum MediaCategory
-{
+public enum MediaCategory {
     Video,
     Image,
     Audio,

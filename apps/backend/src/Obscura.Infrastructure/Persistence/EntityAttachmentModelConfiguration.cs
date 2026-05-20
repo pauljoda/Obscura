@@ -4,12 +4,9 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Persistence;
 
-internal static class EntityAttachmentModelConfiguration
-{
-    public static void ConfigureEntityAttachmentModel(this ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<EntityMarkerRow>(entity =>
-        {
+internal static class EntityAttachmentModelConfiguration {
+    public static void ConfigureEntityAttachmentModel(this ModelBuilder modelBuilder) {
+        modelBuilder.Entity<EntityMarkerRow>(entity => {
             entity.ToTable("entity_markers");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
@@ -26,8 +23,7 @@ internal static class EntityAttachmentModelConfiguration
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<EntitySubtitleRow>(entity =>
-        {
+        modelBuilder.Entity<EntitySubtitleRow>(entity => {
             entity.ToTable("entity_subtitles");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
@@ -52,8 +48,7 @@ internal static class EntityAttachmentModelConfiguration
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<EntityFileRow>(entity =>
-        {
+        modelBuilder.Entity<EntityFileRow>(entity => {
             entity.ToTable("entity_files");
             entity.HasKey(row => row.Id);
             entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
@@ -76,8 +71,7 @@ internal static class EntityAttachmentModelConfiguration
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<VideoDetailRow>(entity =>
-        {
+        modelBuilder.Entity<VideoDetailRow>(entity => {
             entity.ToTable("video_details");
             entity.HasKey(row => row.EntityId);
             entity.Property(row => row.EntityId).HasColumnName("entity_id");

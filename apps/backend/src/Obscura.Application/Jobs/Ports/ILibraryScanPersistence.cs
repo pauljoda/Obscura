@@ -6,8 +6,7 @@ namespace Obscura.Application.Jobs.Ports;
 /// Port for entity persistence operations during library scanning. Handles the create/update/delete
 /// lifecycle for entities discovered by file system scans.
 /// </summary>
-public interface ILibraryScanPersistence
-{
+public interface ILibraryScanPersistence {
     // ── Library roots & settings ──
 
     Task<LibraryRootData?> GetLibraryRootAsync(Guid rootId, CancellationToken cancellationToken);

@@ -5,8 +5,7 @@ namespace Obscura.Contracts.Playback;
 /// <summary>
 /// Jellyfin-compatible playback negotiation request sent before a client opens media.
 /// </summary>
-public sealed record PlaybackInfoRequest
-{
+public sealed record PlaybackInfoRequest {
     [JsonPropertyName("UserId")]
     public Guid? UserId { get; init; }
 

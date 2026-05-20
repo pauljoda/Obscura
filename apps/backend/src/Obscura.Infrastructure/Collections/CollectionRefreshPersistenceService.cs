@@ -10,11 +10,9 @@ namespace Obscura.Infrastructure.Collections;
 /// Infrastructure adapter for <see cref="ICollectionRefreshPersistence"/>.
 /// Manages dynamic collection membership against the v2 entity model.
 /// </summary>
-public sealed class CollectionRefreshPersistenceService(ObscuraDbContext db) : ICollectionRefreshPersistence
-{
+public sealed class CollectionRefreshPersistenceService(ObscuraDbContext db) : ICollectionRefreshPersistence {
     public async Task<CollectionRefreshData?> GetDynamicCollectionAsync(
-        Guid collectionEntityId, CancellationToken cancellationToken)
-    {
+        Guid collectionEntityId, CancellationToken cancellationToken) {
         var row = await db.CollectionDetails
             .Where(c => c.EntityId == collectionEntityId &&
                         (c.Mode == CollectionMode.Dynamic || c.Mode == CollectionMode.Hybrid))
@@ -40,8 +38,7 @@ public sealed class CollectionRefreshPersistenceService(ObscuraDbContext db) : I
     public async Task RefreshCollectionItemsAsync(
         Guid collectionEntityId,
         IReadOnlyList<CollectionRuleMatch> resolvedItems,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
         var dynamicItems = await db.CollectionItemDetails
@@ -69,12 +66,10 @@ public sealed class CollectionRefreshPersistenceService(ObscuraDbContext db) : I
             .ToHashSetAsync(cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
-        foreach (var item in resolvedItems)
-        {
+        foreach (var item in resolvedItems) {
             if (existingItemIds.Contains(item.EntityId)) continue;
 
-            db.CollectionItemDetails.Add(new CollectionItemDetailRow
-            {
+            db.CollectionItemDetails.Add(new CollectionItemDetailRow {
                 Id = Guid.NewGuid(),
                 CollectionEntityId = collectionEntityId,
                 ItemEntityId = item.EntityId,
@@ -86,8 +81,7 @@ public sealed class CollectionRefreshPersistenceService(ObscuraDbContext db) : I
                 .Where(entity => entity.Id == item.EntityId)
                 .Select(entity => entity.KindCode)
                 .FirstAsync(cancellationToken);
-            db.EntityChildLinks.Add(new EntityChildLinkRow
-            {
+            db.EntityChildLinks.Add(new EntityChildLinkRow {
                 ParentEntityId = collectionEntityId,
                 ChildEntityId = item.EntityId,
                 ChildKindCode = childKindCode,

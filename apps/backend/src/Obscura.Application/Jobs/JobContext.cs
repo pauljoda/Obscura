@@ -6,12 +6,10 @@ namespace Obscura.Application.Jobs;
 /// Execution context passed to job handlers providing the claimed job snapshot,
 /// progress reporting, and the ability to enqueue downstream jobs.
 /// </summary>
-public sealed class JobContext
-{
+public sealed class JobContext {
     private readonly IJobQueueService _queue;
 
-    public JobContext(JobRunSnapshot job, IJobQueueService queue)
-    {
+    public JobContext(JobRunSnapshot job, IJobQueueService queue) {
         Job = job;
         _queue = queue;
     }
@@ -31,10 +29,8 @@ public sealed class JobContext
     /// Enqueues a downstream job, skipping if a pending job already exists for the same type and target.
     /// Returns the snapshot when enqueued, or null when deduplicated away.
     /// </summary>
-    public async Task<JobRunSnapshot?> EnqueueIfNeededAsync(EnqueueJobRequest request, CancellationToken cancellationToken = default)
-    {
-        if (await _queue.HasPendingAsync(request.Type, request.TargetEntityId, cancellationToken))
-        {
+    public async Task<JobRunSnapshot?> EnqueueIfNeededAsync(EnqueueJobRequest request, CancellationToken cancellationToken = default) {
+        if (await _queue.HasPendingAsync(request.Type, request.TargetEntityId, cancellationToken)) {
             return null;
         }
 

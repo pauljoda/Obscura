@@ -9,37 +9,29 @@ namespace Obscura.Infrastructure.UserState;
 /// EF Core adapter for <see cref="IUserStatePersistence"/>. Reads and writes raw JSON values
 /// in the <c>ui_preferences</c> table keyed by a user-state slot name.
 /// </summary>
-public sealed class EfUserStatePersistence : IUserStatePersistence
-{
+public sealed class EfUserStatePersistence : IUserStatePersistence {
     private readonly ObscuraDbContext _db;
 
-    public EfUserStatePersistence(ObscuraDbContext db)
-    {
+    public EfUserStatePersistence(ObscuraDbContext db) {
         _db = db;
     }
 
-    public async Task<string?> GetAsync(string key, CancellationToken cancellationToken)
-    {
+    public async Task<string?> GetAsync(string key, CancellationToken cancellationToken) {
         var row = await _db.UiPreferences.AsNoTracking()
             .FirstOrDefaultAsync(pref => pref.Key == key, cancellationToken);
         return string.IsNullOrWhiteSpace(row?.ValueJson) ? null : row.ValueJson;
     }
 
-    public async Task SaveAsync(string key, string valueJson, CancellationToken cancellationToken)
-    {
+    public async Task SaveAsync(string key, string valueJson, CancellationToken cancellationToken) {
         var now = DateTimeOffset.UtcNow;
         var row = await _db.UiPreferences.FindAsync([key], cancellationToken);
-        if (row is null)
-        {
-            _db.UiPreferences.Add(new UiPreferenceRow
-            {
+        if (row is null) {
+            _db.UiPreferences.Add(new UiPreferenceRow {
                 Key = key,
                 ValueJson = valueJson,
                 UpdatedAt = now,
             });
-        }
-        else
-        {
+        } else {
             row.ValueJson = valueJson;
             row.UpdatedAt = now;
         }
@@ -47,11 +39,9 @@ public sealed class EfUserStatePersistence : IUserStatePersistence
         await _db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task DeleteAsync(string key, CancellationToken cancellationToken)
-    {
+    public async Task DeleteAsync(string key, CancellationToken cancellationToken) {
         var row = await _db.UiPreferences.FindAsync([key], cancellationToken);
-        if (row is null)
-        {
+        if (row is null) {
             return;
         }
 

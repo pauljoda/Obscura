@@ -3,19 +3,15 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Obscura.Infrastructure.Persistence.Migrations
-{
+namespace Obscura.Infrastructure.Persistence.Migrations {
     /// <inheritdoc />
-    public partial class AddV2JobRuns : Migration
-    {
+    public partial class AddV2JobRuns : Migration {
         /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
+        protected override void Up(MigrationBuilder migrationBuilder) {
             migrationBuilder.CreateTable(
                 name: "job_runs",
                 schema: "v2",
-                columns: table => new
-                {
+                columns: table => new {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     type = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
                     status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
@@ -32,8 +28,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
                     started_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     finished_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
                 },
-                constraints: table =>
-                {
+                constraints: table => {
                     table.PrimaryKey("PK_job_runs", x => x.id);
                     table.CheckConstraint("ck_job_runs_attempts", "attempts >= 0 AND max_attempts > 0");
                     table.CheckConstraint("ck_job_runs_progress", "progress >= 0 AND progress <= 100");
@@ -47,8 +42,7 @@ namespace Obscura.Infrastructure.Persistence.Migrations
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+        protected override void Down(MigrationBuilder migrationBuilder) {
             migrationBuilder.DropTable(
                 name: "job_runs",
                 schema: "v2");

@@ -6,8 +6,7 @@ namespace Obscura.Application.Jobs;
 /// Application handler for executing one durable background job type.
 /// Handlers are resolved per-scope so they can take scoped dependencies via constructor injection.
 /// </summary>
-public interface IJobHandler
-{
+public interface IJobHandler {
     /// <summary>
     /// Gets the job type handled by this implementation.
     /// </summary>

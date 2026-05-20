@@ -1,7 +1,6 @@
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class EntityChildLinkRow
-{
+public sealed class EntityChildLinkRow {
     public Guid ParentEntityId { get; set; }
 
     public Guid ChildEntityId { get; set; }

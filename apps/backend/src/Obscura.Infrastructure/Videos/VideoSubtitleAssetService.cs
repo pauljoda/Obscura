@@ -7,16 +7,14 @@ namespace Obscura.Infrastructure.Videos;
 /// <summary>
 /// EF-backed subtitle asset resolver for v2 video subtitle tracks.
 /// </summary>
-public sealed class VideoSubtitleAssetService : IVideoSubtitleAssetService
-{
+public sealed class VideoSubtitleAssetService : IVideoSubtitleAssetService {
     private readonly ObscuraDbContext _db;
 
     /// <summary>
     /// Creates a subtitle asset resolver over the v2 database context.
     /// </summary>
     /// <param name="db">Database context used to find subtitle rows.</param>
-    public VideoSubtitleAssetService(ObscuraDbContext db)
-    {
+    public VideoSubtitleAssetService(ObscuraDbContext db) {
         _db = db;
     }
 
@@ -30,8 +28,7 @@ public sealed class VideoSubtitleAssetService : IVideoSubtitleAssetService
     public async Task<VideoSubtitleAsset?> GetSubtitleAsync(
         Guid videoId,
         Guid trackId,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var path = await _db.EntitySubtitles
             .AsNoTracking()
             .Where(row => row.EntityId == videoId && row.Id == trackId)
@@ -51,13 +48,11 @@ public sealed class VideoSubtitleAssetService : IVideoSubtitleAssetService
     public async Task<VideoSubtitleAsset?> GetSubtitleSourceAsync(
         Guid videoId,
         Guid trackId,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var row = await _db.EntitySubtitles
             .AsNoTracking()
             .Where(subtitle => subtitle.EntityId == videoId && subtitle.Id == trackId)
-            .Select(subtitle => new
-            {
+            .Select(subtitle => new {
                 subtitle.SourcePath,
                 subtitle.SourceFormat
             })
@@ -65,18 +60,15 @@ public sealed class VideoSubtitleAssetService : IVideoSubtitleAssetService
 
         if (row is null ||
             string.IsNullOrWhiteSpace(row.SourcePath) ||
-            !IsStyledSubtitleFormat(row.SourceFormat))
-        {
+            !IsStyledSubtitleFormat(row.SourceFormat)) {
             return null;
         }
 
         return ExistingAsset(row.SourcePath, "text/x-ssa; charset=utf-8");
     }
 
-    private static VideoSubtitleAsset? ExistingAsset(string? path, string contentType)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !Path.IsPathRooted(path) || !File.Exists(path))
-        {
+    private static VideoSubtitleAsset? ExistingAsset(string? path, string contentType) {
+        if (string.IsNullOrWhiteSpace(path) || !Path.IsPathRooted(path) || !File.Exists(path)) {
             return null;
         }
 

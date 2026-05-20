@@ -2,8 +2,7 @@ using Obscura.Domain.Entities;
 
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class JobRunRow
-{
+public sealed class JobRunRow {
     public Guid Id { get; set; }
 
     public JobType Type { get; set; } = JobType.Noop;

@@ -2,15 +2,13 @@ using Obscura.Domain.Entities;
 
 namespace Obscura.Infrastructure.Persistence.Entities;
 
-public sealed class EntityDescriptionRow
-{
+public sealed class EntityDescriptionRow {
     public Guid EntityId { get; set; }
     public string Value { get; set; } = string.Empty;
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-public sealed class EntityPlaybackRow
-{
+public sealed class EntityPlaybackRow {
     public Guid EntityId { get; set; }
     public int PlayCount { get; set; }
     public double PlayDurationSeconds { get; set; }
@@ -20,16 +18,14 @@ public sealed class EntityPlaybackRow
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-public sealed class EntityStatRow
-{
+public sealed class EntityStatRow {
     public Guid EntityId { get; set; }
     public string Code { get; set; } = string.Empty;
     public int Value { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-public sealed class EntityDateRow
-{
+public sealed class EntityDateRow {
     public Guid EntityId { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Value { get; set; } = string.Empty;
@@ -38,8 +34,7 @@ public sealed class EntityDateRow
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-public sealed class EntityTechnicalRow
-{
+public sealed class EntityTechnicalRow {
     public Guid EntityId { get; set; }
     public double? DurationSeconds { get; set; }
     public int? Width { get; set; }
@@ -54,16 +49,14 @@ public sealed class EntityTechnicalRow
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-public sealed class EntitySourceRow
-{
+public sealed class EntitySourceRow {
     public Guid EntityId { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Value { get; set; } = string.Empty;
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-public sealed class EntityProgressRow
-{
+public sealed class EntityProgressRow {
     public Guid EntityId { get; set; }
     public Guid? CurrentEntityId { get; set; }
     public string Unit { get; set; } = "item";
@@ -74,8 +67,7 @@ public sealed class EntityProgressRow
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-public sealed class EntityPositionRow
-{
+public sealed class EntityPositionRow {
     public Guid EntityId { get; set; }
     public string Code { get; set; } = string.Empty;
     public int Value { get; set; }
@@ -83,16 +75,14 @@ public sealed class EntityPositionRow
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-public sealed class EntityClassificationRow
-{
+public sealed class EntityClassificationRow {
     public Guid EntityId { get; set; }
     public string? Value { get; set; }
     public string? System { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-public sealed class EntityFileFingerprintRow
-{
+public sealed class EntityFileFingerprintRow {
     public Guid Id { get; set; }
     public Guid EntityId { get; set; }
     public Guid? EntityFileId { get; set; }

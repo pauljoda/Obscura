@@ -3,10 +3,8 @@ using Obscura.Contracts.Settings;
 
 namespace Obscura.Api.Endpoints;
 
-public static class SettingsEndpoints
-{
-    public static RouteGroupBuilder MapSettingsEndpoints(this IEndpointRouteBuilder routes)
-    {
+public static class SettingsEndpoints {
+    public static RouteGroupBuilder MapSettingsEndpoints(this IEndpointRouteBuilder routes) {
         var group = routes.MapGroup("/api/settings")
             .WithTags("Settings");
 
@@ -62,11 +60,10 @@ public static class SettingsEndpoints
             Guid id,
             LibraryRootUpdateRequest request,
             SettingsService settings,
-            CancellationToken cancellationToken) =>
-        {
-            var root = await settings.UpdateLibraryRootAsync(id, request, cancellationToken);
-            return root is null ? Results.NotFound() : Results.Ok(root);
-        })
+            CancellationToken cancellationToken) => {
+                var root = await settings.UpdateLibraryRootAsync(id, request, cancellationToken);
+                return root is null ? Results.NotFound() : Results.Ok(root);
+            })
             .WithTags("Settings")
             .WithName("UpdateLibraryRoot")
             .WithSummary("Updates a watched media root.");
@@ -74,11 +71,10 @@ public static class SettingsEndpoints
         routes.MapDelete("/api/libraries/{id:guid}", async (
             Guid id,
             SettingsService settings,
-            CancellationToken cancellationToken) =>
-        {
-            var deleted = await settings.DeleteLibraryRootAsync(id, cancellationToken);
-            return deleted ? Results.Ok(new { ok = true }) : Results.NotFound();
-        })
+            CancellationToken cancellationToken) => {
+                var deleted = await settings.DeleteLibraryRootAsync(id, cancellationToken);
+                return deleted ? Results.Ok(new { ok = true }) : Results.NotFound();
+            })
             .WithTags("Settings")
             .WithName("DeleteLibraryRoot")
             .WithSummary("Deletes a watched media root.");
