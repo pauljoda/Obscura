@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Obscura.Application.Organization;
+using Obscura.Contracts.Organize;
 using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Organization;
 using Obscura.Infrastructure.Persistence;
@@ -29,7 +30,7 @@ public sealed class EntityOrganizerServiceTests
         await db.SaveChangesAsync();
 
         var service = new OrganizeService(new EfOrganizePersistence(db));
-        var plan = await service.PlanAsync(new OrganizePlanQuery(null, null), CancellationToken.None);
+        var plan = await service.PlanAsync(new OrganizePlanRequest(null, null), CancellationToken.None);
 
         var series = Assert.Single(plan.Items, item => item.EntityId == seriesId);
         Assert.Equal("folder", series.StorageShape);
@@ -57,7 +58,7 @@ public sealed class EntityOrganizerServiceTests
         await db.SaveChangesAsync();
 
         var service = new OrganizeService(new EfOrganizePersistence(db));
-        var plan = await service.PlanAsync(new OrganizePlanQuery(pageId, null), CancellationToken.None);
+        var plan = await service.PlanAsync(new OrganizePlanRequest(pageId, null), CancellationToken.None);
 
         var item = Assert.Single(plan.Items);
         Assert.Equal("archive-entry", item.StorageShape);
@@ -83,7 +84,7 @@ public sealed class EntityOrganizerServiceTests
             await db.SaveChangesAsync();
 
             var service = new OrganizeService(new EfOrganizePersistence(db));
-            var result = await service.ApplyAsync(new OrganizePlanQuery(videoId, null), CancellationToken.None);
+            var result = await service.ApplyAsync(new OrganizePlanRequest(videoId, null), CancellationToken.None);
 
             var item = Assert.Single(result.Items);
             Assert.Equal("applied", item.Status);

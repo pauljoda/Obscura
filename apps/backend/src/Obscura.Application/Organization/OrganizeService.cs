@@ -1,3 +1,4 @@
+using Obscura.Contracts.Organize;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Application.Organization;
@@ -29,12 +30,12 @@ public sealed class OrganizeService
     /// <summary>
     /// Builds a dry-run organization plan without moving any files.
     /// </summary>
-    public async Task<OrganizePlanResult> PlanAsync(
-        OrganizePlanQuery request,
+    public async Task<OrganizePlanResponse> PlanAsync(
+        OrganizePlanRequest request,
         CancellationToken cancellationToken)
     {
         var plan = await BuildPlanAsync(request, cancellationToken);
-        return new OrganizePlanResult(plan);
+        return new OrganizePlanResponse(plan);
     }
 
     /// <summary>
@@ -42,8 +43,8 @@ public sealed class OrganizeService
     /// updating stored paths. Items whose ancestors are also being moved are skipped so a
     /// second run can reposition them once the parent move has completed.
     /// </summary>
-    public async Task<OrganizeApplyResult> ApplyAsync(
-        OrganizePlanQuery request,
+    public async Task<OrganizeApplyResponse> ApplyAsync(
+        OrganizePlanRequest request,
         CancellationToken cancellationToken)
     {
         var plan = await BuildPlanAsync(request, cancellationToken);
@@ -52,7 +53,7 @@ public sealed class OrganizeService
             .Select(item => item.SourcePath)
             .OrderBy(path => path.Length)
             .ToArray();
-        var results = new List<OrganizePlanItemResult>(plan.Count);
+        var results = new List<OrganizePlanItem>(plan.Count);
         var applied = 0;
 
         foreach (var item in plan)
@@ -90,11 +91,11 @@ public sealed class OrganizeService
             }
         }
 
-        return new OrganizeApplyResult(results, applied, results.Count - applied);
+        return new OrganizeApplyResponse(results, applied, results.Count - applied);
     }
 
-    private async Task<IReadOnlyList<OrganizePlanItemResult>> BuildPlanAsync(
-        OrganizePlanQuery request,
+    private async Task<IReadOnlyList<OrganizePlanItem>> BuildPlanAsync(
+        OrganizePlanRequest request,
         CancellationToken cancellationToken)
     {
         var roots = await _persistence.ListRootsAsync(request.RootId, cancellationToken);
@@ -109,21 +110,21 @@ public sealed class OrganizeService
 
         var entityById = entities.ToDictionary(entity => entity.Id);
         var sourceByEntityId = sourceFiles.ToDictionary(file => file.EntityId);
-        var memo = new Dictionary<Guid, OrganizePlanItemResult?>();
+        var memo = new Dictionary<Guid, OrganizePlanItem?>();
 
         return entities
             .Select(entity => BuildItem(entity.Id, entityById, sourceByEntityId, rootPaths, memo))
-            .OfType<OrganizePlanItemResult>()
+            .OfType<OrganizePlanItem>()
             .OrderBy(item => item.SourcePath, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
-    private static OrganizePlanItemResult? BuildItem(
+    private static OrganizePlanItem? BuildItem(
         Guid entityId,
         IReadOnlyDictionary<Guid, OrganizeEntityRow> entityById,
         IReadOnlyDictionary<Guid, OrganizeSourceFile> sourceByEntityId,
         IReadOnlyList<(Guid Id, string Path)> rootPaths,
-        IDictionary<Guid, OrganizePlanItemResult?> memo)
+        IDictionary<Guid, OrganizePlanItem?> memo)
     {
         if (memo.TryGetValue(entityId, out var cached))
         {
@@ -179,7 +180,7 @@ public sealed class OrganizeService
         IReadOnlyDictionary<Guid, OrganizeEntityRow> entityById,
         IReadOnlyDictionary<Guid, OrganizeSourceFile> sourceByEntityId,
         IReadOnlyList<(Guid Id, string Path)> rootPaths,
-        IDictionary<Guid, OrganizePlanItemResult?> memo)
+        IDictionary<Guid, OrganizePlanItem?> memo)
     {
         if (entity.ParentEntityId is { } parentId &&
             entityById.TryGetValue(parentId, out var parent) &&
@@ -207,7 +208,7 @@ public sealed class OrganizeService
         return root.Path;
     }
 
-    private static OrganizePlanItemResult NewItem(
+    private static OrganizePlanItem NewItem(
         OrganizeEntityRow entity,
         EntityStorageShape storageShape,
         string sourcePath,

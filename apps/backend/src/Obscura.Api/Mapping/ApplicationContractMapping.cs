@@ -1,6 +1,4 @@
-using Obscura.Application.Organization;
 using Obscura.Application.Videos;
-using Obscura.Contracts.Organize;
 using Obscura.Contracts.Playback;
 
 namespace Obscura.Api.Mapping;
@@ -82,23 +80,4 @@ internal static class ApplicationContractMapping
     public static UserItemData ToContract(this UserItemDataResult result) =>
         new(result.Played, result.PlayCount, result.PlaybackPositionTicks);
 
-    public static OrganizePlanQuery ToApplication(this OrganizePlanRequest request) =>
-        new(request.EntityId, request.RootId);
-
-    public static OrganizePlanResponse ToContract(this OrganizePlanResult result) =>
-        new(result.Items.Select(ToContract).ToArray());
-
-    public static OrganizeApplyResponse ToContract(this OrganizeApplyResult result) =>
-        new(result.Items.Select(ToContract).ToArray(), result.Applied, result.Skipped);
-
-    private static OrganizePlanItem ToContract(OrganizePlanItemResult result) =>
-        new(
-            result.EntityId,
-            result.Kind,
-            result.Title,
-            result.StorageShape,
-            result.SourcePath,
-            result.TargetPath,
-            result.Status,
-            result.Reason);
 }
