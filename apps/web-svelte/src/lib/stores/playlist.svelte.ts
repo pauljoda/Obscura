@@ -2,11 +2,11 @@ import { getContext, setContext } from "svelte";
 import { goto } from "$app/navigation";
 import { page } from "$app/state";
 import type {
-  CollectionItemDto,
   CollectionEntityType,
-  PlaylistSessionDto,
-  PlaylistSessionWriteDto,
-} from "@obscura/contracts";
+  CollectionItem,
+  PlaylistSession,
+  PlaylistSessionWrite,
+} from "$lib/collections/models";
 import { v2ApiPath } from "$lib/api/orval-fetch";
 
 const KEY = Symbol("playlist");
@@ -23,7 +23,7 @@ function fisherYatesShuffle<T>(arr: T[]): T[] {
 /**
  * Resolve a collection item to its SvelteKit route.
  */
-function getEntityHref(item: CollectionItemDto): string {
+function getEntityHref(item: CollectionItem): string {
   switch (item.entityType) {
     case "video":
       return `/videos/${item.entityId}`;
@@ -70,7 +70,7 @@ export interface PlaylistStartOptions {
 }
 
 export class PlaylistStore {
-  items = $state<CollectionItemDto[]>([]);
+  items = $state<CollectionItem[]>([]);
   playOrder = $state<number[]>([]);
   orderPosition = $state(0);
   collectionName = $state("");
@@ -84,20 +84,20 @@ export class PlaylistStore {
   readonly currentIndex = $derived(this.playOrder[this.orderPosition] ?? 0);
   readonly currentItem = $derived(this.items[this.currentIndex] ?? null);
   readonly orderedItems = $derived(
-    this.playOrder.map((i) => this.items[i]).filter(Boolean) as CollectionItemDto[],
+    this.playOrder.map((i) => this.items[i]).filter(Boolean) as CollectionItem[],
   );
   readonly isOnCurrentPage = $derived(
     this.currentItem ? page.url.pathname === getEntityHref(this.currentItem) : false,
   );
   private mutationVersion = 0;
 
-  private navigateToItem(item: CollectionItemDto) {
+  private navigateToItem(item: CollectionItem) {
     const href = getEntityHref(item);
     const from = this.collectionId ? `/collections/${this.collectionId}` : undefined;
     void goto(from ? buildHrefWithFrom(href, from) : href);
   }
 
-  private applySession(session: PlaylistSessionDto | PlaylistSessionWriteDto) {
+  private applySession(session: PlaylistSession | PlaylistSessionWrite) {
     this.items = session.items;
     this.playOrder = session.playOrder;
     this.orderPosition = session.orderPosition;
@@ -108,7 +108,7 @@ export class PlaylistStore {
     this.slideshowDurationSeconds = session.slideshowDurationSeconds;
   }
 
-  private toSessionPayload(): PlaylistSessionWriteDto {
+  private toSessionPayload(): PlaylistSessionWrite {
     return {
       collectionId: this.collectionId,
       collectionName: this.collectionName,
@@ -126,7 +126,7 @@ export class PlaylistStore {
     this.hydrated = true;
     const hydrateVersion = this.mutationVersion;
     try {
-      const session = await playlistApi<PlaylistSessionDto | null>();
+      const session = await playlistApi<PlaylistSession | null>();
       if (session && this.mutationVersion === hydrateVersion) {
         this.applySession(session);
       }
@@ -138,7 +138,7 @@ export class PlaylistStore {
   private persistSession() {
     if (!this.hydrated) return;
     const payload = this.toSessionPayload();
-    void playlistApi<PlaylistSessionDto | null>({
+    void playlistApi<PlaylistSession | null>({
       method: "PUT",
       body: JSON.stringify(payload),
     }).catch((err) => {
@@ -156,7 +156,7 @@ export class PlaylistStore {
   }
 
   startPlaylist(
-    newItems: CollectionItemDto[],
+    newItems: CollectionItem[],
     name: string,
     startIndex = 0,
     options?: PlaylistStartOptions,

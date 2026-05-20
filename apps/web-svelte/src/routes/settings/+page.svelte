@@ -16,22 +16,22 @@
   } from "@lucide/svelte";
   import { Button, StatusLed, cn } from "@obscura/ui-svelte";
   import {
-    BACKGROUND_WORKER_CONCURRENCY_MAX,
-    BACKGROUND_WORKER_CONCURRENCY_MIN,
-    hlsTranscoderProfiles,
-    normalizeHlsTranscoderProfile,
-    type HlsTranscoderProfile,
-    playbackModes,
-    type PlaybackMode,
-    type SubtitleAppearance,
-    type SubtitleDisplayStyle,
-  } from "@obscura/contracts";
-  import {
     fetchV2LibraryConfig,
     updateV2LibrarySettings,
     type V2LibraryRoot as LibraryRoot,
     type V2LibrarySettings as LibrarySettings,
   } from "$lib/api/v2";
+  import {
+    BACKGROUND_WORKER_CONCURRENCY_MAX,
+    BACKGROUND_WORKER_CONCURRENCY_MIN,
+    hlsTranscoderProfiles,
+    normalizeHlsTranscoderProfile,
+    playbackModes,
+    type HlsTranscoderProfile,
+    type PlaybackMode,
+    type SubtitleAppearance,
+    type SubtitleDisplayStyle,
+  } from "$lib/settings/library-settings";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import ToggleCard from "$lib/components/settings/ToggleCard.svelte";
   import NumberStepper from "$lib/components/settings/NumberStepper.svelte";

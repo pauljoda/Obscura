@@ -1,4 +1,4 @@
-import type { EntityKind } from "@obscura/contracts";
+import type { SearchEntityKind } from "$lib/search/models";
 import {
   Building2,
   BookOpen,
@@ -12,7 +12,7 @@ import {
   type Icon,
 } from "@lucide/svelte";
 
-export const ALL_SEARCH_KINDS: EntityKind[] = [
+export const ALL_SEARCH_KINDS: SearchEntityKind[] = [
   "video-series",
   "video",
   "performer",
@@ -31,7 +31,7 @@ interface SearchKindConfig {
   href: string;
 }
 
-export const SEARCH_KIND_CONFIG: Record<EntityKind, SearchKindConfig> = {
+export const SEARCH_KIND_CONFIG: Record<SearchEntityKind, SearchKindConfig> = {
   "video-series": { label: "Series", icon: FolderOpen, href: "/series" },
   video: { label: "Videos", icon: Film, href: "/videos" },
   performer: { label: "Actors", icon: Users, href: "/performers" },

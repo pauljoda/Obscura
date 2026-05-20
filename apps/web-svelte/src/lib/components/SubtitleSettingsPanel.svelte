@@ -5,7 +5,7 @@
     subtitleDisplayStyles,
     type SubtitleAppearance,
     type SubtitleDisplayStyle,
-  } from "@obscura/contracts";
+  } from "$lib/settings/library-settings";
   import { portal } from "$lib/actions/portal";
 
   interface Props {

@@ -5,8 +5,6 @@
   import { Search, X, Clock, ArrowRight, Trash2 } from "@lucide/svelte";
   import { cn, dur, ease, flyDown } from "@obscura/ui-svelte";
   import { fade } from "svelte/transition";
-  import type { EntityKind, SearchResponseDto, SearchResultItem } from "@obscura/contracts";
-  import { getRatingValue, getThumbnailUrl } from "$lib/api/capabilities";
   import { fetchV2Entities, type V2EntityCard } from "$lib/api/v2";
   import SearchResultCard from "$lib/components/SearchResultCard.svelte";
   import { useSearch } from "$lib/stores/search.svelte";
@@ -16,13 +14,14 @@
   import { buildHrefWithFrom } from "$lib/back-navigation";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
   import { labelForEntityKind } from "$lib/entities/v2-codes";
+  import type { SearchEntityKind, SearchResponse, SearchResultItem } from "$lib/search/models";
 
   const search = useSearch();
   const nsfw = useNsfw();
   const recent = recentSearches();
 
   let query = $state("");
-  let results = $state<SearchResponseDto | null>(null);
+  let results = $state<SearchResponse | null>(null);
   let loading = $state(false);
   let inputRef = $state<HTMLInputElement | null>(null);
 
@@ -34,7 +33,7 @@
     results != null && results.groups.some((group) => group.items.length > 0),
   );
 
-  function toSearchKind(kind: string): EntityKind | null {
+  function toSearchKind(kind: string): SearchEntityKind | null {
     if (kind === "person") return "performer";
     if (
       kind === "video" ||
@@ -70,8 +69,8 @@
     };
   }
 
-  function toSearchResponse(term: string, startedAt: number, items: V2EntityCard[]): SearchResponseDto {
-    const groups = new Map<EntityKind, SearchResultItem[]>();
+  function toSearchResponse(term: string, startedAt: number, items: V2EntityCard[]): SearchResponse {
+    const groups = new Map<SearchEntityKind, SearchResultItem[]>();
     for (const entity of items) {
       const item = entityToSearchItem(entity);
       if (!item) continue;

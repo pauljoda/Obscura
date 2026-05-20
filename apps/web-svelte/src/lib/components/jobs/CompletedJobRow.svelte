@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Badge } from "@obscura/ui-svelte";
-  import type { JobRunDto as JobRun } from "@obscura/contracts";
+  import type { JobRun } from "$lib/jobs/models";
   import {
     displayDescribeTrigger,
     displayJobHeading,

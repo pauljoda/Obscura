@@ -3,10 +3,10 @@
 </script>
 
 <script lang="ts">
-  import type { SearchResultItem } from "@obscura/contracts";
   import { cn } from "@obscura/ui-svelte";
   import { v2AssetUrl } from "$lib/api/orval-fetch";
   import { buildHrefWithFrom } from "$lib/back-navigation";
+  import type { SearchResultItem } from "$lib/search/models";
   import { SEARCH_KIND_CONFIG } from "./search-kind-config";
 
   interface Props {

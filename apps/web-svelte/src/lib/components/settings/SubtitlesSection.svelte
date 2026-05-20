@@ -6,7 +6,7 @@
     subtitleDisplayStyles,
     type SubtitleAppearance,
     type SubtitleDisplayStyle,
-  } from "@obscura/contracts";
+  } from "$lib/settings/library-settings";
   import type { V2LibrarySettings as LibrarySettings } from "$lib/api/v2";
   import SubtitleCaptionOverlay from "$lib/components/SubtitleCaptionOverlay.svelte";
   import ToggleCard from "./ToggleCard.svelte";

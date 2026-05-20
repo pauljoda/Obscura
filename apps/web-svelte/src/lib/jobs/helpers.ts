@@ -1,5 +1,5 @@
 import type { LedStatus, BadgeVariant } from "@obscura/ui-svelte";
-import type { JobRunDto as JobRun, QueueSummaryDto as QueueSummary } from "@obscura/contracts";
+import type { JobRun, QueueSummary } from "./models";
 import {
   Cpu,
   BookOpen,

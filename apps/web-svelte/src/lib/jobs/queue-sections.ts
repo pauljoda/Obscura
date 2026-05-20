@@ -1,4 +1,4 @@
-import type { QueueName } from "@obscura/contracts";
+import type { QueueName } from "./models";
 
 export type JobQueueSection = {
   id: string;

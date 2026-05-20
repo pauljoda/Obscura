@@ -19,7 +19,7 @@
     fetchV2Jobs,
     fetchV2LibraryConfig,
   } from "$lib/api/v2";
-  import type { JobRunDto as JobRun, JobsDashboardDto as JobsDashboard } from "@obscura/contracts";
+  import type { JobRun, JobsDashboard } from "$lib/jobs/models";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import {
     buildV2JobsDashboard,

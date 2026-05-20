@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { SubtitleAppearance } from "@obscura/contracts";
+  import type { SubtitleAppearance } from "$lib/settings/library-settings";
   import { cn } from "@obscura/ui-svelte";
   import { captionClassName } from "$lib/player/subtitle-appearance";
 

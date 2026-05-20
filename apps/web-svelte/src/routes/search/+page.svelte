@@ -10,17 +10,12 @@
     Star,
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-  import type {
-    EntityKind,
-    SearchResponseDto,
-    SearchResultItem,
-  } from "@obscura/contracts";
   import SearchResultCard from "$lib/components/SearchResultCard.svelte";
-  import { getRatingValue, getThumbnailUrl } from "$lib/api/capabilities";
   import { fetchV2Entities, type V2EntityCard } from "$lib/api/v2";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
   import { labelForEntityKind } from "$lib/entities/v2-codes";
   import { useNsfw } from "$lib/nsfw/store.svelte";
+  import type { SearchEntityKind, SearchResponse, SearchResultItem } from "$lib/search/models";
   import { entityTerms } from "$lib/terminology";
   import {
     ALL_SEARCH_KINDS,
@@ -32,13 +27,13 @@
   const currentPath = $derived(`${page.url.pathname}${page.url.search}`);
 
   let query = $state(page.url.searchParams.get("q") ?? "");
-  let activeKinds = $state<Set<EntityKind>>(initialKinds());
+  let activeKinds = $state<Set<SearchEntityKind>>(initialKinds());
   let filtersOpen = $state(false);
   let minRating = $state<number | null>(null);
   let dateFrom = $state("");
   let dateTo = $state("");
 
-  let results = $state<SearchResponseDto | null>(null);
+  let results = $state<SearchResponse | null>(null);
   let loading = $state(false);
   let expanded = $state<
     Record<string, { items: SearchResultItem[]; total: number; loading: boolean }>
@@ -47,12 +42,12 @@
   let inputRef: HTMLInputElement | undefined = $state();
   let activeRequest = 0;
 
-  function initialKinds(): Set<EntityKind> {
+  function initialKinds(): Set<SearchEntityKind> {
     const raw = page.url.searchParams.get("kinds");
     if (!raw) return new Set(ALL_SEARCH_KINDS);
     const parsed = raw
       .split(",")
-      .filter((k): k is EntityKind => (ALL_SEARCH_KINDS as string[]).includes(k));
+      .filter((k): k is SearchEntityKind => (ALL_SEARCH_KINDS as string[]).includes(k));
     return parsed.length > 0 ? new Set(parsed) : new Set(ALL_SEARCH_KINDS);
   }
 
@@ -137,7 +132,7 @@
     return () => window.clearTimeout(timer);
   });
 
-  function kindLabel(kind: EntityKind): string {
+  function kindLabel(kind: SearchEntityKind): string {
     if (kind === "video") return entityTerms.videos;
     if (kind === "performer") return entityTerms.performers;
     if (kind === "studio") return entityTerms.studios;
@@ -145,7 +140,7 @@
     return SEARCH_KIND_CONFIG[kind].label;
   }
 
-  function toggleKind(kind: EntityKind) {
+  function toggleKind(kind: SearchEntityKind) {
     const next = new Set(activeKinds);
     if (next.has(kind)) {
       if (next.size > 1) next.delete(kind);
@@ -155,14 +150,14 @@
     activeKinds = next;
   }
 
-  async function loadMore(_kind: EntityKind, _currentCount: number, _total: number) {
+  async function loadMore(_kind: SearchEntityKind, _currentCount: number, _total: number) {
     // V2 entity search currently returns one page per request. The result groups
     // report their returned total, so this path is only here for template parity.
   }
 
-  function toSearchKind(kind: string): EntityKind | null {
+  function toSearchKind(kind: string): SearchEntityKind | null {
     if (kind === "person") return "performer";
-    if ((ALL_SEARCH_KINDS as string[]).includes(kind)) return kind as EntityKind;
+    if ((ALL_SEARCH_KINDS as string[]).includes(kind)) return kind as SearchEntityKind;
     return null;
   }
 
@@ -184,8 +179,8 @@
     };
   }
 
-  function toSearchResponse(term: string, startedAt: number, entities: V2EntityCard[]): SearchResponseDto {
-    const groups = new Map<EntityKind, SearchResultItem[]>();
+  function toSearchResponse(term: string, startedAt: number, entities: V2EntityCard[]): SearchResponse {
+    const groups = new Map<SearchEntityKind, SearchResultItem[]>();
     for (const entity of entities) {
       const item = entityToSearchItem(entity);
       if (!item || !activeKinds.has(item.kind)) continue;
@@ -206,7 +201,7 @@
     };
   }
 
-  function gridClassFor(kind: EntityKind): string {
+  function gridClassFor(kind: SearchEntityKind): string {
     switch (kind) {
       case "video":
         return "grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
@@ -227,7 +222,7 @@
     }
   }
 
-  function groupItemsFor(kind: EntityKind, baseItems: SearchResultItem[]) {
+  function groupItemsFor(kind: SearchEntityKind, baseItems: SearchResultItem[]) {
     const extra = expanded[kind];
     const items = extra ? [...baseItems, ...extra.items] : baseItems;
     return items;

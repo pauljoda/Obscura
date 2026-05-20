@@ -1,6 +1,6 @@
 <script lang="ts">
   import { BookOpen, ChevronDown, ChevronUp, Film, Images, Layers, Music, Repeat, Shuffle, SkipBack, SkipForward, X } from "@lucide/svelte";
-  import type { CollectionEntityType } from "@obscura/contracts";
+  import type { CollectionEntityType } from "$lib/collections/models";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
   import { getEntityHref } from "./collections/collection-item-helpers";
   import PlaylistQueueSheet from "./PlaylistQueueSheet.svelte";

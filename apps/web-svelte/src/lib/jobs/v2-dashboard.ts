@@ -1,13 +1,13 @@
-import {
-  queueDefinitions,
-  type JobRunDto,
-  type JobStatus,
-  type JobsDashboardDto,
-  type QueueName,
-  type QueueSummaryDto,
-} from "@obscura/contracts";
 import type { V2JobRun } from "$lib/api/v2";
 import type { JobQueueCountDto } from "$lib/api/generated/model";
+import {
+  queueDefinitions,
+  type JobRun,
+  type JobsDashboard,
+  type JobStatus,
+  type QueueName,
+  type QueueSummary,
+} from "./models";
 
 type V2JobDefinition = {
   type: string;
@@ -163,7 +163,7 @@ function definitionForJob(type: string): V2JobDefinition {
   );
 }
 
-function queueSummaryBase(definition: V2JobDefinition): QueueSummaryDto {
+function queueSummaryBase(definition: V2JobDefinition): QueueSummary {
   const queueDefinition = queueDefinitionByName.get(definition.queueName);
   return {
     name: definition.queueName,
@@ -202,7 +202,7 @@ function normalizeProgress(progress: V2JobRun["progress"]): number {
   return Math.min(100, Math.max(0, Math.round(value)));
 }
 
-export function mapV2JobRun(job: V2JobRun): JobRunDto {
+export function mapV2JobRun(job: V2JobRun): JobRun {
   const definition = definitionForJob(job.type);
   const status = mapV2JobStatus(job.status);
 
@@ -236,9 +236,9 @@ export function buildV2JobsDashboard(
   jobs: readonly V2JobRun[],
   schedule?: V2ScheduleInfo,
   counts?: readonly JobQueueCountDto[],
-): JobsDashboardDto {
+): JobsDashboard {
   const mappedJobs = jobs.map(mapV2JobRun);
-  const summaries = new Map<QueueName, QueueSummaryDto>();
+  const summaries = new Map<QueueName, QueueSummary>();
 
   for (const definition of V2_JOB_DEFINITIONS) {
     if (!summaries.has(definition.queueName)) {

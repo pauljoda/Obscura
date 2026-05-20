@@ -1,7 +1,7 @@
-import type { CollectionItemDto } from "@obscura/contracts";
 import { buildHrefWithFrom } from "$lib/back-navigation";
+import type { CollectionItem } from "$lib/collections/models";
 
-export function getEntityHref(item: CollectionItemDto, from?: string): string {
+export function getEntityHref(item: CollectionItem, from?: string): string {
   let base: string;
   switch (item.entityType) {
     case "video":
@@ -25,13 +25,13 @@ export function getEntityHref(item: CollectionItemDto, from?: string): string {
   return from ? buildHrefWithFrom(base, from) : base;
 }
 
-export function getEntityTitle(item: CollectionItemDto): string {
+export function getEntityTitle(item: CollectionItem): string {
   const entity = item.entity as Record<string, unknown> | undefined;
   if (!entity) return "Unknown";
   return (entity.title as string) ?? "Untitled";
 }
 
-export function getEntityThumbnail(item: CollectionItemDto): string | null {
+export function getEntityThumbnail(item: CollectionItem): string | null {
   const entity = item.entity as Record<string, unknown> | undefined;
   if (!entity) return null;
   switch (item.entityType) {
@@ -51,7 +51,7 @@ export function getEntityThumbnail(item: CollectionItemDto): string | null {
   }
 }
 
-export function getEntityMeta(item: CollectionItemDto): string | null {
+export function getEntityMeta(item: CollectionItem): string | null {
   const entity = item.entity as Record<string, unknown> | undefined;
   if (!entity) return null;
   switch (item.entityType) {

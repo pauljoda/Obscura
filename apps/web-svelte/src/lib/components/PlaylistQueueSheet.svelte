@@ -1,6 +1,6 @@
 <script lang="ts">
   import { X, BookOpen, Film, Images, Layers, Music, ListMusic } from "@lucide/svelte";
-  import type { CollectionEntityType } from "@obscura/contracts";
+  import type { CollectionEntityType } from "$lib/collections/models";
   import { v2AssetUrl } from "$lib/api/orval-fetch";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
   import {
