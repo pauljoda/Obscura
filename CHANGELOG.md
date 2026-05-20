@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Plugin identify requests now use `structuralContext` instead of the old `graph` field, so community v2 plugins must update to the new structural-context protocol.
 - Reads and writes now flow through one faithful domain entity and a single projection, so detail pages, ratings, flags, playback, markers, and all other capabilities stay consistent across the app.
 - The legacy "counters" concept was removed: scraped numeric metadata (runtime, vote counts, and similar) now lives in entity stats, and structural counts are derived from child items instead of being stored. Community identify plugins must send `stats` instead of `counters`, and you should rescan your library roots.
+- Entity hierarchy storage now uses each entity's parent pointer directly instead of a separate child-link table, reducing duplicated structure and preserving existing structural links during migration.
 
 ### Added
 - High-level v2 implementation summary for the rebuilt Obscura architecture, media model, playback pipeline, and UI surfaces.
@@ -36,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Plugin identify protocol context was renamed from `graph` / `IdentifyGraphContext` to `structuralContext` / `IdentifyStructuralContext`.
 - The `Counters` capability, `entity_counters` table, and the plugin metadata-patch `counters` field were removed; numeric scraped metadata now uses `stats`. Rescanning v1 data is required.
 - The rating capability payload was flattened (`value` is now the rating number directly instead of a nested object), and the unused domain image capability and `entity_aliases` table were removed.
+- Entity hierarchy persistence now treats `parent_entity_id` and `sort_order` on `entities` as the source of truth; domain hydration still builds child arrays for application code.
 
 ### Fixed
 - Series and season browse and detail pages now load correctly; an entity-kind code mismatch previously made `/api/series` and season routes return empty lists and 404s.
@@ -52,6 +54,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The stale API projection service layer was removed from Application/Infrastructure while the new domain-first persistence slice is established.
 - Temporary v2 upgrade-gate, fresh-start, backup, and legacy import endpoints/jobs/UI were removed from the app.
 - The empty `image_details`, `book_volume_details`, `book_page_details`, and `audio_library_details` placeholder tables were dropped now that no entity carries kind-specific columns for those storage shapes.
+- The duplicated `entity_child_links` table and empty `studio_details` table were dropped; structural children are derived from entity parent fields and studios use the shared entity row only.
 
 ### Docs
 - Backend architecture guidance now documents the Clean Architecture, DDD-lite, CQRS-lite, EF Core, DTO, and generated-client contract for future Obscura work.

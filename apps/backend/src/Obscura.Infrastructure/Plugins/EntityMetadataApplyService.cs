@@ -371,19 +371,6 @@ public sealed class EntityMetadataApplyService {
 
         entity.SortOrder = sortOrder.Value;
         entity.UpdatedAt = now;
-
-        if (entity.ParentEntityId is null) {
-            return;
-        }
-
-        var link = await _db.EntityChildLinks.FirstOrDefaultAsync(
-            row => row.ParentEntityId == entity.ParentEntityId.Value &&
-                   row.ChildEntityId == entity.Id &&
-                   row.IsStructural,
-            cancellationToken);
-        if (link is not null) {
-            link.SortOrder = sortOrder.Value;
-        }
     }
 
     private static int? StructuralSortOrder(string kindCode, IReadOnlyDictionary<string, int> positions) {

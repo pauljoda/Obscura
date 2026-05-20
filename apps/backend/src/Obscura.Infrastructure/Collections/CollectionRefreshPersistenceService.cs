@@ -46,12 +46,6 @@ public sealed class CollectionRefreshPersistenceService(ObscuraDbContext db) : I
                          ci.Source == CollectionItemSource.Dynamic)
             .ToListAsync(cancellationToken);
         db.CollectionItemDetails.RemoveRange(dynamicItems);
-        var dynamicLinks = await db.EntityChildLinks
-            .Where(link => link.ParentEntityId == collectionEntityId &&
-                           !link.IsStructural &&
-                           link.Source == CollectionItemSource.Dynamic.ToCode())
-            .ToListAsync(cancellationToken);
-        db.EntityChildLinks.RemoveRange(dynamicLinks);
         await db.SaveChangesAsync(cancellationToken);
 
         var maxSortOrder = await db.CollectionItemDetails
@@ -76,19 +70,6 @@ public sealed class CollectionRefreshPersistenceService(ObscuraDbContext db) : I
                 Source = CollectionItemSource.Dynamic,
                 SortOrder = sortOrder++,
                 AddedAt = now
-            });
-            var childKindCode = await db.Entities
-                .Where(entity => entity.Id == item.EntityId)
-                .Select(entity => entity.KindCode)
-                .FirstAsync(cancellationToken);
-            db.EntityChildLinks.Add(new EntityChildLinkRow {
-                ParentEntityId = collectionEntityId,
-                ChildEntityId = item.EntityId,
-                ChildKindCode = childKindCode,
-                SortOrder = sortOrder - 1,
-                IsStructural = false,
-                Source = CollectionItemSource.Dynamic.ToCode(),
-                CreatedAt = now
             });
             existingItemIds.Add(item.EntityId);
         }

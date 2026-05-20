@@ -24,13 +24,6 @@ internal static partial class ExpandedV2ModelConfiguration {
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<PersonDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<StudioDetailRow>(entity => {
-            entity.ToTable("studio_details");
-            entity.HasKey(row => row.EntityId);
-            entity.Property(row => row.EntityId).HasColumnName("entity_id");
-            entity.HasOne<EntityRow>().WithOne().HasForeignKey<StudioDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
-        });
-
         modelBuilder.Entity<TagDetailRow>(entity => {
             entity.ToTable("tag_details");
             entity.HasKey(row => row.EntityId);

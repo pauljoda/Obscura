@@ -1,4 +1,12 @@
+using System.Reflection;
+using Obscura.Contracts.Entities;
+using Obscura.Contracts.Media;
+using Obscura.Contracts.Series;
+using Obscura.Contracts.Taxonomy;
+using Obscura.Domain.Entities;
+using Obscura.Domain.Media;
 using Obscura.Infrastructure.Persistence;
+using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Entities.Mappers;
 
@@ -11,8 +19,16 @@ namespace Obscura.Infrastructure.Entities.Mappers;
 /// </summary>
 public static class EntityMappers {
     /// <summary>Discovers every concrete kind mapper bound to <paramref name="db"/>.</summary>
-    public static IReadOnlyList<IEntityKindMapper> Kinds(ObscuraDbContext db) =>
-        Discover<IEntityKindMapper>(db);
+    public static IReadOnlyList<IEntityKindMapper> Kinds(ObscuraDbContext db) {
+        var explicitMappers = Discover<IEntityKindMapper>(db);
+        var mappedKinds = explicitMappers.Select(mapper => mapper.Kind).ToHashSet();
+        var conventionMappers = EntityKindRegistry.All
+            .Where(descriptor => descriptor.ClrType is not null && !mappedKinds.Contains(descriptor.Value))
+            .Select(descriptor => new ConventionEntityKindMapper(descriptor))
+            .Cast<IEntityKindMapper>();
+
+        return explicitMappers.Concat(conventionMappers).ToArray();
+    }
 
     /// <summary>Discovers every concrete capability mapper bound to <paramref name="db"/>.</summary>
     public static IReadOnlyList<IEntityCapabilityMapper> Capabilities(ObscuraDbContext db) =>
@@ -21,8 +37,109 @@ public static class EntityMappers {
     private static IReadOnlyList<TMapper> Discover<TMapper>(ObscuraDbContext db) {
         var assembly = typeof(EntityMappers).Assembly;
         return assembly.GetTypes()
-            .Where(type => type is { IsClass: true, IsAbstract: false } && typeof(TMapper).IsAssignableFrom(type))
+            .Where(type => type is { IsClass: true, IsAbstract: false } &&
+                           typeof(TMapper).IsAssignableFrom(type) &&
+                           type != typeof(ConventionEntityKindMapper))
             .Select(type => (TMapper)Activator.CreateInstance(type, db)!)
             .ToArray();
+    }
+
+    internal sealed class ConventionEntityKindMapper(EntityKindDescriptor descriptor) : IEntityKindMapper {
+        public EntityKind Kind => descriptor.Value;
+
+        public Task<Entity> ConstructAsync(EntityRow row, CancellationToken cancellationToken) {
+            if (descriptor.ClrType is null) {
+                throw new InvalidOperationException($"EntityKind.{descriptor.Value} has no domain type.");
+            }
+
+            if (descriptor.ClrType == typeof(VideoSeason)) {
+                return Task.FromResult<Entity>(new VideoSeason(row.Id, row.Title, row.ParentEntityId, sortOrder: row.SortOrder));
+            }
+
+            if (FindSimpleConstructor(descriptor.ClrType) is { } ctor) {
+                var args = ctor.GetParameters()
+                    .Select(parameter => ArgumentFor(row, parameter))
+                    .ToArray();
+                return Task.FromResult((Entity)ctor.Invoke(args));
+            }
+
+            throw new InvalidOperationException(
+                $"EntityKind.{descriptor.Value} cannot be convention-hydrated; add an explicit IEntityKindMapper.");
+        }
+
+        public Task PersistDetailAsync(Entity entity, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public IEntityCard ProjectDetail(
+            Entity entity,
+            EntityCard card,
+            IReadOnlyList<EntityCreditMetadata> creditMetadata) =>
+            descriptor.Value switch {
+                EntityKind.AudioLibrary => new AudioLibraryDetail {
+                    Id = card.Id,
+                    Kind = card.Kind,
+                    Title = card.Title,
+                    ParentEntityId = card.ParentEntityId,
+                    SortOrder = card.SortOrder,
+                    Capabilities = card.Capabilities,
+                    ChildrenByKind = card.ChildrenByKind,
+                    Relationships = card.Relationships,
+                },
+                EntityKind.Image => new ImageDetail {
+                    Id = card.Id,
+                    Kind = card.Kind,
+                    Title = card.Title,
+                    ParentEntityId = card.ParentEntityId,
+                    SortOrder = card.SortOrder,
+                    Capabilities = card.Capabilities,
+                    ChildrenByKind = card.ChildrenByKind,
+                    Relationships = card.Relationships,
+                },
+                EntityKind.Studio => new StudioDetail {
+                    Id = card.Id,
+                    Kind = card.Kind,
+                    Title = card.Title,
+                    ParentEntityId = card.ParentEntityId,
+                    SortOrder = card.SortOrder,
+                    Capabilities = card.Capabilities,
+                    ChildrenByKind = card.ChildrenByKind,
+                    Relationships = card.Relationships,
+                },
+                EntityKind.VideoSeason => new VideoSeasonDetail {
+                    Id = card.Id,
+                    Kind = card.Kind,
+                    Title = card.Title,
+                    ParentEntityId = card.ParentEntityId,
+                    SortOrder = card.SortOrder,
+                    Capabilities = card.Capabilities,
+                    ChildrenByKind = card.ChildrenByKind,
+                    Relationships = card.Relationships,
+                },
+                _ => card
+            };
+
+        private static ConstructorInfo? FindSimpleConstructor(Type type) =>
+            type.GetConstructors()
+                .Where(ctor => {
+                    var parameters = ctor.GetParameters();
+                    return parameters.Length >= 2 &&
+                           parameters[0].ParameterType == typeof(Guid) &&
+                           parameters[1].ParameterType == typeof(string) &&
+                           parameters.Skip(2).All(parameter => parameter.HasDefaultValue);
+                })
+                .OrderBy(ctor => ctor.GetParameters().Length)
+                .FirstOrDefault();
+
+        private static object? ArgumentFor(EntityRow row, ParameterInfo parameter) {
+            if (parameter.ParameterType == typeof(Guid)) {
+                return row.Id;
+            }
+
+            if (parameter.ParameterType == typeof(string)) {
+                return row.Title;
+            }
+
+            return parameter.DefaultValue;
+        }
     }
 }

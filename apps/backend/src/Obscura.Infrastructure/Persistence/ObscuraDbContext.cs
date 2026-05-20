@@ -29,8 +29,6 @@ public sealed class ObscuraDbContext : DbContext {
     public DbSet<EntityRelationshipLinkRow> EntityRelationshipLinks => Set<EntityRelationshipLinkRow>();
 
 
-    public DbSet<EntityChildLinkRow> EntityChildLinks => Set<EntityChildLinkRow>();
-
     public DbSet<EntityUrlRow> EntityUrls => Set<EntityUrlRow>();
 
     public DbSet<EntityExternalIdRow> EntityExternalIds => Set<EntityExternalIdRow>();
@@ -80,8 +78,6 @@ public sealed class ObscuraDbContext : DbContext {
     public DbSet<AudioTrackDetailRow> AudioTrackDetails => Set<AudioTrackDetailRow>();
 
     public DbSet<PersonDetailRow> PersonDetails => Set<PersonDetailRow>();
-
-    public DbSet<StudioDetailRow> StudioDetails => Set<StudioDetailRow>();
 
     public DbSet<TagDetailRow> TagDetails => Set<TagDetailRow>();
 

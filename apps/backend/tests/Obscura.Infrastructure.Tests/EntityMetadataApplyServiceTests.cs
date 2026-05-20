@@ -79,24 +79,7 @@ public sealed class EntityMetadataApplyServiceTests {
         var episodeId = Guid.Parse("44444444-4444-4444-4444-444444444444");
         SeedEntity(db, seriesId, "video-series", "Old Series");
         SeedEntity(db, seasonId, "video-season", "Old Season", parentEntityId: seriesId, sortOrder: 1);
-        SeedEntity(db, episodeId, "video", "Old Episode");
-        db.EntityChildLinks.AddRange(
-            new EntityChildLinkRow {
-                ParentEntityId = seriesId,
-                ChildEntityId = seasonId,
-                ChildKindCode = EntityKindRegistry.VideoSeason.Code,
-                SortOrder = 1,
-                IsStructural = true,
-                CreatedAt = DateTimeOffset.UtcNow
-            },
-            new EntityChildLinkRow {
-                ParentEntityId = seasonId,
-                ChildEntityId = episodeId,
-                ChildKindCode = EntityKindRegistry.Video.Code,
-                SortOrder = 1,
-                IsStructural = true,
-                CreatedAt = DateTimeOffset.UtcNow
-            });
+        SeedEntity(db, episodeId, "video", "Old Episode", parentEntityId: seasonId, sortOrder: 1);
         db.EntityPositions.Add(new EntityPositionRow {
             EntityId = episodeId,
             Code = "episodeNumber",
@@ -195,25 +178,8 @@ public sealed class EntityMetadataApplyServiceTests {
         var childId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var grandchildId = Guid.Parse("77777777-7777-7777-7777-777777777777");
         SeedEntity(db, parentId, "video-series", "Old Series");
-        SeedEntity(db, childId, "video-season", "Old Season");
-        SeedEntity(db, grandchildId, "video", "Old Episode");
-        db.EntityChildLinks.AddRange(
-            new EntityChildLinkRow {
-                ParentEntityId = parentId,
-                ChildEntityId = childId,
-                ChildKindCode = "video-season",
-                SortOrder = 1,
-                IsStructural = true,
-                CreatedAt = DateTimeOffset.UtcNow
-            },
-            new EntityChildLinkRow {
-                ParentEntityId = childId,
-                ChildEntityId = grandchildId,
-                ChildKindCode = "video",
-                SortOrder = 1,
-                IsStructural = true,
-                CreatedAt = DateTimeOffset.UtcNow
-            });
+        SeedEntity(db, childId, "video-season", "Old Season", parentEntityId: parentId, sortOrder: 1);
+        SeedEntity(db, grandchildId, "video", "Old Episode", parentEntityId: childId, sortOrder: 1);
         await db.SaveChangesAsync();
 
         var proposal = new EntityMetadataProposal(
@@ -283,23 +249,6 @@ public sealed class EntityMetadataApplyServiceTests {
         SeedEntity(db, seriesId, "video-series", "Series");
         SeedEntity(db, seasonId, "video-season", "Season", parentEntityId: seriesId, sortOrder: 1);
         SeedEntity(db, episodeId, "video", "Episode", parentEntityId: seasonId, sortOrder: 1);
-        db.EntityChildLinks.AddRange(
-            new EntityChildLinkRow {
-                ParentEntityId = seriesId,
-                ChildEntityId = seasonId,
-                ChildKindCode = "video-season",
-                SortOrder = 1,
-                IsStructural = true,
-                CreatedAt = DateTimeOffset.UtcNow
-            },
-            new EntityChildLinkRow {
-                ParentEntityId = seasonId,
-                ChildEntityId = episodeId,
-                ChildKindCode = "video",
-                SortOrder = 1,
-                IsStructural = true,
-                CreatedAt = DateTimeOffset.UtcNow
-            });
         await db.SaveChangesAsync();
 
         var proposal = new EntityMetadataProposal(
@@ -351,8 +300,6 @@ public sealed class EntityMetadataApplyServiceTests {
 
         Assert.Equal(3, (await db.Entities.FindAsync([seasonId]))?.SortOrder);
         Assert.Equal(2, (await db.Entities.FindAsync([episodeId]))?.SortOrder);
-        Assert.Equal(3, (await db.EntityChildLinks.FindAsync([seriesId, seasonId, "video-season"]))?.SortOrder);
-        Assert.Equal(2, (await db.EntityChildLinks.FindAsync([seasonId, episodeId, "video"]))?.SortOrder);
         Assert.Equal(3, (await db.EntityPositions.FindAsync([seasonId, "season"]))?.Value);
         Assert.Equal(2, (await db.EntityPositions.FindAsync([episodeId, "episode"]))?.Value);
         Assert.Null(await db.EntityPositions.FindAsync([seasonId, "seasonNumber"]));
@@ -368,14 +315,6 @@ public sealed class EntityMetadataApplyServiceTests {
         SeedEntity(db, seriesId, "video-series", "Series");
         SeedEntity(db, episodeId, "video", "Episode", parentEntityId: seriesId, sortOrder: 1);
         SeedEntity(db, personId, "person", "Returning Actor");
-        db.EntityChildLinks.Add(new EntityChildLinkRow {
-            ParentEntityId = seriesId,
-            ChildEntityId = episodeId,
-            ChildKindCode = "video",
-            SortOrder = 1,
-            IsStructural = true,
-            CreatedAt = DateTimeOffset.UtcNow
-        });
         await db.SaveChangesAsync();
 
         var proposal = new EntityMetadataProposal(
@@ -428,14 +367,6 @@ public sealed class EntityMetadataApplyServiceTests {
         SeedEntity(db, seriesId, "video-series", "Series");
         SeedEntity(db, episodeId, "video", "Episode", parentEntityId: seriesId, sortOrder: 1);
         SeedEntity(db, personId, "person", "Returning Actor");
-        db.EntityChildLinks.Add(new EntityChildLinkRow {
-            ParentEntityId = seriesId,
-            ChildEntityId = episodeId,
-            ChildKindCode = "video",
-            SortOrder = 1,
-            IsStructural = true,
-            CreatedAt = DateTimeOffset.UtcNow
-        });
         await db.SaveChangesAsync();
 
         var personImage = new ImageCandidate(
@@ -501,14 +432,6 @@ public sealed class EntityMetadataApplyServiceTests {
         var episodeId = Guid.Parse("14141414-1414-1414-1414-141414141414");
         SeedEntity(db, seriesId, "video-series", "The Chair Company");
         SeedEntity(db, episodeId, "video", "Old Episode", parentEntityId: seriesId, sortOrder: 1);
-        db.EntityChildLinks.Add(new EntityChildLinkRow {
-            ParentEntityId = seriesId,
-            ChildEntityId = episodeId,
-            ChildKindCode = "video",
-            SortOrder = 1,
-            IsStructural = true,
-            CreatedAt = DateTimeOffset.UtcNow
-        });
         await db.SaveChangesAsync();
 
         var personRelationship = new EntityMetadataProposal(

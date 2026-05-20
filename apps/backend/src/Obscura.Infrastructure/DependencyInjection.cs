@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using Obscura.Domain.Entities;
 using Obscura.Application.Entities;
 using Obscura.Application.Jobs;
 using Obscura.Application.Jobs.Ports;
@@ -111,16 +112,28 @@ public static class DependencyInjection {
 
     private static void RegisterEntityMappers(IServiceCollection services) {
         var assembly = typeof(IEntityKindMapper).Assembly;
-        var mapperInterfaces = new[] { typeof(IEntityKindMapper), typeof(IEntityCapabilityMapper) };
         var implementations = assembly.GetTypes()
             .Where(type => type is { IsClass: true, IsAbstract: false });
 
-        foreach (var type in implementations) {
-            foreach (var contract in mapperInterfaces) {
-                if (contract.IsAssignableFrom(type)) {
-                    services.AddScoped(contract, type);
-                }
-            }
+        var explicitKindTypes = implementations
+            .Where(type => typeof(IEntityKindMapper).IsAssignableFrom(type) &&
+                           type != typeof(EntityMappers.ConventionEntityKindMapper))
+            .ToArray();
+        foreach (var type in explicitKindTypes) {
+            services.AddScoped(typeof(IEntityKindMapper), type);
+        }
+
+        var explicitKindNames = explicitKindTypes
+            .Select(type => type.Name)
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var descriptor in EntityKindRegistry.All.Where(descriptor =>
+                     descriptor.ClrType is not null &&
+                     !explicitKindNames.Contains($"{descriptor.Value}KindMapper"))) {
+            services.AddScoped<IEntityKindMapper>(_ => new EntityMappers.ConventionEntityKindMapper(descriptor));
+        }
+
+        foreach (var type in implementations.Where(type => typeof(IEntityCapabilityMapper).IsAssignableFrom(type))) {
+            services.AddScoped(typeof(IEntityCapabilityMapper), type);
         }
     }
 

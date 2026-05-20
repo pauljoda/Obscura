@@ -355,9 +355,9 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
     }
 
     public async Task<int> RemoveStaleImagesInGalleryAsync(Guid galleryEntityId, IReadOnlySet<string> validPaths, CancellationToken cancellationToken) {
-        var childIds = await db.EntityChildLinks.AsNoTracking()
-            .Where(link => link.ParentEntityId == galleryEntityId && link.ChildKindCode == EntityKindRegistry.Image.Code)
-            .Select(link => link.ChildEntityId)
+        var childIds = await db.Entities.AsNoTracking()
+            .Where(entity => entity.ParentEntityId == galleryEntityId && entity.KindCode == EntityKindRegistry.Image.Code)
+            .Select(entity => entity.Id)
             .ToListAsync(cancellationToken);
 
         return await RemoveStaleEntitiesBySourcePath(childIds, validPaths, cancellationToken);
@@ -373,9 +373,9 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
     }
 
     public async Task<int> RemoveStaleAudioTracksInLibraryAsync(Guid libraryEntityId, IReadOnlySet<string> validPaths, CancellationToken cancellationToken) {
-        var childIds = await db.EntityChildLinks.AsNoTracking()
-            .Where(link => link.ParentEntityId == libraryEntityId && link.ChildKindCode == EntityKindRegistry.AudioTrack.Code)
-            .Select(link => link.ChildEntityId)
+        var childIds = await db.Entities.AsNoTracking()
+            .Where(entity => entity.ParentEntityId == libraryEntityId && entity.KindCode == EntityKindRegistry.AudioTrack.Code)
+            .Select(entity => entity.Id)
             .ToListAsync(cancellationToken);
 
         return await RemoveStaleEntitiesBySourcePath(childIds, validPaths, cancellationToken);
@@ -391,9 +391,9 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
     }
 
     public async Task<int> RemoveStaleBookChaptersAsync(Guid bookEntityId, IReadOnlySet<string> validArchivePaths, CancellationToken cancellationToken) {
-        var chapterIds = await db.EntityChildLinks.AsNoTracking()
-            .Where(link => link.ParentEntityId == bookEntityId && link.ChildKindCode == EntityKindRegistry.BookChapter.Code)
-            .Select(link => link.ChildEntityId)
+        var chapterIds = await db.Entities.AsNoTracking()
+            .Where(entity => entity.ParentEntityId == bookEntityId && entity.KindCode == EntityKindRegistry.BookChapter.Code)
+            .Select(entity => entity.Id)
             .ToListAsync(cancellationToken);
 
         return await RemoveStaleEntitiesBySourcePath(chapterIds, validArchivePaths, cancellationToken);
@@ -674,31 +674,6 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         child.SortOrder = sortOrder;
         child.UpdatedAt = now;
 
-        var localLinks = db.EntityChildLinks.Local
-            .Where(link => link.ChildEntityId == childId && link.IsStructural)
-            .ToList();
-        var storedLinks = await db.EntityChildLinks
-            .Where(link => link.ChildEntityId == childId && link.IsStructural)
-            .ToListAsync(cancellationToken);
-
-        foreach (var link in localLinks.Concat(storedLinks).DistinctBy(link => new { link.ParentEntityId, link.ChildEntityId, link.ChildKindCode })) {
-            if (link.ParentEntityId == parentId && string.Equals(link.ChildKindCode, child.KindCode, StringComparison.OrdinalIgnoreCase)) {
-                link.SortOrder = sortOrder;
-                return;
-            }
-
-            db.EntityChildLinks.Remove(link);
-        }
-
-        db.EntityChildLinks.Add(new EntityChildLinkRow {
-            ParentEntityId = parentId,
-            ChildEntityId = childId,
-            ChildKindCode = child.KindCode,
-            SortOrder = sortOrder,
-            IsStructural = true,
-            Source = "scan",
-            CreatedAt = now
-        });
     }
 
     private async Task EnsureEntityFileAsync(

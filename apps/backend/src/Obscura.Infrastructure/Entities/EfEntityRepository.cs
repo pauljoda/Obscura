@@ -104,22 +104,16 @@ public sealed class EfEntityRepository : IEntityWriteRepository {
         Entity entity,
         EntityHydrationContext context,
         CancellationToken cancellationToken) {
-        var links = await _db.EntityChildLinks.AsNoTracking()
-            .Where(link => link.ParentEntityId == entity.Id)
-            .OrderBy(link => link.SortOrder)
-            .ToArrayAsync(cancellationToken);
-        var childIds = links.Select(link => link.ChildEntityId).ToArray();
         var childRows = await _db.Entities.AsNoTracking()
-            .Where(row => childIds.Contains(row.Id) && row.DeletedAt == null)
-            .ToDictionaryAsync(row => row.Id, cancellationToken);
-        foreach (var link in links) {
-            if (!childRows.TryGetValue(link.ChildEntityId, out var childRow)) {
-                continue;
-            }
-
+            .Where(row => row.ParentEntityId == entity.Id && row.DeletedAt == null)
+            .OrderBy(row => row.SortOrder)
+            .ThenBy(row => row.CreatedAt)
+            .ThenBy(row => row.Id)
+            .ToArrayAsync(cancellationToken);
+        foreach (var childRow in childRows) {
             var child = await HydrateAsync(childRow, context, cancellationToken);
             if (!entity.ChildEntities.Any(existing => existing.Id == child.Id)) {
-                entity.AddChild(child, link.SortOrder);
+                entity.AddChild(child, childRow.SortOrder);
             }
         }
     }
@@ -168,8 +162,6 @@ public sealed class EfEntityRepository : IEntityWriteRepository {
             await SaveEntityAsync(credit.Person, visited, cancellationToken);
         }
 
-        _db.EntityChildLinks.RemoveRange(
-            _db.EntityChildLinks.Where(link => link.ParentEntityId == entity.Id));
         _db.EntityRelationshipLinks.RemoveRange(
             _db.EntityRelationshipLinks.Where(link =>
                 link.EntityId == entity.Id &&
@@ -184,19 +176,6 @@ public sealed class EfEntityRepository : IEntityWriteRepository {
         await _db.SaveChangesAsync(cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
-        var childIndex = 0;
-        foreach (var child in entity.ChildEntities) {
-            _db.EntityChildLinks.Add(new EntityChildLinkRow {
-                ParentEntityId = entity.Id,
-                ChildEntityId = child.Id,
-                ChildKindCode = EntityKindRegistry.ToCode(child.Kind),
-                SortOrder = child.SortOrder ?? childIndex,
-                IsStructural = true,
-                CreatedAt = now,
-            });
-            childIndex++;
-        }
-
         var relationshipIndex = 0;
         foreach (var relationship in entity.Relationships) {
             _db.EntityRelationshipLinks.Add(new EntityRelationshipLinkRow {

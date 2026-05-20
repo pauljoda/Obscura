@@ -19,17 +19,9 @@ public sealed class EfEntityRepositoryTests {
         var personId = Guid.Parse("33333333-3333-3333-3333-333333333333");
         var tagId = Guid.Parse("44444444-4444-4444-4444-444444444444");
         SeedEntity(db, seriesId, EntityKind.VideoSeries, "Series");
-        SeedEntity(db, seasonId, EntityKind.VideoSeason, "Season 1");
+        SeedEntity(db, seasonId, EntityKind.VideoSeason, "Season 1", seriesId, sortOrder: 1);
         SeedEntity(db, personId, EntityKind.Person, "Ada Person");
         SeedEntity(db, tagId, EntityKind.Tag, "Noir");
-        db.EntityChildLinks.Add(new EntityChildLinkRow {
-            ParentEntityId = seriesId,
-            ChildEntityId = seasonId,
-            ChildKindCode = EntityKindRegistry.VideoSeason.Code,
-            SortOrder = 1,
-            IsStructural = true,
-            CreatedAt = DateTimeOffset.UtcNow
-        });
         db.EntityRelationshipLinks.AddRange(
             new EntityRelationshipLinkRow {
                 EntityId = seriesId,
@@ -90,11 +82,7 @@ public sealed class EfEntityRepositoryTests {
 
         Assert.Equal("video-series", Assert.Single(db.Entities.Where(row => row.Id == series.Id)).KindCode);
         Assert.Equal(series.Id, Assert.Single(db.Entities.Where(row => row.Id == season.Id)).ParentEntityId);
-        Assert.Contains(db.EntityChildLinks, link =>
-            link.ParentEntityId == series.Id &&
-            link.ChildEntityId == season.Id &&
-            link.ChildKindCode == EntityKindRegistry.VideoSeason.Code &&
-            link.SortOrder == 3);
+        Assert.Equal(3, Assert.Single(db.Entities.Where(row => row.Id == season.Id)).SortOrder);
         Assert.Contains(db.EntityRelationshipLinks, link =>
             link.EntityId == series.Id &&
             link.RelationshipCode == "related" &&
@@ -223,11 +211,19 @@ public sealed class EfEntityRepositoryTests {
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options);
 
-    private static void SeedEntity(ObscuraDbContext db, Guid id, EntityKind kind, string title) {
+    private static void SeedEntity(
+        ObscuraDbContext db,
+        Guid id,
+        EntityKind kind,
+        string title,
+        Guid? parentEntityId = null,
+        int? sortOrder = null) {
         db.Entities.Add(new EntityRow {
             Id = id,
             KindCode = EntityKindRegistry.ToCode(kind),
             Title = title,
+            ParentEntityId = parentEntityId,
+            SortOrder = sortOrder,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         });

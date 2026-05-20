@@ -41,9 +41,9 @@ public sealed class MapperCoverageTests {
     }
 
     /// <summary>
-    /// Every <see cref="EntityKind"/> value that declares a concrete domain CLR type must have
-    /// exactly one <see cref="IEntityKindMapper"/> implementation whose <c>Kind</c> property
-    /// returns that value. Kinds without a CLR type (e.g. placeholder kinds) are excluded.
+    /// Every <see cref="EntityKind"/> value that declares a concrete domain CLR type must be
+    /// constructible either by an explicit <see cref="IEntityKindMapper"/> implementation or by
+    /// the convention mapper for simple entity constructors.
     /// </summary>
     [Fact]
     public void EveryEntityKindWithDomainTypeHasExactlyOneKindMapper() {
@@ -56,10 +56,10 @@ public sealed class MapperCoverageTests {
             .Select(descriptor => descriptor.Value)
             .ToArray();
 
-        // Every kind with a CLR type must have a mapper
+        // Every kind with a CLR type must have a mapper, explicit or convention-backed.
         Assert.All(kindsWithDomainTypes, kind =>
             Assert.True(mappedKinds.Contains(kind),
-                $"EntityKind.{kind} has CLR type {EntityKindRegistry.Describe(kind).ClrType!.Name} but no IEntityKindMapper."));
+                $"EntityKind.{kind} has CLR type {EntityKindRegistry.Describe(kind).ClrType!.Name} but cannot be constructed by IEntityKindMapper."));
 
         // Every mapper must map to a kind with a CLR type (no orphan mappers)
         Assert.All(mappers, mapper =>
@@ -80,7 +80,7 @@ public sealed class MapperCoverageTests {
         var kindMappers = EntityMappers.Kinds(db);
         var capabilityMappers = EntityMappers.Capabilities(db);
 
-        var expectedKindCount = DiscoverConcreteKindMapperTypes().Length;
+        var expectedKindCount = EntityKindRegistry.All.Count(descriptor => descriptor.ClrType is not null);
         var expectedCapabilityCount = DiscoverConcreteCapabilityMapperTypes().Length;
 
         Assert.Equal(expectedKindCount, kindMappers.Count);
@@ -88,18 +88,39 @@ public sealed class MapperCoverageTests {
     }
 
     /// <summary>
-    /// Every <see cref="IEntityKindMapper"/> follows the naming convention
+    /// Explicit <see cref="IEntityKindMapper"/> implementations follow the naming convention
     /// <c>{KindName}KindMapper</c> where <c>KindName</c> matches the <see cref="EntityKind"/>
-    /// enum member name. This is not enforced by the type system but aids discoverability.
+    /// enum member name. Convention-backed simple mappers are intentionally excluded.
     /// </summary>
     [Fact]
     public void KindMapperNamingConventionIsConsistent() {
         using var db = CreateInMemoryContext();
         var mappers = EntityMappers.Kinds(db);
         Assert.All(mappers, mapper => {
+            if (mapper.GetType().Name == "ConventionEntityKindMapper") {
+                return;
+            }
+
             var expectedName = $"{mapper.Kind}KindMapper";
             Assert.Equal(expectedName, mapper.GetType().Name);
         });
+    }
+
+    [Fact]
+    public void SimpleKindsUseConventionMapperInsteadOfOneClassPerKind() {
+        using var db = CreateInMemoryContext();
+        var mappers = EntityMappers.Kinds(db);
+
+        Assert.All(
+            new[] {
+                EntityKind.AudioLibrary,
+                EntityKind.BookPage,
+                EntityKind.BookVolume,
+                EntityKind.Image,
+                EntityKind.Studio,
+                EntityKind.VideoSeason
+            },
+            kind => Assert.Equal("ConventionEntityKindMapper", mappers.Single(mapper => mapper.Kind == kind).GetType().Name));
     }
 
     // ── Reflection helpers ──────────────────────────────────────────────────────
@@ -124,7 +145,8 @@ public sealed class MapperCoverageTests {
     private static Type[] DiscoverConcreteKindMapperTypes() =>
         InfrastructureMapperTypes
             .Where(type => type is { IsClass: true, IsAbstract: false } &&
-                           typeof(IEntityKindMapper).IsAssignableFrom(type))
+                           typeof(IEntityKindMapper).IsAssignableFrom(type) &&
+                           type.Name != "ConventionEntityKindMapper")
             .OrderBy(type => type.Name)
             .ToArray();
 

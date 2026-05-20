@@ -15,10 +15,6 @@ public sealed class PersonDetailRow {
     public string? Piercings { get; set; }
 }
 
-public sealed class StudioDetailRow {
-    public Guid EntityId { get; set; }
-}
-
 public sealed class TagDetailRow {
     public Guid EntityId { get; set; }
     public bool IgnoreAutoTag { get; set; }

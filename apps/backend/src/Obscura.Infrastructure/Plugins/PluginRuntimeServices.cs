@@ -509,7 +509,7 @@ public sealed class IdentifyPluginService {
             auth,
             query,
             ancestors: [],
-            parentLink: null,
+            parentSortOrder: null,
             visited: [],
             cancellationToken);
     }
@@ -552,7 +552,7 @@ public sealed class IdentifyPluginService {
         IReadOnlyDictionary<string, string> auth,
         IdentifyQuery? query,
         IReadOnlyList<IdentifyEntitySnapshot> ancestors,
-        EntityChildLinkRow? parentLink,
+        int? parentSortOrder,
         HashSet<Guid> visited,
         CancellationToken cancellationToken) {
         if (!visited.Add(entity.Id)) {
@@ -560,7 +560,7 @@ public sealed class IdentifyPluginService {
         }
 
         var hints = await _hints.ResolveAsync(entity.Id, descriptor.Manifest.Id, cancellationToken);
-        var positions = await ResolveStructuralPositionsAsync(entity.Id, parentLink, cancellationToken);
+        var positions = await ResolveStructuralPositionsAsync(entity.Id, parentSortOrder, cancellationToken);
         var structuralContext = ancestors.Count > 0 || positions.Count > 0
             ? new IdentifyStructuralContext(ancestors, positions)
             : null;
@@ -613,12 +613,12 @@ public sealed class IdentifyPluginService {
         var usedProviderChildren = new HashSet<string>(StringComparer.Ordinal);
         var providerStructuralChildren = StructuralChildProposals(providerProposal);
         foreach (var child in existingChildren) {
-            var positions = await ResolveStructuralPositionsAsync(child.Entity.Id, child.Link, cancellationToken);
+            var positions = await ResolveStructuralPositionsAsync(child.Entity.Id, child.SortOrder, cancellationToken);
             var providerChild = providerStructuralChildren
                 .Where(candidate => IsKindCompatible(child.Entity.KindCode, candidate.TargetKind))
                 .Select(candidate => new {
                     Proposal = candidate,
-                    Score = ScoreProposalMatch(child.Entity, child.Link, positions, candidate)
+                    Score = ScoreProposalMatch(child.Entity, child.SortOrder, positions, candidate)
                 })
                 .Where(candidate => candidate.Score > 0)
                 .OrderByDescending(candidate => candidate.Score)
@@ -647,7 +647,7 @@ public sealed class IdentifyPluginService {
                 auth,
                 query: null,
                 ancestors: ancestorPath,
-                parentLink: child.Link,
+                parentSortOrder: child.SortOrder,
                 visited,
                 cancellationToken);
             if (childResponse.Ok && childResponse.Result is not null) {
@@ -664,35 +664,25 @@ public sealed class IdentifyPluginService {
     }
 
     private async Task<IReadOnlyList<StructuralChild>> LoadStructuralChildrenAsync(Guid parentEntityId, CancellationToken cancellationToken) {
-        var links = await _db.EntityChildLinks
+        var children = await _db.Entities
             .AsNoTracking()
-            .Where(link => link.ParentEntityId == parentEntityId)
+            .Where(row => row.ParentEntityId == parentEntityId && row.DeletedAt == null)
+            .OrderBy(row => row.SortOrder)
+            .ThenBy(row => row.CreatedAt)
+            .ThenBy(row => row.Id)
             .ToArrayAsync(cancellationToken);
-        if (links.Length == 0) {
-            return [];
-        }
 
-        var childIds = links.Select(link => link.ChildEntityId).ToArray();
-        var entities = await _db.Entities
-            .AsNoTracking()
-            .Where(row => childIds.Contains(row.Id) && row.DeletedAt == null)
-            .ToDictionaryAsync(row => row.Id, cancellationToken);
-
-        return links
-            .Where(link => entities.ContainsKey(link.ChildEntityId))
-            .OrderBy(link => link.SortOrder)
-            .ThenBy(link => entities[link.ChildEntityId].CreatedAt)
-            .ThenBy(link => link.ChildEntityId)
-            .Select(link => new StructuralChild(link, entities[link.ChildEntityId]))
+        return children
+            .Select(row => new StructuralChild(row.SortOrder, row))
             .ToArray();
     }
 
     private async Task<IReadOnlyDictionary<string, int>> ResolveStructuralPositionsAsync(
         Guid entityId,
-        EntityChildLinkRow? parentLink,
+        int? parentSortOrder,
         CancellationToken cancellationToken) {
         var positions = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        if (parentLink?.SortOrder is { } sortOrder) {
+        if (parentSortOrder is { } sortOrder) {
             positions["sortOrder"] = sortOrder;
         }
 
@@ -748,7 +738,7 @@ public sealed class IdentifyPluginService {
 
     private static int ScoreProposalMatch(
         EntityRow entity,
-        EntityChildLinkRow link,
+        int? sortOrder,
         IReadOnlyDictionary<string, int> positions,
         EntityMetadataProposal proposal) {
         var score = 0;
@@ -763,8 +753,8 @@ public sealed class IdentifyPluginService {
             }
         }
 
-        if (link.SortOrder is { } sortOrder) {
-            if (proposal.Patch.Positions.Values.Contains(sortOrder)) {
+        if (sortOrder is { } structuralSortOrder) {
+            if (proposal.Patch.Positions.Values.Contains(structuralSortOrder)) {
                 score += 5;
             }
         }
@@ -772,7 +762,7 @@ public sealed class IdentifyPluginService {
         return score;
     }
 
-    private sealed record StructuralChild(EntityChildLinkRow Link, EntityRow Entity);
+    private sealed record StructuralChild(int? SortOrder, EntityRow Entity);
 }
 
 /// <summary>

@@ -219,14 +219,6 @@ public sealed class PluginRuntimeServiceTests : IDisposable {
         db.Entities.AddRange(
             new EntityRow { Id = seriesId, KindCode = "video-series", Title = "Example Series", CreatedAt = now, UpdatedAt = now },
             new EntityRow { Id = seasonId, KindCode = "video-season", Title = "Season 1", ParentEntityId = seriesId, SortOrder = 1, CreatedAt = now, UpdatedAt = now });
-        db.EntityChildLinks.Add(new EntityChildLinkRow {
-            ParentEntityId = seriesId,
-            ChildEntityId = seasonId,
-            ChildKindCode = "video-season",
-            SortOrder = 1,
-            IsStructural = true,
-            CreatedAt = now
-        });
         await db.SaveChangesAsync();
 
         var executor = new StructuralContextCapturingProcessExecutor();
@@ -308,23 +300,6 @@ public sealed class PluginRuntimeServiceTests : IDisposable {
             new EntityRow { Id = seriesId, KindCode = "video-series", Title = "The Chair Company", CreatedAt = now, UpdatedAt = now },
             new EntityRow { Id = seasonId, KindCode = "video-season", Title = "Season 1", ParentEntityId = seriesId, SortOrder = 1, CreatedAt = now, UpdatedAt = now },
             new EntityRow { Id = episodeId, KindCode = "video", Title = "Old Episode", ParentEntityId = seasonId, SortOrder = 2, CreatedAt = now, UpdatedAt = now });
-        db.EntityChildLinks.AddRange(
-            new EntityChildLinkRow {
-                ParentEntityId = seriesId,
-                ChildEntityId = seasonId,
-                ChildKindCode = "video-season",
-                SortOrder = 1,
-                IsStructural = true,
-                CreatedAt = now
-            },
-            new EntityChildLinkRow {
-                ParentEntityId = seasonId,
-                ChildEntityId = episodeId,
-                ChildKindCode = "video",
-                SortOrder = 2,
-                IsStructural = true,
-                CreatedAt = now
-            });
         await db.SaveChangesAsync();
 
         var executor = new FullTreeProcessExecutor();

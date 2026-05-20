@@ -14,7 +14,6 @@ public sealed class ObscuraDbContextModelTests {
     [Theory]
     [InlineData(typeof(EntityKindRow), "entity_kinds")]
     [InlineData(typeof(EntityRow), "entities")]
-    [InlineData(typeof(EntityChildLinkRow), "entity_child_links")]
     [InlineData(typeof(EntityRatingRow), "entity_ratings")]
     [InlineData(typeof(EntityFlagRow), "entity_flags")]
     [InlineData(typeof(EntityDescriptionRow), "entity_descriptions")]
@@ -38,7 +37,6 @@ public sealed class ObscuraDbContextModelTests {
     [InlineData(typeof(BookChapterDetailRow), "book_chapter_details")]
     [InlineData(typeof(AudioTrackDetailRow), "audio_track_details")]
     [InlineData(typeof(PersonDetailRow), "person_details")]
-    [InlineData(typeof(StudioDetailRow), "studio_details")]
     [InlineData(typeof(TagDetailRow), "tag_details")]
     [InlineData(typeof(CollectionDetailRow), "collection_details")]
     [InlineData(typeof(CollectionItemDetailRow), "collection_item_details")]
@@ -87,18 +85,12 @@ public sealed class ObscuraDbContextModelTests {
     }
 
     [Fact]
-    public void EntityChildLinksHaveCanonicalStructuralChildIndex() {
+    public void EntityChildLinksAreNotPartOfTheCurrentModel() {
         using var db = CreateContext();
-        var modelEntity = db.Model.FindEntityType(typeof(EntityChildLinkRow));
 
-        var index = modelEntity!.GetIndexes().SingleOrDefault(candidate =>
-            candidate.IsUnique &&
-            candidate.Properties.Select(property => property.Name).SequenceEqual([
-                nameof(EntityChildLinkRow.ChildEntityId)
-            ]));
-
-        Assert.NotNull(index);
-        Assert.Contains("is_structural", index!.GetFilter(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(db.Model.GetEntityTypes(), entity =>
+            entity.ClrType.Name == "EntityChildLinkRow" ||
+            entity.GetTableName() == "entity_child_links");
     }
 
     [Fact]
@@ -139,7 +131,6 @@ public sealed class ObscuraDbContextModelTests {
     [Theory]
     [InlineData(typeof(BookChapterDetailRow), "book_entity_id")]
     [InlineData(typeof(BookChapterDetailRow), "volume_entity_id")]
-    [InlineData(typeof(StudioDetailRow), "parent_studio_entity_id")]
     [InlineData(typeof(TagDetailRow), "parent_tag_entity_id")]
     public void DetailRowsDoNotKeepParentSpecificRelationshipColumns(Type entityType, string columnName) {
         using var db = CreateContext();

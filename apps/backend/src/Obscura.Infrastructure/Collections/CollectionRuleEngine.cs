@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -309,18 +310,22 @@ public sealed class CollectionRuleEngine(ObscuraDbContext db) : ICollectionRuleE
     private string? TranslateVideoSeries(CollectionRuleCondition condition, string kindCode, SqlBuildContext ctx) {
         if (kindCode != "video") return null;
 
-        var subquery = @"e.id IN (
-            SELECT hl_ep.child_entity_id
-            FROM entity_child_links hl_ep
-            INNER JOIN entity_child_links hl_season ON hl_season.child_entity_id = hl_ep.parent_entity_id
-            WHERE hl_season.parent_entity_id";
+        var subquery = @"(
+            e.parent_entity_id {0}
+            OR EXISTS (
+                SELECT 1
+                FROM entities parent_entity
+                WHERE parent_entity.id = e.parent_entity_id
+                  AND parent_entity.parent_entity_id {0}
+            )
+        )";
 
         return condition.Operator switch {
-            "equals" => $"{subquery} = {ctx.AddJsonParam(condition.Value)})",
+            "equals" => string.Format(CultureInfo.InvariantCulture, subquery, $"= {ctx.AddJsonParam(condition.Value)}"),
             "in" when condition.Value?.ValueKind == JsonValueKind.Array =>
-                $"{subquery} IN ({string.Join(", ", condition.Value.Value.EnumerateArray().Select(v => ctx.AddJsonParam(v)))})",
+                string.Format(CultureInfo.InvariantCulture, subquery, $"IN ({string.Join(", ", condition.Value.Value.EnumerateArray().Select(v => ctx.AddJsonParam(v)))})"),
             "not_in" when condition.Value?.ValueKind == JsonValueKind.Array =>
-                $"NOT ({subquery} IN ({string.Join(", ", condition.Value.Value.EnumerateArray().Select(v => ctx.AddJsonParam(v)))}))",
+                $"NOT {string.Format(CultureInfo.InvariantCulture, subquery, $"IN ({string.Join(", ", condition.Value.Value.EnumerateArray().Select(v => ctx.AddJsonParam(v)))})")}",
             _ => null
         };
     }
@@ -338,7 +343,7 @@ public sealed class CollectionRuleEngine(ObscuraDbContext db) : ICollectionRuleE
     private string? TranslateChildCount(CollectionRuleCondition condition, string kindCode, SqlBuildContext ctx) {
         if (kindCode is not ("gallery" or "book")) return null;
 
-        var countExpr = "(SELECT COUNT(*) FROM entity_child_links hl_cnt WHERE hl_cnt.parent_entity_id = e.id)";
+        var countExpr = "(SELECT COUNT(*) FROM entities child_count WHERE child_count.parent_entity_id = e.id AND child_count.deleted_at IS NULL)";
         return TranslateScalar(countExpr, condition.Operator, condition.Value, ctx);
     }
 
