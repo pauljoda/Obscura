@@ -11,13 +11,11 @@ public sealed class VideoSeries : Entity {
         Guid id,
         string title,
         string? status = null,
-        VideoSeriesRenderingMode renderingMode = VideoSeriesRenderingMode.Seasons,
         IEnumerable<Entity>? children = null,
         IEnumerable<Entity>? videos = null,
         IEnumerable<EntityCapability>? capabilities = null)
         : base(id, title, capabilities) {
         Status = status;
-        RenderingMode = renderingMode;
 
         foreach (var child in children ?? []) {
             AddChild(child);
@@ -30,8 +28,18 @@ public sealed class VideoSeries : Entity {
 
     public override EntityKind Kind => EntityKind.VideoSeries;
     public string? Status { get; private set; }
-    public VideoSeriesRenderingMode RenderingMode { get; private set; }
+
+    /// <summary>Direct child videos in insertion order.</summary>
     public IReadOnlyList<Entity> Videos => ChildrenOf(EntityKind.Video);
+
+    /// <summary>Child seasons in insertion order.</summary>
+    public IReadOnlyList<Entity> Seasons => ChildrenOf(EntityKind.VideoSeason);
+
+    /// <summary>
+    /// Layout for the series detail view, derived from whether the series has season children.
+    /// </summary>
+    public VideoSeriesRenderingMode RenderingMode =>
+        Seasons.Count > 0 ? VideoSeriesRenderingMode.Seasons : VideoSeriesRenderingMode.Flat;
 
     protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
     [
