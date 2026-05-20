@@ -185,7 +185,7 @@ public static class EntityCardProjector
         IReadOnlyDictionary<EntityKind, IReadOnlyList<Entity>> map) =>
         map.Select(pair => new EntityGroup(
                 EntityKindRegistry.ToCode(pair.Key),
-                LabelForKind(pair.Key),
+                EntityKindRegistry.Describe(pair.Key).GroupLabel,
                 pair.Value
                     .OrderBy(child => child.SortOrder ?? int.MaxValue)
                     .ThenBy(child => child.Title)
@@ -225,22 +225,4 @@ public static class EntityCardProjector
             flags?.IsOrganized ?? false);
     }
 
-    private static string LabelForKind(EntityKind kind) =>
-        kind switch
-        {
-            EntityKind.Video => "Videos",
-            EntityKind.VideoSeries => "Series",
-            EntityKind.VideoSeason => "Seasons",
-            EntityKind.Image => "Images",
-            EntityKind.Gallery => "Galleries",
-            EntityKind.Book => "Books",
-            EntityKind.BookPage => "Pages",
-            EntityKind.AudioLibrary => "Audio Libraries",
-            EntityKind.AudioTrack => "Audio Tracks",
-            EntityKind.Person => "People",
-            EntityKind.Studio => "Studios",
-            EntityKind.Tag => "Tags",
-            EntityKind.Collection => "Collections",
-            _ => EntityKindRegistry.ToCode(kind)
-        };
 }

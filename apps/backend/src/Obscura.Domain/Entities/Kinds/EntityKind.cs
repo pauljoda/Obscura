@@ -8,81 +8,81 @@ namespace Obscura.Domain.Entities;
 public enum EntityKind {
     /// <summary>Generic audio media root.</summary>
     [Code("audio")]
-    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.File)]
+    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.File, "Audio")]
     Audio,
 
     /// <summary>Audio library, album, audiobook, or podcast grouping.</summary>
     [Code("audio-library")]
-    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.Folder, typeof(Obscura.Domain.Media.AudioLibrary))]
+    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.Folder, "Audio Libraries", typeof(Obscura.Domain.Media.AudioLibrary))]
     AudioLibrary,
 
     /// <summary>Playable audio track.</summary>
     [Code("audio-track")]
-    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.File, typeof(Obscura.Domain.Media.AudioTrack))]
+    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.File, "Audio Tracks", typeof(Obscura.Domain.Media.AudioTrack))]
     AudioTrack,
 
     /// <summary>Book, comic, manga, or other page-based media item.</summary>
     [Code("book")]
-    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.Archive, typeof(Obscura.Domain.Media.Book))]
+    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.Archive, "Books", typeof(Obscura.Domain.Media.Book))]
     Book,
 
     /// <summary>Structural book volume.</summary>
     [Code("book-volume")]
-    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.None, typeof(Obscura.Domain.Media.BookVolume))]
+    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.None, "Volumes", typeof(Obscura.Domain.Media.BookVolume))]
     BookVolume,
 
     /// <summary>Structural book chapter.</summary>
     [Code("book-chapter")]
-    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.None, typeof(Obscura.Domain.Media.BookChapter))]
+    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.None, "Chapters", typeof(Obscura.Domain.Media.BookChapter))]
     BookChapter,
 
     /// <summary>Structural book page.</summary>
     [Code("book-page")]
-    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.ArchiveEntry, typeof(Obscura.Domain.Media.BookPage))]
+    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.ArchiveEntry, "Pages", typeof(Obscura.Domain.Media.BookPage))]
     BookPage,
 
     /// <summary>User collection.</summary>
     [Code("collection")]
-    [EntityKindMeta(EntityKindCategory.Collection, EntityStorageShape.None, typeof(Obscura.Domain.Media.Collection))]
+    [EntityKindMeta(EntityKindCategory.Collection, EntityStorageShape.None, "Collections", typeof(Obscura.Domain.Media.Collection))]
     Collection,
 
     /// <summary>Image gallery.</summary>
     [Code("gallery")]
-    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.Folder, typeof(Obscura.Domain.Media.Gallery))]
+    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.Folder, "Galleries", typeof(Obscura.Domain.Media.Gallery))]
     Gallery,
 
     /// <summary>Single image.</summary>
     [Code("image")]
-    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.File, typeof(Obscura.Domain.Media.Image))]
+    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.File, "Images", typeof(Obscura.Domain.Media.Image))]
     Image,
 
     /// <summary>Person taxonomy entity.</summary>
     [Code("person")]
-    [EntityKindMeta(EntityKindCategory.Taxonomy, EntityStorageShape.None, typeof(Obscura.Domain.Taxonomy.Person))]
+    [EntityKindMeta(EntityKindCategory.Taxonomy, EntityStorageShape.None, "People", typeof(Obscura.Domain.Taxonomy.Person))]
     Person,
 
     /// <summary>Studio, publisher, label, or production group.</summary>
     [Code("studio")]
-    [EntityKindMeta(EntityKindCategory.Taxonomy, EntityStorageShape.None, typeof(Obscura.Domain.Taxonomy.Studio))]
+    [EntityKindMeta(EntityKindCategory.Taxonomy, EntityStorageShape.None, "Studios", typeof(Obscura.Domain.Taxonomy.Studio))]
     Studio,
 
     /// <summary>Tag taxonomy entity.</summary>
     [Code("tag")]
-    [EntityKindMeta(EntityKindCategory.Taxonomy, EntityStorageShape.None, typeof(Obscura.Domain.Taxonomy.Tag))]
+    [EntityKindMeta(EntityKindCategory.Taxonomy, EntityStorageShape.None, "Tags", typeof(Obscura.Domain.Taxonomy.Tag))]
     Tag,
 
     /// <summary>Playable video media item.</summary>
     [Code("video")]
-    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.File, typeof(Obscura.Domain.Media.Video))]
+    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.File, "Videos", typeof(Obscura.Domain.Media.Video))]
     Video,
 
     /// <summary>Video series grouping.</summary>
     [Code("video-series")]
-    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.Folder, typeof(Obscura.Domain.Media.VideoSeries))]
+    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.Folder, "Series", typeof(Obscura.Domain.Media.VideoSeries))]
     VideoSeries,
 
     /// <summary>Structural video season.</summary>
     [Code("video-season")]
-    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.Folder, typeof(Obscura.Domain.Media.VideoSeason))]
+    [EntityKindMeta(EntityKindCategory.Media, EntityStorageShape.Folder, "Seasons", typeof(Obscura.Domain.Media.VideoSeason))]
     VideoSeason
 }

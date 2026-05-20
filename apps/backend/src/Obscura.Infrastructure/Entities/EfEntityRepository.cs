@@ -360,7 +360,7 @@ public sealed class EfEntityRepository(ObscuraDbContext db) : IEntityWriteReposi
                 TargetEntityId = credit.Person.Id,
                 TargetKindCode = EntityKindRegistry.Person.Code,
                 SortOrder = creditIndex,
-                MetadataJson = JsonSerializer.Serialize(new CreditMetadata(EncodeCreditRole(credit.Role))),
+                MetadataJson = JsonSerializer.Serialize(new CreditMetadata(credit.Role.ToCode())),
                 CreatedAt = DateTimeOffset.UtcNow
             });
             creditIndex++;
@@ -781,34 +781,13 @@ public sealed class EfEntityRepository(ObscuraDbContext db) : IEntityWriteReposi
 
         try {
             var metadata = JsonSerializer.Deserialize<CreditMetadata>(metadataJson);
-            return metadata?.Role?.ToLowerInvariant() switch {
-                "actor" => CreditRole.Actor,
-                "director" => CreditRole.Director,
-                "writer" => CreditRole.Writer,
-                "producer" => CreditRole.Producer,
-                "creator" => CreditRole.Creator,
-                "artist" => CreditRole.Artist,
-                "narrator" => CreditRole.Narrator,
-                "composer" => CreditRole.Composer,
-                _ => CreditRole.Person
-            };
+            return metadata?.Role is { } role && role.TryDecodeAs<CreditRole>(out var decoded)
+                ? decoded
+                : CreditRole.Person;
         } catch (JsonException) {
             return CreditRole.Person;
         }
     }
-
-    private static string EncodeCreditRole(CreditRole role) =>
-        role switch {
-            CreditRole.Actor => "actor",
-            CreditRole.Director => "director",
-            CreditRole.Writer => "writer",
-            CreditRole.Producer => "producer",
-            CreditRole.Creator => "creator",
-            CreditRole.Artist => "artist",
-            CreditRole.Narrator => "narrator",
-            CreditRole.Composer => "composer",
-            _ => "person"
-        };
 
     private sealed record CreditMetadata([property: JsonPropertyName("role")] string Role);
 

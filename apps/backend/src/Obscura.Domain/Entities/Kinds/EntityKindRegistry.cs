@@ -18,12 +18,14 @@ public enum EntityKindCategory {
 }
 
 /// <summary>
-/// Resolved facts for one entity kind: its stable code, display name, category,
-/// filesystem storage shape, and concrete domain CLR type (when one exists).
+/// Resolved facts for one entity kind: its stable code, display name, plural group
+/// label, category, filesystem storage shape, and concrete domain CLR type (when one
+/// exists).
 /// </summary>
 /// <param name="Value">Domain enum value.</param>
 /// <param name="Code">Stable database/API code.</param>
-/// <param name="DisplayName">Human-readable display name.</param>
+/// <param name="DisplayName">Human-readable singular display name.</param>
+/// <param name="GroupLabel">Plural display label used when grouping entities by kind.</param>
 /// <param name="Category">Broad category used by metadata rows.</param>
 /// <param name="StorageShape">Filesystem storage shape used by scan and organize rules.</param>
 /// <param name="ClrType">Concrete domain entity type, or null for kinds with no concrete type.</param>
@@ -31,6 +33,7 @@ public sealed record EntityKindDescriptor(
     EntityKind Value,
     string Code,
     string DisplayName,
+    string GroupLabel,
     EntityKindCategory Category,
     EntityStorageShape StorageShape,
     Type? ClrType) {
@@ -120,6 +123,7 @@ public static class EntityKindRegistry {
             value,
             CodecRegistry.Get<EntityKind>().Encode(value),
             Regex.Replace(name, "(?<=[a-z])([A-Z])", " $1"),
+            meta.GroupLabel,
             meta.Category,
             meta.StorageShape,
             meta.ClrType);
