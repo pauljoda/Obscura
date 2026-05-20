@@ -40,28 +40,13 @@ public sealed class TypedEntityModelTests {
         var person = new Person(
             Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
             "Ada Person",
-            disambiguation: null,
-            gender: null,
-            birthdate: null,
-            country: null,
-            ethnicity: null,
-            eyeColor: null,
-            hairColor: null,
-            height: null,
-            weight: null,
-            measurements: null,
-            tattoos: null,
-            piercings: null,
-            careerStart: null,
-            careerEnd: null,
-            capabilities: [new CapabilityDescription("Profile")]);
+            capabilities: [new CapabilityDescription("Profile"), new CapabilityLifetime()]);
 
         person.SetCountry("US");
-        person.SetCareerYears(2020, null);
+        person.RequireCapability<CapabilityLifetime>();
 
         Assert.Equal(EntityKind.Person, person.Kind);
         Assert.Equal("US", person.Country);
-        Assert.Equal(2020, person.CareerStart);
         Assert.Equal("Profile", person.Description!.Value);
     }
 

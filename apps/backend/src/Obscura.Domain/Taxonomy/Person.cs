@@ -12,7 +12,6 @@ public sealed class Person : Entity {
         string title,
         string? disambiguation = null,
         string? gender = null,
-        string? birthdate = null,
         string? country = null,
         string? ethnicity = null,
         string? eyeColor = null,
@@ -22,13 +21,10 @@ public sealed class Person : Entity {
         string? measurements = null,
         string? tattoos = null,
         string? piercings = null,
-        int? careerStart = null,
-        int? careerEnd = null,
         IEnumerable<EntityCapability>? capabilities = null)
         : base(id, title, capabilities) {
         Disambiguation = disambiguation;
         Gender = gender;
-        Birthdate = birthdate;
         Country = country;
         Ethnicity = ethnicity;
         EyeColor = eyeColor;
@@ -38,14 +34,11 @@ public sealed class Person : Entity {
         Measurements = measurements;
         Tattoos = tattoos;
         Piercings = piercings;
-        CareerStart = careerStart;
-        CareerEnd = careerEnd;
     }
 
     public override EntityKind Kind => EntityKind.Person;
     public string? Disambiguation { get; private set; }
     public string? Gender { get; private set; }
-    public string? Birthdate { get; private set; }
     public string? Country { get; private set; }
     public string? Ethnicity { get; private set; }
     public string? EyeColor { get; private set; }
@@ -55,18 +48,10 @@ public sealed class Person : Entity {
     public string? Measurements { get; private set; }
     public string? Tattoos { get; private set; }
     public string? Piercings { get; private set; }
-    public int? CareerStart { get; private set; }
-    public int? CareerEnd { get; private set; }
 
     /// <summary>Updates the country value for the person.</summary>
     public void SetCountry(string? country) {
         Country = country;
-    }
-
-    /// <summary>Updates the known career year range.</summary>
-    public void SetCareerYears(int? start, int? end) {
-        CareerStart = start;
-        CareerEnd = end;
     }
 
     protected override IEnumerable<EntityCapability> CreateDefaultCapabilities() =>
@@ -74,6 +59,8 @@ public sealed class Person : Entity {
         new CapabilityRating(),
         new CapabilityLinks(),
         new CapabilityFlags(),
-        new CapabilityFiles()
+        new CapabilityFiles(),
+        new CapabilityDates(),
+        new CapabilityLifetime()
     ];
 }

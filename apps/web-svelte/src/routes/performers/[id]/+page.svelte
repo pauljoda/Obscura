@@ -46,7 +46,6 @@
     if (!person) return [];
     const rows: DetailRow[] = [];
     if (person.gender) rows.push({ label: "Gender", value: person.gender });
-    if (person.birthdate) rows.push({ label: "Birthdate", value: person.birthdate });
     if (person.country) rows.push({ label: "Country", value: person.country });
     if (person.ethnicity) rows.push({ label: "Ethnicity", value: person.ethnicity });
     if (person.eyeColor) rows.push({ label: "Eyes", value: person.eyeColor });
@@ -56,8 +55,6 @@
     if (person.measurements) rows.push({ label: "Measurements", value: person.measurements });
     if (person.tattoos) rows.push({ label: "Tattoos", value: person.tattoos });
     if (person.piercings) rows.push({ label: "Piercings", value: person.piercings });
-    if (person.careerStart != null) rows.push({ label: "Career Start", value: String(person.careerStart) });
-    if (person.careerEnd != null) rows.push({ label: "Career End", value: String(person.careerEnd) });
     if (person.disambiguation) rows.push({ label: "Disambiguation", value: person.disambiguation });
     return rows;
   });

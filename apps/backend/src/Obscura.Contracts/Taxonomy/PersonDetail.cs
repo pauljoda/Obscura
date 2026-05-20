@@ -13,7 +13,6 @@ namespace Obscura.Contracts.Taxonomy;
 /// <param name="ChildrenByKind">Generic child groups keyed by entity kind.</param>
 /// <param name="Disambiguation">Optional text used to distinguish people with the same name.</param>
 /// <param name="Gender">Optional gender value from imported or edited metadata.</param>
-/// <param name="Birthdate">Optional birthdate value as supplied by metadata.</param>
 /// <param name="Country">Optional country value.</param>
 /// <param name="Ethnicity">Optional ethnicity value.</param>
 /// <param name="EyeColor">Optional eye color value.</param>
@@ -23,8 +22,6 @@ namespace Obscura.Contracts.Taxonomy;
 /// <param name="Measurements">Optional measurements text.</param>
 /// <param name="Tattoos">Optional tattoo description.</param>
 /// <param name="Piercings">Optional piercing description.</param>
-/// <param name="CareerStart">Optional career start year.</param>
-/// <param name="CareerEnd">Optional career end year.</param>
 public sealed record PersonDetail(
     Guid Id,
     string Kind,
@@ -36,7 +33,6 @@ public sealed record PersonDetail(
     IReadOnlyList<EntityGroup> Relationships,
     string? Disambiguation,
     string? Gender,
-    string? Birthdate,
     string? Country,
     string? Ethnicity,
     string? EyeColor,
@@ -45,6 +41,4 @@ public sealed record PersonDetail(
     int? Weight,
     string? Measurements,
     string? Tattoos,
-    string? Piercings,
-    int? CareerStart,
-    int? CareerEnd) : IEntityCard;
+    string? Piercings) : IEntityCard;

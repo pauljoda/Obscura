@@ -740,7 +740,6 @@ public sealed class EfEntityRepository(ObscuraDbContext db) {
                     row.Title,
                     detail?.Disambiguation,
                     detail?.Gender,
-                    birthdate: null,
                     detail?.Country,
                     detail?.Ethnicity,
                     detail?.EyeColor,
