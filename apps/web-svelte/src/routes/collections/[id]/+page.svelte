@@ -8,11 +8,11 @@
     updateV2EntityFlags,
     type V2CollectionDetail,
   } from "$lib/api/v2";
+  import { getCapability } from "$lib/api/capabilities";
   import {
-    getCapability,
-    withFlagCapability,
-    withRatingCapability,
-  } from "$lib/api/capabilities";
+    toggleOptimisticEntityFlag,
+    updateOptimisticEntityRating,
+  } from "$lib/entities/entity-detail-state";
   import { getAllChildIds } from "$lib/entities/entity-children";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
@@ -59,13 +59,9 @@
 
   async function handleRatingChange(value: number | null) {
     if (!collection || ratingBusy) return;
-    const previous = collection;
     ratingBusy = true;
-    collection = { ...collection, capabilities: withRatingCapability(collection.capabilities, value) };
     try {
-      await updateV2EntityRating(collection.id, value);
-    } catch {
-      collection = previous;
+      await updateOptimisticEntityRating(collection, value, (next) => (collection = next), updateV2EntityRating);
     } finally {
       ratingBusy = false;
     }
@@ -73,28 +69,12 @@
 
   async function handleFavoriteToggle() {
     if (!collection) return;
-    const previous = collection;
-    const flagsCap = getCapability(collection.capabilities, "flags");
-    const next = !(flagsCap?.isFavorite ?? false);
-    collection = { ...collection, capabilities: withFlagCapability(collection.capabilities, "isFavorite", next) };
-    try {
-      await updateV2EntityFlags(collection.id, { isFavorite: next });
-    } catch {
-      collection = previous;
-    }
+    await toggleOptimisticEntityFlag(collection, "isFavorite", (next) => (collection = next), updateV2EntityFlags);
   }
 
   async function handleOrganizedToggle() {
     if (!collection) return;
-    const previous = collection;
-    const flagsCap = getCapability(collection.capabilities, "flags");
-    const next = !(flagsCap?.isOrganized ?? false);
-    collection = { ...collection, capabilities: withFlagCapability(collection.capabilities, "isOrganized", next) };
-    try {
-      await updateV2EntityFlags(collection.id, { isOrganized: next });
-    } catch {
-      collection = previous;
-    }
+    await toggleOptimisticEntityFlag(collection, "isOrganized", (next) => (collection = next), updateV2EntityFlags);
   }
 </script>
 

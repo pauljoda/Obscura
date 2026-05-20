@@ -28,20 +28,17 @@
     type V2VideoDetail,
     type V2LibrarySettings,
   } from "$lib/api/v2";
+  import { getCapability } from "$lib/api/capabilities";
   import {
-    getCapability,
-    withFlagCapability,
-    withRatingCapability,
-  } from "$lib/api/capabilities";
+    toggleOptimisticEntityFlag,
+    updateOptimisticEntityRating,
+  } from "$lib/entities/entity-detail-state";
   import EntityCastAndCrewSection from "$lib/components/entities/EntityCastAndCrewSection.svelte";
   import IdentifyButton from "$lib/components/IdentifyButton.svelte";
   import type { EntityDetailTag } from "$lib/entities/entity-detail";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import {
-    creditCardsFromThumbnails,
-    hydrateStandardRelationshipThumbnails,
-    tagsFromThumbnails,
-    thumbnailsToCards,
+    hydrateStandardRelationshipCards,
     type EntityThumbnailCard,
   } from "$lib/entities/entity-relationship-thumbnails";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
@@ -386,10 +383,10 @@
   }
 
   async function hydrateVideoRelationships(nextVideo: V2VideoDetail) {
-    const relationships = await hydrateStandardRelationshipThumbnails(nextVideo);
-    studioCards = thumbnailsToCards(relationships.studio);
-    creditCards = creditCardsFromThumbnails(relationships.cast, nextVideo.creditMetadata);
-    relationshipTags = tagsFromThumbnails(relationships.tags);
+    const relationships = await hydrateStandardRelationshipCards(nextVideo);
+    studioCards = relationships.studioCards;
+    creditCards = relationships.creditCards;
+    relationshipTags = relationships.relationshipTags;
   }
 
   async function loadPlaybackInfo(
@@ -539,13 +536,9 @@
 
   async function handleRatingChange(value: number | null) {
     if (!video || ratingBusy) return;
-    const previous = video;
     ratingBusy = true;
-    video = { ...video, capabilities: withRatingCapability(video.capabilities, value) };
     try {
-      await updateV2EntityRating(video.id, value);
-    } catch {
-      video = previous;
+      await updateOptimisticEntityRating(video, value, (next) => (video = next), updateV2EntityRating);
     } finally {
       ratingBusy = false;
     }
@@ -553,28 +546,12 @@
 
   async function handleFavoriteToggle() {
     if (!video) return;
-    const previous = video;
-    const flagsCap = getCapability(video.capabilities, "flags");
-    const next = !(flagsCap?.isFavorite ?? false);
-    video = { ...video, capabilities: withFlagCapability(video.capabilities, "isFavorite", next) };
-    try {
-      await updateV2EntityFlags(video.id, { isFavorite: next });
-    } catch {
-      video = previous;
-    }
+    await toggleOptimisticEntityFlag(video, "isFavorite", (next) => (video = next), updateV2EntityFlags);
   }
 
   async function handleOrganizedToggle() {
     if (!video) return;
-    const previous = video;
-    const flagsCap = getCapability(video.capabilities, "flags");
-    const next = !(flagsCap?.isOrganized ?? false);
-    video = { ...video, capabilities: withFlagCapability(video.capabilities, "isOrganized", next) };
-    try {
-      await updateV2EntityFlags(video.id, { isOrganized: next });
-    } catch {
-      video = previous;
-    }
+    await toggleOptimisticEntityFlag(video, "isOrganized", (next) => (video = next), updateV2EntityFlags);
   }
 </script>
 

@@ -11,9 +11,11 @@
   import {
     getCapability,
     getImagesCapability,
-    withFlagCapability,
-    withRatingCapability,
   } from "$lib/api/capabilities";
+  import {
+    toggleOptimisticEntityFlag,
+    updateOptimisticEntityRating,
+  } from "$lib/entities/entity-detail-state";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
   import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
@@ -66,13 +68,9 @@
 
   async function handleRatingChange(value: number | null) {
     if (!image || ratingBusy) return;
-    const previous = image;
     ratingBusy = true;
-    image = { ...image, capabilities: withRatingCapability(image.capabilities, value) };
     try {
-      await updateV2EntityRating(image.id, value);
-    } catch {
-      image = previous;
+      await updateOptimisticEntityRating(image, value, (next) => (image = next), updateV2EntityRating);
     } finally {
       ratingBusy = false;
     }
@@ -80,28 +78,12 @@
 
   async function handleFavoriteToggle() {
     if (!image) return;
-    const previous = image;
-    const flagsCap = getCapability(image.capabilities, "flags");
-    const next = !(flagsCap?.isFavorite ?? false);
-    image = { ...image, capabilities: withFlagCapability(image.capabilities, "isFavorite", next) };
-    try {
-      await updateV2EntityFlags(image.id, { isFavorite: next });
-    } catch {
-      image = previous;
-    }
+    await toggleOptimisticEntityFlag(image, "isFavorite", (next) => (image = next), updateV2EntityFlags);
   }
 
   async function handleOrganizedToggle() {
     if (!image) return;
-    const previous = image;
-    const flagsCap = getCapability(image.capabilities, "flags");
-    const next = !(flagsCap?.isOrganized ?? false);
-    image = { ...image, capabilities: withFlagCapability(image.capabilities, "isOrganized", next) };
-    try {
-      await updateV2EntityFlags(image.id, { isOrganized: next });
-    } catch {
-      image = previous;
-    }
+    await toggleOptimisticEntityFlag(image, "isOrganized", (next) => (image = next), updateV2EntityFlags);
   }
 </script>
 

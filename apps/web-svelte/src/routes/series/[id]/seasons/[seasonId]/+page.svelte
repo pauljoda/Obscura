@@ -10,11 +10,11 @@
     type V2VideoSeasonDetail,
     type V2VideoSeriesDetail,
   } from "$lib/api/v2";
+  import { getCapability } from "$lib/api/capabilities";
   import {
-    getCapability,
-    withFlagCapability,
-    withRatingCapability,
-  } from "$lib/api/capabilities";
+    toggleOptimisticEntityFlag,
+    updateOptimisticEntityRating,
+  } from "$lib/entities/entity-detail-state";
   import { getChildIds } from "$lib/entities/entity-children";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import {
@@ -104,13 +104,9 @@
 
   async function handleRatingChange(value: number | null) {
     if (!season || ratingBusy) return;
-    const previous = season;
     ratingBusy = true;
-    season = { ...season, capabilities: withRatingCapability(season.capabilities, value) };
     try {
-      await updateV2EntityRating(season.id, value);
-    } catch {
-      season = previous;
+      await updateOptimisticEntityRating(season, value, (next) => (season = next), updateV2EntityRating);
     } finally {
       ratingBusy = false;
     }
@@ -118,28 +114,12 @@
 
   async function handleFavoriteToggle() {
     if (!season) return;
-    const previous = season;
-    const flagsCap = getCapability(season.capabilities, "flags");
-    const next = !(flagsCap?.isFavorite ?? false);
-    season = { ...season, capabilities: withFlagCapability(season.capabilities, "isFavorite", next) };
-    try {
-      await updateV2EntityFlags(season.id, { isFavorite: next });
-    } catch {
-      season = previous;
-    }
+    await toggleOptimisticEntityFlag(season, "isFavorite", (next) => (season = next), updateV2EntityFlags);
   }
 
   async function handleOrganizedToggle() {
     if (!season) return;
-    const previous = season;
-    const flagsCap = getCapability(season.capabilities, "flags");
-    const next = !(flagsCap?.isOrganized ?? false);
-    season = { ...season, capabilities: withFlagCapability(season.capabilities, "isOrganized", next) };
-    try {
-      await updateV2EntityFlags(season.id, { isOrganized: next });
-    } catch {
-      season = previous;
-    }
+    await toggleOptimisticEntityFlag(season, "isOrganized", (next) => (season = next), updateV2EntityFlags);
   }
 
   async function hydrateEpisodeThumbnails(seasonDetail: V2VideoSeasonDetail) {

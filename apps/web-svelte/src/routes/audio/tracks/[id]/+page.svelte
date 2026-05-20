@@ -8,11 +8,11 @@
     updateV2EntityRating,
     type V2AudioTrackDetail,
   } from "$lib/api/v2";
+  import { getCapability } from "$lib/api/capabilities";
   import {
-    getCapability,
-    withFlagCapability,
-    withRatingCapability,
-  } from "$lib/api/capabilities";
+    toggleOptimisticEntityFlag,
+    updateOptimisticEntityRating,
+  } from "$lib/entities/entity-detail-state";
   import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
@@ -56,13 +56,9 @@
 
   async function handleRatingChange(value: number | null) {
     if (!track || ratingBusy) return;
-    const previous = track;
     ratingBusy = true;
-    track = { ...track, capabilities: withRatingCapability(track.capabilities, value) };
     try {
-      await updateV2EntityRating(track.id, value);
-    } catch {
-      track = previous;
+      await updateOptimisticEntityRating(track, value, (next) => (track = next), updateV2EntityRating);
     } finally {
       ratingBusy = false;
     }
@@ -70,28 +66,12 @@
 
   async function handleFavoriteToggle() {
     if (!track) return;
-    const previous = track;
-    const flags = getCapability(track.capabilities, "flags");
-    const next = !(flags?.isFavorite ?? false);
-    track = { ...track, capabilities: withFlagCapability(track.capabilities, "isFavorite", next) };
-    try {
-      await updateV2EntityFlags(track.id, { isFavorite: next });
-    } catch {
-      track = previous;
-    }
+    await toggleOptimisticEntityFlag(track, "isFavorite", (next) => (track = next), updateV2EntityFlags);
   }
 
   async function handleOrganizedToggle() {
     if (!track) return;
-    const previous = track;
-    const flags = getCapability(track.capabilities, "flags");
-    const next = !(flags?.isOrganized ?? false);
-    track = { ...track, capabilities: withFlagCapability(track.capabilities, "isOrganized", next) };
-    try {
-      await updateV2EntityFlags(track.id, { isOrganized: next });
-    } catch {
-      track = previous;
-    }
+    await toggleOptimisticEntityFlag(track, "isOrganized", (next) => (track = next), updateV2EntityFlags);
   }
 </script>
 

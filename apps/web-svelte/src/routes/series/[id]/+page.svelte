@@ -11,21 +11,19 @@
     type V2VideoSeasonDetail,
     type V2VideoSeriesDetail,
   } from "$lib/api/v2";
+  import { getCapability } from "$lib/api/capabilities";
   import {
-    getCapability,
-    withFlagCapability,
-    withRatingCapability,
-  } from "$lib/api/capabilities";
+    toggleOptimisticEntityFlag,
+    updateOptimisticEntityRating,
+  } from "$lib/entities/entity-detail-state";
   import EntityCastAndCrewSection from "$lib/components/entities/EntityCastAndCrewSection.svelte";
   import IdentifyButton from "$lib/components/IdentifyButton.svelte";
   import type { EntityDetailTag } from "$lib/entities/entity-detail";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { getChildIds } from "$lib/entities/entity-children";
   import {
-    creditCardsFromThumbnails,
     fetchOrderedEntityThumbnails,
-    hydrateStandardRelationshipThumbnails,
-    tagsFromThumbnails,
+    hydrateStandardRelationshipCards,
     thumbnailsToCards,
   } from "$lib/entities/entity-relationship-thumbnails";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
@@ -131,13 +129,9 @@
 
   async function handleRatingChange(value: number | null) {
     if (!series || ratingBusy) return;
-    const previous = series;
     ratingBusy = true;
-    series = { ...series, capabilities: withRatingCapability(series.capabilities, value) };
     try {
-      await updateV2EntityRating(series.id, value);
-    } catch {
-      series = previous;
+      await updateOptimisticEntityRating(series, value, (next) => (series = next), updateV2EntityRating);
     } finally {
       ratingBusy = false;
     }
@@ -145,28 +139,12 @@
 
   async function handleFavoriteToggle() {
     if (!series) return;
-    const previous = series;
-    const flagsCap = getCapability(series.capabilities, "flags");
-    const next = !(flagsCap?.isFavorite ?? false);
-    series = { ...series, capabilities: withFlagCapability(series.capabilities, "isFavorite", next) };
-    try {
-      await updateV2EntityFlags(series.id, { isFavorite: next });
-    } catch {
-      series = previous;
-    }
+    await toggleOptimisticEntityFlag(series, "isFavorite", (next) => (series = next), updateV2EntityFlags);
   }
 
   async function handleOrganizedToggle() {
     if (!series) return;
-    const previous = series;
-    const flagsCap = getCapability(series.capabilities, "flags");
-    const next = !(flagsCap?.isOrganized ?? false);
-    series = { ...series, capabilities: withFlagCapability(series.capabilities, "isOrganized", next) };
-    try {
-      await updateV2EntityFlags(series.id, { isOrganized: next });
-    } catch {
-      series = previous;
-    }
+    await toggleOptimisticEntityFlag(series, "isOrganized", (next) => (series = next), updateV2EntityFlags);
   }
 
   async function loadSeasonEpisodeCounts(nextSeries: V2VideoSeriesDetail): Promise<Record<string, number>> {
@@ -192,12 +170,12 @@
       seasons,
       childSeries,
       videos,
-      relationships,
+      relationshipCards,
     ] = await Promise.all([
       fetchOrderedEntityThumbnails(seasonIds),
       fetchOrderedEntityThumbnails(childSeriesIds),
       fetchOrderedEntityThumbnails(videoIds),
-      hydrateStandardRelationshipThumbnails(nextSeries),
+      hydrateStandardRelationshipCards(nextSeries),
     ]);
 
     seasonCards = thumbnailsToCards(seasons, {
@@ -205,9 +183,9 @@
     });
     childSeriesCards = thumbnailsToCards(childSeries);
     videoCards = thumbnailsToCards(videos);
-    studioCards = thumbnailsToCards(relationships.studio);
-    creditCards = creditCardsFromThumbnails(relationships.cast, nextSeries.creditMetadata);
-    relationshipTags = tagsFromThumbnails(relationships.tags);
+    studioCards = relationshipCards.studioCards;
+    creditCards = relationshipCards.creditCards;
+    relationshipTags = relationshipCards.relationshipTags;
   }
 
   function formatDateForHero(value: string): string {

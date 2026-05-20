@@ -8,11 +8,11 @@
     updateV2EntityFlags,
     type V2AudioLibraryDetail,
   } from "$lib/api/v2";
+  import { getCapability } from "$lib/api/capabilities";
   import {
-    getCapability,
-    withFlagCapability,
-    withRatingCapability,
-  } from "$lib/api/capabilities";
+    toggleOptimisticEntityFlag,
+    updateOptimisticEntityRating,
+  } from "$lib/entities/entity-detail-state";
   import { getAllChildIds } from "$lib/entities/entity-children";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
@@ -74,13 +74,9 @@
 
   async function handleRatingChange(value: number | null) {
     if (!library || ratingBusy) return;
-    const previous = library;
     ratingBusy = true;
-    library = { ...library, capabilities: withRatingCapability(library.capabilities, value) };
     try {
-      await updateV2EntityRating(library.id, value);
-    } catch {
-      library = previous;
+      await updateOptimisticEntityRating(library, value, (next) => (library = next), updateV2EntityRating);
     } finally {
       ratingBusy = false;
     }
@@ -88,28 +84,12 @@
 
   async function handleFavoriteToggle() {
     if (!library) return;
-    const previous = library;
-    const flagsCap = getCapability(library.capabilities, "flags");
-    const next = !(flagsCap?.isFavorite ?? false);
-    library = { ...library, capabilities: withFlagCapability(library.capabilities, "isFavorite", next) };
-    try {
-      await updateV2EntityFlags(library.id, { isFavorite: next });
-    } catch {
-      library = previous;
-    }
+    await toggleOptimisticEntityFlag(library, "isFavorite", (next) => (library = next), updateV2EntityFlags);
   }
 
   async function handleOrganizedToggle() {
     if (!library) return;
-    const previous = library;
-    const flagsCap = getCapability(library.capabilities, "flags");
-    const next = !(flagsCap?.isOrganized ?? false);
-    library = { ...library, capabilities: withFlagCapability(library.capabilities, "isOrganized", next) };
-    try {
-      await updateV2EntityFlags(library.id, { isOrganized: next });
-    } catch {
-      library = previous;
-    }
+    await toggleOptimisticEntityFlag(library, "isOrganized", (next) => (library = next), updateV2EntityFlags);
   }
 </script>
 

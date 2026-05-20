@@ -9,11 +9,11 @@
     updateV2EntityFlags,
     type V2PersonDetail,
   } from "$lib/api/v2";
+  import { getCapability } from "$lib/api/capabilities";
   import {
-    getCapability,
-    withFlagCapability,
-    withRatingCapability,
-  } from "$lib/api/capabilities";
+    toggleOptimisticEntityFlag,
+    updateOptimisticEntityRating,
+  } from "$lib/entities/entity-detail-state";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
@@ -92,13 +92,9 @@
 
   async function handleRatingChange(value: number | null) {
     if (!person || ratingBusy) return;
-    const previous = person;
     ratingBusy = true;
-    person = { ...person, capabilities: withRatingCapability(person.capabilities, value) };
     try {
-      await updateV2EntityRating(person.id, value);
-    } catch {
-      person = previous;
+      await updateOptimisticEntityRating(person, value, (next) => (person = next), updateV2EntityRating);
     } finally {
       ratingBusy = false;
     }
@@ -106,28 +102,12 @@
 
   async function handleFavoriteToggle() {
     if (!person) return;
-    const previous = person;
-    const flagsCap = getCapability(person.capabilities, "flags");
-    const next = !(flagsCap?.isFavorite ?? false);
-    person = { ...person, capabilities: withFlagCapability(person.capabilities, "isFavorite", next) };
-    try {
-      await updateV2EntityFlags(person.id, { isFavorite: next });
-    } catch {
-      person = previous;
-    }
+    await toggleOptimisticEntityFlag(person, "isFavorite", (next) => (person = next), updateV2EntityFlags);
   }
 
   async function handleOrganizedToggle() {
     if (!person) return;
-    const previous = person;
-    const flagsCap = getCapability(person.capabilities, "flags");
-    const next = !(flagsCap?.isOrganized ?? false);
-    person = { ...person, capabilities: withFlagCapability(person.capabilities, "isOrganized", next) };
-    try {
-      await updateV2EntityFlags(person.id, { isOrganized: next });
-    } catch {
-      person = previous;
-    }
+    await toggleOptimisticEntityFlag(person, "isOrganized", (next) => (person = next), updateV2EntityFlags);
   }
 </script>
 

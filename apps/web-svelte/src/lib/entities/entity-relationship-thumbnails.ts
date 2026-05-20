@@ -106,3 +106,18 @@ export async function hydrateStandardRelationshipThumbnails(
     tags: tagIds.map((id) => byId.get(id)).filter((thumbnail): thumbnail is EntityThumbnail => Boolean(thumbnail)),
   };
 }
+
+export async function hydrateStandardRelationshipCards(
+  entity: EntityRelationshipSource & { creditMetadata?: EntityCreditMetadata[] },
+): Promise<{
+  creditCards: EntityThumbnailCard[];
+  relationshipTags: EntityDetailTag[];
+  studioCards: EntityThumbnailCard[];
+}> {
+  const relationships = await hydrateStandardRelationshipThumbnails(entity);
+  return {
+    creditCards: creditCardsFromThumbnails(relationships.cast, entity.creditMetadata ?? []),
+    relationshipTags: tagsFromThumbnails(relationships.tags),
+    studioCards: thumbnailsToCards(relationships.studio),
+  };
+}

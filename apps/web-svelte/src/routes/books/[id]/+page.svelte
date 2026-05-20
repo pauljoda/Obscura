@@ -8,11 +8,11 @@
     updateV2EntityFlags,
     type V2BookDetail,
   } from "$lib/api/v2";
+  import { getCapability } from "$lib/api/capabilities";
   import {
-    getCapability,
-    withFlagCapability,
-    withRatingCapability,
-  } from "$lib/api/capabilities";
+    toggleOptimisticEntityFlag,
+    updateOptimisticEntityRating,
+  } from "$lib/entities/entity-detail-state";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
@@ -71,13 +71,9 @@
 
   async function handleRatingChange(value: number | null) {
     if (!book || ratingBusy) return;
-    const previous = book;
     ratingBusy = true;
-    book = { ...book, capabilities: withRatingCapability(book.capabilities, value) };
     try {
-      await updateV2EntityRating(book.id, value);
-    } catch {
-      book = previous;
+      await updateOptimisticEntityRating(book, value, (next) => (book = next), updateV2EntityRating);
     } finally {
       ratingBusy = false;
     }
@@ -85,28 +81,12 @@
 
   async function handleFavoriteToggle() {
     if (!book) return;
-    const previous = book;
-    const flagsCap = getCapability(book.capabilities, "flags");
-    const next = !(flagsCap?.isFavorite ?? false);
-    book = { ...book, capabilities: withFlagCapability(book.capabilities, "isFavorite", next) };
-    try {
-      await updateV2EntityFlags(book.id, { isFavorite: next });
-    } catch {
-      book = previous;
-    }
+    await toggleOptimisticEntityFlag(book, "isFavorite", (next) => (book = next), updateV2EntityFlags);
   }
 
   async function handleOrganizedToggle() {
     if (!book) return;
-    const previous = book;
-    const flagsCap = getCapability(book.capabilities, "flags");
-    const next = !(flagsCap?.isOrganized ?? false);
-    book = { ...book, capabilities: withFlagCapability(book.capabilities, "isOrganized", next) };
-    try {
-      await updateV2EntityFlags(book.id, { isOrganized: next });
-    } catch {
-      book = previous;
-    }
+    await toggleOptimisticEntityFlag(book, "isOrganized", (next) => (book = next), updateV2EntityFlags);
   }
 </script>
 

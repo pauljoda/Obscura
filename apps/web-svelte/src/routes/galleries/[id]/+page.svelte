@@ -8,21 +8,19 @@
     updateV2EntityFlags,
     type V2GalleryDetail,
   } from "$lib/api/v2";
+  import { getCapability } from "$lib/api/capabilities";
   import {
-    getCapability,
-    withFlagCapability,
-    withRatingCapability,
-  } from "$lib/api/capabilities";
+    toggleOptimisticEntityFlag,
+    updateOptimisticEntityRating,
+  } from "$lib/entities/entity-detail-state";
   import { getAllChildIds } from "$lib/entities/entity-children";
   import EntityCastAndCrewSection from "$lib/components/entities/EntityCastAndCrewSection.svelte";
   import type { EntityDetailTag } from "$lib/entities/entity-detail";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
   import {
-    creditCardsFromThumbnails,
     fetchOrderedEntityThumbnails,
-    hydrateStandardRelationshipThumbnails,
-    tagsFromThumbnails,
+    hydrateStandardRelationshipCards,
     thumbnailsToCards,
   } from "$lib/entities/entity-relationship-thumbnails";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
@@ -80,25 +78,21 @@
   async function hydrateGalleryThumbnails(nextGallery: V2GalleryDetail) {
     const [children, relationships] = await Promise.all([
       fetchOrderedEntityThumbnails(getAllChildIds(nextGallery)),
-      hydrateStandardRelationshipThumbnails(nextGallery),
+      hydrateStandardRelationshipCards(nextGallery),
     ]);
     childCards = thumbnailsToCards(children, {
       hrefFor: (thumbnail) => resolveEntityHref(thumbnail.kind, thumbnail.id),
     });
-    studioCards = thumbnailsToCards(relationships.studio);
-    creditCards = creditCardsFromThumbnails(relationships.cast, nextGallery.creditMetadata);
-    relationshipTags = tagsFromThumbnails(relationships.tags);
+    studioCards = relationships.studioCards;
+    creditCards = relationships.creditCards;
+    relationshipTags = relationships.relationshipTags;
   }
 
   async function handleRatingChange(value: number | null) {
     if (!gallery || ratingBusy) return;
-    const previous = gallery;
     ratingBusy = true;
-    gallery = { ...gallery, capabilities: withRatingCapability(gallery.capabilities, value) };
     try {
-      await updateV2EntityRating(gallery.id, value);
-    } catch {
-      gallery = previous;
+      await updateOptimisticEntityRating(gallery, value, (next) => (gallery = next), updateV2EntityRating);
     } finally {
       ratingBusy = false;
     }
@@ -106,28 +100,12 @@
 
   async function handleFavoriteToggle() {
     if (!gallery) return;
-    const previous = gallery;
-    const flagsCap = getCapability(gallery.capabilities, "flags");
-    const next = !(flagsCap?.isFavorite ?? false);
-    gallery = { ...gallery, capabilities: withFlagCapability(gallery.capabilities, "isFavorite", next) };
-    try {
-      await updateV2EntityFlags(gallery.id, { isFavorite: next });
-    } catch {
-      gallery = previous;
-    }
+    await toggleOptimisticEntityFlag(gallery, "isFavorite", (next) => (gallery = next), updateV2EntityFlags);
   }
 
   async function handleOrganizedToggle() {
     if (!gallery) return;
-    const previous = gallery;
-    const flagsCap = getCapability(gallery.capabilities, "flags");
-    const next = !(flagsCap?.isOrganized ?? false);
-    gallery = { ...gallery, capabilities: withFlagCapability(gallery.capabilities, "isOrganized", next) };
-    try {
-      await updateV2EntityFlags(gallery.id, { isOrganized: next });
-    } catch {
-      gallery = previous;
-    }
+    await toggleOptimisticEntityFlag(gallery, "isOrganized", (next) => (gallery = next), updateV2EntityFlags);
   }
 </script>
 

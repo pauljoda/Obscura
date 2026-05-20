@@ -9,11 +9,11 @@
     updateV2EntityFlags,
     type V2StudioDetail,
   } from "$lib/api/v2";
+  import { getCapability } from "$lib/api/capabilities";
   import {
-    getCapability,
-    withFlagCapability,
-    withRatingCapability,
-  } from "$lib/api/capabilities";
+    toggleOptimisticEntityFlag,
+    updateOptimisticEntityRating,
+  } from "$lib/entities/entity-detail-state";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
   import { resolveEntityHref } from "$lib/entities/entity-routes";
@@ -70,13 +70,9 @@
 
   async function handleRatingChange(value: number | null) {
     if (!studio || ratingBusy) return;
-    const previous = studio;
     ratingBusy = true;
-    studio = { ...studio, capabilities: withRatingCapability(studio.capabilities, value) };
     try {
-      await updateV2EntityRating(studio.id, value);
-    } catch {
-      studio = previous;
+      await updateOptimisticEntityRating(studio, value, (next) => (studio = next), updateV2EntityRating);
     } finally {
       ratingBusy = false;
     }
@@ -84,28 +80,12 @@
 
   async function handleFavoriteToggle() {
     if (!studio) return;
-    const previous = studio;
-    const flagsCap = getCapability(studio.capabilities, "flags");
-    const next = !(flagsCap?.isFavorite ?? false);
-    studio = { ...studio, capabilities: withFlagCapability(studio.capabilities, "isFavorite", next) };
-    try {
-      await updateV2EntityFlags(studio.id, { isFavorite: next });
-    } catch {
-      studio = previous;
-    }
+    await toggleOptimisticEntityFlag(studio, "isFavorite", (next) => (studio = next), updateV2EntityFlags);
   }
 
   async function handleOrganizedToggle() {
     if (!studio) return;
-    const previous = studio;
-    const flagsCap = getCapability(studio.capabilities, "flags");
-    const next = !(flagsCap?.isOrganized ?? false);
-    studio = { ...studio, capabilities: withFlagCapability(studio.capabilities, "isOrganized", next) };
-    try {
-      await updateV2EntityFlags(studio.id, { isOrganized: next });
-    } catch {
-      studio = previous;
-    }
+    await toggleOptimisticEntityFlag(studio, "isOrganized", (next) => (studio = next), updateV2EntityFlags);
   }
 </script>
 
