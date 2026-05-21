@@ -79,7 +79,7 @@ import type {
   VideoSeriesDetail,
   VideoSeasonDetail,
 } from "./generated/model";
-import { jellyfinApiPath } from "./orval-fetch";
+import { fetchV2Api, jellyfinApiPath } from "./orval-fetch";
 
 export type V2EntityCapability = EntityCapability;
 export type V2EntityCard = EntityThumbnail;
@@ -215,6 +215,33 @@ export interface JellyfinPlaybackSessionRequest {
 
 export interface V2RequestOptions {
   signal?: AbortSignal;
+}
+
+export interface V2EntityMetadataFlagsPatch {
+  isFavorite?: boolean | null;
+  isNsfw?: boolean | null;
+  isOrganized?: boolean | null;
+}
+
+export interface V2EntityMetadataPatch {
+  title?: string | null;
+  description?: string | null;
+  externalIds: Record<string, string>;
+  urls: string[];
+  tags: string[];
+  studio?: string | null;
+  credits: unknown[];
+  dates: Record<string, string>;
+  stats: Record<string, number>;
+  positions: Record<string, number>;
+  classification?: string | null;
+  rating?: number | null;
+  flags?: V2EntityMetadataFlagsPatch | null;
+}
+
+export interface V2EntityMetadataUpdateRequest {
+  fields: string[];
+  patch: V2EntityMetadataPatch;
 }
 
 type GeneratedResponse<T> = {
@@ -488,6 +515,18 @@ export function updateV2EntityFlags(
     isFavorite: flags.isFavorite ?? null,
     isNsfw: flags.isNsfw ?? null,
     isOrganized: flags.isOrganized ?? null,
+  });
+}
+
+export function updateV2EntityMetadata(
+  id: string,
+  request: V2EntityMetadataUpdateRequest,
+  options?: V2RequestOptions,
+): Promise<V2EntityDetailCard> {
+  return fetchV2Api<V2EntityDetailCard>(`/entities/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(request),
+    signal: options?.signal,
   });
 }
 

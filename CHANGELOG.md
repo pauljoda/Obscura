@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Entity detail pages now support tab-scoped editing for reusable sections: users can enter edit mode, update fields inline with validation, save explicitly, and get warned before leaving a tab with unsaved changes.
 - The entity browse experience was refined into a "reel-transport" control room aesthetic — the pagination strip now reads like a deck counter with a brass progress hairline and grouped transport buttons, the toolbar no longer reshuffles when you search, thumbnails carry a quieter shadow with a brass underline accent on hover and select, and the kind tabs gained a glowing brass indicator. Mobile layouts stay legible without pushing the grid around when filters appear.
 - Browse search now queries the server, so typing in the search box searches all entities in the library — not just the loaded page. Results, pagination totals, and page counts update to reflect the filtered dataset.
 - Browse pagination now shows the true total count from the server, so the "showing" readout reads `1–250 of 4,500` instead of the loaded subset, the page indicator shows the real `01 / 18`, and the seek-to-end button jumps to the actual last page by buffering remaining cursor pages on demand. The centered transport buttons stay rock-steady as the readout digits grow.
@@ -37,6 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The bulk selection bar now shows Select All, Clear, and NSFW toggle as dedicated controls; page-specific actions move into an Actions flyout menu for a cleaner toolbar on mobile.
 
 ### Added
+- Editable EntityDetail sections now save through one global entity metadata patch endpoint, shared with identify proposal application so manual edits and plugin metadata use the same backend path.
 - High-level v2 implementation summary for the rebuilt Obscura architecture, media model, playback pipeline, and UI surfaces.
 - EF-projected browse/detail APIs for videos, series, seasons, images, galleries, books, audio libraries/tracks, people, studios, tags, collections, and generic entity lists.
 - `EntityListResponse.totalCount` reports the unbounded count of entities matching the response's filters, so paginated UIs can render accurate `page X of Y` indicators and a true seek-to-end target without re-counting after every cursor advance.

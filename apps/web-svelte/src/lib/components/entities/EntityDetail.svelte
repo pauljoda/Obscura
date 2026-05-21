@@ -8,6 +8,9 @@
     ExternalLink,
     FileText,
     Link,
+    Pencil,
+    Save,
+    X,
   } from "@lucide/svelte";
   import type { LucideIcon } from "@lucide/svelte";
   import type { EntityDetailCard } from "$lib/entities/entity-detail";
@@ -32,7 +35,40 @@
     label?: string;
     count?: number;
     icon?: LucideIcon;
+    editable?: boolean;
     hidden?: boolean;
+  }
+
+  export interface EntityMetadataPatch {
+    title?: string | null;
+    description?: string | null;
+    externalIds: Record<string, string>;
+    urls: string[];
+    tags: string[];
+    studio?: string | null;
+    credits: unknown[];
+    dates: Record<string, string>;
+    stats: Record<string, number>;
+    positions: Record<string, number>;
+    classification?: string | null;
+    rating?: number | null;
+    flags?: {
+      isFavorite?: boolean | null;
+      isNsfw?: boolean | null;
+      isOrganized?: boolean | null;
+    } | null;
+  }
+
+  export interface EntityMetadataUpdateRequest {
+    fields: string[];
+    patch: EntityMetadataPatch;
+  }
+
+  interface EntityDetailEditDraft {
+    description: string;
+    linksText: string;
+    tagsText: string;
+    datesText: string;
   }
 
   interface Props {
@@ -44,6 +80,7 @@
     ratingBusy?: boolean;
     showHero?: boolean;
     tabs?: EntityDetailTab[];
+    onMetadataSave?: (request: EntityMetadataUpdateRequest) => void | Promise<void>;
     /** Route-provided sections that can be assigned to any tab. */
     sections?: EntityDetailSection[];
     /** Inline metadata rendered below the title (e.g. studio link · date · count). */
@@ -69,6 +106,7 @@
     ratingBusy = false,
     showHero = true,
     tabs = [],
+    onMetadataSave,
     sections = [],
     heroMeta,
     heroBadges,
@@ -83,6 +121,17 @@
   let ratingAnim = $state<"fill" | "clear" | null>(null);
   let ratingAnimCount = $state(0);
   let activeTabId = $state("");
+  let editingTabId = $state<string | null>(null);
+  let pendingTabId = $state<string | null>(null);
+  let savingEdit = $state(false);
+  let editError = $state<string | null>(null);
+  let initialDraft = $state<EntityDetailEditDraft | null>(null);
+  let editDraft = $state<EntityDetailEditDraft>({
+    description: "",
+    linksText: "",
+    tagsText: "",
+    datesText: "",
+  });
 
   const isFavorite = $derived(card.flags.find((f) => f.code === "favorite")?.active ?? false);
   const isNsfw = $derived(card.flags.find((f) => f.code === "nsfw")?.active ?? false);
@@ -125,6 +174,14 @@
     { id: "files", label: "Files", icon: FileText },
   ]);
   const availableSections = $derived([...coreSections, ...sections]);
+  const activeTabSections = $derived(activeTab ? sectionsForTab(activeTab) : []);
+  const isEditingActiveTab = $derived(Boolean(activeTab && editingTabId === activeTab.id));
+  const activeTabCanEdit = $derived(
+    Boolean(onMetadataSave && activeTab && activeTabSections.some(sectionEditable)),
+  );
+  const editValidationErrors = $derived.by(() => validateDraft(activeTabSections, editDraft));
+  const editDirty = $derived(Boolean(initialDraft && serializeDraft(initialDraft) !== serializeDraft(editDraft)));
+  const saveDisabled = $derived(!editDirty || editValidationErrors.length > 0 || savingEdit);
 
   function handleRatingClick(e: MouseEvent, value: number) {
     if (!onRatingChange || ratingBusy || !card.rating) return;
@@ -144,8 +201,14 @@
     return availableSections.find((section) => section.id === sectionId) ?? null;
   }
 
+  function sectionEditable(section: EntityDetailSection): boolean {
+    if (section.editable != null) return section.editable;
+    return ["description", "tags", "links", "dates"].includes(section.id);
+  }
+
   function sectionHasContent(section: EntityDetailSection): boolean {
     if (section.hidden) return false;
+    if (onMetadataSave && sectionEditable(section)) return true;
 
     switch (section.id) {
       case "description":
@@ -166,6 +229,156 @@
       .map(findSection)
       .filter((section): section is EntityDetailSection => Boolean(section))
       .filter(sectionHasContent);
+  }
+
+  function draftFromCard(): EntityDetailEditDraft {
+    return {
+      description: card.description ?? "",
+      linksText: card.links.map((link) => link.url ?? link.label).join("\n"),
+      tagsText: card.tags.map((tag) => tag.title).join(", "),
+      datesText: "dates" in card
+        ? (card as EntityDetailCard & { dates?: Array<{ code: string; value: string }> }).dates?.map((date) => `${date.code}=${date.value}`).join("\n") ?? ""
+        : "",
+    };
+  }
+
+  function serializeDraft(draft: EntityDetailEditDraft | null): string {
+    return JSON.stringify(draft);
+  }
+
+  function startEdit(tab: EntityDetailTab) {
+    const nextDraft = draftFromCard();
+    initialDraft = { ...nextDraft };
+    editDraft = { ...nextDraft };
+    editingTabId = tab.id;
+    editError = null;
+  }
+
+  function cancelEdit() {
+    editingTabId = null;
+    initialDraft = null;
+    editError = null;
+  }
+
+  function requestTab(tabId: string) {
+    if (tabId === activeTab?.id) return;
+    if (editDirty) {
+      pendingTabId = tabId;
+      return;
+    }
+    activeTabId = tabId;
+    cancelEdit();
+  }
+
+  function stayOnDirtyTab() {
+    pendingTabId = null;
+  }
+
+  function discardDirtyTab() {
+    if (pendingTabId) activeTabId = pendingTabId;
+    pendingTabId = null;
+    cancelEdit();
+  }
+
+  function parseListLines(value: string): string[] {
+    return value
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }
+
+  function parseTags(value: string): string[] {
+    return value
+      .split(/[,\n]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  function parseKeyValueLines(value: string): Record<string, string> {
+    const result: Record<string, string> = {};
+    for (const line of parseListLines(value)) {
+      const separator = line.indexOf("=");
+      if (separator <= 0) continue;
+      const key = line.slice(0, separator).trim();
+      const fieldValue = line.slice(separator + 1).trim();
+      if (key && fieldValue) result[key] = fieldValue;
+    }
+    return result;
+  }
+
+  function validateDraft(activeSections: EntityDetailSection[], draft: EntityDetailEditDraft): string[] {
+    const errors: string[] = [];
+    if (activeSections.some((section) => section.id === "links")) {
+      const invalid = parseListLines(draft.linksText).some((url) => {
+        try {
+          const parsed = new URL(url);
+          return parsed.protocol !== "http:" && parsed.protocol !== "https:";
+        } catch {
+          return true;
+        }
+      });
+      if (invalid) errors.push("Links must be absolute http or https URLs.");
+    }
+    if (activeSections.some((section) => section.id === "dates")) {
+      const invalidLine = parseListLines(draft.datesText).find((line) => {
+        const separator = line.indexOf("=");
+        return separator <= 0 || separator === line.length - 1;
+      });
+      if (invalidLine) errors.push("Dates must use code=value lines.");
+    }
+    return errors;
+  }
+
+  function emptyPatch(): EntityMetadataPatch {
+    return {
+      title: null,
+      description: null,
+      externalIds: {},
+      urls: [],
+      tags: [],
+      studio: null,
+      credits: [],
+      dates: {},
+      stats: {},
+      positions: {},
+      classification: null,
+    };
+  }
+
+  function buildMetadataUpdate(activeSections: EntityDetailSection[], draft: EntityDetailEditDraft): EntityMetadataUpdateRequest {
+    const fields: string[] = [];
+    const patch = emptyPatch();
+    if (activeSections.some((section) => section.id === "description")) {
+      fields.push("description");
+      patch.description = draft.description.trim() ? draft.description.trim() : null;
+    }
+    if (activeSections.some((section) => section.id === "links")) {
+      fields.push("urls");
+      patch.urls = parseListLines(draft.linksText);
+    }
+    if (activeSections.some((section) => section.id === "tags")) {
+      fields.push("tags");
+      patch.tags = parseTags(draft.tagsText);
+    }
+    if (activeSections.some((section) => section.id === "dates")) {
+      fields.push("dates");
+      patch.dates = parseKeyValueLines(draft.datesText);
+    }
+    return { fields, patch };
+  }
+
+  async function saveEdit() {
+    if (!onMetadataSave || !activeTab || saveDisabled) return;
+    savingEdit = true;
+    editError = null;
+    try {
+      await onMetadataSave(buildMetadataUpdate(activeTabSections, editDraft));
+      cancelEdit();
+    } catch (err) {
+      editError = err instanceof Error ? err.message : String(err);
+    } finally {
+      savingEdit = false;
+    }
   }
 </script>
 
@@ -219,6 +432,42 @@
   {/if}
 {/snippet}
 
+{#snippet descriptionEditSection()}
+  <section class="detail-section edit-section">
+    <label class="edit-field">
+      <span>Description</span>
+      <textarea bind:value={editDraft.description} aria-label="Description" rows="7"></textarea>
+    </label>
+  </section>
+{/snippet}
+
+{#snippet tagsEditSection()}
+  <section class="detail-section edit-section">
+    <label class="edit-field">
+      <span>Tags</span>
+      <input bind:value={editDraft.tagsText} aria-label="Tags" />
+    </label>
+  </section>
+{/snippet}
+
+{#snippet linksEditSection()}
+  <section class="detail-section edit-section">
+    <label class="edit-field">
+      <span>Links</span>
+      <textarea bind:value={editDraft.linksText} aria-label="Links" rows="5"></textarea>
+    </label>
+  </section>
+{/snippet}
+
+{#snippet datesEditSection()}
+  <section class="detail-section edit-section">
+    <label class="edit-field">
+      <span>Dates</span>
+      <textarea bind:value={editDraft.datesText} aria-label="Dates" rows="5"></textarea>
+    </label>
+  </section>
+{/snippet}
+
 {#snippet filesSection()}
   {#if card.files.length > 0}
     <section class="detail-section">
@@ -259,7 +508,15 @@
 {/snippet}
 
 {#snippet renderDetailSection(section: EntityDetailSection)}
-  {#if section.id === "description"}
+  {#if isEditingActiveTab && section.id === "description"}
+    {@render descriptionEditSection()}
+  {:else if isEditingActiveTab && section.id === "tags"}
+    {@render tagsEditSection()}
+  {:else if isEditingActiveTab && section.id === "links"}
+    {@render linksEditSection()}
+  {:else if isEditingActiveTab && section.id === "dates"}
+    {@render datesEditSection()}
+  {:else if section.id === "description"}
     {@render descriptionSection()}
   {:else if section.id === "tags"}
     {@render tagsSection()}
@@ -431,7 +688,7 @@
             aria-selected={active}
             aria-controls={`entity-detail-panel-${tab.id}`}
             class:active
-            onclick={() => (activeTabId = tab.id)}
+            onclick={() => requestTab(tab.id)}
           >
             {#if TabIcon}
               <TabIcon class="detail-tab-icon h-3.5 w-3.5" />
@@ -451,9 +708,41 @@
           id={`entity-detail-panel-${activeTab.id}`}
           aria-labelledby={`entity-detail-tab-${activeTab.id}`}
         >
+          {#if activeTabCanEdit}
+            <div class="detail-edit-toolbar">
+              <span>{isEditingActiveTab ? "Editing" : "View"}</span>
+              <div class="detail-edit-actions">
+                {#if isEditingActiveTab}
+                  <button type="button" class="edit-action secondary" onclick={cancelEdit} disabled={savingEdit} aria-label={`Cancel ${activeTab.label}`}>
+                    <X class="h-3.5 w-3.5" />
+                    Cancel
+                  </button>
+                  <button type="button" class="edit-action primary" onclick={() => void saveEdit()} disabled={saveDisabled} aria-label={`Save ${activeTab.label}`}>
+                    <Save class="h-3.5 w-3.5" />
+                    {savingEdit ? "Saving" : "Save"}
+                  </button>
+                {:else}
+                  <button type="button" class="edit-action primary" onclick={() => startEdit(activeTab)} aria-label={`Edit ${activeTab.label}`}>
+                    <Pencil class="h-3.5 w-3.5" />
+                    Edit
+                  </button>
+                {/if}
+              </div>
+            </div>
+            {#if isEditingActiveTab && (editValidationErrors.length > 0 || editError)}
+              <div class="edit-errors" aria-live="polite">
+                {#each editValidationErrors as error (error)}
+                  <p>{error}</p>
+                {/each}
+                {#if editError}
+                  <p>{editError}</p>
+                {/if}
+              </div>
+            {/if}
+          {/if}
           {#key activeTab.id}
             <div class="detail-tab-sections" data-layout={activeTab.layout ?? "stack"}>
-              {#each sectionsForTab(activeTab) as section (section.id)}
+              {#each activeTabSections as section (section.id)}
                 {@render renderDetailSection(section)}
               {:else}
                 <div class="tab-empty-state">No details available.</div>
@@ -467,6 +756,19 @@
     {@render defaultDetailContent()}
   {/if}
 </article>
+
+{#if pendingTabId}
+  <div class="edit-confirm-backdrop">
+    <div class="edit-confirm" role="dialog" aria-modal="true" aria-label="Discard unsaved edits?">
+      <h2>Discard unsaved edits?</h2>
+      <p>Changing tabs will leave the current edit session.</p>
+      <div class="edit-confirm-actions">
+        <button type="button" class="edit-action secondary" onclick={stayOnDirtyTab}>Stay here</button>
+        <button type="button" class="edit-action primary" onclick={discardDirtyTab}>Discard changes</button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
   /* ── Layout ─────────────────────────────────────────────── */
@@ -863,6 +1165,84 @@
     min-width: 0;
   }
 
+  .detail-edit-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--detail-border);
+    background: color-mix(in srgb, var(--detail-surface) 92%, transparent);
+  }
+
+  .detail-edit-toolbar > span {
+    color: var(--detail-text-muted);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .detail-edit-actions,
+  .edit-confirm-actions {
+    display: flex;
+    align-items: center;
+    justify-content: end;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .edit-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 2rem;
+    border: 1px solid var(--detail-border);
+    padding: 0.35rem 0.7rem;
+    background: var(--detail-surface-raised);
+    color: var(--detail-text-secondary);
+    cursor: pointer;
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition: color 0.15s, border-color 0.15s, background 0.15s, box-shadow 0.15s, opacity 0.15s;
+  }
+
+  .edit-action.primary {
+    color: var(--detail-accent);
+    border-color: var(--detail-accent-muted);
+    background: color-mix(in srgb, var(--detail-accent) 8%, var(--detail-surface-raised));
+    box-shadow: 0 0 14px var(--detail-accent-glow);
+  }
+
+  .edit-action.secondary {
+    color: var(--detail-text-muted);
+  }
+
+  .edit-action:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+    box-shadow: none;
+  }
+
+  .edit-errors {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.65rem 1.5rem;
+    border-bottom: 1px solid color-mix(in srgb, #ef4444 45%, var(--detail-border));
+    background: color-mix(in srgb, #ef4444 8%, var(--detail-surface));
+    color: #fca5a5;
+    font-size: 0.78rem;
+  }
+
+  .edit-errors p {
+    margin: 0;
+  }
+
   .detail-tab-sections {
     display: grid;
     gap: 1rem;
@@ -1012,6 +1392,82 @@
   .detail-section:last-child {
     border-bottom: none;
     padding-bottom: 0;
+  }
+
+  .edit-section {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .edit-field {
+    display: grid;
+    gap: 0.45rem;
+    min-width: 0;
+  }
+
+  .edit-field span {
+    color: var(--detail-text-muted);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .edit-field input,
+  .edit-field textarea {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--detail-border);
+    border-radius: 0;
+    background: var(--detail-surface-raised);
+    color: var(--detail-text);
+    padding: 0.65rem 0.75rem;
+    font: inherit;
+    font-size: 0.86rem;
+    line-height: 1.55;
+    outline: none;
+    resize: vertical;
+  }
+
+  .edit-field input:focus,
+  .edit-field textarea:focus {
+    border-color: var(--detail-accent-muted);
+    box-shadow: 0 0 14px var(--detail-accent-glow);
+  }
+
+  .edit-confirm-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.58);
+    backdrop-filter: blur(8px);
+  }
+
+  .edit-confirm {
+    width: min(100%, 24rem);
+    border: 1px solid var(--detail-border, #1c2235);
+    background: var(--detail-surface, #101420);
+    color: var(--detail-text-secondary, #c4c9d4);
+    padding: 1rem;
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .edit-confirm h2 {
+    margin: 0;
+    color: var(--detail-text, #f2eed8);
+    font-family: var(--font-heading, Geist, sans-serif);
+    font-size: 1rem;
+    letter-spacing: 0;
+  }
+
+  .edit-confirm p {
+    margin: 0.45rem 0 1rem;
+    color: var(--detail-text-muted, #8a93a6);
+    font-size: 0.82rem;
   }
 
   .section-label {

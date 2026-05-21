@@ -20,6 +20,7 @@
     postJellyfinSessionProgress,
     updateV2EntityRating,
     updateV2EntityFlags,
+    updateV2EntityMetadata,
     type JellyfinPlaybackInfoResponse,
     type V2VideoDetail,
     type V2LibrarySettings,
@@ -43,6 +44,7 @@
   import { usePlaylist } from "$lib/stores/playlist.svelte";
   import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
   import EntityDetail, {
+    type EntityMetadataUpdateRequest,
     type EntityDetailSection,
     type EntityDetailTab,
   } from "$lib/components/entities/EntityDetail.svelte";
@@ -519,6 +521,12 @@
     if (!video) return;
     await toggleOptimisticEntityFlag(video, "isOrganized", (next) => (video = next), updateV2EntityFlags);
   }
+
+  async function handleMetadataSave(request: EntityMetadataUpdateRequest) {
+    if (!video) return;
+    await updateV2EntityMetadata(video.id, request);
+    await refreshVideo();
+  }
 </script>
 
 <svelte:head>
@@ -627,6 +635,7 @@
       onRatingChange={handleRatingChange}
       onFavoriteToggle={handleFavoriteToggle}
       onOrganizedToggle={handleOrganizedToggle}
+      onMetadataSave={handleMetadataSave}
       {ratingBusy}
       showHero={false}
       posterSize="none"

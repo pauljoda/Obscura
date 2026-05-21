@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import { FileText } from "@lucide/svelte";
 import { createRawSnippet } from "svelte";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { EntityDetailCard } from "$lib/entities/entity-detail";
 import EntityDetail, { type EntityDetailSection } from "./EntityDetail.svelte";
 
@@ -116,5 +116,78 @@ describe("EntityDetail", () => {
     render(EntityDetail, { props: { card } });
 
     expect(screen.getByRole("link", { name: "COMEDY" })).toHaveAttribute("href", "/tags/tag-comedy");
+  });
+
+  it("edits the active tab sections and saves a scoped metadata patch", async () => {
+    const card = buildCard();
+    card.description = "Old description";
+    const onMetadataSave = vi.fn().mockResolvedValue(undefined);
+
+    render(EntityDetail, {
+      props: {
+        card,
+        tabs: [{ id: "details", label: "Details", sections: ["description"] }],
+        onMetadataSave,
+      },
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Edit Details" }));
+    const description = screen.getByLabelText("Description");
+    await fireEvent.input(description, { target: { value: "New description" } });
+    await fireEvent.click(screen.getByRole("button", { name: "Save Details" }));
+
+    expect(onMetadataSave).toHaveBeenCalledWith({
+      fields: ["description"],
+      patch: expect.objectContaining({ description: "New description" }),
+    });
+    expect(screen.queryByLabelText("Description")).not.toBeInTheDocument();
+  });
+
+  it("blocks dirty tab navigation until the user discards edits", async () => {
+    const card = buildCard();
+    card.description = "Old description";
+    card.links = [{ label: "Site", url: "https://example.test" }];
+
+    render(EntityDetail, {
+      props: {
+        card,
+        tabs: [
+          { id: "details", label: "Details", sections: ["description"] },
+          { id: "links", label: "Links", sections: ["links"] },
+        ],
+        onMetadataSave: vi.fn().mockResolvedValue(undefined),
+      },
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Edit Details" }));
+    await fireEvent.input(screen.getByLabelText("Description"), { target: { value: "Unsaved" } });
+    await fireEvent.click(screen.getByRole("tab", { name: "Links" }));
+
+    expect(screen.getByRole("dialog", { name: "Discard unsaved edits?" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Details" })).toHaveAttribute("aria-selected", "true");
+
+    await fireEvent.click(screen.getByRole("button", { name: "Discard changes" }));
+
+    expect(screen.getByRole("tab", { name: "Links" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("dialog", { name: "Discard unsaved edits?" })).not.toBeInTheDocument();
+  });
+
+  it("shows inline validation and disables save for invalid editable fields", async () => {
+    const card = buildCard();
+    card.links = [{ label: "Site", url: "https://example.test" }];
+
+    render(EntityDetail, {
+      props: {
+        card,
+        tabs: [{ id: "links", label: "Links", sections: ["links"] }],
+        onMetadataSave: vi.fn().mockResolvedValue(undefined),
+      },
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Edit Links" }));
+    await fireEvent.input(screen.getByRole("textbox", { name: "Links" }), { target: { value: "not-a-url" } });
+
+    expect(screen.getByText("Links must be absolute http or https URLs.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save Links" })).toBeDisabled();
   });
 });

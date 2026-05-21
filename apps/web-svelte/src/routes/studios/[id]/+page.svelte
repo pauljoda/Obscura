@@ -7,6 +7,7 @@
     fetchV2Entities,
     updateV2EntityRating,
     updateV2EntityFlags,
+    updateV2EntityMetadata,
     type V2StudioDetail,
   } from "$lib/api/v2";
   import { getCapability } from "$lib/api/capabilities";
@@ -19,7 +20,7 @@
   import { resolveEntityHref } from "$lib/entities/entity-routes";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
   import type { EntityCard } from "$lib/api/generated/model";
-  import EntityDetail from "$lib/components/entities/EntityDetail.svelte";
+  import EntityDetail, { type EntityMetadataUpdateRequest } from "$lib/components/entities/EntityDetail.svelte";
   import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
 
   type LoadState = "loading" | "ready" | "error";
@@ -87,6 +88,12 @@
     if (!studio) return;
     await toggleOptimisticEntityFlag(studio, "isOrganized", (next) => (studio = next), updateV2EntityFlags);
   }
+
+  async function handleMetadataSave(request: EntityMetadataUpdateRequest) {
+    if (!studio) return;
+    await updateV2EntityMetadata(studio.id, request);
+    await loadStudio();
+  }
 </script>
 
 <svelte:head>
@@ -112,6 +119,7 @@
       onRatingChange={handleRatingChange}
       onFavoriteToggle={handleFavoriteToggle}
       onOrganizedToggle={handleOrganizedToggle}
+      onMetadataSave={handleMetadataSave}
       {ratingBusy}
       posterSize="large"
     >
