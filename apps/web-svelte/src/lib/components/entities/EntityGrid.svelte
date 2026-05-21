@@ -282,6 +282,24 @@
     let raf: number | null = null;
     let observer: ResizeObserver | null = null;
 
+    function findScrollAncestorBottom(el: Element): number {
+      // Walk up to the nearest scrolling ancestor (e.g. the layout's <main>)
+      // and clip the available height there. window.innerHeight overshoots on
+      // mobile because the layout reserves a band at the bottom for the fixed
+      // MobileNav — anchoring against the scrolling container keeps the
+      // pagination strip above that band instead of behind it.
+      let current: Element | null = el.parentElement;
+      while (current && current !== document.body && current !== document.documentElement) {
+        const cs = getComputedStyle(current);
+        const overflows = cs.overflowY === "auto" || cs.overflowY === "scroll";
+        if (overflows) {
+          return current.getBoundingClientRect().bottom;
+        }
+        current = current.parentElement;
+      }
+      return window.innerHeight;
+    }
+
     function measureViewport() {
       if (!viewportEl || scrollMaxHeight !== undefined) {
         measuredScrollMaxHeight = null;
@@ -292,12 +310,13 @@
       // so its rendered height has to come out of the inner viewport's budget
       // — otherwise the bar would push the bottom of the grid off-screen.
       const paginationHeight = paginationBarEl?.getBoundingClientRect().height ?? 0;
+      const containerBottom = findScrollAncestorBottom(viewportEl);
 
       measuredScrollMaxHeight = computeContainedScrollHeight({
         bottomPadding: scrollBottomPadding + paginationHeight,
         minHeight: scrollMinHeight,
         top: viewportEl.getBoundingClientRect().top,
-        viewportHeight: window.innerHeight,
+        viewportHeight: containerBottom,
       });
     }
 
@@ -795,6 +814,16 @@
   }
 
   .grid-viewport.is-contained {
+    /*
+     * `min-height` and `max-height` are pinned to the same computed value so
+     * the inner grid always fills the available space below the toolbar/tabs.
+     * Without min-height the viewport would shrink to fit a sparse card set
+     * and the docked pagination strip would float in the middle of the page
+     * with a large empty area beneath it; with min-height the bar instead
+     * sits flush at the bottom of the available area and an empty viewport
+     * shows clean negative space rather than collapsing.
+     */
+    min-height: var(--entity-grid-scroll-max-height, 0);
     max-height: var(--entity-grid-scroll-max-height, calc(100dvh - 2rem));
     overflow-y: auto;
     /*
