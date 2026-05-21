@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Entity detail edit mode now features a tiptap WYSIWYG markdown editor for descriptions, a searchable tag picker with live API search and inline tag creation, and an icon-only edit toggle replacing the old labeled toolbar.
 - Entity detail pages now support tab-scoped editing for reusable sections: users can enter edit mode, update fields inline with validation, save explicitly, and get warned before leaving a tab with unsaved changes. Rich metadata sections such as studios, credits, stats, dates, technical data, progress, positions, classification, sources, and fingerprints remain visible through the shared detail section system.
 - The entity browse experience was refined into a "reel-transport" control room aesthetic — the pagination strip now reads like a deck counter with a brass progress hairline and grouped transport buttons, the toolbar no longer reshuffles when you search, thumbnails carry a quieter shadow with a brass underline accent on hover and select, and the kind tabs gained a glowing brass indicator. Mobile layouts stay legible without pushing the grid around when filters appear.
 - Browse search now queries the server, so typing in the search box searches all entities in the library — not just the loaded page. Results, pagination totals, and page counts update to reflect the filtered dataset.
@@ -39,6 +40,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The bulk selection bar now shows Select All, Clear, and NSFW toggle as dedicated controls; page-specific actions move into an Actions flyout menu for a cleaner toolbar on mobile.
 
 ### Added
+- MarkdownEditor form component: tiptap-based WYSIWYG with Dark Room toolbar styling, markdown serialization, and formatting support (bold, italic, headings, lists, blockquotes, code, links).
+- EntityPicker form component: multi/single-select entity reference picker with debounced live API search, thumbnail avatars, keyboard navigation, and inline creation for new items.
 - Editable EntityDetail sections now save through one global entity metadata patch endpoint, shared with identify proposal application so manual edits and plugin metadata use the same backend path.
 - High-level v2 implementation summary for the rebuilt Obscura architecture, media model, playback pipeline, and UI surfaces.
 - EF-projected browse/detail APIs for videos, series, seasons, images, galleries, books, audio libraries/tracks, people, studios, tags, collections, and generic entity lists.
