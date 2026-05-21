@@ -851,29 +851,16 @@
     min-height: 0;
   }
 
+  /*
+   * The viewport no longer establishes its own scrolling container. Cards
+   * flow naturally in the layout's main scroll, the sticky toolbar/pagination
+   * strip float over them, and the section's flex min-height keeps the
+   * pagination strip pinned to the bottom of the visible area on sparse
+   * grids. Without an inner overflow container, content can't be clipped
+   * behind the sticky toolbar — the cards just slide under it.
+   */
   .grid-viewport.is-contained {
-    /*
-     * The viewport sizes to its content (a sparse card set keeps the viewport
-     * short) but caps at `max-height` so a full page of cards scrolls
-     * internally. The pagination bar below is pushed to the bottom of the
-     * `.entity-grid` flex column with `margin-top: auto`, so the empty space
-     * on a sparse grid lives in the outer flex container as plain layout
-     * negative space — not as a tall scrollable area inside the viewport.
-     */
-    max-height: var(--entity-grid-scroll-max-height, calc(100dvh - 2rem));
-    overflow-y: auto;
-    /*
-     * Default `overscroll-behavior: auto` so a wheel/touch scroll that hits the
-     * top or bottom edge of the inner grid keeps going on the outer page. Without
-     * this, the page header gets stranded above the viewport once the user has
-     * scrolled into the grid and they can't get back to it without finding a
-     * non-grid area to scroll on. The browser still confines normal in-bounds
-     * scroll to the grid, so the pagination strip stays sticky.
-     */
-    overscroll-behavior: auto;
-    padding-right: 0.35rem;
-    scrollbar-gutter: stable;
-    scrollbar-width: thin;
+    min-height: 0;
   }
 
   .cards,
