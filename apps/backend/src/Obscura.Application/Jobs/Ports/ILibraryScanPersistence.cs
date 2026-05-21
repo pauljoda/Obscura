@@ -18,10 +18,10 @@ public interface ILibraryScanPersistence {
 
     Task<Guid> UpsertVideoAsync(string filePath, string title, Guid libraryRootId, bool isNsfw, CancellationToken cancellationToken);
     Task<Guid> UpsertImageAsync(string filePath, string title, Guid? galleryEntityId, long? sizeBytes, int sortOrder, bool isNsfw, CancellationToken cancellationToken);
-    Task<Guid> UpsertGalleryAsync(string folderPath, string title, bool isNsfw, CancellationToken cancellationToken);
+    Task<Guid> UpsertGalleryAsync(string folderPath, string title, Guid libraryRootId, bool isNsfw, CancellationToken cancellationToken);
     Task<Guid> UpsertAudioTrackAsync(string filePath, string title, Guid audioLibraryId, int sortOrder, bool isNsfw, CancellationToken cancellationToken);
-    Task<Guid> UpsertAudioLibraryAsync(string folderPath, string title, bool isNsfw, CancellationToken cancellationToken);
-    Task<Guid> UpsertBookAsync(string archivePath, string title, bool isNsfw, CancellationToken cancellationToken);
+    Task<Guid> UpsertAudioLibraryAsync(string folderPath, string title, Guid libraryRootId, bool isNsfw, CancellationToken cancellationToken);
+    Task<Guid> UpsertBookAsync(string archivePath, string title, Guid libraryRootId, bool isNsfw, CancellationToken cancellationToken);
     Task<Guid> UpsertBookChapterAsync(string archivePath, string title, Guid bookEntityId, int pageCount, bool isNsfw, CancellationToken cancellationToken);
     Task<Guid> UpsertBookPageAsync(string filePath, string title, Guid bookEntityId, Guid chapterEntityId, int sortOrder, bool isNsfw, CancellationToken cancellationToken);
 
@@ -34,6 +34,12 @@ public interface ILibraryScanPersistence {
     Task<int> RemoveStaleAudioLibrariesInRootAsync(Guid rootId, IReadOnlySet<string> validFolderPaths, CancellationToken cancellationToken);
     Task<int> RemoveStaleBookChaptersAsync(Guid bookEntityId, IReadOnlySet<string> validArchivePaths, CancellationToken cancellationToken);
     Task<int> RemoveStaleBooksInRootAsync(Guid rootId, IReadOnlySet<string> validPaths, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Removes video series and season entities that have no remaining child entities.
+    /// Should be called after stale video removal to clean up empty container shells.
+    /// </summary>
+    Task<int> RemoveOrphanSeriesAndSeasonsAsync(CancellationToken cancellationToken);
 
     // ── Batch upsert ──
 

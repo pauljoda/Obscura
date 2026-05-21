@@ -34,7 +34,7 @@ public sealed class ScanAudioJobHandler(
             var libraryTitle = Path.GetFileName(dirPath);
             validLibraryPaths.Add(dirPath);
 
-            var libraryId = await Persistence.UpsertAudioLibraryAsync(dirPath, libraryTitle, root.IsNsfw, cancellationToken);
+            var libraryId = await Persistence.UpsertAudioLibraryAsync(dirPath, libraryTitle, root.Id, root.IsNsfw, cancellationToken);
             var validTrackPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             for (var i = 0; i < audioFiles.Count; i++) {

@@ -107,18 +107,23 @@ public sealed class ScanLibraryJobHandler(
         }
 
         int removed;
+        int orphans;
         using (timer.Phase("cleanup")) {
             removed = await Persistence.RemoveStaleVideosByRootAsync(root.Id, validPaths, cancellationToken);
             if (removed > 0)
                 logger.LogInformation("ScanLibrary: removed {Count} stale video entities from {Label}", removed, root.Label);
+
+            orphans = await Persistence.RemoveOrphanSeriesAndSeasonsAsync(cancellationToken);
+            if (orphans > 0)
+                logger.LogInformation("ScanLibrary: removed {Count} orphan series/season entities", orphans);
         }
 
         await Persistence.UpdateRootLastScannedAsync(root.Id, cancellationToken);
 
         var report = timer.Finish();
         logger.LogInformation(
-            "[METRICS] scan-library {Label} — {FileCount} files, {Removed} stale — {Timing}",
-            root.Label, files.Count, removed, report.ToLogString());
+            "[METRICS] scan-library {Label} — {FileCount} files, {Removed} stale, {Orphans} orphans — {Timing}",
+            root.Label, files.Count, removed, orphans, report.ToLogString());
     }
 
     private static VideoUpsertItem BuildVideoUpsertItem(string filePath, LibraryRootData root) {

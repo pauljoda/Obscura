@@ -235,16 +235,16 @@ public sealed class ScanJobHandlerTests {
         public Task<Guid> UpsertImageAsync(string filePath, string title, Guid? galleryEntityId, long? sizeBytes, int sortOrder, bool isNsfw, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
-        public Task<Guid> UpsertGalleryAsync(string folderPath, string title, bool isNsfw, CancellationToken cancellationToken) =>
+        public Task<Guid> UpsertGalleryAsync(string folderPath, string title, Guid libraryRootId, bool isNsfw, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<Guid> UpsertAudioTrackAsync(string filePath, string title, Guid audioLibraryId, int sortOrder, bool isNsfw, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
-        public Task<Guid> UpsertAudioLibraryAsync(string folderPath, string title, bool isNsfw, CancellationToken cancellationToken) =>
+        public Task<Guid> UpsertAudioLibraryAsync(string folderPath, string title, Guid libraryRootId, bool isNsfw, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
-        public Task<Guid> UpsertBookAsync(string archivePath, string title, bool isNsfw, CancellationToken cancellationToken) =>
+        public Task<Guid> UpsertBookAsync(string archivePath, string title, Guid libraryRootId, bool isNsfw, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<Guid> UpsertBookChapterAsync(string archivePath, string title, Guid bookEntityId, int pageCount, bool isNsfw, CancellationToken cancellationToken) =>
@@ -273,6 +273,9 @@ public sealed class ScanJobHandlerTests {
 
         public Task<int> RemoveStaleBooksInRootAsync(Guid rootId, IReadOnlySet<string> validPaths, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+
+        public Task<int> RemoveOrphanSeriesAndSeasonsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(0);
 
         public Task<IReadOnlyList<Guid>> UpsertVideosBatchAsync(IReadOnlyList<VideoUpsertItem> items, CancellationToken cancellationToken) {
             UpsertedVideoItems.AddRange(items);

@@ -133,10 +133,12 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         return id;
     }
 
-    public async Task<Guid> UpsertGalleryAsync(string folderPath, string title, bool isNsfw, CancellationToken cancellationToken) {
+    public async Task<Guid> UpsertGalleryAsync(string folderPath, string title, Guid libraryRootId, bool isNsfw, CancellationToken cancellationToken) {
         var existing = await FindEntityBySourcePath(EntityKindRegistry.Gallery.Code, folderPath, cancellationToken);
         if (existing is not null) {
             existing.UpdatedAt = DateTimeOffset.UtcNow;
+            var detail = await db.GalleryDetails.FindAsync([existing.Id], cancellationToken);
+            if (detail is not null) detail.LibraryRootId = libraryRootId;
             await db.SaveChangesAsync(cancellationToken);
             return existing.Id;
         }
@@ -145,7 +147,7 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         var id = Guid.NewGuid();
 
         db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.Gallery.Code, Title = title, CreatedAt = now, UpdatedAt = now });
-        db.GalleryDetails.Add(new GalleryDetailRow { EntityId = id, GalleryType = GalleryType.Folder });
+        db.GalleryDetails.Add(new GalleryDetailRow { EntityId = id, GalleryType = GalleryType.Folder, LibraryRootId = libraryRootId });
         db.EntityFiles.Add(new EntityFileRow {
             Id = Guid.NewGuid(),
             EntityId = id,
@@ -204,10 +206,13 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         return id;
     }
 
-    public async Task<Guid> UpsertAudioLibraryAsync(string folderPath, string title, bool isNsfw, CancellationToken cancellationToken) {
+    public async Task<Guid> UpsertAudioLibraryAsync(string folderPath, string title, Guid libraryRootId, bool isNsfw, CancellationToken cancellationToken) {
         var existing = await FindEntityBySourcePath(EntityKindRegistry.AudioLibrary.Code, folderPath, cancellationToken);
         if (existing is not null) {
             existing.UpdatedAt = DateTimeOffset.UtcNow;
+            var detail = await db.AudioLibraryDetails.FindAsync([existing.Id], cancellationToken);
+            if (detail is not null) detail.LibraryRootId = libraryRootId;
+            else db.AudioLibraryDetails.Add(new AudioLibraryDetailRow { EntityId = existing.Id, LibraryRootId = libraryRootId });
             await db.SaveChangesAsync(cancellationToken);
             return existing.Id;
         }
@@ -216,6 +221,7 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         var id = Guid.NewGuid();
 
         db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.AudioLibrary.Code, Title = title, CreatedAt = now, UpdatedAt = now });
+        db.AudioLibraryDetails.Add(new AudioLibraryDetailRow { EntityId = id, LibraryRootId = libraryRootId });
         db.EntityFiles.Add(new EntityFileRow {
             Id = Guid.NewGuid(),
             EntityId = id,
@@ -232,10 +238,12 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         return id;
     }
 
-    public async Task<Guid> UpsertBookAsync(string archivePath, string title, bool isNsfw, CancellationToken cancellationToken) {
+    public async Task<Guid> UpsertBookAsync(string archivePath, string title, Guid libraryRootId, bool isNsfw, CancellationToken cancellationToken) {
         var existing = await FindEntityBySourcePath(EntityKindRegistry.Book.Code, archivePath, cancellationToken);
         if (existing is not null) {
             existing.UpdatedAt = DateTimeOffset.UtcNow;
+            var detail = await db.BookDetails.FindAsync([existing.Id], cancellationToken);
+            if (detail is not null) detail.LibraryRootId = libraryRootId;
             await db.SaveChangesAsync(cancellationToken);
             return existing.Id;
         }
@@ -244,7 +252,7 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
         var id = Guid.NewGuid();
 
         db.Entities.Add(new EntityRow { Id = id, KindCode = EntityKindRegistry.Book.Code, Title = title, CreatedAt = now, UpdatedAt = now });
-        db.BookDetails.Add(new BookDetailRow { EntityId = id, BookType = BookType.Book });
+        db.BookDetails.Add(new BookDetailRow { EntityId = id, BookType = BookType.Book, LibraryRootId = libraryRootId });
         db.EntityFiles.Add(new EntityFileRow {
             Id = Guid.NewGuid(),
             EntityId = id,
@@ -364,9 +372,9 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
     }
 
     public async Task<int> RemoveStaleGalleriesInRootAsync(Guid rootId, IReadOnlySet<string> validFolderPaths, CancellationToken cancellationToken) {
-        var galleryIds = await db.Entities.AsNoTracking()
-            .Where(e => e.KindCode == EntityKindRegistry.Gallery.Code)
-            .Select(e => e.Id)
+        var galleryIds = await db.GalleryDetails.AsNoTracking()
+            .Where(gd => gd.LibraryRootId == rootId)
+            .Select(gd => gd.EntityId)
             .ToListAsync(cancellationToken);
 
         return await RemoveStaleEntitiesBySourcePath(galleryIds, validFolderPaths, cancellationToken);
@@ -382,9 +390,9 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
     }
 
     public async Task<int> RemoveStaleAudioLibrariesInRootAsync(Guid rootId, IReadOnlySet<string> validFolderPaths, CancellationToken cancellationToken) {
-        var libraryIds = await db.Entities.AsNoTracking()
-            .Where(e => e.KindCode == EntityKindRegistry.AudioLibrary.Code)
-            .Select(e => e.Id)
+        var libraryIds = await db.AudioLibraryDetails.AsNoTracking()
+            .Where(ald => ald.LibraryRootId == rootId)
+            .Select(ald => ald.EntityId)
             .ToListAsync(cancellationToken);
 
         return await RemoveStaleEntitiesBySourcePath(libraryIds, validFolderPaths, cancellationToken);
@@ -400,12 +408,37 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
     }
 
     public async Task<int> RemoveStaleBooksInRootAsync(Guid rootId, IReadOnlySet<string> validPaths, CancellationToken cancellationToken) {
-        var bookIds = await db.Entities.AsNoTracking()
-            .Where(e => e.KindCode == EntityKindRegistry.Book.Code)
-            .Select(e => e.Id)
+        var bookIds = await db.BookDetails.AsNoTracking()
+            .Where(bd => bd.LibraryRootId == rootId)
+            .Select(bd => bd.EntityId)
             .ToListAsync(cancellationToken);
 
         return await RemoveStaleEntitiesBySourcePath(bookIds, validPaths, cancellationToken);
+    }
+
+    public async Task<int> RemoveOrphanSeriesAndSeasonsAsync(CancellationToken cancellationToken) {
+        var seasonCode = EntityKindRegistry.VideoSeason.Code;
+        var seriesCode = EntityKindRegistry.VideoSeries.Code;
+
+        var orphanSeasons = await db.Entities
+            .Where(e => e.KindCode == seasonCode
+                && !db.Entities.Any(child => child.ParentEntityId == e.Id))
+            .ToListAsync(cancellationToken);
+        db.Entities.RemoveRange(orphanSeasons);
+
+        if (orphanSeasons.Count > 0)
+            await db.SaveChangesAsync(cancellationToken);
+
+        var orphanSeries = await db.Entities
+            .Where(e => e.KindCode == seriesCode
+                && !db.Entities.Any(child => child.ParentEntityId == e.Id))
+            .ToListAsync(cancellationToken);
+        db.Entities.RemoveRange(orphanSeries);
+
+        if (orphanSeries.Count > 0)
+            await db.SaveChangesAsync(cancellationToken);
+
+        return orphanSeasons.Count + orphanSeries.Count;
     }
 
     // ── Batch upsert ──

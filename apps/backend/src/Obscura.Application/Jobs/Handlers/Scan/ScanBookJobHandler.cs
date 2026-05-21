@@ -45,7 +45,7 @@ public sealed class ScanBookJobHandler(
                 continue;
             }
 
-            var bookId = await Persistence.UpsertBookAsync(archivePath, bookTitle, root.IsNsfw, cancellationToken);
+            var bookId = await Persistence.UpsertBookAsync(archivePath, bookTitle, root.Id, root.IsNsfw, cancellationToken);
             var chapterId = await Persistence.UpsertBookChapterAsync(archivePath, bookTitle, bookId, pageMembers.Count, root.IsNsfw, cancellationToken);
 
             for (var i = 0; i < pageMembers.Count; i++) {

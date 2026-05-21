@@ -64,6 +64,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The thumbnail lab now shows how many cards are loaded and rendered on the current page so pagination behavior can be checked directly.
 
 ### Fixed
+- Library scans now correctly remove galleries, books, and audio libraries only from the scanned root instead of accidentally deleting entities belonging to other roots.
+- Scanning a video library root now cleans up empty series and season container entities after their child videos are removed from disk.
 - Series and season browse and detail pages now load correctly; an entity-kind code mismatch previously made `/api/series` and season routes return empty lists and 404s.
 - Backend startup no longer reports pending EF model changes from entity-kind seed metadata drift.
 - Series, season, video, gallery, collection, and audio detail pages now show their migrated child items and relationships again.

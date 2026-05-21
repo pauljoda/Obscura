@@ -34,7 +34,7 @@ public sealed class ScanGalleryJobHandler(
             var galleryTitle = Path.GetFileName(dirPath);
             validGalleryPaths.Add(dirPath);
 
-            var galleryId = await Persistence.UpsertGalleryAsync(dirPath, galleryTitle, root.IsNsfw, cancellationToken);
+            var galleryId = await Persistence.UpsertGalleryAsync(dirPath, galleryTitle, root.Id, root.IsNsfw, cancellationToken);
             var validImagePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             for (var i = 0; i < imageFiles.Count; i++) {
