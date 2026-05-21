@@ -5,6 +5,21 @@ import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
 
 const DEFAULT_ENTITY_PAGE_SIZE = 250;
 
+/**
+ * Orval emits the OpenAPI int32 totalCount as `number | string` to honour the spec's
+ * pattern constraint; the .NET API always serializes it as a number, but we coerce
+ * defensively so a string from an older runtime or a manual response shim is still
+ * treated as a count rather than NaN.
+ */
+function coerceTotalCount(value: number | string | undefined, fallback: number): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
+
 export type EntityIndexLoadState = "loading" | "ready" | "error";
 
 export interface EntityIndexPageStateOptions {
@@ -49,7 +64,7 @@ export class EntityIndexPageState {
       });
       this.items = response.items;
       this.nextCursor = response.nextCursor;
-      this.totalCount = response.totalCount ?? response.items.length;
+      this.totalCount = coerceTotalCount(response.totalCount, response.items.length);
       this.loadState = "ready";
     } catch (err) {
       this.errorMessage = err instanceof Error ? err.message : String(err);
@@ -71,9 +86,7 @@ export class EntityIndexPageState {
       });
       this.items = [...this.items, ...response.items];
       this.nextCursor = response.nextCursor;
-      if (typeof response.totalCount === "number") {
-        this.totalCount = response.totalCount;
-      }
+      this.totalCount = coerceTotalCount(response.totalCount, this.totalCount);
     } catch (err) {
       this.loadMoreError = err instanceof Error ? err.message : String(err);
     } finally {

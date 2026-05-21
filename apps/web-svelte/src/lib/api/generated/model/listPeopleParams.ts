@@ -9,4 +9,8 @@ export type ListPeopleParams = {
 query?: string;
 cursor?: string;
 hideNsfw?: boolean;
+/**
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+limit?: number | string;
 };

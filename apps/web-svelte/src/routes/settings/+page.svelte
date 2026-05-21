@@ -113,6 +113,7 @@
     hlsTranscoderProfile: "Software",
     hlsFfmpegPath: "ffmpeg",
     hlsVaapiDevice: "/dev/dri/renderD128",
+    hideNsfw: false,
     createdAt: "",
     updatedAt: "",
   };

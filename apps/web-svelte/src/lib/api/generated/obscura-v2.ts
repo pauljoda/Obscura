@@ -728,160 +728,6 @@ export const deleteJellyfinUserPlayedItem = async (itemId: string, options?: Req
 
 
 
-export type browseLibraryPathResponse200 = {
-  data: LibraryBrowseResponse
-  status: 200
-}
-
-export type browseLibraryPathResponseSuccess = (browseLibraryPathResponse200) & {
-  headers: Headers;
-};
-;
-
-export type browseLibraryPathResponse = (browseLibraryPathResponseSuccess)
-
-export const getBrowseLibraryPathUrl = (params?: BrowseLibraryPathParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString())
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/libraries/browse?${stringifiedParams}` : `/api/libraries/browse`
-}
-
-/**
- * @summary Browses local directories for watched-root selection.
- */
-export const browseLibraryPath = async (params?: BrowseLibraryPathParams, options?: RequestInit): Promise<browseLibraryPathResponse> => {
-
-  return orvalFetch<browseLibraryPathResponse>(getBrowseLibraryPathUrl(params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-export type createLibraryRootResponse200 = {
-  data: LibraryRoot
-  status: 200
-}
-
-export type createLibraryRootResponseSuccess = (createLibraryRootResponse200) & {
-  headers: Headers;
-};
-;
-
-export type createLibraryRootResponse = (createLibraryRootResponseSuccess)
-
-export const getCreateLibraryRootUrl = () => {
-
-
-
-
-  return `/api/libraries`
-}
-
-/**
- * @summary Adds a watched media root.
- */
-export const createLibraryRoot = async (libraryRootCreateRequest: LibraryRootCreateRequest, options?: RequestInit): Promise<createLibraryRootResponse> => {
-
-  return orvalFetch<createLibraryRootResponse>(getCreateLibraryRootUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      libraryRootCreateRequest,)
-  }
-);}
-
-
-
-export type updateLibraryRootResponse200 = {
-  data: void
-  status: 200
-}
-
-export type updateLibraryRootResponseSuccess = (updateLibraryRootResponse200) & {
-  headers: Headers;
-};
-;
-
-export type updateLibraryRootResponse = (updateLibraryRootResponseSuccess)
-
-export const getUpdateLibraryRootUrl = (id: string,) => {
-
-
-
-
-  return `/api/libraries/${id}`
-}
-
-/**
- * @summary Updates a watched media root.
- */
-export const updateLibraryRoot = async (id: string,
-    libraryRootUpdateRequest: LibraryRootUpdateRequest, options?: RequestInit): Promise<updateLibraryRootResponse> => {
-
-  return orvalFetch<updateLibraryRootResponse>(getUpdateLibraryRootUrl(id),
-  {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      libraryRootUpdateRequest,)
-  }
-);}
-
-
-
-export type deleteLibraryRootResponse200 = {
-  data: void
-  status: 200
-}
-
-export type deleteLibraryRootResponseSuccess = (deleteLibraryRootResponse200) & {
-  headers: Headers;
-};
-;
-
-export type deleteLibraryRootResponse = (deleteLibraryRootResponseSuccess)
-
-export const getDeleteLibraryRootUrl = (id: string,) => {
-
-
-
-
-  return `/api/libraries/${id}`
-}
-
-/**
- * @summary Deletes a watched media root.
- */
-export const deleteLibraryRoot = async (id: string, options?: RequestInit): Promise<deleteLibraryRootResponse> => {
-
-  return orvalFetch<deleteLibraryRootResponse>(getDeleteLibraryRootUrl(id),
-  {
-    ...options,
-    method: 'DELETE'
-
-
-  }
-);}
-
-
-
 export type getUpdateCheckResponse200 = {
   data: void
   status: 200
@@ -908,204 +754,6 @@ export const getGetUpdateCheckUrl = () => {
 export const getUpdateCheck = async ( options?: RequestInit): Promise<getUpdateCheckResponse> => {
 
   return orvalFetch<getUpdateCheckResponse>(getGetUpdateCheckUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-export type getPlaylistSessionResponse200 = {
-  data: void
-  status: 200
-}
-
-export type getPlaylistSessionResponseSuccess = (getPlaylistSessionResponse200) & {
-  headers: Headers;
-};
-;
-
-export type getPlaylistSessionResponse = (getPlaylistSessionResponseSuccess)
-
-export const getGetPlaylistSessionUrl = () => {
-
-
-
-
-  return `/api/playlist-session`
-}
-
-/**
- * @summary Gets the current browser playlist session.
- */
-export const getPlaylistSession = async ( options?: RequestInit): Promise<getPlaylistSessionResponse> => {
-
-  return orvalFetch<getPlaylistSessionResponse>(getGetPlaylistSessionUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-export type putPlaylistSessionResponse200 = {
-  data: void
-  status: 200
-}
-
-export type putPlaylistSessionResponseSuccess = (putPlaylistSessionResponse200) & {
-  headers: Headers;
-};
-;
-
-export type putPlaylistSessionResponse = (putPlaylistSessionResponseSuccess)
-
-export const getPutPlaylistSessionUrl = () => {
-
-
-
-
-  return `/api/playlist-session`
-}
-
-/**
- * @summary Stores the current browser playlist session.
- */
-export const putPlaylistSession = async ( options?: RequestInit): Promise<putPlaylistSessionResponse> => {
-
-  return orvalFetch<putPlaylistSessionResponse>(getPutPlaylistSessionUrl(),
-  {
-    ...options,
-    method: 'PUT'
-
-
-  }
-);}
-
-
-
-export type deletePlaylistSessionResponse200 = {
-  data: void
-  status: 200
-}
-
-export type deletePlaylistSessionResponseSuccess = (deletePlaylistSessionResponse200) & {
-  headers: Headers;
-};
-;
-
-export type deletePlaylistSessionResponse = (deletePlaylistSessionResponseSuccess)
-
-export const getDeletePlaylistSessionUrl = () => {
-
-
-
-
-  return `/api/playlist-session`
-}
-
-/**
- * @summary Clears the current browser playlist session.
- */
-export const deletePlaylistSession = async ( options?: RequestInit): Promise<deletePlaylistSessionResponse> => {
-
-  return orvalFetch<deletePlaylistSessionResponse>(getDeletePlaylistSessionUrl(),
-  {
-    ...options,
-    method: 'DELETE'
-
-
-  }
-);}
-
-
-
-export type getVideoSubtitleResponse200 = {
-  data: void
-  status: 200
-}
-
-export type getVideoSubtitleResponse404 = {
-  data: ApiProblem
-  status: 404
-}
-
-export type getVideoSubtitleResponseSuccess = (getVideoSubtitleResponse200) & {
-  headers: Headers;
-};
-export type getVideoSubtitleResponseError = (getVideoSubtitleResponse404) & {
-  headers: Headers;
-};
-
-export type getVideoSubtitleResponse = (getVideoSubtitleResponseSuccess | getVideoSubtitleResponseError)
-
-export const getGetVideoSubtitleUrl = (id: string,
-    trackId: string,) => {
-
-
-
-
-  return `/api/videos/${id}/subtitles/${trackId}`
-}
-
-/**
- * @summary Gets one normalized WebVTT subtitle track.
- */
-export const getVideoSubtitle = async (id: string,
-    trackId: string, options?: RequestInit): Promise<getVideoSubtitleResponse> => {
-
-  return orvalFetch<getVideoSubtitleResponse>(getGetVideoSubtitleUrl(id,trackId),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-export type getVideoSubtitleSourceResponse200 = {
-  data: void
-  status: 200
-}
-
-export type getVideoSubtitleSourceResponse404 = {
-  data: ApiProblem
-  status: 404
-}
-
-export type getVideoSubtitleSourceResponseSuccess = (getVideoSubtitleSourceResponse200) & {
-  headers: Headers;
-};
-export type getVideoSubtitleSourceResponseError = (getVideoSubtitleSourceResponse404) & {
-  headers: Headers;
-};
-
-export type getVideoSubtitleSourceResponse = (getVideoSubtitleSourceResponseSuccess | getVideoSubtitleSourceResponseError)
-
-export const getGetVideoSubtitleSourceUrl = (id: string,
-    trackId: string,) => {
-
-
-
-
-  return `/api/videos/${id}/subtitles/${trackId}/source`
-}
-
-/**
- * @summary Gets one preserved ASS/SSA subtitle source.
- */
-export const getVideoSubtitleSource = async (id: string,
-    trackId: string, options?: RequestInit): Promise<getVideoSubtitleSourceResponse> => {
-
-  return orvalFetch<getVideoSubtitleSourceResponse>(getGetVideoSubtitleSourceUrl(id,trackId),
   {
     ...options,
     method: 'GET'
@@ -1561,6 +1209,96 @@ export const getGetVideoUrl = (id: string,) => {
 export const getVideo = async (id: string, options?: RequestInit): Promise<getVideoResponse> => {
 
   return orvalFetch<getVideoResponse>(getGetVideoUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getVideoSubtitleResponse200 = {
+  data: void
+  status: 200
+}
+
+export type getVideoSubtitleResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getVideoSubtitleResponseSuccess = (getVideoSubtitleResponse200) & {
+  headers: Headers;
+};
+export type getVideoSubtitleResponseError = (getVideoSubtitleResponse404) & {
+  headers: Headers;
+};
+
+export type getVideoSubtitleResponse = (getVideoSubtitleResponseSuccess | getVideoSubtitleResponseError)
+
+export const getGetVideoSubtitleUrl = (id: string,
+    trackId: string,) => {
+
+
+
+
+  return `/api/videos/${id}/subtitles/${trackId}`
+}
+
+/**
+ * @summary Gets one normalized WebVTT subtitle track.
+ */
+export const getVideoSubtitle = async (id: string,
+    trackId: string, options?: RequestInit): Promise<getVideoSubtitleResponse> => {
+
+  return orvalFetch<getVideoSubtitleResponse>(getGetVideoSubtitleUrl(id,trackId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getVideoSubtitleSourceResponse200 = {
+  data: void
+  status: 200
+}
+
+export type getVideoSubtitleSourceResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getVideoSubtitleSourceResponseSuccess = (getVideoSubtitleSourceResponse200) & {
+  headers: Headers;
+};
+export type getVideoSubtitleSourceResponseError = (getVideoSubtitleSourceResponse404) & {
+  headers: Headers;
+};
+
+export type getVideoSubtitleSourceResponse = (getVideoSubtitleSourceResponseSuccess | getVideoSubtitleSourceResponseError)
+
+export const getGetVideoSubtitleSourceUrl = (id: string,
+    trackId: string,) => {
+
+
+
+
+  return `/api/videos/${id}/subtitles/${trackId}/source`
+}
+
+/**
+ * @summary Gets one preserved ASS/SSA subtitle source.
+ */
+export const getVideoSubtitleSource = async (id: string,
+    trackId: string, options?: RequestInit): Promise<getVideoSubtitleSourceResponse> => {
+
+  return orvalFetch<getVideoSubtitleSourceResponse>(getGetVideoSubtitleSourceUrl(id,trackId),
   {
     ...options,
     method: 'GET'
@@ -2778,6 +2516,268 @@ export const updateLibrarySettings = async (librarySettingsUpdateRequest: Librar
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       librarySettingsUpdateRequest,)
+  }
+);}
+
+
+
+export type browseLibraryPathResponse200 = {
+  data: LibraryBrowseResponse
+  status: 200
+}
+
+export type browseLibraryPathResponseSuccess = (browseLibraryPathResponse200) & {
+  headers: Headers;
+};
+;
+
+export type browseLibraryPathResponse = (browseLibraryPathResponseSuccess)
+
+export const getBrowseLibraryPathUrl = (params?: BrowseLibraryPathParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/libraries/browse?${stringifiedParams}` : `/api/libraries/browse`
+}
+
+/**
+ * @summary Browses local directories for watched-root selection.
+ */
+export const browseLibraryPath = async (params?: BrowseLibraryPathParams, options?: RequestInit): Promise<browseLibraryPathResponse> => {
+
+  return orvalFetch<browseLibraryPathResponse>(getBrowseLibraryPathUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type createLibraryRootResponse200 = {
+  data: LibraryRoot
+  status: 200
+}
+
+export type createLibraryRootResponseSuccess = (createLibraryRootResponse200) & {
+  headers: Headers;
+};
+;
+
+export type createLibraryRootResponse = (createLibraryRootResponseSuccess)
+
+export const getCreateLibraryRootUrl = () => {
+
+
+
+
+  return `/api/libraries`
+}
+
+/**
+ * @summary Adds a watched media root.
+ */
+export const createLibraryRoot = async (libraryRootCreateRequest: LibraryRootCreateRequest, options?: RequestInit): Promise<createLibraryRootResponse> => {
+
+  return orvalFetch<createLibraryRootResponse>(getCreateLibraryRootUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      libraryRootCreateRequest,)
+  }
+);}
+
+
+
+export type updateLibraryRootResponse200 = {
+  data: void
+  status: 200
+}
+
+export type updateLibraryRootResponseSuccess = (updateLibraryRootResponse200) & {
+  headers: Headers;
+};
+;
+
+export type updateLibraryRootResponse = (updateLibraryRootResponseSuccess)
+
+export const getUpdateLibraryRootUrl = (id: string,) => {
+
+
+
+
+  return `/api/libraries/${id}`
+}
+
+/**
+ * @summary Updates a watched media root.
+ */
+export const updateLibraryRoot = async (id: string,
+    libraryRootUpdateRequest: LibraryRootUpdateRequest, options?: RequestInit): Promise<updateLibraryRootResponse> => {
+
+  return orvalFetch<updateLibraryRootResponse>(getUpdateLibraryRootUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      libraryRootUpdateRequest,)
+  }
+);}
+
+
+
+export type deleteLibraryRootResponse200 = {
+  data: void
+  status: 200
+}
+
+export type deleteLibraryRootResponseSuccess = (deleteLibraryRootResponse200) & {
+  headers: Headers;
+};
+;
+
+export type deleteLibraryRootResponse = (deleteLibraryRootResponseSuccess)
+
+export const getDeleteLibraryRootUrl = (id: string,) => {
+
+
+
+
+  return `/api/libraries/${id}`
+}
+
+/**
+ * @summary Deletes a watched media root.
+ */
+export const deleteLibraryRoot = async (id: string, options?: RequestInit): Promise<deleteLibraryRootResponse> => {
+
+  return orvalFetch<deleteLibraryRootResponse>(getDeleteLibraryRootUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type getPlaylistSessionResponse200 = {
+  data: void
+  status: 200
+}
+
+export type getPlaylistSessionResponseSuccess = (getPlaylistSessionResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getPlaylistSessionResponse = (getPlaylistSessionResponseSuccess)
+
+export const getGetPlaylistSessionUrl = () => {
+
+
+
+
+  return `/api/playlist-session`
+}
+
+/**
+ * @summary Gets the current browser playlist session.
+ */
+export const getPlaylistSession = async ( options?: RequestInit): Promise<getPlaylistSessionResponse> => {
+
+  return orvalFetch<getPlaylistSessionResponse>(getGetPlaylistSessionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type putPlaylistSessionResponse200 = {
+  data: void
+  status: 200
+}
+
+export type putPlaylistSessionResponseSuccess = (putPlaylistSessionResponse200) & {
+  headers: Headers;
+};
+;
+
+export type putPlaylistSessionResponse = (putPlaylistSessionResponseSuccess)
+
+export const getPutPlaylistSessionUrl = () => {
+
+
+
+
+  return `/api/playlist-session`
+}
+
+/**
+ * @summary Stores the current browser playlist session.
+ */
+export const putPlaylistSession = async ( options?: RequestInit): Promise<putPlaylistSessionResponse> => {
+
+  return orvalFetch<putPlaylistSessionResponse>(getPutPlaylistSessionUrl(),
+  {
+    ...options,
+    method: 'PUT'
+
+
+  }
+);}
+
+
+
+export type deletePlaylistSessionResponse200 = {
+  data: void
+  status: 200
+}
+
+export type deletePlaylistSessionResponseSuccess = (deletePlaylistSessionResponse200) & {
+  headers: Headers;
+};
+;
+
+export type deletePlaylistSessionResponse = (deletePlaylistSessionResponseSuccess)
+
+export const getDeletePlaylistSessionUrl = () => {
+
+
+
+
+  return `/api/playlist-session`
+}
+
+/**
+ * @summary Clears the current browser playlist session.
+ */
+export const deletePlaylistSession = async ( options?: RequestInit): Promise<deletePlaylistSessionResponse> => {
+
+  return orvalFetch<deletePlaylistSessionResponse>(getDeletePlaylistSessionUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
   }
 );}
 

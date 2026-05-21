@@ -42,6 +42,7 @@ export interface LibrarySettings {
   hlsTranscoderProfile: string;
   hlsFfmpegPath: string;
   hlsVaapiDevice: string;
+  hideNsfw: boolean;
   createdAt: string;
   updatedAt: string;
 }

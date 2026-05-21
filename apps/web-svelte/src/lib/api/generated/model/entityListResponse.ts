@@ -10,10 +10,6 @@ export interface EntityListResponse {
   items: EntityThumbnail[];
   /** @nullable */
   nextCursor: string | null;
-  /**
-   * Total number of entities matching the same filters (kind, query, NSFW) as this
-   * response, ignoring the cursor. Allows the client to render accurate page-of-pages
-   * indicators and seek-to-end affordances without re-counting after every load.
-   */
-  totalCount: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  totalCount: number | string;
 }
