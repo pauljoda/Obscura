@@ -224,6 +224,13 @@
 </div>
 
 <style>
+  .surface-well {
+    background: var(--color-surface-1, #0c0f15);
+    border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
+    border-radius: 0;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.30);
+  }
+
   .date-row {
     display: flex;
     align-items: center;
@@ -243,15 +250,26 @@
   .date-row input {
     min-width: 0;
     flex: 1;
-    border: 1px solid var(--color-border-subtle);
-    background: var(--color-surface-1);
+    border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
+    background: var(--color-surface-1, #0c0f15);
+    border-radius: 0;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.30);
     color: var(--color-text-primary);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
     font-size: 0.72rem;
     padding: 0.35rem 0.5rem;
+    transition:
+      border-color var(--duration-fast, 80ms) var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1)),
+      box-shadow var(--duration-fast, 80ms) var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1));
   }
 
   .date-row input:focus {
-    border-color: var(--color-border-accent);
+    border-color: var(--color-border-accent, rgba(196, 154, 90, 0.25));
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.30), 0 0 0 1px rgba(196,154,90,0.35), 0 0 8px rgba(196,154,90,0.15);
     outline: none;
+  }
+
+  :global(.tag-chip) {
+    border-radius: 0 !important;
   }
 </style>

@@ -8,7 +8,9 @@
     ChevronsRight,
     LoaderCircle,
     SearchX,
+    Check,
   } from "@lucide/svelte";
+  import { cn } from "@obscura/ui-svelte";
   import { onMount } from "svelte";
   import { createFilterPresets, type FilterPreset } from "$lib/filter-presets";
   import { usePageSnapshots } from "$lib/stores/page-snapshots.svelte";
@@ -154,6 +156,7 @@
   let query = $state("");
   let pageIndex = $state(0);
   let pageSize = $state(DEFAULT_PAGE_SIZE);
+  let pageSizeOpen = $state(false);
   let pendingAdvanceAfterLoad = $state(false);
   let scale = $state(5);
   let selectedIds = $state<string[]>([]);
@@ -727,7 +730,6 @@
         ></span>
 
         <div class="page-readout" aria-live="polite">
-          <span class="readout-label">SHOWING</span>
           <span class="readout-range" style:--readout-ch="{readoutPlaceholderWidth}ch">
             <strong>{pageStart + 1}–{pageEnd}</strong>
             <span class="readout-divider">/</span>
@@ -800,22 +802,43 @@
               Try again
             </button>
           {/if}
-          <label class="page-size-control">
+          <div class="page-size-control">
             <span class="page-size-label">PER PAGE</span>
-            <span class="page-size-field">
-              <select
-                class="allow-compact-input-text"
+            <div class="relative">
+              <button
+                type="button"
+                class="page-size-btn"
                 aria-label="Per page"
-                value={pageSize}
-                onchange={(event) => setPageSize(Number((event.currentTarget as HTMLSelectElement).value))}
+                onclick={() => (pageSizeOpen = !pageSizeOpen)}
               >
-                {#each normalizedPageSizeOptions as option (option)}
-                  <option value={option}>{option}</option>
-                {/each}
-              </select>
-              <ChevronDown class="page-size-caret" aria-hidden="true" />
-            </span>
-          </label>
+                {pageSize}
+                <ChevronDown class="h-3 w-3 text-text-disabled ml-1 shrink-0" />
+              </button>
+              {#if pageSizeOpen}
+                <button
+                  type="button"
+                  class="fixed inset-0 z-40 cursor-default"
+                  aria-label="Close page size menu"
+                  onclick={() => (pageSizeOpen = false)}
+                ></button>
+                <div class="page-size-menu">
+                  {#each normalizedPageSizeOptions as option (option)}
+                    <button
+                      type="button"
+                      class={cn("page-size-menu-item", pageSize === option && "is-active")}
+                      onclick={() => {
+                        setPageSize(option);
+                        pageSizeOpen = false;
+                      }}
+                    >
+                      <Check class={cn("h-3 w-3 shrink-0", pageSize === option ? "opacity-100" : "opacity-0")} />
+                      {option}
+                    </button>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          </div>
         </div>
     </nav>
     </div>
@@ -918,8 +941,20 @@
     bottom: 0;
     z-index: 4;
     padding-bottom: 0.5rem;
-    background: var(--color-bg);
-    box-shadow: 0 2rem 0 0 var(--color-bg);
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .pagination-shell::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 0.5rem;
+    background: var(--color-bg, #07080b);
+    z-index: -1;
+    pointer-events: auto;
   }
 
   .pagination-bar {
@@ -927,20 +962,16 @@
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     gap: 0.85rem;
-    border: 1px solid var(--color-border-default);
-    border-top-color: rgb(196 154 90 / 0.22);
-    background:
-      linear-gradient(180deg, rgb(20 23 30 / 0.55), rgb(11 12 16 / 0.85)),
-      color-mix(in srgb, var(--color-surface-2) 92%, transparent);
-    box-shadow:
-      0 -10px 28px rgb(0 0 0 / 0.45),
-      inset 0 1px 0 rgb(255 255 255 / 0.04),
-      inset 0 -1px 0 rgb(0 0 0 / 0.4);
-    backdrop-filter: blur(14px) saturate(1.15);
-    -webkit-backdrop-filter: blur(14px) saturate(1.15);
+    border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
+    background: rgba(12, 15, 21, 0.96);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.60);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 0;
     color: var(--color-text-muted);
     font-family: var(--font-mono, "JetBrains Mono", monospace);
     padding: 0.7rem 0.85rem;
+    pointer-events: auto;
   }
 
   .pagination-bar > .page-readout {
@@ -1032,12 +1063,10 @@
     align-items: center;
     gap: 0.25rem;
     padding: 0.2rem 0.3rem;
-    border: 1px solid rgb(0 0 0 / 0.45);
-    background:
-      linear-gradient(180deg, rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.15));
-    box-shadow:
-      inset 0 1px 3px rgb(0 0 0 / 0.55),
-      inset 0 -1px 0 rgb(255 255 255 / 0.02);
+    border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
+    background: var(--color-surface-2, #101420);
+    border-radius: 0;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.30);
   }
 
   .transport-btn {
@@ -1046,44 +1075,28 @@
     justify-content: center;
     width: 2rem;
     height: 1.85rem;
-    border: 1px solid rgb(255 255 255 / 0.05);
-    background:
-      linear-gradient(180deg, rgb(34 38 48 / 0.95), rgb(18 21 28 / 0.95));
+    border: 1px solid transparent;
+    background: transparent;
     color: var(--color-text-muted);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.05),
-      0 1px 2px rgb(0 0 0 / 0.35);
+    border-radius: 0;
     transition:
-      color var(--duration-fast) var(--ease-default),
-      border-color var(--duration-fast) var(--ease-default),
-      box-shadow var(--duration-fast) var(--ease-default),
-      transform var(--duration-fast) var(--ease-mechanical),
-      background var(--duration-fast) var(--ease-default);
+      color var(--duration-fast, 80ms) var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1)),
+      background var(--duration-fast, 80ms) var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1)),
+      box-shadow var(--duration-fast, 80ms) var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1));
   }
 
   .transport-btn:hover:not(:disabled) {
-    border-color: rgb(196 154 90 / 0.4);
-    color: var(--color-text-accent-bright);
-    background:
-      linear-gradient(180deg, rgb(44 36 22 / 0.95), rgb(28 22 12 / 0.95));
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.08),
-      0 0 12px rgb(196 154 90 / 0.18);
+    background: var(--color-surface-3, #151a28);
+    color: var(--color-text-primary);
   }
 
   .transport-btn:active:not(:disabled) {
-    transform: translateY(1px);
-    box-shadow:
-      inset 0 2px 5px rgb(0 0 0 / 0.6),
-      0 0 8px rgb(196 154 90 / 0.15);
+    background: var(--color-surface-4, #1c2235);
   }
 
   .transport-btn:focus-visible {
     outline: none;
-    border-color: rgb(196 154 90 / 0.7);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.08),
-      0 0 0 2px rgb(196 154 90 / 0.25);
+    box-shadow: 0 0 0 1px rgba(196,154,90,0.35), 0 0 8px rgba(196,154,90,0.15);
   }
 
   .transport-btn:disabled {
@@ -1144,49 +1157,77 @@
     letter-spacing: 0.18em;
   }
 
-  .page-size-field {
-    position: relative;
+  .page-size-btn {
     display: inline-flex;
     align-items: center;
-  }
-
-  .page-size-field select {
+    justify-content: space-between;
     height: 1.85rem;
-    border: 1px solid rgb(255 255 255 / 0.06);
-    background:
-      linear-gradient(180deg, rgb(34 38 48 / 0.95), rgb(18 21 28 / 0.95));
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.04),
-      0 1px 2px rgb(0 0 0 / 0.3);
+    min-width: 4.5rem;
+    border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
+    background: var(--color-surface-1, #0c0f15);
+    border-radius: 0;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.30);
     color: var(--color-text-primary);
-    font: inherit;
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
     font-size: 0.72rem;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.04em;
-    padding: 0 1.7rem 0 0.65rem;
-    appearance: none;
-    -webkit-appearance: none;
+    padding: 0 0.45rem 0 0.65rem;
     transition:
-      border-color var(--duration-fast) var(--ease-default),
-      box-shadow var(--duration-fast) var(--ease-default);
+      border-color var(--duration-fast, 80ms) var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1)),
+      background var(--duration-fast, 80ms) var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1)),
+      box-shadow var(--duration-fast, 80ms) var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1));
   }
 
-  .page-size-field select:hover,
-  .page-size-field select:focus-visible {
+  .page-size-btn:hover,
+  .page-size-btn:focus-visible {
     outline: none;
-    border-color: rgb(196 154 90 / 0.45);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.06),
-      0 0 0 2px rgb(196 154 90 / 0.15);
+    border-color: var(--color-border-accent, rgba(196, 154, 90, 0.25));
+    background: var(--color-surface-2, #101420);
+    box-shadow: 0 0 0 1px rgba(196,154,90,0.35), 0 0 8px rgba(196,154,90,0.15);
   }
 
-  .page-size-field :global(.page-size-caret) {
+  .page-size-menu {
     position: absolute;
-    right: 0.5rem;
-    width: 0.8rem;
-    height: 0.8rem;
-    color: var(--color-text-disabled);
-    pointer-events: none;
+    bottom: calc(100% + 0.3rem);
+    right: 0;
+    z-index: 50;
+    min-width: 6rem;
+    border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
+    background: rgba(12, 15, 21, 0.98);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 0;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.60);
+    padding: 0.3rem 0;
+    overflow: hidden;
+  }
+
+  .page-size-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    padding: 0.45rem 0.85rem;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.74rem;
+    letter-spacing: 0.04em;
+    text-align: left;
+    transition:
+      background-color var(--duration-fast, 80ms) var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1)),
+      color var(--duration-fast, 80ms) var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1));
+  }
+
+  .page-size-menu-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--color-text-primary);
+  }
+
+  .page-size-menu-item.is-active {
+    background: linear-gradient(90deg, rgba(196, 154, 90, 0.15), transparent);
+    color: var(--color-text-accent, #c49a5a);
   }
 
   .retry-load {
@@ -1218,9 +1259,10 @@
     display: grid;
     grid-template-rows: auto 1fr;
     overflow: hidden;
-    border: 1px solid var(--color-border-subtle);
-    background: var(--color-surface-1);
-    box-shadow: inset 0 2px 8px rgb(0 0 0 / 0.3);
+    background: var(--color-surface-1, #0c0f15);
+    border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
+    border-radius: 0;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.30);
   }
 
   .skeleton-media {
@@ -1275,9 +1317,10 @@
     gap: 0.35rem;
     min-height: 12rem;
     place-content: center;
-    border: 1px solid var(--color-border-subtle);
-    background: var(--color-surface-1);
-    box-shadow: inset 0 2px 8px rgb(0 0 0 / 0.3);
+    background: var(--color-surface-1, #0c0f15);
+    border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
+    border-radius: 0;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.30);
     color: var(--color-text-muted);
     text-align: center;
   }
@@ -1301,13 +1344,17 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    border: 1px solid var(--color-border-subtle);
-    background: var(--color-surface-1);
-    box-shadow: inset 0 2px 8px rgb(0 0 0 / 0.3);
+    border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
+    background: rgba(12, 15, 21, 0.96);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 0;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.60);
     color: var(--color-text-muted);
     font-family: var(--font-mono, "JetBrains Mono", monospace);
     font-size: 0.7rem;
     padding: 0.55rem 0.7rem;
+    pointer-events: auto;
   }
 
   .bulk-bar > span {
@@ -1323,19 +1370,25 @@
   }
 
   .bulk-actions button {
-    border: 1px solid var(--color-border-subtle);
-    background: var(--color-surface-2);
+    border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
+    background: var(--color-surface-2, #101420);
     color: var(--color-text-muted);
     font-size: 0.68rem;
     padding: 0.32rem 0.5rem;
+    border-radius: 0;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.30);
     transition:
       border-color var(--duration-fast) var(--ease-default),
-      color var(--duration-fast) var(--ease-default);
+      background var(--duration-fast) var(--ease-default),
+      color var(--duration-fast) var(--ease-default),
+      box-shadow var(--duration-fast) var(--ease-default);
   }
 
   .bulk-actions button:hover {
-    border-color: var(--color-border-accent);
+    border-color: var(--color-border-accent, rgba(196, 154, 90, 0.25));
+    background: var(--color-surface-3, #151a28);
     color: var(--color-text-accent);
+    box-shadow: 0 0 0 1px rgba(196,154,90,0.35), 0 0 8px rgba(196,154,90,0.15);
   }
 
   .bulk-actions button.danger:hover {

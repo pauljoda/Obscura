@@ -87,7 +87,7 @@
       aria-label="Close preset menu"
       onclick={close}
     ></button>
-    <div class="surface-elevated absolute right-0 top-full z-50 mt-1 w-56 py-1">
+    <div class="surface-glass absolute right-0 top-full z-50 mt-1 w-56 py-1">
       {#if presets.length > 0}
         <div class="tag-scroll-area max-h-48 overflow-y-auto">
           {#each presets as preset (preset.id)}
@@ -224,3 +224,14 @@
     </div>
   {/if}
 </div>
+
+<style>
+  .surface-glass {
+    border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
+    background: rgba(12, 15, 21, 0.98);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 0;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.60);
+  }
+</style>

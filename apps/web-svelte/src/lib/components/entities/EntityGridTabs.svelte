@@ -112,13 +112,13 @@
   .tab.is-active::before {
     background: linear-gradient(
       to right,
-      rgb(196 154 90 / 0.05),
-      rgb(221 180 119) 50%,
-      rgb(196 154 90 / 0.05)
+      rgba(196, 154, 90, 0.05),
+      rgba(196, 154, 90, 0.5) 50%,
+      rgba(196, 154, 90, 0.05)
     );
     box-shadow:
-      0 0 8px rgb(196 154 90 / 0.55),
-      0 0 16px rgb(196 154 90 / 0.2);
+      0 0 8px rgba(196, 154, 90, 0.3),
+      0 0 16px rgba(196, 154, 90, 0.1);
   }
 
   .tab strong {
