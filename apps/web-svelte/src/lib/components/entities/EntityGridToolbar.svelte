@@ -301,19 +301,23 @@
    * mirroring how the pagination strip locks to the bottom of the same
    * container.
    *
-   * `top: 0.5rem` floats the docked toolbar a hair below the page-content
-   * top edge so it reads as a floating control surface rather than welded
-   * to the top of the viewport. The opaque background + heavy drop shadow +
-   * brass border-bottom hint give the docked state a clear material edge as
-   * cards scroll behind it.
+   * `top: 0` keeps the toolbar flush with the container's top edge so cards
+   * scrolling behind it are always covered by the toolbar's opaque
+   * background. `padding-top: 0.5rem` then offsets the toolbar's content
+   * (search box + control row + filter chips) down from that top edge — the
+   * "small buffer at the top" without exposing a transparent strip that
+   * would let card thumbnails leak through above the controls. The heavy
+   * drop shadow + brass border-bottom hint give the docked state a clear
+   * material edge matching the pagination strip below.
    */
   .toolbar-shell {
     position: sticky;
-    top: 0.5rem;
+    top: 0;
     z-index: 4;
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
+    padding-top: 0.5rem;
     background: var(--color-bg);
     border-bottom: 1px solid rgb(196 154 90 / 0.22);
     box-shadow:
