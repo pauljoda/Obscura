@@ -611,7 +611,7 @@
         <Building2 class="h-4 w-4" />
         Studio
       </h2>
-      <div class="reference-list">
+      <div class="reference-list is-horizontal-rail">
         {@render referenceItem(cardFull.studio)}
       </div>
     </section>
@@ -625,7 +625,7 @@
         <Users class="h-4 w-4" />
         Credits
       </h2>
-      <div class="reference-list">
+      <div class="reference-list is-horizontal-rail">
         {#each cardFull.credits ?? [] as credit, index (`${credit.id}:${index}`)}
           {@render referenceItem(credit)}
         {/each}
@@ -1871,9 +1871,20 @@
 
   .reference-list {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 0.75rem;
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.35rem;
+    scroll-padding-inline: 0.25rem;
+    scrollbar-width: thin;
+  }
+
+  .reference-list.is-horizontal-rail {
+    align-items: stretch;
   }
 
   .reference-thumbnail {

@@ -113,7 +113,11 @@ describe("EntityDetail", () => {
     const card = {
       ...buildCard(),
       studio: { id: "studio-1", kind: "studio", title: "Blender Foundation", thumbnail: null },
-      credits: [{ id: "person-1", kind: "person", title: "Sacha Goedegebure", thumbnail: null }],
+      credits: [
+        { id: "person-1", kind: "person", title: "Sacha Goedegebure", thumbnail: null },
+        { id: "person-2", kind: "person", title: "Nathan Vegdahl", thumbnail: null },
+        { id: "person-3", kind: "person", title: "Jan Morgenstern", thumbnail: null },
+      ],
       stats: [{ code: "views", label: "Views", value: "1842" }],
       dates: [{ code: "release", label: "Release", value: "2008-05-30", sortable: "2008-05-30" }],
       technical: [{ label: "Resolution", value: "1920×1080 (1080p)" }],
@@ -171,7 +175,11 @@ describe("EntityDetail", () => {
     const card = {
       ...buildCard(),
       studio: { id: "studio-1", kind: "studio", title: "Blender Foundation", thumbnail: null },
-      credits: [{ id: "person-1", kind: "person", title: "Sacha Goedegebure", thumbnail: null }],
+      credits: [
+        { id: "person-1", kind: "person", title: "Sacha Goedegebure", thumbnail: null },
+        { id: "person-2", kind: "person", title: "Nathan Vegdahl", thumbnail: null },
+        { id: "person-3", kind: "person", title: "Jan Morgenstern", thumbnail: null },
+      ],
       stats: [],
       dates: [],
       technical: [],
@@ -192,8 +200,14 @@ describe("EntityDetail", () => {
     });
 
     const thumbnails = container.querySelectorAll(".entity-thumbnail");
+    const referenceLists = container.querySelectorAll(".reference-list");
 
-    expect(thumbnails).toHaveLength(2);
+    expect(thumbnails).toHaveLength(4);
+    expect(referenceLists.length).toBeGreaterThan(0);
+    for (const list of referenceLists) {
+      expect(list).toHaveClass("reference-list");
+      expect(list).toHaveClass("is-horizontal-rail");
+    }
     expect(screen.getByRole("link", { name: "Blender Foundation" })).toHaveAttribute("href", "/studios/studio-1");
     expect(screen.getByRole("link", { name: "Sacha Goedegebure" })).toHaveAttribute("href", "/performers/person-1");
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
