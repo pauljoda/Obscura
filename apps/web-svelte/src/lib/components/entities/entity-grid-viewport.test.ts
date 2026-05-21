@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  computeContainedScrollHeight,
-  shouldContainWheelScroll,
-} from "./entity-grid-viewport.svelte";
+import { computeContainedScrollHeight } from "./entity-grid-viewport.svelte";
 
 describe("entity-grid viewport sizing", () => {
   it("fits the scrollable grid into the visible viewport below its actual top edge", () => {
@@ -15,11 +12,5 @@ describe("entity-grid viewport sizing", () => {
 
   it("does not grow beyond the visible viewport after the outer page scrolls past the grid top", () => {
     expect(computeContainedScrollHeight({ top: -900, viewportHeight: 960, bottomPadding: 24 })).toBe("936px");
-  });
-
-  it("contains wheel scroll at the top and bottom of the grid", () => {
-    expect(shouldContainWheelScroll({ scrollTop: 0, clientHeight: 400, scrollHeight: 1000, deltaY: -16 })).toBe(true);
-    expect(shouldContainWheelScroll({ scrollTop: 600, clientHeight: 400, scrollHeight: 1000, deltaY: 16 })).toBe(true);
-    expect(shouldContainWheelScroll({ scrollTop: 240, clientHeight: 400, scrollHeight: 1000, deltaY: 16 })).toBe(false);
   });
 });

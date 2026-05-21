@@ -5,13 +5,13 @@ interface ContainedScrollHeightInput {
   viewportHeight: number;
 }
 
-interface WheelScrollInput {
-  clientHeight: number;
-  deltaY: number;
-  scrollHeight: number;
-  scrollTop: number;
-}
-
+/**
+ * Compute the pixel height the contained grid viewport should occupy so the
+ * sticky pagination strip lands at the bottom of the visible viewport while
+ * leaving room for the outer page chrome above the grid. The grid no longer
+ * traps wheel events at its scroll boundaries — callers should let
+ * `overscroll-behavior: auto` handle scroll chaining to the outer page.
+ */
 export function computeContainedScrollHeight({
   bottomPadding = 24,
   minHeight = 320,
@@ -21,16 +21,4 @@ export function computeContainedScrollHeight({
   const visibleTop = Math.max(0, top);
   const available = Math.floor(viewportHeight - visibleTop - bottomPadding);
   return `${Math.max(minHeight, available)}px`;
-}
-
-export function shouldContainWheelScroll({
-  clientHeight,
-  deltaY,
-  scrollHeight,
-  scrollTop,
-}: WheelScrollInput): boolean {
-  if (scrollHeight <= clientHeight) return false;
-  const atTop = scrollTop <= 0;
-  const atBottom = Math.ceil(scrollTop + clientHeight) >= scrollHeight;
-  return (deltaY < 0 && atTop) || (deltaY > 0 && atBottom);
 }

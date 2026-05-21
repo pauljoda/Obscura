@@ -30,10 +30,7 @@
   import EntityGridFilterDrawer from "./EntityGridFilterDrawer.svelte";
   import EntityGridTabs from "./EntityGridTabs.svelte";
   import EntityGridToolbar from "./EntityGridToolbar.svelte";
-  import {
-    computeContainedScrollHeight,
-    shouldContainWheelScroll,
-  } from "./entity-grid-viewport.svelte";
+  import { computeContainedScrollHeight } from "./entity-grid-viewport.svelte";
 
   const DEFAULT_PAGE_SIZE = 250;
   const DEFAULT_PAGE_SIZE_OPTIONS = [100, 250, 500, 1000];
@@ -446,21 +443,6 @@
     onSelectionChange?.(selectedIds);
   }
 
-  function containWheel(event: WheelEvent) {
-    const target = event.currentTarget;
-    if (!(target instanceof HTMLElement)) return;
-    if (
-      shouldContainWheelScroll({
-        clientHeight: target.clientHeight,
-        deltaY: event.deltaY,
-        scrollHeight: target.scrollHeight,
-        scrollTop: target.scrollTop,
-      })
-    ) {
-      event.preventDefault();
-    }
-  }
-
   function scrollPageToTop() {
     viewportEl?.scrollTo({ top: 0 });
   }
@@ -630,7 +612,6 @@
     bind:this={viewportEl}
     class={["grid-viewport", containsScroll && "is-contained"]}
     style:--entity-grid-scroll-max-height={effectiveScrollMaxHeight ?? undefined}
-    onwheel={containWheel}
   >
     {#if loading}
       <div class="loading-grid" aria-label="Loading entities" aria-busy="true">
@@ -788,7 +769,15 @@
   .grid-viewport.is-contained {
     max-height: var(--entity-grid-scroll-max-height, calc(100dvh - 2rem));
     overflow-y: auto;
-    overscroll-behavior: contain;
+    /*
+     * Default `overscroll-behavior: auto` so a wheel/touch scroll that hits the
+     * top or bottom edge of the inner grid keeps going on the outer page. Without
+     * this, the page header gets stranded above the viewport once the user has
+     * scrolled into the grid and they can't get back to it without finding a
+     * non-grid area to scroll on. The browser still confines normal in-bounds
+     * scroll to the grid, so the pagination strip stays sticky.
+     */
+    overscroll-behavior: auto;
     padding-right: 0.35rem;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
