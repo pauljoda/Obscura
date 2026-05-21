@@ -16,7 +16,8 @@
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import { onMount } from "svelte";
-  import { isNsfw } from "$lib/api/capabilities";
+  import { isNsfw, withFlagCapability } from "$lib/api/capabilities";
+  import { updateV2EntityFlags } from "$lib/api/v2";
   import { createFilterPresets, type FilterPreset } from "$lib/filter-presets";
   import { usePageSnapshots } from "$lib/stores/page-snapshots.svelte";
   import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
@@ -64,7 +65,6 @@
     minScale?: number;
     nsfwMode?: "show" | "off" | "blur";
     onLoadMore?: () => void | Promise<void>;
-    onNsfwToggle?: (selectedIds: string[], markNsfw: boolean) => void;
     onPageSizeChange?: (pageSize: number) => void;
     onRequestChange?: (request: EntityGridRequest) => void;
     onRenderedCountChange?: (renderedCount: number) => void;
@@ -102,7 +102,6 @@
     minScale = 2,
     nsfwMode = "show",
     onLoadMore,
-    onNsfwToggle,
     onPageSizeChange,
     onRequestChange,
     onRenderedCountChange,
@@ -528,6 +527,23 @@
     onSelectionChange?.(selectedIds);
   }
 
+  let nsfwToggling = $state(false);
+
+  async function toggleNsfwFlag(markNsfw: boolean) {
+    if (nsfwToggling || selectedCards.length === 0) return;
+    nsfwToggling = true;
+    try {
+      await Promise.all(
+        selectedCards.map((c) => updateV2EntityFlags(c.entity.id, { isNsfw: markNsfw })),
+      );
+      for (const card of selectedCards) {
+        card.entity.capabilities = withFlagCapability(card.entity.capabilities, "isNsfw", markNsfw);
+      }
+    } finally {
+      nsfwToggling = false;
+    }
+  }
+
   function scrollPageToTop() {
     viewportEl?.scrollTo({ top: 0 });
   }
@@ -693,19 +709,17 @@
           <span class="bulk-btn-label">Clear</span>
         </button>
 
-        {#if onNsfwToggle}
-          <span class="bulk-divider" aria-hidden="true"></span>
-          <button
-            type="button"
-            class="bulk-btn"
-            class:is-active={!allSelectedNsfw}
-            title={allSelectedNsfw ? "Mark SFW" : "Mark NSFW"}
-            onclick={() => onNsfwToggle(selectedIds, !allSelectedNsfw)}
-          >
-            <Flame class="h-3.5 w-3.5" />
-            <span class="bulk-btn-label">{allSelectedNsfw ? "Mark SFW" : "Mark NSFW"}</span>
-          </button>
-        {/if}
+        <span class="bulk-divider" aria-hidden="true"></span>
+        <button
+          type="button"
+          class="bulk-btn"
+          disabled={nsfwToggling}
+          title={allSelectedNsfw ? "Mark SFW" : "Mark NSFW"}
+          onclick={() => void toggleNsfwFlag(!allSelectedNsfw)}
+        >
+          <Flame class="h-3.5 w-3.5" />
+          <span class="bulk-btn-label">{allSelectedNsfw ? "Mark SFW" : "Mark NSFW"}</span>
+        </button>
 
         {#if bulkActions.length > 0}
           <span class="bulk-divider" aria-hidden="true"></span>
@@ -1413,6 +1427,8 @@
   }
 
   .bulk-bar {
+    position: relative;
+    z-index: 3;
     display: flex;
     align-items: center;
     gap: 0.75rem;
