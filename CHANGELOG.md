@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- The entity browse experience was refined into a "reel-transport" control room aesthetic — the pagination strip now reads like a deck counter with a brass progress hairline and grouped transport buttons, the toolbar no longer reshuffles when you search, thumbnails carry a quieter shadow with a brass underline accent on hover and select, and the kind tabs gained a glowing brass indicator. Mobile layouts stay legible without pushing the grid around when filters appear.
 - Obscura v2 rebuilt the app around a .NET API, EF Core persistence, PostgreSQL, and a .NET worker, replacing the legacy server/runtime path with one backend-owned architecture.
 - The media library now uses EF-backed entity records with explicit child and relationship links for videos, series, seasons, images, galleries, books, audio, people, studios, tags, and collections, giving browse and detail pages a common model without a global graph abstraction.
 - Entity pages now load and display child and related items through a lighter relationship model, making large series, galleries, and collections faster to browse.
@@ -34,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - EF-projected browse/detail APIs for videos, series, seasons, images, galleries, books, audio libraries/tracks, people, studios, tags, collections, and generic entity lists.
 
 ### Changed
+- Entity browse pages received a visual polish pass: pagination became a transport-style strip with a brass progress indicator, the search toolbar layout is stable while typing and filtering, thumbnail hover/selection now uses a brass underline and gentler shadows, and the kind tabs got a glowing accent rail.
 - The v2 development data model was simplified around generic entity children, relationships, and thumbnail projections; rescanning/importing v1 data is required.
 - Changelog entries are now curated release notes for important user-visible changes instead of an exhaustive development log.
 - Domain entities now use a breaking object-oriented model with enum entity kinds and attached mutable capabilities instead of registry/string capability lookups.

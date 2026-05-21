@@ -740,9 +740,9 @@
     position: sticky;
     bottom: 0;
     z-index: 5;
-    display: grid;
-    grid-template-columns: minmax(0, auto) 1fr minmax(0, auto);
+    display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.85rem;
     border: 1px solid var(--color-border-default);
     border-top-color: rgb(196 154 90 / 0.22);
@@ -758,7 +758,18 @@
     color: var(--color-text-muted);
     font-family: var(--font-mono, "JetBrains Mono", monospace);
     padding: 0.7rem 0.85rem;
-    overflow: hidden;
+  }
+
+  .pagination-bar > .transport {
+    margin-inline: auto;
+  }
+
+  .pagination-bar > .page-size-control {
+    margin-inline-start: auto;
+  }
+
+  .pagination-bar > .transport ~ .page-size-control {
+    margin-inline-start: 0;
   }
 
   .pagination-progress {
@@ -1158,32 +1169,38 @@
 
   @media (max-width: 720px) {
     .pagination-bar {
-      grid-template-columns: 1fr auto;
-      grid-template-areas:
-        "readout  size"
-        "transport transport";
-      row-gap: 0.6rem;
+      gap: 0.55rem 0.65rem;
       padding: 0.65rem 0.7rem 0.7rem;
     }
 
-    .page-readout {
-      grid-area: readout;
+    .pagination-bar > .page-readout {
+      order: 1;
+      flex: 1 1 auto;
       font-size: 0.62rem;
+    }
+
+    .pagination-bar > .page-size-control {
+      order: 2;
+      margin-inline-start: 0;
+    }
+
+    .pagination-bar > .transport {
+      order: 3;
+      flex: 1 1 100%;
+      margin: 0;
+      justify-content: space-between;
+      padding: 0.25rem 0.35rem;
+    }
+
+    .pagination-bar > .more-hint,
+    .pagination-bar > .retry-load {
+      order: 4;
+      flex: 1 1 100%;
+      justify-content: center;
     }
 
     .readout-range strong {
       font-size: 0.72rem;
-    }
-
-    .page-size-control {
-      grid-area: size;
-    }
-
-    .transport {
-      grid-area: transport;
-      justify-self: stretch;
-      justify-content: space-between;
-      padding: 0.25rem 0.35rem;
     }
 
     .transport-btn {
