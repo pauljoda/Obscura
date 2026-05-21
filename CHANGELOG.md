@@ -66,6 +66,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The thumbnail lab now shows how many cards are loaded and rendered on the current page so pagination behavior can be checked directly.
 
 ### Fixed
+- Entity detail reference sections now render linked entity thumbnails without selection checkboxes, keeping checkbox selection scoped to full EntityGrid views.
 - Entity detail tabs now render shared rich metadata sections such as credits, studios, stats, technical data, sources, and fingerprints without each route having to provide a custom renderer.
 - Library scans now correctly remove galleries, books, and audio libraries only from the scanned root instead of accidentally deleting entities belonging to other roots.
 - Scanning a video library root now cleans up empty series and season container entities after their child videos are removed from disk.

@@ -37,7 +37,7 @@
         <div class="credit-scroller">
           {#each studioCards as thumbnailCard (thumbnailKey(thumbnailCard))}
             <div class="credit-thumbnail is-studio">
-              <EntityThumbnail card={thumbnailCard} titleAlign="center" titleSize="compact" />
+              <EntityThumbnail card={thumbnailCard} selectable={false} titleAlign="center" titleSize="compact" />
             </div>
           {/each}
         </div>
@@ -54,13 +54,13 @@
           {#each creditCards as thumbnailCard (thumbnailKey(thumbnailCard))}
             <div class="credit-thumbnail">
               {#if thumbnailCard.subtitle}
-                <EntityThumbnail card={thumbnailCard} titleAlign="center" titleSize="compact">
+                <EntityThumbnail card={thumbnailCard} selectable={false} titleAlign="center" titleSize="compact">
                   {#snippet subtitleContent(card)}
                     <span class="credit-role-label">{card.subtitle}</span>
                   {/snippet}
                 </EntityThumbnail>
               {:else}
-                <EntityThumbnail card={thumbnailCard} titleAlign="center" titleSize="compact" />
+                <EntityThumbnail card={thumbnailCard} selectable={false} titleAlign="center" titleSize="compact" />
               {/if}
             </div>
           {/each}

@@ -26,8 +26,8 @@
   import type { EntityDetailCard, EntityDetailCardFull, EntityDetailCredit } from "$lib/entities/entity-detail";
   import { renderEntityDescriptionMarkdown } from "$lib/entities/entity-detail-markdown";
   import { hasHero, hasPoster } from "$lib/entities/entity-detail";
-  import { placeholderGradient } from "$lib/entities/entity-thumbnail";
-  import { resolveEntityHref } from "$lib/entities/v2-codes";
+  import { entityReferenceToThumbnailCard, placeholderGradient } from "$lib/entities/entity-thumbnail";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import EntityTagChips from "./EntityTagChips.svelte";
 
   export type EntityDetailPosterSize = "none" | "small" | "medium" | "large";
@@ -471,8 +471,13 @@
     }
   }
 
-  function creditHref(credit: EntityDetailCredit): string | undefined {
-    return resolveEntityHref(credit.kind, credit.id);
+  function creditToThumbnailCard(credit: EntityDetailCredit) {
+    return entityReferenceToThumbnailCard({
+      id: credit.id,
+      kind: credit.kind,
+      title: credit.title,
+      thumbnailUrl: credit.thumbnail,
+    });
   }
 </script>
 
@@ -589,22 +594,14 @@
 {/snippet}
 
 {#snippet referenceItem(credit: EntityDetailCredit)}
-  {@const href = creditHref(credit)}
-  {#if href}
-    <a class="reference-item" href={href}>
-      {#if credit.thumbnail}
-        <img src={credit.thumbnail} alt="" />
-      {/if}
-      <span>{credit.title}</span>
-    </a>
-  {:else}
-    <span class="reference-item">
-      {#if credit.thumbnail}
-        <img src={credit.thumbnail} alt="" />
-      {/if}
-      <span>{credit.title}</span>
-    </span>
-  {/if}
+  <div class="reference-thumbnail">
+    <EntityThumbnail
+      card={creditToThumbnailCard(credit)}
+      selectable={false}
+      titleAlign="center"
+      titleSize="compact"
+    />
+  </div>
 {/snippet}
 
 {#snippet studioSection()}
@@ -629,7 +626,7 @@
         Credits
       </h2>
       <div class="reference-list">
-        {#each cardFull.credits ?? [] as credit (credit.id)}
+        {#each cardFull.credits ?? [] as credit, index (`${credit.id}:${index}`)}
           {@render referenceItem(credit)}
         {/each}
       </div>
@@ -1875,34 +1872,13 @@
   .reference-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.75rem;
     min-width: 0;
   }
 
-  .reference-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55rem;
+  .reference-thumbnail {
+    flex: 0 0 clamp(7rem, 33vw, 8.75rem);
     min-width: 0;
-    max-width: 100%;
-    border: 1px solid var(--detail-border);
-    background: var(--detail-surface-raised);
-    color: var(--detail-text-secondary);
-    padding: 0.35rem 0.65rem 0.35rem 0.4rem;
-    font-size: 0.82rem;
-    text-decoration: none;
-  }
-
-  .reference-item img {
-    width: 2rem;
-    height: 2rem;
-    object-fit: cover;
-    border: 1px solid color-mix(in srgb, var(--detail-border) 70%, transparent);
-  }
-
-  a.reference-item:hover {
-    color: var(--detail-accent);
-    border-color: var(--detail-accent-muted);
   }
 
   /* ── Links ──────────────────────────────────────────────── */

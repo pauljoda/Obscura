@@ -151,9 +151,9 @@ describe("EntityDetail", () => {
     });
 
     expect(screen.getByRole("heading", { name: "Studio" })).toBeInTheDocument();
-    expect(screen.getByText("Blender Foundation")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Blender Foundation" })).toHaveAttribute("href", "/studios/studio-1");
     expect(screen.getByRole("heading", { name: "Credits" })).toBeInTheDocument();
-    expect(screen.getByText("Sacha Goedegebure")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Sacha Goedegebure" })).toHaveAttribute("href", "/performers/person-1");
     expect(screen.getByText("Views")).toBeInTheDocument();
     expect(screen.getByText("1842")).toBeInTheDocument();
     expect(screen.getByText("Release")).toBeInTheDocument();
@@ -165,6 +165,39 @@ describe("EntityDetail", () => {
     expect(screen.getByText("animation")).toBeInTheDocument();
     expect(screen.getByText("stash-import")).toBeInTheDocument();
     expect(screen.getByText("oshash")).toBeInTheDocument();
+  });
+
+  it("renders reference sections with non-selectable entity thumbnails", () => {
+    const card = {
+      ...buildCard(),
+      studio: { id: "studio-1", kind: "studio", title: "Blender Foundation", thumbnail: null },
+      credits: [{ id: "person-1", kind: "person", title: "Sacha Goedegebure", thumbnail: null }],
+      stats: [],
+      dates: [],
+      technical: [],
+      fingerprints: [],
+      markers: [],
+      subtitles: [],
+      progress: null,
+      positions: [],
+      classification: null,
+      sources: [],
+    } satisfies EntityDetailCardFull;
+
+    const { container } = render(EntityDetail, {
+      props: {
+        card,
+        tabs: [{ id: "references", label: "References", sections: ["studio", "credits"] }],
+      },
+    });
+
+    const thumbnails = container.querySelectorAll(".entity-thumbnail");
+
+    expect(thumbnails).toHaveLength(2);
+    expect(screen.getByRole("link", { name: "Blender Foundation" })).toHaveAttribute("href", "/studios/studio-1");
+    expect(screen.getByRole("link", { name: "Sacha Goedegebure" })).toHaveAttribute("href", "/performers/person-1");
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(container.querySelector(".selection")).not.toBeInTheDocument();
   });
 
   it("renders tags as links to the tag entity", () => {
