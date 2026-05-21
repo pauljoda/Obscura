@@ -35,7 +35,10 @@ describe("EntityIndexPageState", () => {
 
     await state.loadInitial();
 
-    expect(fetchV2Entities).toHaveBeenCalledWith({ kind: "video", hideNsfw: true, limit: 250 });
+    expect(fetchV2Entities).toHaveBeenCalledWith(
+      { kind: "video", query: undefined, hideNsfw: true, limit: 250 },
+      { signal: expect.any(AbortSignal) },
+    );
     expect(state.loadState).toBe("ready");
     expect(state.cards.map((card) => card.href)).toEqual(["/videos/video-1"]);
     expect(state.nextCursor).toBe("next-page");
@@ -44,6 +47,7 @@ describe("EntityIndexPageState", () => {
 
     expect(fetchV2Entities).toHaveBeenLastCalledWith({
       kind: "video",
+      query: undefined,
       cursor: "next-page",
       hideNsfw: true,
       limit: 250,
@@ -74,7 +78,10 @@ describe("EntityIndexPageState", () => {
     await Promise.resolve();
 
     expect(fetchV2Entities).toHaveBeenCalledTimes(2);
-    expect(fetchV2Entities).toHaveBeenLastCalledWith({ kind: "video", hideNsfw: false, limit: 500 });
+    expect(fetchV2Entities).toHaveBeenLastCalledWith(
+      { kind: "video", query: undefined, hideNsfw: false, limit: 500 },
+      { signal: expect.any(AbortSignal) },
+    );
     expect(state.cards.map((card) => card.entity.title)).toEqual(["Second Video"]);
   });
 });
