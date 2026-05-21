@@ -17,6 +17,7 @@
   import { cn } from "@obscura/ui-svelte";
   import { onMount } from "svelte";
   import { isNsfw, withFlagCapability } from "$lib/api/capabilities";
+  import type { EntityCapability } from "$lib/api/generated/model";
   import { updateV2EntityFlags } from "$lib/api/v2";
   import { createFilterPresets, type FilterPreset } from "$lib/filter-presets";
   import { usePageSnapshots } from "$lib/stores/page-snapshots.svelte";
@@ -154,6 +155,7 @@
   }
 
   let actionsMenuOpen = $state(false);
+  let capabilityOverrides = $state(new Map<string, EntityCapability[]>());
   let activeKind = $state(ENTITY_GRID_ALL_KINDS);
   let activePresetId = $state<string | null>(null);
   let drawerOpen = $state(false);
@@ -186,13 +188,21 @@
     sortBy,
     sortDir,
   });
-  const tabs = $derived(buildEntityKindTabs(cards, { includeNsfw: gridState.includeNsfw }));
-  const filterOptions = $derived(buildCapabilityFilterOptions(cards));
-  const visibleCards = $derived(applyEntityGridState(cards, gridState, filterOptions));
+  const effectiveCards = $derived.by(() => {
+    if (capabilityOverrides.size === 0) return cards;
+    return cards.map((c) => {
+      const overridden = capabilityOverrides.get(c.entity.id);
+      if (!overridden) return c;
+      return { ...c, entity: { ...c.entity, capabilities: overridden } };
+    });
+  });
+  const tabs = $derived(buildEntityKindTabs(effectiveCards, { includeNsfw: gridState.includeNsfw }));
+  const filterOptions = $derived(buildCapabilityFilterOptions(effectiveCards));
+  const visibleCards = $derived(applyEntityGridState(effectiveCards, gridState, filterOptions));
   const selectedCount = $derived(selectedIds.length);
   const selectedCards = $derived(
     selectedCount > 0
-      ? cards.filter((c) => selectedIds.includes(c.entity.id))
+      ? effectiveCards.filter((c) => selectedIds.includes(c.entity.id))
       : [],
   );
   const allSelectedNsfw = $derived(
@@ -536,9 +546,11 @@
       await Promise.all(
         selectedCards.map((c) => updateV2EntityFlags(c.entity.id, { isNsfw: markNsfw })),
       );
+      const next = new Map(capabilityOverrides);
       for (const card of selectedCards) {
-        card.entity.capabilities = withFlagCapability(card.entity.capabilities, "isNsfw", markNsfw);
+        next.set(card.entity.id, withFlagCapability(card.entity.capabilities, "isNsfw", markNsfw));
       }
+      capabilityOverrides = next;
     } finally {
       nsfwToggling = false;
     }
