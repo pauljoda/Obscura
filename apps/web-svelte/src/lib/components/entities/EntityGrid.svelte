@@ -722,7 +722,8 @@
   </div>
 
   {#if !loading && visibleCards.length > 0}
-    <nav class="pagination-bar" bind:this={paginationBarEl} aria-label="Entity grid pagination">
+    <div class="pagination-shell" bind:this={paginationBarEl}>
+    <nav class="pagination-bar" aria-label="Entity grid pagination">
         <span
           class="pagination-progress"
           aria-hidden="true"
@@ -821,6 +822,7 @@
           </label>
         </div>
     </nav>
+    </div>
   {/if}
 </section>
 
@@ -836,12 +838,29 @@
   .entity-grid {
     display: flex;
     flex-direction: column;
-    gap: 0.85rem;
     min-height: var(--entity-grid-fill-height, 0);
     min-width: 0;
   }
 
-  .entity-grid > .pagination-bar {
+  /*
+   * Use explicit sibling margins instead of flex `gap` so we can zero out the
+   * space directly after the sticky toolbar. With `gap`, the strip between
+   * the toolbar's bottom edge and the next sibling's top is transparent —
+   * cards scrolling through it leak into view as a "clipping" band below
+   * the docked toolbar. Removing only that one gap lets the next sibling
+   * (tabs / drawer / grid-viewport) sit flush against the toolbar shell, so
+   * cards slide directly under the toolbar's opaque background with no
+   * dead band between them.
+   */
+  .entity-grid > * + * {
+    margin-top: 0.85rem;
+  }
+
+  .entity-grid > :first-child + * {
+    margin-top: 0;
+  }
+
+  .entity-grid > .pagination-shell {
     margin-top: auto;
   }
 
@@ -893,16 +912,22 @@
   /*
    * The pagination strip is a sibling of the scrolling .grid-viewport (not a
    * child of it), so iOS/macOS overscroll bounce on the inner viewport does
-   * not shake the bar's anchored position. With `position: sticky; bottom: 0`
-   * the bar locks to the bottom of the layout's scrolling container once it
-   * has entered the visible area, mirroring how the toolbar above locks to
-   * the container's top edge — together they frame the cards as one stable
-   * control surface.
+   * not shake the bar's anchored position. The outer .pagination-shell holds
+   * the sticky `bottom: 0` anchor and contributes a `padding-bottom: 0.5rem`
+   * opaque buffer between the bar and the scroll container's bottom edge —
+   * mirroring how `.toolbar-shell` offsets its own visible bar from the top
+   * edge with `padding-top: 0.5rem`. The inner `.pagination-bar` keeps the
+   * glass/border visual styling but no longer carries any sticky behavior.
    */
-  .pagination-bar {
+  .pagination-shell {
     position: sticky;
     bottom: 0;
     z-index: 4;
+    padding-bottom: 0.5rem;
+    background: var(--color-bg);
+  }
+
+  .pagination-bar {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
