@@ -96,6 +96,7 @@
   ];
 
   let sortOpen = $state(false);
+  let thumbSizeOpen = $state(false);
 
   const activeFilters = $derived(
     activeFilterIds
@@ -135,42 +136,6 @@
           </button>
         {/if}
       </label>
-
-      <div class="control-cluster control-cluster-trailing">
-        <button
-          type="button"
-          class={cn("ctrl-btn ctrl-filters", drawerOpen && "is-active")}
-          aria-expanded={drawerOpen}
-          onclick={() => onDrawerOpenChange(!drawerOpen)}
-        >
-          <SlidersHorizontal class="h-3.5 w-3.5" />
-          <span class="ctrl-label">Filters</span>
-          {#if activeFilterIds.length > 0}
-            <span class="filter-count">{activeFilterIds.length}</span>
-          {/if}
-        </button>
-
-        <EntityGridPresetDropdown
-          {activePresetId}
-          {presets}
-          {onApplyPreset}
-          {onSavePreset}
-          {onOverwritePreset}
-          {onDeletePreset}
-        />
-
-        {#if canClearFiltersAndSort}
-          <button
-            type="button"
-            title="Clear filters, sort, search, and saved preferences"
-            class="ctrl-btn ctrl-clear"
-            onclick={onClearFiltersAndSort}
-          >
-            <RotateCcw class="h-3.5 w-3.5 shrink-0" />
-            <span class="ctrl-label">Clear</span>
-          </button>
-        {/if}
-      </div>
     </div>
 
     <div class="controls-row">
@@ -246,20 +211,77 @@
           </button>
         </div>
 
-        <label class="thumb-size-control" title="Drag to change thumbnail size">
-          <Grid2x2 class="thumb-size-icon thumb-size-icon-min" aria-hidden="true" />
-          <span class="sr-only">Thumbnail columns</span>
-          <input
-            type="range"
-            aria-label="Thumbnail columns"
-            min={minScale}
-            max={maxScale}
-            step="1"
-            value={scale}
-            oninput={parseScale}
-          />
-          <Grid3x3 class="thumb-size-icon thumb-size-icon-max" aria-hidden="true" />
-        </label>
+        <div class="relative">
+          <button
+            type="button"
+            class={cn("ctrl-btn ctrl-icon", thumbSizeOpen && "is-active")}
+            title="Thumbnail size"
+            aria-label="Thumbnail size"
+            aria-expanded={thumbSizeOpen}
+            onclick={() => (thumbSizeOpen = !thumbSizeOpen)}
+          >
+            <LayoutGrid class="h-3.5 w-3.5" />
+          </button>
+
+          {#if thumbSizeOpen}
+            <button
+              type="button"
+              class="fixed inset-0 z-40"
+              aria-label="Close thumbnail size menu"
+              onclick={() => (thumbSizeOpen = false)}
+            ></button>
+            <div class="thumb-size-popover">
+              <Grid2x2 class="thumb-size-icon thumb-size-icon-min" aria-hidden="true" />
+              <span class="sr-only">Thumbnail columns</span>
+              <input
+                type="range"
+                aria-label="Thumbnail columns"
+                min={minScale}
+                max={maxScale}
+                step="1"
+                value={scale}
+                oninput={parseScale}
+              />
+              <Grid3x3 class="thumb-size-icon thumb-size-icon-max" aria-hidden="true" />
+            </div>
+          {/if}
+        </div>
+      </div>
+
+      <div class="control-cluster control-cluster-trailing">
+        <button
+          type="button"
+          class={cn("ctrl-btn ctrl-filters", drawerOpen && "is-active")}
+          aria-expanded={drawerOpen}
+          onclick={() => onDrawerOpenChange(!drawerOpen)}
+        >
+          <SlidersHorizontal class="h-3.5 w-3.5" />
+          <span class="ctrl-label">Filters</span>
+          {#if activeFilterIds.length > 0}
+            <span class="filter-count">{activeFilterIds.length}</span>
+          {/if}
+        </button>
+
+        <EntityGridPresetDropdown
+          {activePresetId}
+          {presets}
+          {onApplyPreset}
+          {onSavePreset}
+          {onOverwritePreset}
+          {onDeletePreset}
+        />
+
+        {#if canClearFiltersAndSort}
+          <button
+            type="button"
+            title="Clear filters, sort, search, and saved preferences"
+            class="ctrl-btn ctrl-clear"
+            onclick={onClearFiltersAndSort}
+          >
+            <RotateCcw class="h-3.5 w-3.5 shrink-0" />
+            <span class="ctrl-label">Clear</span>
+          </button>
+        {/if}
       </div>
     </div>
 
@@ -606,45 +628,58 @@
     padding: 0 0.25rem;
   }
 
-  .thumb-size-control {
-    display: inline-flex;
+  /*
+   * Thumbnail size lives in a popover so the slider gets enough width to be
+   * grabbed comfortably on touch devices without taking up a permanent slot
+   * in the toolbar. The trigger is a single icon button; the popover floats
+   * below it with the min/max grid icons flanking a wider slider.
+   */
+  .thumb-size-popover {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.3rem);
+    z-index: 50;
+    display: flex;
     align-items: center;
-    gap: 0.45rem;
-    padding: 0 0.55rem;
-    height: 2rem;
+    gap: 0.55rem;
+    width: min(13rem, calc(100vw - 4rem));
     border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
-    background: var(--color-surface-1, #0c0f15);
+    background: rgba(12, 15, 21, 0.98);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
     border-radius: 0;
-    box-shadow: inset 0 2px 8px rgba(0,0,0,0.30);
-    color: var(--color-text-muted);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.60);
+    padding: 0.7rem 0.8rem;
   }
 
-  .thumb-size-control :global(.thumb-size-icon) {
+  .thumb-size-popover :global(.thumb-size-icon) {
     color: var(--color-text-disabled);
     flex-shrink: 0;
   }
 
-  .thumb-size-control :global(.thumb-size-icon-min) {
-    width: 0.78rem;
-    height: 0.78rem;
+  .thumb-size-popover :global(.thumb-size-icon-min) {
+    width: 0.85rem;
+    height: 0.85rem;
   }
 
-  .thumb-size-control :global(.thumb-size-icon-max) {
-    width: 0.9rem;
-    height: 0.9rem;
+  .thumb-size-popover :global(.thumb-size-icon-max) {
+    width: 1rem;
+    height: 1rem;
     transform: rotate(180deg);
   }
 
-  .thumb-size-control input {
-    width: 5rem;
-    height: 14px;
+  .thumb-size-popover input {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+    height: 28px;
     appearance: none;
     -webkit-appearance: none;
     background: transparent;
   }
 
-  .thumb-size-control input::-webkit-slider-runnable-track {
-    height: 2px;
+  .thumb-size-popover input::-webkit-slider-runnable-track {
+    height: 3px;
     background: linear-gradient(
       to right,
       rgb(196 154 90 / 0.5),
@@ -653,8 +688,8 @@
     box-shadow: inset 0 0 4px rgb(0 0 0 / 0.6);
   }
 
-  .thumb-size-control input::-moz-range-track {
-    height: 2px;
+  .thumb-size-popover input::-moz-range-track {
+    height: 3px;
     background: linear-gradient(
       to right,
       rgb(196 154 90 / 0.5),
@@ -662,13 +697,14 @@
     );
   }
 
-  .thumb-size-control input::-webkit-slider-thumb {
-    width: 11px;
-    height: 11px;
-    margin-top: -4.5px;
+  .thumb-size-popover input::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+    margin-top: -7.5px;
     appearance: none;
     -webkit-appearance: none;
     border: 1px solid rgb(244 220 170);
+    border-radius: 0;
     background: radial-gradient(circle at 30% 30%, #f3e6cc, #c79b5c 65%);
     box-shadow:
       0 0 6px rgb(196 154 90 / 0.55),
@@ -676,21 +712,22 @@
       inset 0 1px 0 rgb(255 255 255 / 0.3);
   }
 
-  .thumb-size-control input::-moz-range-thumb {
-    width: 11px;
-    height: 11px;
+  .thumb-size-popover input::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
     border: 1px solid rgb(244 220 170);
+    border-radius: 0;
     background: radial-gradient(circle at 30% 30%, #f3e6cc, #c79b5c 65%);
     box-shadow:
       0 0 6px rgb(196 154 90 / 0.55),
       0 0 12px rgb(196 154 90 / 0.25);
   }
 
-  .thumb-size-control input:focus-visible {
+  .thumb-size-popover input:focus-visible {
     outline: none;
   }
 
-  .thumb-size-control input:focus-visible::-webkit-slider-thumb {
+  .thumb-size-popover input:focus-visible::-webkit-slider-thumb {
     box-shadow:
       0 0 0 3px rgb(196 154 90 / 0.25),
       0 0 12px rgb(196 154 90 / 0.4);
@@ -812,23 +849,14 @@
   }
 
   /*
-   * On narrow viewports the labels collapse to icons (below 520px) and the
-   * thumb-size slider shrinks so the leading cluster fits in one row.
-   * The trailing cluster keeps `margin-left: auto` to stay flush right —
-   * never stranded against the left edge with empty space to its right.
+   * On narrow viewports labels collapse to icons (below 520px) so the row
+   * fits in one line. The trailing cluster keeps `margin-left: auto` to
+   * stay flush right — never stranded against the left edge with empty
+   * space to its right.
    */
   @media (max-width: 520px) {
     .toolbar-root {
       padding: 0.6rem 0.6rem;
-    }
-
-    .thumb-size-control {
-      gap: 0.35rem;
-      padding: 0 0.45rem;
-    }
-
-    .thumb-size-control input {
-      width: 3.25rem;
     }
   }
 </style>
