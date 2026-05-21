@@ -17,7 +17,8 @@ namespace Obscura.Infrastructure.Entities;
 /// coordinator and never branches on a concrete entity kind.
 /// </summary>
 public sealed class EfEntityReadService : IEntityReadService {
-    private const int PageSize = 60;
+    private const int DefaultPageSize = 250;
+    private const int MaxPageSize = 1000;
 
     private readonly ObscuraDbContext _db;
     private readonly EfEntityRepository _repository;
@@ -37,7 +38,9 @@ public sealed class EfEntityReadService : IEntityReadService {
         string? query,
         string? cursor,
         bool? hideNsfw,
+        int? limit,
         CancellationToken cancellationToken) {
+        var pageSize = Math.Clamp(limit ?? DefaultPageSize, 1, MaxPageSize);
         var entityQuery = _db.Entities.AsNoTracking()
             .Where(entity => entity.DeletedAt == null);
 
@@ -68,12 +71,12 @@ public sealed class EfEntityReadService : IEntityReadService {
         var rows = await entityQuery
             .OrderBy(entity => entity.Title)
             .ThenBy(entity => entity.Id)
-            .Take(PageSize + 1)
+            .Take(pageSize + 1)
             .ToArrayAsync(cancellationToken);
 
-        var page = rows.Take(PageSize).ToArray();
+        var page = rows.Take(pageSize).ToArray();
         var thumbnails = await ProjectThumbnailsAsync(page, cancellationToken);
-        var nextCursor = rows.Length > PageSize ? EncodeCursor(page[^1].Title, page[^1].Id) : null;
+        var nextCursor = rows.Length > pageSize ? EncodeCursor(page[^1].Title, page[^1].Id) : null;
         return new EntityListResponse(thumbnails, nextCursor);
     }
 

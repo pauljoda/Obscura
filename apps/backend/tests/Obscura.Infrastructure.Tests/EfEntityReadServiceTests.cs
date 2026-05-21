@@ -43,7 +43,7 @@ public sealed class EfEntityReadServiceTests {
         var repository = new EfEntityRepository(db, EntityMappers.Kinds(db), EntityMappers.Capabilities(db));
         var service = new EfEntityReadService(db, repository, EntityMappers.Kinds(db));
 
-        var result = await service.ListAsync(EntityKindRegistry.Video.Code, null, null, null, CancellationToken.None);
+        var result = await service.ListAsync(EntityKindRegistry.Video.Code, null, null, null, null, CancellationToken.None);
         var item = Assert.Single(result.Items);
 
         Assert.Equal("sprite", item.HoverKind);

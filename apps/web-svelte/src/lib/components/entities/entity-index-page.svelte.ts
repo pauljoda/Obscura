@@ -3,6 +3,8 @@ import { entityCardToThumbnailCard } from "$lib/entities/entity-grid";
 import { resolveEntityHref } from "$lib/entities/entity-routes";
 import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
 
+const DEFAULT_ENTITY_PAGE_SIZE = 250;
+
 export type EntityIndexLoadState = "loading" | "ready" | "error";
 
 export interface EntityIndexPageStateOptions {
@@ -18,6 +20,7 @@ export class EntityIndexPageState {
   loadState = $state<EntityIndexLoadState>("loading");
   loadingMore = $state(false);
   nextCursor = $state<string | null>(null);
+  pageSize = $state(DEFAULT_ENTITY_PAGE_SIZE);
 
   cards: EntityThumbnailCard[] = $derived.by(() =>
     this.items.map((item) => entityCardToThumbnailCard(item, this.hrefFor(item))),
@@ -40,6 +43,7 @@ export class EntityIndexPageState {
       const response = await fetchV2Entities({
         kind: this.#options.getKind(),
         hideNsfw: this.#options.getHideNsfw(),
+        limit: this.pageSize,
       });
       this.items = response.items;
       this.nextCursor = response.nextCursor;
@@ -60,6 +64,7 @@ export class EntityIndexPageState {
         kind: this.#options.getKind(),
         cursor: this.nextCursor,
         hideNsfw: this.#options.getHideNsfw(),
+        limit: this.pageSize,
       });
       this.items = [...this.items, ...response.items];
       this.nextCursor = response.nextCursor;
@@ -76,5 +81,12 @@ export class EntityIndexPageState {
 
   hrefFor(item: V2EntityCard): string | undefined {
     return this.#options.resolveHref?.(item) ?? this.#defaultHref(item);
+  }
+
+  setPageSize(pageSize: number) {
+    const next = Math.max(1, Math.floor(pageSize));
+    if (next === this.pageSize) return;
+    this.pageSize = next;
+    void this.loadInitial();
   }
 }

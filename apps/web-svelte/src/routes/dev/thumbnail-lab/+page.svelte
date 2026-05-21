@@ -6,7 +6,7 @@
 
   type LabState = "hydrated" | "loading" | "empty";
 
-  const LAB_PAGE_SIZE = 180;
+  const LAB_PAGE_SIZE = 250;
   const hydratedCards: EntityThumbnailCard[] = interleaveRows(thumbnailLabRows.map((row) => row.cards));
   const bulkActions = [
     { id: "review", label: "Mark reviewed", onRun: () => undefined },
@@ -15,6 +15,7 @@
 
   let labState = $state<LabState>("hydrated");
   let visibleCount = $state(LAB_PAGE_SIZE);
+  let renderedCount = $state(0);
   let selectedIds = $state<string[]>([]);
   let lastRequest = $state<EntityGridRequest | null>(null);
 
@@ -87,6 +88,7 @@
   <section class="status-strip" aria-label="Grid state">
     <span>{hydratedCards.length} fixture entities</span>
     <span>{loadedCount} loaded / {hydratedCards.length}</span>
+    <span>{renderedCount} rendered</span>
     <span>{thumbnailLabRows.length} entity kinds</span>
     <span>{selectedIds.length} selected</span>
     {#if lastRequest}
@@ -100,8 +102,6 @@
     loading={isLoading}
     hasMore={hasMore}
     loadingMore={false}
-    loadMoreHref="/dev/thumbnail-lab"
-    loadMoreKey={visibleCount}
     loadMoreLabel="Load more fixtures"
     onLoadMore={loadMore}
     prefsKey="thumbnail-lab-entity-grid-surface"
@@ -110,6 +110,7 @@
     emptyTitle="Nothing present"
     emptyMessage={labState === "empty" ? "There are no items to show." : "Try adjusting your search or filters."}
     onRequestChange={(request) => (lastRequest = request)}
+    onRenderedCountChange={(count) => (renderedCount = count)}
     onSelectionChange={(ids) => (selectedIds = ids)}
   />
 </main>

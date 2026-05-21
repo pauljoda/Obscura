@@ -21,10 +21,10 @@ describe("v2 api client", () => {
       }),
     );
 
-    await fetchV2Entities({ kind: "video", query: "space movie", cursor: "abc+123" });
+    await fetchV2Entities({ kind: "video", query: "space movie", cursor: "abc+123", limit: 250 });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/entities?kind=video&query=space+movie&cursor=abc%2B123",
+      "/api/entities?kind=video&query=space+movie&cursor=abc%2B123&limit=250",
       expect.objectContaining({ headers: expect.any(Headers) }),
     );
   });

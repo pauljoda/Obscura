@@ -1,6 +1,13 @@
 <script lang="ts">
   import { browser } from "$app/environment";
-  import { SearchX } from "@lucide/svelte";
+  import {
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ChevronsRight,
+    LoaderCircle,
+    SearchX,
+  } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { createFilterPresets, type FilterPreset } from "$lib/filter-presets";
   import { usePageSnapshots } from "$lib/stores/page-snapshots.svelte";
@@ -22,11 +29,13 @@
   import EntityGridFilterDrawer from "./EntityGridFilterDrawer.svelte";
   import EntityGridTabs from "./EntityGridTabs.svelte";
   import EntityGridToolbar from "./EntityGridToolbar.svelte";
-  import InfiniteLoadTrigger from "./InfiniteLoadTrigger.svelte";
   import {
     computeContainedScrollHeight,
     shouldContainWheelScroll,
   } from "./entity-grid-viewport.svelte";
+
+  const DEFAULT_PAGE_SIZE = 250;
+  const DEFAULT_PAGE_SIZE_OPTIONS = [100, 250, 500, 1000];
 
   interface Props {
     bulkActions?: EntityGridBulkAction[];
@@ -34,26 +43,27 @@
     emptyMessage?: string;
     emptyTitle?: string;
     hasMore?: boolean;
+    initialPageSize?: number;
     initialSortBy?: EntityGridSort;
     initialSortDir?: EntityGridSortDir;
     loading?: boolean;
     loadingMore?: boolean;
     loadMoreError?: string | null;
-    loadMoreHref?: string;
-    loadMoreKey?: string | number;
     loadMoreLabel?: string;
     maxScale?: number;
     minScale?: number;
     nsfwMode?: "show" | "off" | "blur";
     onLoadMore?: () => void | Promise<void>;
+    onPageSizeChange?: (pageSize: number) => void;
     onRequestChange?: (request: EntityGridRequest) => void;
+    onRenderedCountChange?: (renderedCount: number) => void;
     onSelectionChange?: (selectedIds: string[]) => void;
+    pageSizeOptions?: number[];
     prefsKey?: string;
     selectable?: boolean;
     scrollBottomPadding?: number;
     scrollMaxHeight?: string | null | undefined;
     scrollMinHeight?: number;
-    scrollThreshold?: number;
   }
 
   let {
@@ -62,26 +72,27 @@
     emptyMessage = "Try adjusting your search or filters.",
     emptyTitle = "Nothing present",
     hasMore = false,
+    initialPageSize = DEFAULT_PAGE_SIZE,
     initialSortBy = "title",
     initialSortDir = "asc",
     loading = false,
     loadingMore = false,
     loadMoreError = null,
-    loadMoreHref = "#",
-    loadMoreKey,
     loadMoreLabel = "Load more",
     maxScale = 12,
     minScale = 2,
     nsfwMode = "show",
     onLoadMore,
+    onPageSizeChange,
     onRequestChange,
+    onRenderedCountChange,
     onSelectionChange,
+    pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
     prefsKey,
     selectable = true,
     scrollBottomPadding = 24,
     scrollMaxHeight = undefined,
     scrollMinHeight = 320,
-    scrollThreshold = 1200,
   }: Props = $props();
 
   function storageKey(): string | null {
@@ -90,6 +101,10 @@
 
   function presetStorageKey(): string | null {
     return prefsKey ? `obscura:entity-grid-presets:${prefsKey}` : null;
+  }
+
+  function pageSizeStorageKey(): string | null {
+    return prefsKey ? `obscura:entity-grid-page-size:${prefsKey}` : null;
   }
 
   function loadScale(): number {
@@ -103,6 +118,21 @@
     return Number.isFinite(parsed) ? Math.min(maxScale, Math.max(minScale, parsed)) : fallbackScale;
   }
 
+  function normalizePageSize(value: number): number {
+    const numeric = Math.floor(value);
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : DEFAULT_PAGE_SIZE;
+  }
+
+  function loadPageSize(): number {
+    const fallback = normalizePageSize(initialPageSize);
+    if (!browser) return fallback;
+    const key = pageSizeStorageKey();
+    if (!key) return fallback;
+    const raw = window.localStorage.getItem(key);
+    if (raw == null) return fallback;
+    return normalizePageSize(Number(raw));
+  }
+
   let activeKind = $state(ENTITY_GRID_ALL_KINDS);
   let activePresetId = $state<string | null>(null);
   let drawerOpen = $state(false);
@@ -110,6 +140,9 @@
   let includeNsfw = $state(true);
   let presets = $state<FilterPreset[]>([]);
   let query = $state("");
+  let pageIndex = $state(0);
+  let pageSize = $state(DEFAULT_PAGE_SIZE);
+  let pendingAdvanceAfterLoad = $state(false);
   let scale = $state(5);
   let selectedIds = $state<string[]>([]);
   let viewportEl: HTMLDivElement | undefined = $state();
@@ -135,6 +168,16 @@
   const request = $derived(entityGridRequestFromState(gridState, filterOptions));
   const effectiveScrollMaxHeight = $derived(scrollMaxHeight === undefined ? measuredScrollMaxHeight : scrollMaxHeight);
   const containsScroll = $derived(scrollMaxHeight !== null);
+  const normalizedPageSizeOptions = $derived(
+    Array.from(new Set([...pageSizeOptions, pageSize].map(normalizePageSize))).sort((a, b) => a - b),
+  );
+  const pageCount = $derived(Math.max(1, Math.ceil(visibleCards.length / pageSize)));
+  const currentPageIndex = $derived(Math.min(pageIndex, pageCount - 1));
+  const pageStart = $derived(visibleCards.length === 0 ? 0 : currentPageIndex * pageSize);
+  const pageEnd = $derived(Math.min(visibleCards.length, pageStart + pageSize));
+  const pagedCards = $derived(visibleCards.slice(pageStart, pageEnd));
+  const canPageBack = $derived(currentPageIndex > 0);
+  const canPageForward = $derived(currentPageIndex < pageCount - 1 || Boolean(hasMore && onLoadMore));
 
   interface EntityGridSnapshot {
     query: string;
@@ -146,12 +189,16 @@
     viewMode: EntityGridViewMode;
     selectedIds: string[];
     scale: number;
+    pageIndex: number;
+    pageSize: number;
   }
 
   const pageSnapshots = usePageSnapshots();
 
   onMount(() => {
     scale = loadScale();
+    pageSize = loadPageSize();
+    onPageSizeChange?.(pageSize);
     const key = presetStorageKey();
     if (key) presets = createFilterPresets(key).load();
 
@@ -167,6 +214,8 @@
         viewMode,
         selectedIds: [...selectedIds],
         scale,
+        pageIndex: currentPageIndex,
+        pageSize,
       }),
       restore: (snapshot) => {
         query = snapshot.query;
@@ -178,6 +227,9 @@
         viewMode = snapshot.viewMode;
         selectedIds = snapshot.selectedIds;
         scale = snapshot.scale;
+        pageSize = normalizePageSize(snapshot.pageSize ?? pageSize);
+        pageIndex = Math.max(0, snapshot.pageIndex ?? 0);
+        onPageSizeChange?.(pageSize);
         onSelectionChange?.(selectedIds);
       },
     });
@@ -227,6 +279,10 @@
     onRequestChange?.(request);
   });
 
+  $effect(() => {
+    onRenderedCountChange?.(pagedCards.length);
+  });
+
   function persistScale(next: number) {
     scale = Math.min(maxScale, Math.max(minScale, next));
     const key = storageKey();
@@ -236,6 +292,7 @@
   function setActiveKind(kind: string) {
     activeKind = kind;
     activePresetId = null;
+    pageIndex = 0;
     selectedIds = [];
     onSelectionChange?.(selectedIds);
   }
@@ -243,16 +300,19 @@
   function setFilterIds(ids: string[]) {
     filterIds = ids;
     activePresetId = null;
+    pageIndex = 0;
   }
 
   function setIncludeNsfw(value: boolean) {
     includeNsfw = value;
     activePresetId = null;
+    pageIndex = 0;
   }
 
   function setQuery(value: string) {
     query = value;
     activePresetId = null;
+    pageIndex = 0;
   }
 
   function setSortBy(value: EntityGridSort) {
@@ -301,6 +361,7 @@
     sortBy = preset.sortBy === "kind" || preset.sortBy === "rating" || preset.sortBy === "position" ? preset.sortBy : initialSortBy;
     sortDir = preset.sortDir;
     activePresetId = preset.id;
+    pageIndex = 0;
   }
 
   function savePreset(name: string) {
@@ -332,6 +393,7 @@
     sortBy = initialSortBy;
     sortDir = initialSortDir;
     viewMode = "grid";
+    pageIndex = 0;
     onSelectionChange?.(selectedIds);
   }
 
@@ -354,6 +416,46 @@
       })
     ) {
       event.preventDefault();
+    }
+  }
+
+  function scrollPageToTop() {
+    viewportEl?.scrollTo({ top: 0 });
+  }
+
+  function setPageIndex(next: number) {
+    pageIndex = Math.max(0, Math.min(pageCount - 1, next));
+    queueMicrotask(scrollPageToTop);
+  }
+
+  function setPageSize(value: number) {
+    pageSize = normalizePageSize(value);
+    pageIndex = 0;
+    const key = pageSizeStorageKey();
+    if (browser && key) window.localStorage.setItem(key, String(pageSize));
+    onPageSizeChange?.(pageSize);
+    queueMicrotask(scrollPageToTop);
+  }
+
+  async function goToNextPage() {
+    if (currentPageIndex < pageCount - 1) {
+      setPageIndex(currentPageIndex + 1);
+      return;
+    }
+
+    if (!hasMore || !onLoadMore || loadingMore) return;
+    const targetPage = currentPageIndex + 1;
+    const targetStart = targetPage * pageSize;
+    pendingAdvanceAfterLoad = true;
+    try {
+      while (visibleCards.length <= targetStart && hasMore) {
+        const previousCount = visibleCards.length;
+        await onLoadMore();
+        if (visibleCards.length <= previousCount) break;
+      }
+      setPageIndex(targetPage);
+    } finally {
+      pendingAdvanceAfterLoad = false;
     }
   }
 </script>
@@ -466,7 +568,7 @@
       </div>
     {:else if visibleCards.length > 0}
       <div class="cards" class:is-list={viewMode === "list"} aria-label="Entities">
-        {#each visibleCards as card (card.entity.id)}
+        {#each pagedCards as card (card.entity.id)}
           <EntityThumbnail
             {card}
             layout={viewMode}
@@ -486,17 +588,83 @@
       </div>
     {/if}
 
-    {#if onLoadMore}
-      <InfiniteLoadTrigger
-        hasMore={hasMore}
-        loading={loadingMore}
-        error={loadMoreError}
-        nextHref={loadMoreHref}
-        loadKey={loadMoreKey}
-        label={loadMoreLabel}
-        threshold={scrollThreshold}
-        onLoad={onLoadMore}
-      />
+    {#if !loading && visibleCards.length > 0}
+      <nav class="pagination-bar" aria-label="Entity grid pagination">
+        <div class="page-range" aria-live="polite">
+          <strong>{pageStart + 1}-{pageEnd}</strong>
+          <span>of {visibleCards.length}{hasMore ? "+" : ""}</span>
+        </div>
+
+        <label class="page-size-control">
+          <span>Per page</span>
+          <select
+            value={pageSize}
+            onchange={(event) => setPageSize(Number((event.currentTarget as HTMLSelectElement).value))}
+          >
+            {#each normalizedPageSizeOptions as option (option)}
+              <option value={option}>{option}</option>
+            {/each}
+          </select>
+        </label>
+
+        <div class="page-controls">
+          <button
+            type="button"
+            title="First page"
+            aria-label="First page"
+            disabled={!canPageBack}
+            onclick={() => setPageIndex(0)}
+          >
+            <ChevronsLeft aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            title="Previous page"
+            aria-label="Previous page"
+            disabled={!canPageBack}
+            onclick={() => setPageIndex(currentPageIndex - 1)}
+          >
+            <ChevronLeft aria-hidden="true" />
+          </button>
+          <span class="page-count">Page {currentPageIndex + 1} / {pageCount}</span>
+          <button
+            type="button"
+            title="Next page"
+            aria-label="Next page"
+            disabled={!canPageForward || Boolean(loadMoreError) || loadingMore || pendingAdvanceAfterLoad}
+            onclick={() => void goToNextPage()}
+          >
+            {#if loadingMore || pendingAdvanceAfterLoad}
+              <LoaderCircle class="is-spinning" aria-hidden="true" />
+            {:else}
+              <ChevronRight aria-hidden="true" />
+            {/if}
+          </button>
+          <button
+            type="button"
+            title="Last loaded page"
+            aria-label="Last loaded page"
+            disabled={currentPageIndex >= pageCount - 1}
+            onclick={() => setPageIndex(pageCount - 1)}
+          >
+            <ChevronsRight aria-hidden="true" />
+          </button>
+        </div>
+
+        {#if loadMoreError}
+          <button
+            type="button"
+            class="retry-load"
+            onclick={() => {
+              if (onLoadMore) void onLoadMore();
+            }}
+          >
+            Try again
+          </button>
+        {:else if hasMore && currentPageIndex >= pageCount - 1}
+          <span class="more-hint">{loadMoreLabel}</span>
+        {/if}
+      </nav>
     {/if}
   </div>
 </section>
@@ -542,6 +710,121 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+  }
+
+  .pagination-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border: 1px solid var(--color-border-subtle);
+    background: color-mix(in srgb, var(--color-surface-2) 88%, transparent);
+    box-shadow:
+      0 -8px 24px rgb(0 0 0 / 0.35),
+      inset 0 1px 0 rgb(255 255 255 / 0.04);
+    backdrop-filter: blur(12px);
+    color: var(--color-text-muted);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    padding: 0.55rem 0.65rem;
+  }
+
+  .page-range,
+  .page-size-control,
+  .page-controls,
+  .more-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .page-range {
+    font-size: 0.68rem;
+  }
+
+  .page-range strong {
+    color: var(--color-text-primary);
+    font-weight: 650;
+  }
+
+  .page-size-control {
+    color: var(--color-text-disabled);
+    font-size: 0.64rem;
+    text-transform: uppercase;
+  }
+
+  .page-size-control select {
+    height: 1.8rem;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+    color: var(--color-text-primary);
+    font: inherit;
+    padding: 0 1.65rem 0 0.45rem;
+  }
+
+  .page-controls {
+    justify-content: center;
+  }
+
+  .page-controls button,
+  .retry-load {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.85rem;
+    height: 1.85rem;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+    color: var(--color-text-muted);
+    transition:
+      border-color var(--duration-fast) var(--ease-default),
+      color var(--duration-fast) var(--ease-default),
+      box-shadow var(--duration-fast) var(--ease-default);
+  }
+
+  .page-controls button:hover:not(:disabled),
+  .retry-load:hover {
+    border-color: var(--color-border-accent);
+    color: var(--color-text-accent);
+    box-shadow: 0 0 12px rgb(196 154 90 / 0.18);
+  }
+
+  .page-controls button:disabled {
+    cursor: not-allowed;
+    opacity: 0.38;
+  }
+
+  .page-controls :global(svg) {
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+
+  .page-controls :global(.is-spinning) {
+    animation: spin 0.85s linear infinite;
+  }
+
+  .page-count,
+  .more-hint {
+    color: var(--color-text-disabled);
+    font-size: 0.64rem;
+    text-transform: uppercase;
+  }
+
+  .retry-load {
+    min-width: auto;
+    color: var(--color-error-text);
+    font-size: 0.68rem;
+    padding: 0 0.65rem;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .skeleton-card {
@@ -681,6 +964,27 @@
 
   .empty span {
     font-size: 0.85rem;
+  }
+
+  @media (max-width: 720px) {
+    .pagination-bar {
+      align-items: stretch;
+      flex-wrap: wrap;
+    }
+
+    .page-range {
+      flex: 1 1 auto;
+    }
+
+    .page-controls {
+      order: 3;
+      width: 100%;
+    }
+
+    .page-count {
+      flex: 1;
+      text-align: center;
+    }
   }
 
   @media (min-width: 640px) {

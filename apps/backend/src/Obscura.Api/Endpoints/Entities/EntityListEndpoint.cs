@@ -11,6 +11,7 @@ internal static class EntityListEndpoint {
             string? query,
             string? cursor,
             bool? hideNsfw,
+            int? limit,
             HttpContext httpContext,
             IEntityReadService entities,
             CancellationToken cancellationToken) => {
@@ -18,7 +19,7 @@ internal static class EntityListEndpoint {
                     return error;
                 }
 
-                return Results.Ok(await entities.ListAsync(kind, query, cursor, hideNsfw, cancellationToken));
+                return Results.Ok(await entities.ListAsync(kind, query, cursor, hideNsfw, limit, cancellationToken));
             })
             .WithName("ListEntities")
             .Produces<EntityListResponse>()

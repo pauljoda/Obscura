@@ -248,7 +248,7 @@ function unwrapGenerated<T>(
 }
 
 export function fetchV2Entities(
-  params?: { kind?: string; query?: string; cursor?: string; hideNsfw?: boolean },
+  params?: { kind?: string; query?: string; cursor?: string; hideNsfw?: boolean; limit?: number },
   options?: V2RequestOptions,
 ): Promise<V2EntityListResponse> {
   // Cast: hideNsfw is accepted by the backend but not yet in the generated OpenAPI type.

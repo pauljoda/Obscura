@@ -17,6 +17,7 @@ public interface IEntityReadService {
         string? query,
         string? cursor,
         bool? hideNsfw,
+        int? limit,
         CancellationToken cancellationToken);
 
     /// <summary>

@@ -104,11 +104,11 @@
       {prefsKey}
       {emptyTitle}
       {emptyMessage}
+      initialPageSize={page.pageSize}
       hasMore={page.nextCursor !== null}
       loadingMore={page.loadingMore}
       loadMoreError={page.loadMoreError}
-      loadMoreHref={`/${prefsKey}`}
-      loadMoreKey={page.nextCursor ?? undefined}
+      onPageSizeChange={(size) => page.setPageSize(size)}
       onLoadMore={() => page.loadMore()}
     />
   {/if}

@@ -21,9 +21,10 @@ internal static class EntityKindRouteEndpoints {
             string? query,
             string? cursor,
             bool? hideNsfw,
+            int? limit,
             IEntityReadService entities,
             CancellationToken cancellationToken) =>
-            Results.Ok(await entities.ListAsync(kind, query, cursor, hideNsfw, cancellationToken)))
+            Results.Ok(await entities.ListAsync(kind, query, cursor, hideNsfw, limit, cancellationToken)))
             .WithName(listName)
             .Produces(StatusCodes.Status200OK, listResponseType);
 
