@@ -1506,9 +1506,7 @@
     z-index: 50;
     min-width: 10rem;
     border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
-    background: rgba(12, 15, 21, 0.98);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    background: rgb(12, 15, 21);
     border-radius: 0;
     box-shadow: 0 8px 40px rgba(0,0,0,0.60);
     padding: 0.3rem 0;
