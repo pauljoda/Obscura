@@ -115,6 +115,7 @@
       remoteTotalCount={page.totalCount}
       onPageSizeChange={(size) => page.setPageSize(size)}
       onLoadMore={() => page.loadMore()}
+      onRequestChange={(request) => page.setQuery(request.query ?? "")}
     />
   {/if}
 </section>

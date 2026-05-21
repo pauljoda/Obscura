@@ -36,6 +36,7 @@ export class EntityIndexPageState {
   loadingMore = $state(false);
   nextCursor = $state<string | null>(null);
   pageSize = $state(DEFAULT_ENTITY_PAGE_SIZE);
+  query = $state("");
   totalCount = $state(0);
 
   cards: EntityThumbnailCard[] = $derived.by(() =>
@@ -43,12 +44,18 @@ export class EntityIndexPageState {
   );
 
   readonly #options: EntityIndexPageStateOptions;
+  #searchTimer: ReturnType<typeof setTimeout> | null = null;
+  #searchAbort: AbortController | null = null;
 
   constructor(options: EntityIndexPageStateOptions) {
     this.#options = options;
   }
 
   async loadInitial() {
+    this.#searchAbort?.abort();
+    this.#searchAbort = new AbortController();
+    const signal = this.#searchAbort.signal;
+
     this.loadState = "loading";
     this.errorMessage = null;
     this.loadMoreError = null;
@@ -59,14 +66,17 @@ export class EntityIndexPageState {
     try {
       const response = await fetchV2Entities({
         kind: this.#options.getKind(),
+        query: this.query || undefined,
         hideNsfw: this.#options.getHideNsfw(),
         limit: this.pageSize,
-      });
+      }, { signal });
+      if (signal.aborted) return;
       this.items = response.items;
       this.nextCursor = response.nextCursor;
       this.totalCount = coerceTotalCount(response.totalCount, response.items.length);
       this.loadState = "ready";
     } catch (err) {
+      if (signal.aborted || (err instanceof DOMException && err.name === "AbortError")) return;
       this.errorMessage = err instanceof Error ? err.message : String(err);
       this.loadState = "error";
     }
@@ -80,6 +90,7 @@ export class EntityIndexPageState {
     try {
       const response = await fetchV2Entities({
         kind: this.#options.getKind(),
+        query: this.query || undefined,
         cursor: this.nextCursor,
         hideNsfw: this.#options.getHideNsfw(),
         limit: this.pageSize,
@@ -92,6 +103,17 @@ export class EntityIndexPageState {
     } finally {
       this.loadingMore = false;
     }
+  }
+
+  setQuery(value: string) {
+    const trimmed = value.trim();
+    if (trimmed === this.query) return;
+    this.query = trimmed;
+    if (this.#searchTimer) clearTimeout(this.#searchTimer);
+    this.#searchTimer = setTimeout(() => {
+      this.#searchTimer = null;
+      void this.loadInitial();
+    }, 300);
   }
 
   #defaultHref(item: V2EntityCard): string | undefined {
