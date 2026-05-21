@@ -7,8 +7,7 @@
     ChevronsLeft,
     ChevronsRight,
     EllipsisVertical,
-    EyeOff,
-    Eye,
+    Flame,
     LoaderCircle,
     SearchX,
     Check,
@@ -17,6 +16,7 @@
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import { onMount } from "svelte";
+  import { isNsfw } from "$lib/api/capabilities";
   import { createFilterPresets, type FilterPreset } from "$lib/filter-presets";
   import { usePageSnapshots } from "$lib/stores/page-snapshots.svelte";
   import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
@@ -64,6 +64,7 @@
     minScale?: number;
     nsfwMode?: "show" | "off" | "blur";
     onLoadMore?: () => void | Promise<void>;
+    onNsfwToggle?: (selectedIds: string[], markNsfw: boolean) => void;
     onPageSizeChange?: (pageSize: number) => void;
     onRequestChange?: (request: EntityGridRequest) => void;
     onRenderedCountChange?: (renderedCount: number) => void;
@@ -101,6 +102,7 @@
     minScale = 2,
     nsfwMode = "show",
     onLoadMore,
+    onNsfwToggle,
     onPageSizeChange,
     onRequestChange,
     onRenderedCountChange,
@@ -189,6 +191,14 @@
   const filterOptions = $derived(buildCapabilityFilterOptions(cards));
   const visibleCards = $derived(applyEntityGridState(cards, gridState, filterOptions));
   const selectedCount = $derived(selectedIds.length);
+  const selectedCards = $derived(
+    selectedCount > 0
+      ? cards.filter((c) => selectedIds.includes(c.entity.id))
+      : [],
+  );
+  const allSelectedNsfw = $derived(
+    selectedCards.length > 0 && selectedCards.every((c) => isNsfw(c.entity.capabilities)),
+  );
   const request = $derived(entityGridRequestFromState(gridState, filterOptions));
   const effectiveScrollMaxHeight = $derived(scrollMaxHeight === undefined ? measuredScrollMaxHeight : scrollMaxHeight);
   const containsScroll = $derived(scrollMaxHeight !== null);
@@ -683,22 +693,17 @@
           <span class="bulk-btn-label">Clear</span>
         </button>
 
-        {#if nsfwMode === "show"}
+        {#if onNsfwToggle}
           <span class="bulk-divider" aria-hidden="true"></span>
           <button
             type="button"
             class="bulk-btn"
-            class:is-active={!includeNsfw}
-            title={includeNsfw ? "Hide NSFW" : "Show NSFW"}
-            onclick={() => setIncludeNsfw(!includeNsfw)}
+            class:is-active={!allSelectedNsfw}
+            title={allSelectedNsfw ? "Mark SFW" : "Mark NSFW"}
+            onclick={() => onNsfwToggle(selectedIds, !allSelectedNsfw)}
           >
-            {#if includeNsfw}
-              <EyeOff class="h-3.5 w-3.5" />
-              <span class="bulk-btn-label">Hide NSFW</span>
-            {:else}
-              <Eye class="h-3.5 w-3.5" />
-              <span class="bulk-btn-label">Show NSFW</span>
-            {/if}
+            <Flame class="h-3.5 w-3.5" />
+            <span class="bulk-btn-label">{allSelectedNsfw ? "Mark SFW" : "Mark NSFW"}</span>
           </button>
         {/if}
 
