@@ -18,7 +18,8 @@ export function computeContainedScrollHeight({
   top,
   viewportHeight,
 }: ContainedScrollHeightInput): string {
-  const available = Math.floor(viewportHeight - top - bottomPadding);
+  const visibleTop = Math.max(0, top);
+  const available = Math.floor(viewportHeight - visibleTop - bottomPadding);
   return `${Math.max(minHeight, available)}px`;
 }
 

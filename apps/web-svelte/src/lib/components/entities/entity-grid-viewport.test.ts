@@ -13,6 +13,10 @@ describe("entity-grid viewport sizing", () => {
     expect(computeContainedScrollHeight({ top: 820, viewportHeight: 960, bottomPadding: 24, minHeight: 280 })).toBe("280px");
   });
 
+  it("does not grow beyond the visible viewport after the outer page scrolls past the grid top", () => {
+    expect(computeContainedScrollHeight({ top: -900, viewportHeight: 960, bottomPadding: 24 })).toBe("936px");
+  });
+
   it("contains wheel scroll at the top and bottom of the grid", () => {
     expect(shouldContainWheelScroll({ scrollTop: 0, clientHeight: 400, scrollHeight: 1000, deltaY: -16 })).toBe(true);
     expect(shouldContainWheelScroll({ scrollTop: 600, clientHeight: 400, scrollHeight: 1000, deltaY: 16 })).toBe(true);

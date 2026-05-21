@@ -134,6 +134,7 @@
   const selectedCount = $derived(selectedIds.length);
   const request = $derived(entityGridRequestFromState(gridState, filterOptions));
   const effectiveScrollMaxHeight = $derived(scrollMaxHeight === undefined ? measuredScrollMaxHeight : scrollMaxHeight);
+  const containsScroll = $derived(scrollMaxHeight !== null);
 
   interface EntityGridSnapshot {
     query: string;
@@ -446,7 +447,7 @@
 
   <div
     bind:this={viewportEl}
-    class={["grid-viewport", effectiveScrollMaxHeight && "is-contained"]}
+    class={["grid-viewport", containsScroll && "is-contained"]}
     style:--entity-grid-scroll-max-height={effectiveScrollMaxHeight ?? undefined}
     onwheel={containWheel}
   >
@@ -515,7 +516,7 @@
   }
 
   .grid-viewport.is-contained {
-    max-height: var(--entity-grid-scroll-max-height);
+    max-height: var(--entity-grid-scroll-max-height, calc(100dvh - 2rem));
     overflow-y: auto;
     overscroll-behavior: contain;
     padding-right: 0.35rem;

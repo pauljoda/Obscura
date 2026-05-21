@@ -21,6 +21,7 @@
   const cards = $derived(labState === "empty" ? [] : hydratedCards.slice(0, visibleCount));
   const hasMore = $derived(labState === "hydrated" && visibleCount < hydratedCards.length);
   const isLoading = $derived(labState === "loading");
+  const loadedCount = $derived(cards.length);
 
   function interleaveRows(rows: EntityThumbnailCard[][]): EntityThumbnailCard[] {
     const maxLength = Math.max(...rows.map((row) => row.length));
@@ -85,6 +86,7 @@
 
   <section class="status-strip" aria-label="Grid state">
     <span>{hydratedCards.length} fixture entities</span>
+    <span>{loadedCount} loaded / {hydratedCards.length}</span>
     <span>{thumbnailLabRows.length} entity kinds</span>
     <span>{selectedIds.length} selected</span>
     {#if lastRequest}
