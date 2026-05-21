@@ -135,6 +135,42 @@
           </button>
         {/if}
       </label>
+
+      <div class="control-cluster control-cluster-trailing">
+        <button
+          type="button"
+          class={cn("ctrl-btn ctrl-filters", drawerOpen && "is-active")}
+          aria-expanded={drawerOpen}
+          onclick={() => onDrawerOpenChange(!drawerOpen)}
+        >
+          <SlidersHorizontal class="h-3.5 w-3.5" />
+          <span class="ctrl-label">Filters</span>
+          {#if activeFilterIds.length > 0}
+            <span class="filter-count">{activeFilterIds.length}</span>
+          {/if}
+        </button>
+
+        <EntityGridPresetDropdown
+          {activePresetId}
+          {presets}
+          {onApplyPreset}
+          {onSavePreset}
+          {onOverwritePreset}
+          {onDeletePreset}
+        />
+
+        {#if canClearFiltersAndSort}
+          <button
+            type="button"
+            title="Clear filters, sort, search, and saved preferences"
+            class="ctrl-btn ctrl-clear"
+            onclick={onClearFiltersAndSort}
+          >
+            <RotateCcw class="h-3.5 w-3.5 shrink-0" />
+            <span class="ctrl-label">Clear</span>
+          </button>
+        {/if}
+      </div>
     </div>
 
     <div class="controls-row">
@@ -224,42 +260,6 @@
           />
           <Grid3x3 class="thumb-size-icon thumb-size-icon-max" aria-hidden="true" />
         </label>
-      </div>
-
-      <div class="control-cluster control-cluster-trailing">
-        <button
-          type="button"
-          class={cn("ctrl-btn ctrl-filters", drawerOpen && "is-active")}
-          aria-expanded={drawerOpen}
-          onclick={() => onDrawerOpenChange(!drawerOpen)}
-        >
-          <SlidersHorizontal class="h-3.5 w-3.5" />
-          <span class="ctrl-label">Filters</span>
-          {#if activeFilterIds.length > 0}
-            <span class="filter-count">{activeFilterIds.length}</span>
-          {/if}
-        </button>
-
-        <EntityGridPresetDropdown
-          {activePresetId}
-          {presets}
-          {onApplyPreset}
-          {onSavePreset}
-          {onOverwritePreset}
-          {onDeletePreset}
-        />
-
-        {#if canClearFiltersAndSort}
-          <button
-            type="button"
-            title="Clear filters, sort, search, and saved preferences"
-            class="ctrl-btn ctrl-clear"
-            onclick={onClearFiltersAndSort}
-          >
-            <RotateCcw class="h-3.5 w-3.5 shrink-0" />
-            <span class="ctrl-label">Clear</span>
-          </button>
-        {/if}
       </div>
     </div>
 
