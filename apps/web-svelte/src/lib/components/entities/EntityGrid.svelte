@@ -923,6 +923,7 @@
     z-index: 4;
     padding-bottom: 0.5rem;
     background: var(--color-bg);
+    box-shadow: 0 2rem 0 0 var(--color-bg);
   }
 
   .pagination-bar {
