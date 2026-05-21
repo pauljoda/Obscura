@@ -10,6 +10,12 @@ export default defineConfig({
     hmr: {
       clientPort: 5173,
     },
+    proxy: {
+      "/api": {
+        target: "http://localhost:8008",
+        changeOrigin: true,
+      },
+    },
   },
   optimizeDeps: {
     exclude: ["jassub"],
