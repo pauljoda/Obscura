@@ -203,6 +203,7 @@
   let mediaMounted = $state(false);
   let controlsTimeout: number | null = null;
   let playTracked = false;
+  let endedTracked = false;
   let lastSourceKey = "";
   let pendingSeekTime: number | null = null;
   let pendingAutoPlay = false;
@@ -312,6 +313,17 @@
   });
   const activePlaybackLabel = $derived(
     effectiveMode === "direct" ? "Direct Playback" : "Adaptive HLS",
+  );
+  const playbackProgressPercent = $derived(
+    duration > 0 ? Math.max(0, Math.min(100, (currentTime / duration) * 100)) : 0,
+  );
+  const bufferedProgressPercent = $derived(
+    duration > 0
+      ? Math.max(
+          playbackProgressPercent,
+          Math.max(0, Math.min(100, ((currentTime + bufferAhead) / duration) * 100)),
+        )
+      : 0,
   );
   const displayedAudioTracks = $derived<AudioTrackOption[]>(
     audioTrackOptions.length > 1
@@ -465,6 +477,12 @@
     bufferAhead = Math.max(0, bufferedEnd - video.currentTime);
   }
 
+  function notifyPlaybackEnded() {
+    if (endedTracked) return;
+    endedTracked = true;
+    onEnded?.();
+  }
+
   function qualityLabel(quality: VideoQuality, index: number) {
     if (quality.bitrate) return formatBandwidth(quality.bitrate);
     return `Level ${index + 1}`;
@@ -605,13 +623,19 @@
   function togglePlay() {
     if (!player) return;
     if (player.paused) void playWithFallback();
-    else void player.pause();
+    else {
+      void player.pause();
+      videoEl?.pause();
+    }
   }
 
   async function playWithFallback() {
     if (!player) return;
     try {
       await player.play();
+      if (videoEl?.paused) {
+        await videoEl.play();
+      }
     } catch (error) {
       if (applyPlaybackFallback()) {
         pendingAutoPlay = true;
@@ -653,8 +677,12 @@
     if (!player) return;
     const target = Math.max(0, Math.min(duration || time, time));
     player.currentTime = target;
+    if (videoEl && Math.abs(videoEl.currentTime - target) > 0.15) {
+      videoEl.currentTime = target;
+    }
     currentTime = target;
     onTimeUpdate?.(target);
+    updateBuffered();
   }
 
   function toggleMute() {
@@ -922,6 +950,7 @@
     playerNotice = null;
     activeQualityLabel = null;
     playTracked = false;
+    endedTracked = false;
     autoSelected = false;
   });
 
@@ -1103,15 +1132,80 @@
     const video = videoEl;
     if (!video) return;
     const onProgress = () => updateBuffered();
+    const onNativeTimeUpdate = () => {
+      currentTime = video.currentTime;
+      onTimeUpdate?.(video.currentTime);
+      updateBuffered();
+    };
     const onLoadedMetadata = () => {
       duration = Math.max(video.duration || 0, propDuration ?? 0);
       updateBuffered();
     };
+    const onNativePlay = () => {
+      playing = true;
+      endedTracked = false;
+      if (!playTracked) {
+        playTracked = true;
+        onPlayStarted?.();
+      }
+      scheduleControlsHide();
+    };
+    const onNativePlaying = () => {
+      buffering = false;
+      playing = true;
+      scheduleControlsHide();
+    };
+    const onNativePause = () => {
+      playing = false;
+      showControls = true;
+      clearControlsTimer();
+    };
+    const onNativeEnded = () => {
+      playing = false;
+      showControls = true;
+      clearControlsTimer();
+      notifyPlaybackEnded();
+    };
+    const onNativeWaiting = () => {
+      buffering = true;
+    };
+    const onNativeSeeked = () => {
+      buffering = false;
+      playing = !video.paused;
+      updateBuffered();
+    };
+    const onNativeVolumeChange = () => {
+      muted = video.muted || video.volume === 0;
+      volume = video.volume;
+    };
+    const onNativeRateChange = () => {
+      playbackRate = video.playbackRate;
+    };
+    video.addEventListener("timeupdate", onNativeTimeUpdate);
     video.addEventListener("progress", onProgress);
     video.addEventListener("loadedmetadata", onLoadedMetadata);
+    video.addEventListener("play", onNativePlay);
+    video.addEventListener("playing", onNativePlaying);
+    video.addEventListener("pause", onNativePause);
+    video.addEventListener("ended", onNativeEnded);
+    video.addEventListener("waiting", onNativeWaiting);
+    video.addEventListener("seeking", onNativeWaiting);
+    video.addEventListener("seeked", onNativeSeeked);
+    video.addEventListener("volumechange", onNativeVolumeChange);
+    video.addEventListener("ratechange", onNativeRateChange);
     return () => {
+      video.removeEventListener("timeupdate", onNativeTimeUpdate);
       video.removeEventListener("progress", onProgress);
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
+      video.removeEventListener("play", onNativePlay);
+      video.removeEventListener("playing", onNativePlaying);
+      video.removeEventListener("pause", onNativePause);
+      video.removeEventListener("ended", onNativeEnded);
+      video.removeEventListener("waiting", onNativeWaiting);
+      video.removeEventListener("seeking", onNativeWaiting);
+      video.removeEventListener("seeked", onNativeSeeked);
+      video.removeEventListener("volumechange", onNativeVolumeChange);
+      video.removeEventListener("ratechange", onNativeRateChange);
     };
   });
 
@@ -1199,6 +1293,7 @@
 
   function handlePlay(_event: Event) {
     playing = true;
+    endedTracked = false;
     if (!playTracked) {
       playTracked = true;
       onPlayStarted?.();
@@ -1222,7 +1317,7 @@
     playing = false;
     showControls = true;
     clearControlsTimer();
-    onEnded?.();
+    notifyPlaybackEnded();
   }
 
   function handleWaiting(_event: Event) {
@@ -1312,6 +1407,8 @@
             "video-time-slider mobile-video-progress group/track",
             showControls ? "opacity-100" : "opacity-0",
           )}
+          style:--obscura-slider-fill={`${playbackProgressPercent}%`}
+          style:--obscura-buffer-progress={`${bufferedProgressPercent}%`}
           data-testid="video-progress-track"
           aria-label="Seek"
           onpointerdown={(event) => event.stopPropagation()}
@@ -1355,6 +1452,8 @@
               {/if}
             </div>
           {/if}
+          <div class="video-slider-native-progress is-buffered"></div>
+          <div class="video-slider-native-progress is-played"></div>
           <media-slider-chapters>
             <template>
               <div class="video-slider-chapter">
@@ -2402,11 +2501,32 @@
     z-index: 2;
   }
 
+  .video-slider-native-progress {
+    height: 100%;
+    left: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+  }
+
+  .video-slider-native-progress.is-buffered {
+    background: rgba(255, 255, 255, 0.34);
+    width: var(--obscura-buffer-progress, 0%);
+    z-index: 2;
+  }
+
+  .video-slider-native-progress.is-played {
+    background: var(--media-slider-track-fill-bg);
+    box-shadow: 0 0 10px rgba(196, 154, 90, 0.35);
+    width: var(--obscura-slider-fill, 0%);
+    z-index: 3;
+  }
+
   .video-slider-thumb {
     background: var(--color-accent-400);
     box-shadow: 0 0 12px rgba(196, 154, 90, 0.55);
     height: 0.95rem;
-    left: var(--slider-fill, 0%);
+    left: var(--obscura-slider-fill, var(--slider-fill, 0%));
     pointer-events: none;
     position: absolute;
     top: 50%;

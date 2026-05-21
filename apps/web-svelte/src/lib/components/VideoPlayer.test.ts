@@ -396,6 +396,28 @@ describe("VideoPlayer", () => {
     expect(source).not.toContain('data-testid="video-progress-marker"');
   });
 
+  it("renders playback and buffer progress from the native video clock", async () => {
+    const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
+
+    expect(source).toContain("playbackProgressPercent");
+    expect(source).toContain("bufferedProgressPercent");
+    expect(source).toContain('style:--obscura-slider-fill={`${playbackProgressPercent}%`}');
+    expect(source).toContain('style:--obscura-buffer-progress={`${bufferedProgressPercent}%`}');
+    expect(source).toContain('class="video-slider-native-progress is-buffered"');
+    expect(source).toContain('class="video-slider-native-progress is-played"');
+    expect(source).toContain("left: var(--obscura-slider-fill, var(--slider-fill, 0%));");
+  });
+
+  it("keeps VidStack controls synchronized with the native video element", async () => {
+    const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
+
+    expect(source).toContain("videoEl.currentTime = target");
+    expect(source).toContain("await videoEl.play();");
+    expect(source).toContain("videoEl?.pause();");
+    expect(source).toContain('video.addEventListener("timeupdate", onNativeTimeUpdate)');
+    expect(source).toContain('video.addEventListener("progress", onProgress)');
+  });
+
   it("lets in-player marker chips seek without being swallowed by the overlay", async () => {
     const source = await readFile("src/lib/components/VideoPlayer.svelte", "utf8");
 
