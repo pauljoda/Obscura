@@ -520,5 +520,5 @@ function expandCards(cards: EntityThumbnailCard[], count: number): EntityThumbna
 /** Safe synthetic thumbnail data for exercising the v2 shared entity-card surface without touching user media. */
 export const thumbnailLabRows: EntityThumbnailRow[] = thumbnailLabSeedRows.map((row) => ({
   ...row,
-  cards: expandCards(row.cards, 5),
+  cards: expandCards(row.cards, 300),
 }));

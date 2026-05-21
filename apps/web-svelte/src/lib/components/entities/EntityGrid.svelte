@@ -23,6 +23,10 @@
   import EntityGridTabs from "./EntityGridTabs.svelte";
   import EntityGridToolbar from "./EntityGridToolbar.svelte";
   import InfiniteLoadTrigger from "./InfiniteLoadTrigger.svelte";
+  import {
+    computeContainedScrollHeight,
+    shouldContainWheelScroll,
+  } from "./entity-grid-viewport.svelte";
 
   interface Props {
     bulkActions?: EntityGridBulkAction[];
@@ -46,7 +50,9 @@
     onSelectionChange?: (selectedIds: string[]) => void;
     prefsKey?: string;
     selectable?: boolean;
-    scrollMaxHeight?: string | null;
+    scrollBottomPadding?: number;
+    scrollMaxHeight?: string | null | undefined;
+    scrollMinHeight?: number;
     scrollThreshold?: number;
   }
 
@@ -72,8 +78,10 @@
     onSelectionChange,
     prefsKey,
     selectable = true,
-    scrollMaxHeight = "calc(100dvh - 15rem)",
-    scrollThreshold = 500,
+    scrollBottomPadding = 24,
+    scrollMaxHeight = undefined,
+    scrollMinHeight = 320,
+    scrollThreshold = 1200,
   }: Props = $props();
 
   function storageKey(): string | null {
@@ -104,6 +112,8 @@
   let query = $state("");
   let scale = $state(5);
   let selectedIds = $state<string[]>([]);
+  let viewportEl: HTMLDivElement | undefined = $state();
+  let measuredScrollMaxHeight = $state<string | null>(null);
   // svelte-ignore state_referenced_locally
   let sortBy = $state<EntityGridSort>(initialSortBy);
   // svelte-ignore state_referenced_locally
@@ -123,6 +133,7 @@
   const visibleCards = $derived(applyEntityGridState(cards, gridState, filterOptions));
   const selectedCount = $derived(selectedIds.length);
   const request = $derived(entityGridRequestFromState(gridState, filterOptions));
+  const effectiveScrollMaxHeight = $derived(scrollMaxHeight === undefined ? measuredScrollMaxHeight : scrollMaxHeight);
 
   interface EntityGridSnapshot {
     query: string;
@@ -169,6 +180,46 @@
         onSelectionChange?.(selectedIds);
       },
     });
+  });
+
+  onMount(() => {
+    let raf: number | null = null;
+    let observer: ResizeObserver | null = null;
+
+    function measureViewport() {
+      if (!viewportEl || scrollMaxHeight !== undefined) {
+        measuredScrollMaxHeight = null;
+        return;
+      }
+
+      measuredScrollMaxHeight = computeContainedScrollHeight({
+        bottomPadding: scrollBottomPadding,
+        minHeight: scrollMinHeight,
+        top: viewportEl.getBoundingClientRect().top,
+        viewportHeight: window.innerHeight,
+      });
+    }
+
+    function scheduleMeasure() {
+      if (raf !== null) return;
+      raf = requestAnimationFrame(() => {
+        raf = null;
+        measureViewport();
+      });
+    }
+
+    observer = new ResizeObserver(scheduleMeasure);
+    if (viewportEl) observer.observe(viewportEl);
+    window.addEventListener("resize", scheduleMeasure, { passive: true });
+    window.addEventListener("scroll", scheduleMeasure, { capture: true, passive: true });
+    queueMicrotask(measureViewport);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", scheduleMeasure);
+      window.removeEventListener("scroll", scheduleMeasure, { capture: true });
+      if (raf !== null) cancelAnimationFrame(raf);
+    };
   });
 
   $effect(() => {
@@ -289,6 +340,21 @@
       : selectedIds.filter((selectedId) => selectedId !== id);
     onSelectionChange?.(selectedIds);
   }
+
+  function containWheel(event: WheelEvent) {
+    const target = event.currentTarget;
+    if (!(target instanceof HTMLElement)) return;
+    if (
+      shouldContainWheelScroll({
+        clientHeight: target.clientHeight,
+        deltaY: event.deltaY,
+        scrollHeight: target.scrollHeight,
+        scrollTop: target.scrollTop,
+      })
+    ) {
+      event.preventDefault();
+    }
+  }
 </script>
 
 <section class="entity-grid" style:--col-count={scale}>
@@ -379,8 +445,10 @@
   {/if}
 
   <div
-    class={["grid-viewport", scrollMaxHeight && "is-contained"]}
-    style:--entity-grid-scroll-max-height={scrollMaxHeight ?? undefined}
+    bind:this={viewportEl}
+    class={["grid-viewport", effectiveScrollMaxHeight && "is-contained"]}
+    style:--entity-grid-scroll-max-height={effectiveScrollMaxHeight ?? undefined}
+    onwheel={containWheel}
   >
     {#if loading}
       <div class="loading-grid" aria-label="Loading entities" aria-busy="true">

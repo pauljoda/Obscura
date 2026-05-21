@@ -1,6 +1,7 @@
 <script lang="ts">
   import { LoaderCircle } from "@lucide/svelte";
   import { onMount, untrack } from "svelte";
+  import { calculateLoadAheadThreshold } from "./infinite-load-trigger.svelte";
 
   interface Props {
     error?: string | null;
@@ -12,6 +13,12 @@
     onLoad: () => void | Promise<void>;
     /** Distance from the bottom, in pixels, at which to fire onLoad. */
     threshold?: number;
+    /** Maximum predictive load-ahead distance, in pixels. */
+    maxThreshold?: number;
+    /** Number of visible screens to keep loaded ahead of the user. */
+    screenLead?: number;
+    /** Time window used to convert scroll speed into predictive pixels. */
+    velocityLeadMs?: number;
   }
 
   let {
@@ -22,13 +29,19 @@
     loadKey,
     nextHref,
     onLoad,
-    threshold = 500,
+    threshold = 1200,
+    maxThreshold = 6000,
+    screenLead = 1.75,
+    velocityLeadMs = 1000,
   }: Props = $props();
 
   let sentinelEl: HTMLDivElement | undefined = $state();
   let lastFiredKey: typeof loadKey | undefined;
   let scrollTarget: HTMLElement | Window | null = null;
   let raf: number | null = null;
+  let lastScrollTop = 0;
+  let lastScrollTime = 0;
+  let scrollVelocity = 0;
 
   function findScrollContainer(el: HTMLElement): HTMLElement | Window {
     let parent: HTMLElement | null = el.parentElement;
@@ -66,13 +79,31 @@
 
     const metrics = readMetrics();
     const remaining = metrics.scrollHeight - (metrics.scrollTop + metrics.clientHeight);
-    if (remaining < threshold) {
+    const leadThreshold = calculateLoadAheadThreshold({
+      baseThreshold: threshold,
+      clientHeight: metrics.clientHeight,
+      maxThreshold,
+      screenLead,
+      scrollVelocity,
+      velocityLeadMs,
+    });
+
+    if (remaining < leadThreshold) {
       lastFiredKey = loadKey;
       untrack(() => void onLoad());
     }
   }
 
   function onScroll() {
+    const metrics = readMetrics();
+    const now = performance.now();
+    const elapsed = now - lastScrollTime;
+    if (elapsed > 0) {
+      scrollVelocity = Math.abs(metrics.scrollTop - lastScrollTop) / elapsed;
+    }
+    lastScrollTop = metrics.scrollTop;
+    lastScrollTime = now;
+
     if (raf !== null) return;
     raf = requestAnimationFrame(() => {
       raf = null;
@@ -83,6 +114,9 @@
   onMount(() => {
     if (!sentinelEl) return;
     scrollTarget = findScrollContainer(sentinelEl);
+    const initialMetrics = readMetrics();
+    lastScrollTop = initialMetrics.scrollTop;
+    lastScrollTime = performance.now();
     const target: EventTarget = scrollTarget;
     target.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll, { passive: true });

@@ -27,6 +27,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video playback controls now stay synchronized with the native media element, so playback, seeking, and the buffered range render correctly while HLS plays.
 - Adaptive video playback now keeps decoded video visible over stale poster artwork and can prebuffer more of the stream during local playback.
 - Browse grids now keep infinite scrolling inside the shared entity grid, so long media lists scroll in a focused grid area instead of relying on page-level loading controls.
+- Browse grids now fit their internal scroll area to the visible page instead of clipping below the app frame.
+- Browse grids now prefetch additional results before users hit the end of the scroll area, including a larger buffer during fast scrolling.
 
 ### Added
 - High-level v2 implementation summary for the rebuilt Obscura architecture, media model, playback pipeline, and UI surfaces.
@@ -43,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The rating capability payload was flattened (`value` is now the rating number directly instead of a nested object), and the unused domain image capability and `entity_aliases` table were removed.
 - Entity hierarchy persistence now treats `parent_entity_id` and `sort_order` on `entities` as the source of truth; domain hydration still builds child arrays for application code.
 - Top-level media browse pages now share one Svelte entity-index component for loading, empty states, retry handling, and infinite scroll behavior.
+- The thumbnail lab now loads a much larger synthetic fixture set through the shared infinite-scroll path for stress testing.
 
 ### Fixed
 - Series and season browse and detail pages now load correctly; an entity-kind code mismatch previously made `/api/series` and season routes return empty lists and 404s.

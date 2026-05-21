@@ -6,18 +6,46 @@
 
   type LabState = "hydrated" | "loading" | "empty";
 
-  const hydratedCards: EntityThumbnailCard[] = thumbnailLabRows.flatMap((row) => row.cards);
+  const LAB_PAGE_SIZE = 180;
+  const hydratedCards: EntityThumbnailCard[] = interleaveRows(thumbnailLabRows.map((row) => row.cards));
   const bulkActions = [
     { id: "review", label: "Mark reviewed", onRun: () => undefined },
     { id: "queue", label: "Queue preview", onRun: () => undefined },
   ];
 
   let labState = $state<LabState>("hydrated");
+  let visibleCount = $state(LAB_PAGE_SIZE);
   let selectedIds = $state<string[]>([]);
   let lastRequest = $state<EntityGridRequest | null>(null);
 
-  const cards = $derived(labState === "empty" ? [] : hydratedCards);
+  const cards = $derived(labState === "empty" ? [] : hydratedCards.slice(0, visibleCount));
+  const hasMore = $derived(labState === "hydrated" && visibleCount < hydratedCards.length);
   const isLoading = $derived(labState === "loading");
+
+  function interleaveRows(rows: EntityThumbnailCard[][]): EntityThumbnailCard[] {
+    const maxLength = Math.max(...rows.map((row) => row.length));
+    const results: EntityThumbnailCard[] = [];
+
+    for (let index = 0; index < maxLength; index += 1) {
+      for (const row of rows) {
+        const card = row[index];
+        if (card) results.push(card);
+      }
+    }
+
+    return results;
+  }
+
+  function setLabState(state: LabState) {
+    labState = state;
+    visibleCount = state === "hydrated" ? LAB_PAGE_SIZE : 0;
+    selectedIds = [];
+  }
+
+  async function loadMore() {
+    if (!hasMore) return;
+    visibleCount = Math.min(visibleCount + LAB_PAGE_SIZE, hydratedCards.length);
+  }
 </script>
 
 <svelte:head>
@@ -34,21 +62,21 @@
       <button
         type="button"
         class={labState === "hydrated" ? "is-active" : undefined}
-        onclick={() => (labState = "hydrated")}
+        onclick={() => setLabState("hydrated")}
       >
         Hydrated
       </button>
       <button
         type="button"
         class={labState === "loading" ? "is-active" : undefined}
-        onclick={() => (labState = "loading")}
+        onclick={() => setLabState("loading")}
       >
         Loading
       </button>
       <button
         type="button"
         class={labState === "empty" ? "is-active" : undefined}
-        onclick={() => (labState = "empty")}
+        onclick={() => setLabState("empty")}
       >
         Empty
       </button>
@@ -68,6 +96,12 @@
     {cards}
     {bulkActions}
     loading={isLoading}
+    hasMore={hasMore}
+    loadingMore={false}
+    loadMoreHref="/dev/thumbnail-lab"
+    loadMoreKey={visibleCount}
+    loadMoreLabel="Load more fixtures"
+    onLoadMore={loadMore}
     prefsKey="thumbnail-lab-entity-grid-surface"
     minScale={2}
     maxScale={12}
