@@ -17,6 +17,7 @@
     ListOrdered,
     MonitorCog,
     Pencil,
+    PencilOff,
     Play,
     Save,
     Users,
@@ -29,6 +30,10 @@
   import { entityReferenceToThumbnailCard, placeholderGradient } from "$lib/entities/entity-thumbnail";
   import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import EntityTagChips from "./EntityTagChips.svelte";
+  import MarkdownEditor from "$lib/components/forms/MarkdownEditor.svelte";
+  import EntityPicker from "$lib/components/forms/EntityPicker.svelte";
+  import type { EntityPickerItem } from "$lib/components/forms/EntityPicker.svelte";
+  import { listTags } from "$lib/api/generated/obscura-v2";
 
   export type EntityDetailPosterSize = "none" | "small" | "medium" | "large";
 
@@ -80,6 +85,7 @@
     externalIdsText: string;
     linksText: string;
     tagsText: string;
+    tagPicks: EntityPickerItem[];
     datesText: string;
   }
 
@@ -143,6 +149,7 @@
     externalIdsText: "",
     linksText: "",
     tagsText: "",
+    tagPicks: [],
     datesText: "",
   });
 
@@ -309,6 +316,11 @@
         .map((link) => link.url)
         .join("\n"),
       tagsText: card.tags.map((tag) => tag.title).join(", "),
+      tagPicks: card.tags.map((tag) => ({
+        id: tag.id,
+        title: tag.title,
+        thumbnailUrl: null,
+      })),
       datesText: "dates" in card
         ? (card as EntityDetailCard & { dates?: Array<{ code: string; value: string }> }).dates?.map((date) => `${date.code}=${date.value}`).join("\n") ?? ""
         : "",
@@ -448,7 +460,7 @@
     }
     if (activeSections.some((section) => section.id === "tags")) {
       fields.push("tags");
-      patch.tags = parseTags(draft.tagsText);
+      patch.tags = draft.tagPicks.map((p) => p.title);
     }
     if (activeSections.some((section) => section.id === "dates")) {
       fields.push("dates");
@@ -478,6 +490,16 @@
       title: credit.title,
       thumbnailUrl: credit.thumbnail,
     });
+  }
+
+  async function searchTags(query: string): Promise<EntityPickerItem[]> {
+    const params = query ? { query, limit: 20 } : { limit: 20 };
+    const response = await listTags(params);
+    return response.data.items.map((item) => ({
+      id: item.id,
+      title: item.title,
+      thumbnailUrl: item.coverUrl ?? null,
+    }));
   }
 </script>
 
@@ -533,31 +555,44 @@
 
 {#snippet descriptionEditSection()}
   <section class="detail-section edit-section">
-    <label class="edit-field">
-      <span>Description</span>
-      <textarea bind:value={editDraft.description} aria-label="Description" rows="7"></textarea>
-    </label>
+    <MarkdownEditor
+      value={editDraft.description}
+      onChange={(v) => (editDraft.description = v)}
+      label="Description"
+      placeholder="Write a description…"
+    />
   </section>
 {/snippet}
 
 {#snippet tagsEditSection()}
   <section class="detail-section edit-section">
-    <label class="edit-field">
-      <span>Tags</span>
-      <input bind:value={editDraft.tagsText} aria-label="Tags" />
-    </label>
+    <EntityPicker
+      values={editDraft.tagPicks}
+      onChange={(v) => {
+        editDraft.tagPicks = v;
+        editDraft.tagsText = v.map((p) => p.title).join(", ");
+      }}
+      onSearch={searchTags}
+      label="Tags"
+      placeholder="Search tags…"
+      canAddNew={true}
+      addNewLabel="tag"
+      mode="multi"
+    />
   </section>
 {/snippet}
 
 {#snippet linksEditSection()}
   <section class="detail-section edit-section">
     <label class="edit-field">
-      <span>Links</span>
-      <textarea bind:value={editDraft.linksText} aria-label="Links" rows="5"></textarea>
+      <span class="edit-field-label">Links</span>
+      <span class="edit-field-hint">One URL per line</span>
+      <textarea bind:value={editDraft.linksText} aria-label="Links" rows="4" class="edit-textarea"></textarea>
     </label>
     <label class="edit-field">
-      <span>External IDs</span>
-      <textarea bind:value={editDraft.externalIdsText} aria-label="External IDs" rows="4"></textarea>
+      <span class="edit-field-label">External IDs</span>
+      <span class="edit-field-hint">provider=value, one per line</span>
+      <textarea bind:value={editDraft.externalIdsText} aria-label="External IDs" rows="3" class="edit-textarea"></textarea>
     </label>
   </section>
 {/snippet}
@@ -565,8 +600,9 @@
 {#snippet datesEditSection()}
   <section class="detail-section edit-section">
     <label class="edit-field">
-      <span>Dates</span>
-      <textarea bind:value={editDraft.datesText} aria-label="Dates" rows="5"></textarea>
+      <span class="edit-field-label">Dates</span>
+      <span class="edit-field-hint">code=value, one per line</span>
+      <textarea bind:value={editDraft.datesText} aria-label="Dates" rows="4" class="edit-textarea"></textarea>
     </label>
   </section>
 {/snippet}
@@ -1057,24 +1093,28 @@
         >
           {#if activeTabCanEdit}
             <div class="detail-edit-toolbar">
-              <span>{isEditingActiveTab ? "Editing" : "View"}</span>
-              <div class="detail-edit-actions">
-                {#if isEditingActiveTab}
+              {#if isEditingActiveTab}
+                <div class="detail-edit-actions">
                   <button type="button" class="edit-action secondary" onclick={cancelEdit} disabled={savingEdit} aria-label={`Cancel ${activeTab.label}`}>
                     <X class="h-3.5 w-3.5" />
                     Cancel
                   </button>
                   <button type="button" class="edit-action primary" onclick={() => void saveEdit()} disabled={saveDisabled} aria-label={`Save ${activeTab.label}`}>
                     <Save class="h-3.5 w-3.5" />
-                    {savingEdit ? "Saving" : "Save"}
+                    {savingEdit ? "Saving…" : "Save"}
                   </button>
-                {:else}
-                  <button type="button" class="edit-action primary" onclick={() => startEdit(activeTab)} aria-label={`Edit ${activeTab.label}`}>
-                    <Pencil class="h-3.5 w-3.5" />
-                    Edit
-                  </button>
-                {/if}
-              </div>
+                </div>
+              {:else}
+                <button
+                  type="button"
+                  class="edit-toggle-btn"
+                  onclick={() => startEdit(activeTab)}
+                  aria-label={`Edit ${activeTab.label}`}
+                  title="Edit"
+                >
+                  <Pencil class="h-3.5 w-3.5" />
+                </button>
+              {/if}
             </div>
             {#if isEditingActiveTab && (editValidationErrors.length > 0 || editError)}
               <div class="edit-errors" aria-live="polite">
@@ -1515,20 +1555,30 @@
   .detail-edit-toolbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.75rem 1.5rem;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 0.5rem 1.5rem;
     border-bottom: 1px solid var(--detail-border);
     background: color-mix(in srgb, var(--detail-surface) 92%, transparent);
   }
 
-  .detail-edit-toolbar > span {
+  .edit-toggle-btn {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 1px solid var(--detail-border);
+    background: var(--detail-surface-raised);
     color: var(--detail-text-muted);
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  }
+
+  .edit-toggle-btn:hover {
+    color: var(--detail-accent);
+    border-color: var(--detail-accent-muted);
+    box-shadow: 0 0 12px var(--detail-accent-glow);
   }
 
   .detail-edit-actions,
@@ -1748,11 +1798,11 @@
 
   .edit-field {
     display: grid;
-    gap: 0.45rem;
+    gap: 0.3rem;
     min-width: 0;
   }
 
-  .edit-field span {
+  .edit-field-label {
     color: var(--detail-text-muted);
     font-family: var(--font-mono, "JetBrains Mono", monospace);
     font-size: 0.68rem;
@@ -1761,26 +1811,31 @@
     text-transform: uppercase;
   }
 
-  .edit-field input,
-  .edit-field textarea {
+  .edit-field-hint {
+    color: var(--detail-text-disabled);
+    font-size: 0.68rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .edit-textarea {
     width: 100%;
     min-width: 0;
-    border: 1px solid var(--detail-border);
+    border: 1px solid var(--color-border-subtle, rgba(164, 172, 185, 0.06));
     border-radius: 0;
-    background: var(--detail-surface-raised);
+    background: var(--color-surface-2, #11151c);
     color: var(--detail-text);
     padding: 0.65rem 0.75rem;
-    font: inherit;
-    font-size: 0.86rem;
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.8rem;
     line-height: 1.55;
     outline: none;
     resize: vertical;
+    transition: border-color 0.18s, box-shadow 0.18s;
   }
 
-  .edit-field input:focus,
-  .edit-field textarea:focus {
-    border-color: var(--detail-accent-muted);
-    box-shadow: 0 0 14px var(--detail-accent-glow);
+  .edit-textarea:focus {
+    border-color: var(--color-border-accent, rgba(199, 155, 92, 0.24));
+    box-shadow: var(--shadow-focus-accent, 0 0 0 2px rgba(199, 155, 92, 0.12));
   }
 
   .edit-confirm-backdrop {

@@ -226,54 +226,56 @@ describe("EntityDetail", () => {
   it("edits the active tab sections and saves a scoped metadata patch", async () => {
     const card = buildCard();
     card.description = "Old description";
+    card.links = [{ label: "https://example.test", url: "https://example.test" }];
     const onMetadataSave = vi.fn().mockResolvedValue(undefined);
 
     render(EntityDetail, {
       props: {
         card,
-        tabs: [{ id: "details", label: "Details", sections: ["description"] }],
+        tabs: [{ id: "links", label: "Links", sections: ["links"] }],
         onMetadataSave,
       },
     });
 
-    await fireEvent.click(screen.getByRole("button", { name: "Edit Details" }));
-    const description = screen.getByLabelText("Description");
-    await fireEvent.input(description, { target: { value: "New description" } });
-    await fireEvent.click(screen.getByRole("button", { name: "Save Details" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Edit Links" }));
+    await fireEvent.input(screen.getByRole("textbox", { name: "Links" }), {
+      target: { value: "https://new-link.test" },
+    });
+    await fireEvent.click(screen.getByRole("button", { name: "Save Links" }));
 
     expect(onMetadataSave).toHaveBeenCalledWith({
-      fields: ["description"],
-      patch: expect.objectContaining({ description: "New description" }),
+      fields: ["urls", "externalIds"],
+      patch: expect.objectContaining({ urls: ["https://new-link.test"] }),
     });
-    expect(screen.queryByLabelText("Description")).not.toBeInTheDocument();
   });
 
   it("blocks dirty tab navigation until the user discards edits", async () => {
     const card = buildCard();
-    card.description = "Old description";
-    card.links = [{ label: "Site", url: "https://example.test" }];
+    card.links = [{ label: "https://example.test", url: "https://example.test" }];
 
     render(EntityDetail, {
       props: {
         card,
         tabs: [
-          { id: "details", label: "Details", sections: ["description"] },
           { id: "links", label: "Links", sections: ["links"] },
+          { id: "details", label: "Details", sections: ["description"] },
         ],
         onMetadataSave: vi.fn().mockResolvedValue(undefined),
       },
     });
 
-    await fireEvent.click(screen.getByRole("button", { name: "Edit Details" }));
-    await fireEvent.input(screen.getByLabelText("Description"), { target: { value: "Unsaved" } });
-    await fireEvent.click(screen.getByRole("tab", { name: "Links" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Edit Links" }));
+    await fireEvent.input(screen.getByRole("textbox", { name: "Links" }), {
+      target: { value: "https://changed.test" },
+    });
+    await fireEvent.click(screen.getByRole("tab", { name: "Details" }));
 
     expect(screen.getByRole("dialog", { name: "Discard unsaved edits?" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Details" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Links" })).toHaveAttribute("aria-selected", "true");
 
     await fireEvent.click(screen.getByRole("button", { name: "Discard changes" }));
 
-    expect(screen.getByRole("tab", { name: "Links" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Details" })).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByRole("dialog", { name: "Discard unsaved edits?" })).not.toBeInTheDocument();
   });
 

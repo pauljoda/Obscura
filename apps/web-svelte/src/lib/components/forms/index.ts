@@ -7,6 +7,9 @@ export { default as TagSelect } from "./TagSelect.svelte";
 export { default as ToggleChip } from "./ToggleChip.svelte";
 export { default as FormActions } from "./FormActions.svelte";
 export { default as EditFormShell } from "./EditFormShell.svelte";
+export { default as MarkdownEditor } from "./MarkdownEditor.svelte";
+export { default as EntityPicker } from "./EntityPicker.svelte";
 
 export type { SearchOption } from "./SearchSelect.svelte";
 export type { TagOption } from "./TagSelect.svelte";
+export type { EntityPickerItem } from "./EntityPicker.svelte";
