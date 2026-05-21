@@ -147,7 +147,24 @@ function isFullEntityCard(entity: EntityGridSourceEntity): entity is EntityCard 
 }
 
 function capabilitiesForEntity(entity: EntityGridSourceEntity): EntityCapability[] {
-  return isFullEntityCard(entity) ? entity.capabilities : [];
+  if (isFullEntityCard(entity)) return entity.capabilities;
+
+  const caps: EntityCapability[] = [];
+  if (entity.isFavorite || entity.isNsfw || entity.isOrganized) {
+    caps.push({
+      kind: "flags" as const,
+      isFavorite: entity.isFavorite || null,
+      isNsfw: entity.isNsfw || null,
+      isOrganized: entity.isOrganized || null,
+    });
+  }
+  if (entity.rating != null) {
+    caps.push({
+      kind: "rating" as const,
+      value: typeof entity.rating === "string" ? Number(entity.rating) : entity.rating,
+    });
+  }
+  return caps;
 }
 
 function aspectRatioForEntity(entity: EntityGridSourceEntity): EntityThumbnailCard["aspectRatio"] {
