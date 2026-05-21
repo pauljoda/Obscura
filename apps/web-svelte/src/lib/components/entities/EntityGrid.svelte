@@ -840,13 +840,9 @@
 
   /*
    * Use explicit sibling margins instead of flex `gap` so we can zero out the
-   * space directly after the sticky toolbar. With `gap`, the strip between
-   * the toolbar's bottom edge and the next sibling's top is transparent —
-   * cards scrolling through it leak into view as a "clipping" band below
-   * the docked toolbar. Removing only that one gap lets the next sibling
-   * (tabs / drawer / grid-viewport) sit flush against the toolbar shell, so
-   * cards slide directly under the toolbar's opaque background with no
-   * dead band between them.
+   * space directly after the sticky toolbar. The thumbnail viewport owns its
+   * own block padding, so cards get visible breathing room above and below
+   * without creating a transparent strip inside the sticky toolbar shell.
    */
   .entity-grid > * + * {
     margin-top: 0.85rem;
@@ -863,7 +859,9 @@
   .grid-viewport {
     display: grid;
     gap: 0.85rem;
+    box-sizing: border-box;
     min-height: 0;
+    padding-block: 0.85rem;
   }
 
   /*
