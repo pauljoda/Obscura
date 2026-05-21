@@ -1,6 +1,12 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import {
+    Badge,
+    BarChart3,
+    Building2,
+    Calendar,
+    Database,
+    Fingerprint,
     Star,
     Heart,
     Flame,
@@ -8,15 +14,20 @@
     ExternalLink,
     FileText,
     Link,
+    ListOrdered,
+    MonitorCog,
     Pencil,
+    Play,
     Save,
+    Users,
     X,
   } from "@lucide/svelte";
   import type { LucideIcon } from "@lucide/svelte";
-  import type { EntityDetailCard } from "$lib/entities/entity-detail";
+  import type { EntityDetailCard, EntityDetailCardFull, EntityDetailCredit } from "$lib/entities/entity-detail";
   import { renderEntityDescriptionMarkdown } from "$lib/entities/entity-detail-markdown";
   import { hasHero, hasPoster } from "$lib/entities/entity-detail";
   import { placeholderGradient } from "$lib/entities/entity-thumbnail";
+  import { resolveEntityHref } from "$lib/entities/v2-codes";
   import EntityTagChips from "./EntityTagChips.svelte";
 
   export type EntityDetailPosterSize = "none" | "small" | "medium" | "large";
@@ -170,13 +181,45 @@
   const hasTabs = $derived(tabs.length > 0);
   const activeTab = $derived(tabs.find((tab) => tab.id === activeTabId) ?? tabs[0] ?? null);
   const coreSections = $derived.by((): EntityDetailSection[] => [
-    { id: "description" },
-    { id: "tags" },
+    { id: "description", label: "Description" },
+    { id: "tags", label: "Tags" },
     { id: "links", label: "Links", icon: Link },
     { id: "files", label: "Files", icon: FileText },
+    { id: "studio", label: "Studio", icon: Building2 },
+    { id: "credits", label: "Credits", icon: Users },
+    { id: "stats", label: "Stats", icon: BarChart3 },
+    { id: "dates", label: "Dates", icon: Calendar },
+    { id: "technical", label: "Technical", icon: MonitorCog },
+    { id: "progress", label: "Progress", icon: Play },
+    { id: "positions", label: "Positions", icon: ListOrdered },
+    { id: "classification", label: "Classification", icon: Badge },
+    { id: "source", label: "Source", icon: Database },
+    { id: "sources", label: "Sources", icon: Database },
+    { id: "fingerprints", label: "Fingerprints", icon: Fingerprint },
   ]);
   const availableSections = $derived([...coreSections, ...sections]);
   const activeTabSections = $derived(activeTab ? sectionsForTab(activeTab) : []);
+  const cardFull = $derived(card as EntityDetailCard & Partial<EntityDetailCardFull>);
+  const standaloneMetadataSectionIds = [
+    "studio",
+    "credits",
+    "stats",
+    "dates",
+    "technical",
+    "progress",
+    "positions",
+    "classification",
+    "sources",
+    "fingerprints",
+    "links",
+    "files",
+  ];
+  const standaloneMetadataSections = $derived.by(() =>
+    standaloneMetadataSectionIds
+      .map(findSection)
+      .filter((section): section is EntityDetailSection => Boolean(section))
+      .filter(sectionHasContent),
+  );
   const isEditingActiveTab = $derived(Boolean(activeTab && editingTabId === activeTab.id));
   const activeTabCanEdit = $derived(
     Boolean(onMetadataSave && activeTab && activeTabSections.some(sectionEditable)),
@@ -221,6 +264,27 @@
         return card.links.length > 0;
       case "files":
         return card.files.length > 0;
+      case "studio":
+        return Boolean(cardFull.studio);
+      case "credits":
+        return (cardFull.credits?.length ?? 0) > 0;
+      case "stats":
+        return (cardFull.stats?.length ?? 0) > 0;
+      case "dates":
+        return (cardFull.dates?.length ?? 0) > 0;
+      case "technical":
+        return (cardFull.technical?.length ?? 0) > 0;
+      case "progress":
+        return Boolean(cardFull.progress);
+      case "positions":
+        return (cardFull.positions?.length ?? 0) > 0;
+      case "classification":
+        return Boolean(cardFull.classification);
+      case "source":
+      case "sources":
+        return (cardFull.sources?.length ?? 0) > 0 || (cardFull.fingerprints?.length ?? 0) > 0;
+      case "fingerprints":
+        return (cardFull.fingerprints?.length ?? 0) > 0;
       default:
         return Boolean(sectionContent);
     }
@@ -406,6 +470,10 @@
       savingEdit = false;
     }
   }
+
+  function creditHref(credit: EntityDetailCredit): string | undefined {
+    return resolveEntityHref(credit.kind, credit.id);
+  }
 </script>
 
 {#snippet descriptionContent()}
@@ -520,6 +588,238 @@
   {/if}
 {/snippet}
 
+{#snippet referenceItem(credit: EntityDetailCredit)}
+  {@const href = creditHref(credit)}
+  {#if href}
+    <a class="reference-item" href={href}>
+      {#if credit.thumbnail}
+        <img src={credit.thumbnail} alt="" />
+      {/if}
+      <span>{credit.title}</span>
+    </a>
+  {:else}
+    <span class="reference-item">
+      {#if credit.thumbnail}
+        <img src={credit.thumbnail} alt="" />
+      {/if}
+      <span>{credit.title}</span>
+    </span>
+  {/if}
+{/snippet}
+
+{#snippet studioSection()}
+  {#if cardFull.studio}
+    <section class="detail-section">
+      <h2 class="section-label">
+        <Building2 class="h-4 w-4" />
+        Studio
+      </h2>
+      <div class="reference-list">
+        {@render referenceItem(cardFull.studio)}
+      </div>
+    </section>
+  {/if}
+{/snippet}
+
+{#snippet creditsSection()}
+  {#if (cardFull.credits?.length ?? 0) > 0}
+    <section class="detail-section">
+      <h2 class="section-label">
+        <Users class="h-4 w-4" />
+        Credits
+      </h2>
+      <div class="reference-list">
+        {#each cardFull.credits ?? [] as credit (credit.id)}
+          {@render referenceItem(credit)}
+        {/each}
+      </div>
+    </section>
+  {/if}
+{/snippet}
+
+{#snippet statsSection()}
+  {#if (cardFull.stats?.length ?? 0) > 0}
+    <section class="detail-section">
+      <h2 class="section-label">
+        <BarChart3 class="h-4 w-4" />
+        Stats
+      </h2>
+      <div class="tab-data-list">
+        {#each cardFull.stats ?? [] as row (row.code)}
+          <div class="tab-data-row">
+            <span>{row.label}</span>
+            <strong>{row.value}</strong>
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
+{/snippet}
+
+{#snippet datesSection()}
+  {#if (cardFull.dates?.length ?? 0) > 0}
+    <section class="detail-section">
+      <h2 class="section-label">
+        <Calendar class="h-4 w-4" />
+        Dates
+      </h2>
+      <div class="tab-data-list">
+        {#each cardFull.dates ?? [] as row (row.code)}
+          <div class="tab-data-row">
+            <span>{row.label}</span>
+            <strong>{row.value}</strong>
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
+{/snippet}
+
+{#snippet technicalSection()}
+  {#if (cardFull.technical?.length ?? 0) > 0}
+    <section class="detail-section">
+      <h2 class="section-label">
+        <MonitorCog class="h-4 w-4" />
+        Technical
+      </h2>
+      <div class="tab-data-list">
+        {#each cardFull.technical ?? [] as row (row.label)}
+          <div class="tab-data-row">
+            <span>{row.label}</span>
+            <strong>{row.value}</strong>
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
+{/snippet}
+
+{#snippet progressSection()}
+  {#if cardFull.progress}
+    <section class="detail-section">
+      <h2 class="section-label">
+        <Play class="h-4 w-4" />
+        Progress
+      </h2>
+      <div class="tab-data-list">
+        <div class="tab-data-row">
+          <span>Progress</span>
+          <strong>{cardFull.progress.index} / {cardFull.progress.total} {cardFull.progress.unit}</strong>
+        </div>
+        <div class="tab-data-row">
+          <span>Percent</span>
+          <strong>{cardFull.progress.percent}%</strong>
+        </div>
+        {#if cardFull.progress.mode}
+          <div class="tab-data-row">
+            <span>Mode</span>
+            <strong>{cardFull.progress.mode}</strong>
+          </div>
+        {/if}
+      </div>
+    </section>
+  {/if}
+{/snippet}
+
+{#snippet positionsSection()}
+  {#if (cardFull.positions?.length ?? 0) > 0}
+    <section class="detail-section">
+      <h2 class="section-label">
+        <ListOrdered class="h-4 w-4" />
+        Positions
+      </h2>
+      <div class="tab-data-list">
+        {#each cardFull.positions ?? [] as row (row.code)}
+          <div class="tab-data-row">
+            <span>{row.code}</span>
+            <strong>{row.label}</strong>
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
+{/snippet}
+
+{#snippet classificationSection()}
+  {#if cardFull.classification}
+    <section class="detail-section">
+      <h2 class="section-label">
+        <Badge class="h-4 w-4" />
+        Classification
+      </h2>
+      <div class="tab-data-list">
+        <div class="tab-data-row">
+          <span>{cardFull.classification.system ?? "classification"}</span>
+          <strong>{cardFull.classification.value}</strong>
+        </div>
+      </div>
+    </section>
+  {/if}
+{/snippet}
+
+{#snippet sourceSection()}
+  {#if (cardFull.sources?.length ?? 0) > 0 || (cardFull.fingerprints?.length ?? 0) > 0}
+    <section class="detail-section">
+      <h2 class="section-label">
+        <Database class="h-4 w-4" />
+        Source
+      </h2>
+      <div class="tab-data-list">
+        {#each cardFull.sources ?? [] as source (source.code)}
+          <div class="tab-data-row">
+            <span>{source.code}</span>
+            <strong>{source.value}</strong>
+          </div>
+        {/each}
+        {#each cardFull.fingerprints ?? [] as fingerprint (`${fingerprint.algorithm}:${fingerprint.value}`)}
+          <div class="tab-data-row">
+            <span>{fingerprint.algorithm}</span>
+            <strong>{fingerprint.value}</strong>
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
+{/snippet}
+
+{#snippet sourcesSection()}
+  {#if (cardFull.sources?.length ?? 0) > 0}
+    <section class="detail-section">
+      <h2 class="section-label">
+        <Database class="h-4 w-4" />
+        Sources
+      </h2>
+      <div class="tab-data-list">
+        {#each cardFull.sources ?? [] as source (source.code)}
+          <div class="tab-data-row">
+            <span>{source.code}</span>
+            <strong>{source.value}</strong>
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
+{/snippet}
+
+{#snippet fingerprintsSection()}
+  {#if (cardFull.fingerprints?.length ?? 0) > 0}
+    <section class="detail-section">
+      <h2 class="section-label">
+        <Fingerprint class="h-4 w-4" />
+        Fingerprints
+      </h2>
+      <div class="tab-data-list">
+        {#each cardFull.fingerprints ?? [] as row (`${row.algorithm}:${row.value}`)}
+          <div class="tab-data-row">
+            <span>{row.algorithm}</span>
+            <strong>{row.value}</strong>
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
+{/snippet}
+
 {#snippet customSection(section: EntityDetailSection)}
   {#if sectionContent}
     <section class="detail-section custom-detail-section" aria-label={section.label ?? section.id}>
@@ -554,6 +854,28 @@
     {@render linksSection()}
   {:else if section.id === "files"}
     {@render filesSection()}
+  {:else if section.id === "studio"}
+    {@render studioSection()}
+  {:else if section.id === "credits"}
+    {@render creditsSection()}
+  {:else if section.id === "stats"}
+    {@render statsSection()}
+  {:else if section.id === "dates"}
+    {@render datesSection()}
+  {:else if section.id === "technical"}
+    {@render technicalSection()}
+  {:else if section.id === "progress"}
+    {@render progressSection()}
+  {:else if section.id === "positions"}
+    {@render positionsSection()}
+  {:else if section.id === "classification"}
+    {@render classificationSection()}
+  {:else if section.id === "source"}
+    {@render sourceSection()}
+  {:else if section.id === "sources"}
+    {@render sourcesSection()}
+  {:else if section.id === "fingerprints"}
+    {@render fingerprintsSection()}
   {:else}
     {@render customSection(section)}
   {/if}
@@ -574,17 +896,15 @@
   {/if}
 
   <!-- Lower metadata sections -->
-  {#if card.links.length > 0 || card.files.length > 0 || extraSections}
+  {#if standaloneMetadataSections.length > 0 || extraSections}
     <div class="metadata-sections">
       {#if extraSections}
         {@render extraSections()}
       {/if}
 
-      <!-- Links (universal) -->
-      {@render linksSection()}
-
-      <!-- Files (universal) -->
-      {@render filesSection()}
+      {#each standaloneMetadataSections as section (section.id)}
+        {@render renderDetailSection(section)}
+      {/each}
     </div>
   {/if}
 {/snippet}
@@ -1511,6 +1831,78 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--detail-text-muted);
+  }
+
+  .tab-data-list {
+    display: grid;
+    gap: 0;
+    min-width: 0;
+  }
+
+  .tab-data-row {
+    display: grid;
+    grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
+    gap: 0.8rem;
+    align-items: baseline;
+    min-width: 0;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--detail-border) 56%, transparent);
+    font-size: 0.82rem;
+  }
+
+  .tab-data-row:last-child {
+    border-bottom: none;
+  }
+
+  .tab-data-row span {
+    color: var(--detail-text-muted);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .tab-data-row strong {
+    min-width: 0;
+    color: var(--detail-text-secondary);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.76rem;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .reference-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .reference-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+    max-width: 100%;
+    border: 1px solid var(--detail-border);
+    background: var(--detail-surface-raised);
+    color: var(--detail-text-secondary);
+    padding: 0.35rem 0.65rem 0.35rem 0.4rem;
+    font-size: 0.82rem;
+    text-decoration: none;
+  }
+
+  .reference-item img {
+    width: 2rem;
+    height: 2rem;
+    object-fit: cover;
+    border: 1px solid color-mix(in srgb, var(--detail-border) 70%, transparent);
+  }
+
+  a.reference-item:hover {
+    color: var(--detail-accent);
+    border-color: var(--detail-accent-muted);
   }
 
   /* ── Links ──────────────────────────────────────────────── */

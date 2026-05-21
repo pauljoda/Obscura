@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/svelte";
 import { FileText } from "@lucide/svelte";
 import { createRawSnippet } from "svelte";
 import { describe, expect, it, vi } from "vitest";
-import type { EntityDetailCard } from "$lib/entities/entity-detail";
+import type { EntityDetailCard, EntityDetailCardFull } from "$lib/entities/entity-detail";
 import EntityDetail, { type EntityDetailSection } from "./EntityDetail.svelte";
 
 function buildCard(): EntityDetailCard {
@@ -107,6 +107,64 @@ describe("EntityDetail", () => {
     expect(screen.getByText("File info panel")).toBeInTheDocument();
     expect(screen.getByText("/media/bunny.mp4")).toBeInTheDocument();
     expect(screen.queryByText("A gentle rabbit adventure.")).not.toBeInTheDocument();
+  });
+
+  it("renders built-in extended metadata sections without route custom content", async () => {
+    const card = {
+      ...buildCard(),
+      studio: { id: "studio-1", kind: "studio", title: "Blender Foundation", thumbnail: null },
+      credits: [{ id: "person-1", kind: "person", title: "Sacha Goedegebure", thumbnail: null }],
+      stats: [{ code: "views", label: "Views", value: "1842" }],
+      dates: [{ code: "release", label: "Release", value: "2008-05-30", sortable: "2008-05-30" }],
+      technical: [{ label: "Resolution", value: "1920×1080 (1080p)" }],
+      fingerprints: [{ algorithm: "oshash", value: "a1b2c3d4" }],
+      markers: [],
+      subtitles: [],
+      progress: { index: 12, total: 18, percent: 67, unit: "episodes", mode: "watching", completed: false },
+      positions: [{ code: "episode", value: 2, label: "Episode 2" }],
+      classification: { value: "animation", system: "content-type" },
+      sources: [{ code: "stash-import", value: "scene-42" }],
+    } satisfies EntityDetailCardFull;
+
+    render(EntityDetail, {
+      props: {
+        card,
+        tabs: [
+          {
+            id: "metadata",
+            label: "Metadata",
+            sections: [
+              "studio",
+              "credits",
+              "stats",
+              "dates",
+              "technical",
+              "progress",
+              "positions",
+              "classification",
+              "sources",
+              "fingerprints",
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByRole("heading", { name: "Studio" })).toBeInTheDocument();
+    expect(screen.getByText("Blender Foundation")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Credits" })).toBeInTheDocument();
+    expect(screen.getByText("Sacha Goedegebure")).toBeInTheDocument();
+    expect(screen.getByText("Views")).toBeInTheDocument();
+    expect(screen.getByText("1842")).toBeInTheDocument();
+    expect(screen.getByText("Release")).toBeInTheDocument();
+    expect(screen.getByText("2008-05-30")).toBeInTheDocument();
+    expect(screen.getByText("Resolution")).toBeInTheDocument();
+    expect(screen.getByText("1920×1080 (1080p)")).toBeInTheDocument();
+    expect(screen.getByText("watching")).toBeInTheDocument();
+    expect(screen.getByText("Episode 2")).toBeInTheDocument();
+    expect(screen.getByText("animation")).toBeInTheDocument();
+    expect(screen.getByText("stash-import")).toBeInTheDocument();
+    expect(screen.getByText("oshash")).toBeInTheDocument();
   });
 
   it("renders tags as links to the tag entity", () => {

@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
-- Entity detail pages now support tab-scoped editing for reusable sections: users can enter edit mode, update fields inline with validation, save explicitly, and get warned before leaving a tab with unsaved changes.
+- Entity detail pages now support tab-scoped editing for reusable sections: users can enter edit mode, update fields inline with validation, save explicitly, and get warned before leaving a tab with unsaved changes. Rich metadata sections such as studios, credits, stats, dates, technical data, progress, positions, classification, sources, and fingerprints remain visible through the shared detail section system.
 - The entity browse experience was refined into a "reel-transport" control room aesthetic — the pagination strip now reads like a deck counter with a brass progress hairline and grouped transport buttons, the toolbar no longer reshuffles when you search, thumbnails carry a quieter shadow with a brass underline accent on hover and select, and the kind tabs gained a glowing brass indicator. Mobile layouts stay legible without pushing the grid around when filters appear.
 - Browse search now queries the server, so typing in the search box searches all entities in the library — not just the loaded page. Results, pagination totals, and page counts update to reflect the filtered dataset.
 - Browse pagination now shows the true total count from the server, so the "showing" readout reads `1–250 of 4,500` instead of the loaded subset, the page indicator shows the real `01 / 18`, and the seek-to-end button jumps to the actual last page by buffering remaining cursor pages on demand. The centered transport buttons stay rock-steady as the readout digits grow.
@@ -66,6 +66,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The thumbnail lab now shows how many cards are loaded and rendered on the current page so pagination behavior can be checked directly.
 
 ### Fixed
+- Entity detail tabs now render shared rich metadata sections such as credits, studios, stats, technical data, sources, and fingerprints without each route having to provide a custom renderer.
 - Library scans now correctly remove galleries, books, and audio libraries only from the scanned root instead of accidentally deleting entities belonging to other roots.
 - Scanning a video library root now cleans up empty series and season container entities after their child videos are removed from disk.
 - Series and season browse and detail pages now load correctly; an entity-kind code mismatch previously made `/api/series` and season routes return empty lists and 404s.

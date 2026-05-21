@@ -340,8 +340,19 @@ export const detailLabRows: EntityDetailLabRow[] = [
           "person-emma": svgArt("ES", forest, burgundy, brass, "portrait"),
           "person-kira": svgArt("KV", graphite, ember, brass, "portrait"),
         };
-        card.credits = card.credits.map((c) => ({ ...c, thumbnail: creditThumbs[c.id] ?? null }));
-        card.studio = card.studio ? { ...card.studio, thumbnail: svgArt("BF", forest, brass, graphite, "square") } : null;
+        card.studio = {
+          id: "studio-blender",
+          kind: "studio",
+          title: "Blender Foundation",
+          thumbnail: svgArt("BF", forest, brass, graphite, "square"),
+        };
+        card.credits = [
+          { id: "person-sacha", kind: "person", title: "Sacha Goedegebure", thumbnail: creditThumbs["person-sacha"] ?? null },
+          { id: "person-nathan", kind: "person", title: "Nathan Vegdahl", thumbnail: creditThumbs["person-nathan"] ?? null },
+          { id: "person-jan", kind: "person", title: "Jan Morgenstern", thumbnail: creditThumbs["person-jan"] ?? null },
+          { id: "person-emma", kind: "person", title: "Emma Silverton", thumbnail: creditThumbs["person-emma"] ?? null },
+          { id: "person-kira", kind: "person", title: "Kira Vasquez", thumbnail: creditThumbs["person-kira"] ?? null },
+        ];
         return card;
       })(),
     ],
