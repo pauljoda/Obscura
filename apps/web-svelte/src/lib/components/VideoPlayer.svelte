@@ -2069,6 +2069,12 @@
     width: 100%;
   }
 
+  :global(.obscura-media-engine[data-started] media-poster),
+  :global(.obscura-media-engine[data-playing] media-poster) {
+    opacity: 0;
+    visibility: hidden;
+  }
+
   .obscura-player-surface:fullscreen,
   .obscura-player-surface:-webkit-full-screen {
     align-items: center;

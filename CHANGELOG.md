@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Entity hierarchy storage now uses each entity's parent pointer directly instead of a separate child-link table, reducing duplicated structure and preserving existing structural links during migration.
 - Video subtitles and thumbnail previews now recover from stale generated media cache entries, so rescans can rebuild missing subtitle files and browse thumbnails can use trickplay hover previews again.
 - Video playback controls now stay synchronized with the native media element, so playback, seeking, and the buffered range render correctly while HLS plays.
+- Adaptive video playback now keeps decoded video visible over stale poster artwork and can prebuffer more of the stream during local playback.
 
 ### Added
 - High-level v2 implementation summary for the rebuilt Obscura architecture, media model, playback pipeline, and UI surfaces.
@@ -53,6 +54,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video browse thumbnails now advertise generated trickplay playlists to the frontend, restoring hover preview scrubbing on grid cards.
 - Missing generated subtitle files now cause videos to be queued for subtitle extraction again, and re-extraction refreshes the existing subtitle track instead of adding a duplicate stale entry.
 - Video playback now drives the visible progress and buffer rails from the native video element, fixing stale player controls while adaptive HLS plays.
+- Adaptive video playback now keeps decoded video visible over stale poster artwork and can prebuffer more of the stream during local playback.
 
 ### Removed
 - Historical v1-era release note detail was pruned from the changelog; git history remains the complete record.

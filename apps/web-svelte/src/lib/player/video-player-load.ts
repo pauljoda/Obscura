@@ -36,9 +36,9 @@ export interface AdaptiveHlsBufferConfig {
   startPosition: number;
 }
 
-const ExtendedHlsMaxBufferLengthSeconds = 120;
+const ExtendedHlsMaxBufferLengthSeconds = 600;
 const ExtendedHlsMaxMaxBufferLengthSeconds = 600;
-const ExtendedHlsMaxBufferSizeBytes = 180 * 1000 * 1000;
+const ExtendedHlsMaxBufferSizeBytes = 1_250 * 1000 * 1000;
 
 export interface AdaptiveSeekPlanInput {
   streamMode: VideoPlaybackMode;

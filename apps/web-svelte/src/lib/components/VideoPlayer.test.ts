@@ -384,6 +384,8 @@ describe("VideoPlayer", () => {
     expect(source).toContain(".obscura-media-engine :global(media-provider)");
     expect(source).toContain("position: absolute;");
     expect(source).toContain("inset: 0;");
+    expect(source).toContain(":global(.obscura-media-engine[data-started] media-poster)");
+    expect(source).toContain("visibility: hidden;");
   });
 
   it("uses VidStack chapter sliders for marker sections instead of custom marker ticks", async () => {

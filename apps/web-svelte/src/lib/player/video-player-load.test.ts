@@ -155,9 +155,9 @@ describe("video-player-load", () => {
       backBufferLength: Infinity,
       capLevelToPlayerSize: false,
       frontBufferFlushThreshold: Infinity,
-      maxBufferLength: 120,
+      maxBufferLength: 600,
       maxMaxBufferLength: 600,
-      maxBufferSize: 180_000_000,
+      maxBufferSize: 1_250_000_000,
       startLevel: -1,
       startPosition: 0,
     });
