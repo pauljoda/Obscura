@@ -301,14 +301,20 @@
    * mirroring how the pagination strip locks to the bottom of the same
    * container.
    *
-   * `top: 0` keeps the toolbar flush with the container's top edge so cards
-   * scrolling behind it are always covered by the toolbar's opaque
-   * background. `padding-top: 0.5rem` then offsets the toolbar's content
-   * (search box + control row + filter chips) down from that top edge — the
-   * "small buffer at the top" without exposing a transparent strip that
-   * would let card thumbnails leak through above the controls. The heavy
-   * drop shadow + brass border-bottom hint give the docked state a clear
-   * material edge matching the pagination strip below.
+   * The shell carries an opaque base color (`--color-bg`) under the glass
+   * panel so cards scrolling behind the docked toolbar can never bleed
+   * through the blurred fill. `padding-top: 0.5rem` offsets the visible
+   * glass panel from the top edge, mirroring the pagination shell below.
+   *
+   * The interior `.toolbar-root` panel uses the same glass recipe as the
+   * pagination bar (semi-transparent surface tint + `backdrop-filter`) so
+   * the two docked strips read as one continuous floating material above
+   * the grid.
+   *
+   * Interactive controls share a single set of border / background / inset
+   * tokens defined just below, so the search box, ctrl buttons, view
+   * toggle, and thumbnail-size slider all read as the same family of
+   * material chips instead of mismatched outlines.
    */
   .toolbar-shell {
     position: sticky;
@@ -319,24 +325,42 @@
     gap: 0.4rem;
     padding-top: 0.5rem;
     background: var(--color-bg);
-    border-bottom: 1px solid rgb(196 154 90 / 0.22);
-    box-shadow:
-      0 10px 28px rgb(0 0 0 / 0.45),
-      inset 0 -1px 0 rgb(0 0 0 / 0.4);
+
+    --ctrl-border: rgb(255 255 255 / 0.07);
+    --ctrl-border-hover: rgb(196 154 90 / 0.32);
+    --ctrl-border-active: rgb(196 154 90 / 0.45);
+    --ctrl-bg:
+      linear-gradient(180deg, rgb(28 32 42 / 0.55), rgb(16 19 26 / 0.7));
+    --ctrl-bg-hover:
+      linear-gradient(180deg, rgb(46 38 24 / 0.75), rgb(28 22 12 / 0.9));
+    --ctrl-bg-active:
+      linear-gradient(180deg, rgb(60 46 24 / 0.92), rgb(36 28 16 / 0.95));
+    --ctrl-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.05),
+      0 1px 2px rgb(0 0 0 / 0.25);
+    --ctrl-shadow-hover:
+      inset 0 1px 0 rgb(255 255 255 / 0.07),
+      0 0 12px rgb(196 154 90 / 0.14);
+    --ctrl-shadow-active:
+      inset 0 1px 0 rgb(196 154 90 / 0.12),
+      0 0 18px rgb(196 154 90 / 0.18);
   }
 
   .toolbar-root {
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
-    border: 1px solid var(--color-border-subtle);
+    gap: 0.6rem;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-top-color: rgb(196 154 90 / 0.22);
     background:
-      linear-gradient(180deg, rgb(16 19 26 / 0.7), rgb(11 13 18 / 0.85)),
-      var(--color-surface-1);
+      linear-gradient(180deg, rgb(20 23 30 / 0.55), rgb(11 12 16 / 0.85)),
+      color-mix(in srgb, var(--color-surface-2) 92%, transparent);
+    backdrop-filter: blur(14px) saturate(1.15);
+    -webkit-backdrop-filter: blur(14px) saturate(1.15);
     box-shadow:
       inset 0 1px 0 rgb(255 255 255 / 0.04),
       inset 0 -1px 0 rgb(0 0 0 / 0.35),
-      0 1px 0 rgb(0 0 0 / 0.45);
+      0 10px 28px rgb(0 0 0 / 0.45);
     padding: 0.7rem 0.75rem;
   }
 
@@ -355,12 +379,12 @@
     gap: 0.55rem;
     min-width: 0;
     height: 2.1rem;
-    border: 1px solid rgb(255 255 255 / 0.05);
+    border: 1px solid var(--ctrl-border);
     background:
-      linear-gradient(180deg, rgb(7 8 11 / 0.95), rgb(11 13 18 / 0.95));
+      linear-gradient(180deg, rgb(8 10 14 / 0.72), rgb(12 14 20 / 0.78));
     box-shadow:
-      inset 0 2px 8px rgb(0 0 0 / 0.55),
-      inset 0 -1px 0 rgb(255 255 255 / 0.02);
+      inset 0 2px 6px rgb(0 0 0 / 0.45),
+      inset 0 -1px 0 rgb(255 255 255 / 0.025);
     padding: 0 0.65rem;
     transition:
       border-color var(--duration-fast) var(--ease-default),
@@ -472,12 +496,19 @@
     }
   }
 
+  /*
+   * Two clusters share one wrapping row. The trailing cluster uses
+   * `margin-left: auto` so it always hugs the right edge — both when the
+   * row has spare width and when the leading cluster wraps and pushes
+   * trailing to its own line. Without this, `justify-content: space-between`
+   * collapses to `flex-start` once items wrap, leaving the trailing cluster
+   * stranded against the left edge with empty space on the right.
+   */
   .controls-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.5rem 0.4rem;
     min-width: 0;
   }
 
@@ -490,6 +521,7 @@
   }
 
   .control-cluster-trailing {
+    margin-left: auto;
     justify-content: flex-end;
   }
 
@@ -510,13 +542,11 @@
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
+    height: 2rem;
     min-height: 2rem;
-    border: 1px solid rgb(255 255 255 / 0.05);
-    background:
-      linear-gradient(180deg, rgb(24 28 36 / 0.65), rgb(14 17 22 / 0.85));
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.03),
-      0 1px 2px rgb(0 0 0 / 0.25);
+    border: 1px solid var(--ctrl-border);
+    background: var(--ctrl-bg);
+    box-shadow: var(--ctrl-shadow);
     color: var(--color-text-muted);
     font-family: var(--font-mono, "JetBrains Mono", monospace);
     font-size: 0.7rem;
@@ -530,13 +560,10 @@
   }
 
   .ctrl-btn:hover {
-    border-color: rgb(196 154 90 / 0.32);
-    background:
-      linear-gradient(180deg, rgb(36 30 19 / 0.85), rgb(20 17 11 / 0.95));
+    border-color: var(--ctrl-border-hover);
+    background: var(--ctrl-bg-hover);
     color: var(--color-text-primary);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.05),
-      0 0 12px rgb(196 154 90 / 0.12);
+    box-shadow: var(--ctrl-shadow-hover);
   }
 
   .ctrl-btn:focus-visible {
@@ -548,13 +575,10 @@
   }
 
   .ctrl-btn.is-active {
-    border-color: rgb(196 154 90 / 0.45);
-    background:
-      linear-gradient(180deg, rgb(54 41 22 / 0.95), rgb(32 25 14 / 0.95));
+    border-color: var(--ctrl-border-active);
+    background: var(--ctrl-bg-active);
     color: var(--color-text-accent-bright);
-    box-shadow:
-      inset 0 1px 0 rgb(196 154 90 / 0.1),
-      0 0 18px rgb(196 154 90 / 0.15);
+    box-shadow: var(--ctrl-shadow-active);
   }
 
   .ctrl-label {
@@ -647,12 +671,12 @@
     gap: 0.45rem;
     padding: 0 0.55rem;
     height: 2rem;
-    border: 1px solid rgb(0 0 0 / 0.5);
+    border: 1px solid var(--ctrl-border);
     background:
-      linear-gradient(180deg, rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.15));
+      linear-gradient(180deg, rgb(8 10 14 / 0.7), rgb(12 14 20 / 0.75));
     box-shadow:
-      inset 0 2px 4px rgb(0 0 0 / 0.5),
-      inset 0 -1px 0 rgb(255 255 255 / 0.02);
+      inset 0 2px 5px rgb(0 0 0 / 0.45),
+      inset 0 -1px 0 rgb(255 255 255 / 0.025);
     color: var(--color-text-muted);
   }
 
@@ -736,19 +760,17 @@
   .view-toggle {
     display: inline-flex;
     align-items: center;
-    border: 1px solid rgb(255 255 255 / 0.05);
-    background:
-      linear-gradient(180deg, rgb(24 28 36 / 0.65), rgb(14 17 22 / 0.85));
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.03),
-      0 1px 2px rgb(0 0 0 / 0.25);
+    height: 2rem;
+    border: 1px solid var(--ctrl-border);
+    background: var(--ctrl-bg);
+    box-shadow: var(--ctrl-shadow);
   }
 
   .view-toggle button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 1.95rem;
+    height: 100%;
     width: 2rem;
     background: transparent;
     color: var(--color-text-muted);
@@ -763,14 +785,19 @@
   }
 
   .view-toggle button.is-active {
-    background:
-      linear-gradient(180deg, rgb(54 41 22 / 0.95), rgb(32 25 14 / 0.95));
+    background: var(--ctrl-bg-active);
     color: var(--color-text-accent-bright);
     box-shadow:
       inset 0 0 12px rgb(196 154 90 / 0.18),
       inset 0 1px 0 rgb(196 154 90 / 0.1);
   }
 
+  /*
+   * The filter chip strip reserves its height even when no filters are
+   * active so the cards below don't jump when chips appear or disappear.
+   * The brass accent rail + label only fade in alongside chips, but the
+   * row's vertical footprint stays constant.
+   */
   .filter-scroll {
     display: flex;
     align-items: center;
@@ -778,11 +805,13 @@
     overflow-x: auto;
     padding: 0 0.1rem;
     scrollbar-width: thin;
+    min-height: 1.85rem;
+    border-left: 2px solid transparent;
+    transition: border-color var(--duration-fast) var(--ease-default);
   }
 
   .filter-scroll.is-active {
-    min-height: 2rem;
-    border-left: 2px solid rgb(196 154 90 / 0.35);
+    border-left-color: rgb(196 154 90 / 0.35);
     padding-left: 0.55rem;
   }
 
@@ -842,5 +871,26 @@
     overflow: hidden;
     clip: rect(0 0 0 0);
     white-space: nowrap;
+  }
+
+  /*
+   * On narrow viewports the labels collapse to icons (below 520px) and the
+   * thumb-size slider shrinks so the leading cluster fits in one row.
+   * The trailing cluster keeps `margin-left: auto` to stay flush right —
+   * never stranded against the left edge with empty space to its right.
+   */
+  @media (max-width: 520px) {
+    .toolbar-root {
+      padding: 0.6rem 0.6rem;
+    }
+
+    .thumb-size-control {
+      gap: 0.35rem;
+      padding: 0 0.45rem;
+    }
+
+    .thumb-size-control input {
+      width: 3.25rem;
+    }
   }
 </style>
