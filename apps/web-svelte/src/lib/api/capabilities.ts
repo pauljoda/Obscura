@@ -91,6 +91,13 @@ export function withFlagCapability(
   flag: "isFavorite" | "isNsfw" | "isOrganized",
   value: boolean,
 ): EntityCapability[] {
+  const hasFlags = capabilities.some((c) => c.kind === "flags");
+  if (!hasFlags) {
+    return [
+      ...capabilities,
+      { kind: "flags" as const, isFavorite: null, isNsfw: null, isOrganized: null, [flag]: value } as EntityCapabilityFlagsCapability,
+    ];
+  }
   return capabilities.map((capability) =>
     capability.kind === "flags"
       ? { ...capability, [flag]: value }

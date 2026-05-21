@@ -439,6 +439,8 @@
     includeNsfw = value;
     activePresetId = null;
     pageIndex = 0;
+    selectedIds = [];
+    onSelectionChange?.(selectedIds);
   }
 
   function setQuery(value: string) {
@@ -537,22 +539,16 @@
     onSelectionChange?.(selectedIds);
   }
 
-  let nsfwToggling = $state(false);
-
-  async function toggleNsfwFlag(markNsfw: boolean) {
-    if (nsfwToggling || selectedCards.length === 0) return;
-    nsfwToggling = true;
-    try {
-      await Promise.all(
-        selectedCards.map((c) => updateV2EntityFlags(c.entity.id, { isNsfw: markNsfw })),
-      );
-      const next = new Map(capabilityOverrides);
-      for (const card of selectedCards) {
-        next.set(card.entity.id, withFlagCapability(card.entity.capabilities, "isNsfw", markNsfw));
-      }
-      capabilityOverrides = next;
-    } finally {
-      nsfwToggling = false;
+  function toggleNsfwFlag(markNsfw: boolean) {
+    if (selectedCards.length === 0) return;
+    const targets = [...selectedCards];
+    const next = new Map(capabilityOverrides);
+    for (const card of targets) {
+      next.set(card.entity.id, withFlagCapability(card.entity.capabilities, "isNsfw", markNsfw));
+    }
+    capabilityOverrides = next;
+    for (const card of targets) {
+      void updateV2EntityFlags(card.entity.id, { isNsfw: markNsfw });
     }
   }
 
@@ -725,9 +721,8 @@
         <button
           type="button"
           class="bulk-btn"
-          disabled={nsfwToggling}
           title={allSelectedNsfw ? "Mark SFW" : "Mark NSFW"}
-          onclick={() => void toggleNsfwFlag(!allSelectedNsfw)}
+          onclick={() => toggleNsfwFlag(!allSelectedNsfw)}
         >
           <Flame class="h-3.5 w-3.5" />
           <span class="bulk-btn-label">{allSelectedNsfw ? "Mark SFW" : "Mark NSFW"}</span>
