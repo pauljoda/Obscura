@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Contracts.Entities;
 using Obscura.Contracts.Plugins;
 using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
@@ -8,6 +9,143 @@ using Obscura.Infrastructure.Plugins;
 namespace Obscura.Infrastructure.Tests;
 
 public sealed class EntityMetadataApplyServiceTests {
+    [Fact]
+    public async Task ApplyPatchUpdatesEditableEntityMetadataAndCanClearNullableFields() {
+        await using var db = CreateContext();
+        var entityId = Guid.Parse("18181818-1818-1818-1818-181818181818");
+        SeedEntity(db, entityId, "video", "Old Title");
+        db.EntityDescriptions.Add(new EntityDescriptionRow {
+            EntityId = entityId,
+            Value = "Old description",
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        db.EntityUrls.Add(new EntityUrlRow {
+            Id = Guid.NewGuid(),
+            EntityId = entityId,
+            Url = "https://old.example.test",
+            SortOrder = 0,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var service = new EntityMetadataApplyService(db, new PluginArtworkServiceOptions(Path.GetTempPath()));
+        var applied = await service.ApplyPatchAsync(
+            entityId,
+            new EntityMetadataUpdateRequest(
+                Fields: ["title", "description", "urls", "rating", "flags"],
+                Patch: EmptyPatch() with {
+                    Title = "New Title",
+                    Description = null,
+                    Urls = ["https://new.example.test"],
+                    Rating = 4,
+                    Flags = new EntityMetadataFlagsPatch(IsFavorite: true, IsNsfw: false, IsOrganized: true)
+                }),
+            CancellationToken.None);
+
+        Assert.True(applied);
+        Assert.Equal("New Title", (await db.Entities.FindAsync([entityId]))?.Title);
+        Assert.Null(await db.EntityDescriptions.FindAsync([entityId]));
+        Assert.Equal("https://new.example.test", await db.EntityUrls.Where(row => row.EntityId == entityId).Select(row => row.Url).SingleAsync());
+        Assert.Equal(4, (await db.EntityRatings.FindAsync([entityId]))?.Value);
+        var flags = await db.EntityFlags.FindAsync([entityId]);
+        Assert.True(flags?.IsFavorite);
+        Assert.False(flags?.IsNsfw);
+        Assert.True(flags?.IsOrganized);
+    }
+
+    [Fact]
+    public async Task ApplyPatchReplacesIncludedMapsAndLeavesOmittedFieldsUnchanged() {
+        await using var db = CreateContext();
+        var entityId = Guid.Parse("19191919-1919-1919-1919-191919191919");
+        SeedEntity(db, entityId, "video", "Keep Title");
+        db.EntityDates.Add(new EntityDateRow {
+            EntityId = entityId,
+            Code = "released",
+            Value = "2020-01-01",
+            SortableValue = new DateOnly(2020, 1, 1),
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        db.EntityStats.Add(new EntityStatRow {
+            EntityId = entityId,
+            Code = "runtime",
+            Value = 90,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        db.EntityPositions.Add(new EntityPositionRow {
+            EntityId = entityId,
+            Code = "episode",
+            Value = 1,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        db.EntityClassifications.Add(new EntityClassificationRow {
+            EntityId = entityId,
+            Value = "old",
+            System = null,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var service = new EntityMetadataApplyService(db, new PluginArtworkServiceOptions(Path.GetTempPath()));
+        var applied = await service.ApplyPatchAsync(
+            entityId,
+            new EntityMetadataUpdateRequest(
+                Fields: ["dates", "stats", "positions", "classification"],
+                Patch: EmptyPatch() with {
+                    Dates = new Dictionary<string, string> { ["aired"] = "2026-05-21" },
+                    Stats = new Dictionary<string, int> { ["votes"] = 12 },
+                    Positions = new Dictionary<string, int> { ["season"] = 2 },
+                    Classification = "episode"
+                }),
+            CancellationToken.None);
+
+        Assert.True(applied);
+        Assert.Equal("Keep Title", (await db.Entities.FindAsync([entityId]))?.Title);
+        Assert.Null(await db.EntityDates.FindAsync([entityId, "released"]));
+        Assert.Equal("2026-05-21", (await db.EntityDates.FindAsync([entityId, "aired"]))?.Value);
+        Assert.Null(await db.EntityStats.FindAsync([entityId, "runtime"]));
+        Assert.Equal(12, (await db.EntityStats.FindAsync([entityId, "votes"]))?.Value);
+        Assert.Null(await db.EntityPositions.FindAsync([entityId, "episode"]));
+        Assert.Equal(2, (await db.EntityPositions.FindAsync([entityId, "season"]))?.Value);
+        Assert.Equal("episode", (await db.EntityClassifications.FindAsync([entityId]))?.Value);
+    }
+
+    [Fact]
+    public async Task ApplyPatchRejectsInvalidTitleRatingAndUrls() {
+        await using var db = CreateContext();
+        var entityId = Guid.Parse("20202020-2020-2020-2020-202020202020");
+        SeedEntity(db, entityId, "video", "Video");
+        await db.SaveChangesAsync();
+
+        var service = new EntityMetadataApplyService(db, new PluginArtworkServiceOptions(Path.GetTempPath()));
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.ApplyPatchAsync(
+            entityId,
+            new EntityMetadataUpdateRequest(
+                Fields: ["title", "rating", "urls"],
+                Patch: EmptyPatch() with {
+                    Title = " ",
+                    Rating = 6,
+                    Urls = ["not-a-url"]
+                }),
+            CancellationToken.None));
+
+        Assert.Contains("title", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Video", (await db.Entities.FindAsync([entityId]))?.Title);
+    }
+
+    [Fact]
+    public async Task ApplyPatchReturnsFalseForMissingEntity() {
+        await using var db = CreateContext();
+        var service = new EntityMetadataApplyService(db, new PluginArtworkServiceOptions(Path.GetTempPath()));
+
+        var applied = await service.ApplyPatchAsync(
+            Guid.Parse("21212121-2121-2121-2121-212121212121"),
+            new EntityMetadataUpdateRequest(Fields: ["title"], Patch: EmptyPatch() with { Title = "Missing" }),
+            CancellationToken.None);
+
+        Assert.False(applied);
+    }
+
     [Fact]
     public async Task ApplySelectedFieldsPersistsProviderIdentityAndCapabilityRows() {
         await using var db = CreateContext();

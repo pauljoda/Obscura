@@ -37,7 +37,19 @@ public sealed record EntityMetadataPatch(
     IReadOnlyDictionary<string, string> Dates,
     IReadOnlyDictionary<string, int> Stats,
     IReadOnlyDictionary<string, int> Positions,
-    string? Classification);
+    string? Classification) {
+    /// <summary>Optional user rating value from 0 through 5.</summary>
+    public int? Rating { get; init; }
+
+    /// <summary>Optional shared user-state flags.</summary>
+    public EntityMetadataFlagsPatch? Flags { get; init; }
+}
+
+/// <summary>
+/// Editable shared entity flags carried by the unified metadata patch shape.
+/// Null values leave individual flags unchanged when a flags field is applied.
+/// </summary>
+public sealed record EntityMetadataFlagsPatch(bool? IsFavorite, bool? IsNsfw, bool? IsOrganized);
 
 /// <summary>
 /// Credited person patch returned by a plugin.

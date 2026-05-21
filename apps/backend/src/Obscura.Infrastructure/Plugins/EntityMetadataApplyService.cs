@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Obscura.Contracts.Entities;
 using Obscura.Contracts.Plugins;
 using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
@@ -35,6 +36,155 @@ public sealed class EntityMetadataApplyService {
         _db = db;
         _options = options;
         _http = http ?? new HttpClient();
+    }
+
+    /// <summary>
+    /// Applies a user-authored metadata patch to one entity. Only explicitly scoped fields
+    /// are mutated, allowing callers to replace or clear individual editable sections without
+    /// sending the entire entity shape.
+    /// </summary>
+    /// <param name="entityId">Entity receiving the patch.</param>
+    /// <param name="request">Scoped metadata update request.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True when the entity exists and was updated; false when no active entity exists.</returns>
+    public async Task<bool> ApplyPatchAsync(
+        Guid entityId,
+        EntityMetadataUpdateRequest request,
+        CancellationToken cancellationToken) {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Patch);
+
+        var fields = FieldSet(request.Fields);
+        ValidatePatch(fields, request.Patch);
+
+        var entity = await _db.Entities
+            .FirstOrDefaultAsync(row => row.Id == entityId && row.DeletedAt == null, cancellationToken);
+        if (entity is null) {
+            return false;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        await ApplyScopedPatchToEntityAsync(entity, fields, request.Patch, now, cancellationToken);
+
+        if (fields.Contains("images") && request.SelectedImages is not null) {
+            await DownloadSelectedImagesAsync(entityId, request.SelectedImages, now, cancellationToken);
+        }
+
+        if (request.Children is { Count: > 0 }) {
+            await ApplyStructuralChildrenAsync(request.Children, now, cancellationToken);
+        }
+
+        if (request.Relationships is { Count: > 0 } &&
+            (fields.Contains("credits") || fields.Contains("studio"))) {
+            await CascadeRelationshipImagesAsync(request.Relationships, now, cancellationToken);
+        }
+
+        entity.UpdatedAt = now;
+        await _db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    private static HashSet<string> FieldSet(IEnumerable<string> fields) =>
+        fields
+            .Where(field => !string.IsNullOrWhiteSpace(field))
+            .Select(field => field.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private static void ValidatePatch(ISet<string> fields, EntityMetadataPatch patch) {
+        var errors = new List<string>();
+
+        if (fields.Contains("title") && string.IsNullOrWhiteSpace(patch.Title)) {
+            errors.Add("title is required");
+        }
+
+        if (fields.Contains("rating") && patch.Rating is not null and (< 0 or > 5)) {
+            errors.Add("rating must be from 0 through 5");
+        }
+
+        if (fields.Contains("urls")) {
+            foreach (var url in patch.Urls.Where(value => !string.IsNullOrWhiteSpace(value))) {
+                if (!Uri.TryCreate(url, UriKind.Absolute, out var parsed) ||
+                    parsed.Scheme is not ("http" or "https")) {
+                    errors.Add($"url '{url}' must be an absolute http or https URL");
+                }
+            }
+        }
+
+        if (fields.Contains("dates")) {
+            foreach (var (code, value) in patch.Dates) {
+                if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(value)) {
+                    errors.Add("date codes and values cannot be empty");
+                } else if (!DateOnly.TryParse(value, out _)) {
+                    errors.Add($"date '{code}' must be parseable as a date");
+                }
+            }
+        }
+
+        if (errors.Count > 0) {
+            throw new ArgumentException($"Invalid entity metadata patch: {string.Join("; ", errors)}.");
+        }
+    }
+
+    private async Task ApplyScopedPatchToEntityAsync(
+        EntityRow entity,
+        ISet<string> fields,
+        EntityMetadataPatch patch,
+        DateTimeOffset now,
+        CancellationToken cancellationToken) {
+        if (fields.Contains("title")) {
+            entity.Title = patch.Title!.Trim();
+        }
+
+        if (fields.Contains("description")) {
+            await UpsertDescriptionAsync(entity.Id, patch.Description, now, cancellationToken);
+        }
+
+        if (fields.Contains("externalIds")) {
+            await ReplaceExternalIdsAsync(entity.Id, patch.ExternalIds, patch.Urls, now, cancellationToken);
+        }
+
+        if (fields.Contains("urls")) {
+            await ReplaceUrlsAsync(entity.Id, patch.Urls, now, cancellationToken);
+        }
+
+        if (fields.Contains("tags")) {
+            await ReplaceTagsAsync(entity.Id, patch.Tags, now, cancellationToken);
+        }
+
+        if (fields.Contains("studio")) {
+            await RemoveRelationshipAsync(entity.Id, "studio", cancellationToken);
+            if (!string.IsNullOrWhiteSpace(patch.Studio)) {
+                await SetStudioAsync(entity.Id, patch.Studio, now, cancellationToken);
+            }
+        }
+
+        if (fields.Contains("credits")) {
+            await ReplaceCreditsAsync(entity.Id, patch.Credits, now, cancellationToken);
+        }
+
+        if (fields.Contains("dates")) {
+            await ReplaceDatesAsync(entity.Id, patch.Dates, now, cancellationToken);
+        }
+
+        if (fields.Contains("stats")) {
+            await ReplaceStatsAsync(entity.Id, patch.Stats, now, cancellationToken);
+        }
+
+        if (fields.Contains("positions")) {
+            await ReplacePositionsAsync(entity, NormalizePositions(patch.Positions), now, cancellationToken);
+        }
+
+        if (fields.Contains("classification")) {
+            await ReplaceClassificationAsync(entity.Id, patch.Classification, now, cancellationToken);
+        }
+
+        if (fields.Contains("rating")) {
+            await UpsertRatingAsync(entity.Id, patch.Rating, now, cancellationToken);
+        }
+
+        if (fields.Contains("flags")) {
+            await UpsertFlagsAsync(entity.Id, patch.Flags, now, cancellationToken);
+        }
     }
 
     /// <summary>
@@ -140,6 +290,54 @@ public sealed class EntityMetadataApplyService {
         } else {
             existing.Value = value.Trim();
             existing.UpdatedAt = now;
+        }
+    }
+
+    private async Task ReplaceUrlsAsync(Guid entityId, IReadOnlyList<string> urls, DateTimeOffset now, CancellationToken cancellationToken) {
+        var existing = await _db.EntityUrls
+            .Where(row => row.EntityId == entityId)
+            .ToArrayAsync(cancellationToken);
+        _db.EntityUrls.RemoveRange(existing);
+
+        var order = 0;
+        foreach (var url in urls.Where(value => !string.IsNullOrWhiteSpace(value)).Select(value => value.Trim()).Distinct(StringComparer.OrdinalIgnoreCase)) {
+            _db.EntityUrls.Add(new EntityUrlRow {
+                Id = Guid.NewGuid(),
+                EntityId = entityId,
+                Url = url,
+                SortOrder = order++,
+                CreatedAt = now
+            });
+        }
+    }
+
+    private async Task ReplaceExternalIdsAsync(
+        Guid entityId,
+        IReadOnlyDictionary<string, string> externalIds,
+        IReadOnlyList<string> urls,
+        DateTimeOffset now,
+        CancellationToken cancellationToken) {
+        var existing = await _db.EntityExternalIds
+            .Where(row => row.EntityId == entityId)
+            .ToArrayAsync(cancellationToken);
+        _db.EntityExternalIds.RemoveRange(existing);
+
+        foreach (var (provider, rawValue) in externalIds) {
+            if (string.IsNullOrWhiteSpace(provider) || string.IsNullOrWhiteSpace(rawValue)) {
+                continue;
+            }
+
+            var value = rawValue.Trim();
+            var url = urls.FirstOrDefault(candidate => candidate.Contains(value, StringComparison.OrdinalIgnoreCase));
+            _db.EntityExternalIds.Add(new EntityExternalIdRow {
+                Id = Guid.NewGuid(),
+                EntityId = entityId,
+                Provider = provider.Trim(),
+                Value = value,
+                Url = url,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
         }
     }
 
@@ -333,6 +531,14 @@ public sealed class EntityMetadataApplyService {
         }
     }
 
+    private async Task ReplaceDatesAsync(Guid entityId, IReadOnlyDictionary<string, string> dates, DateTimeOffset now, CancellationToken cancellationToken) {
+        var existing = await _db.EntityDates
+            .Where(row => row.EntityId == entityId)
+            .ToArrayAsync(cancellationToken);
+        _db.EntityDates.RemoveRange(existing);
+        await UpsertDatesAsync(entityId, dates, now, cancellationToken);
+    }
+
     private async Task UpsertStatsAsync(Guid entityId, IReadOnlyDictionary<string, int> stats, DateTimeOffset now, CancellationToken cancellationToken) {
         foreach (var (code, value) in stats) {
             var existing = await _db.EntityStats.FindAsync([entityId, code], cancellationToken);
@@ -343,6 +549,14 @@ public sealed class EntityMetadataApplyService {
                 existing.UpdatedAt = now;
             }
         }
+    }
+
+    private async Task ReplaceStatsAsync(Guid entityId, IReadOnlyDictionary<string, int> stats, DateTimeOffset now, CancellationToken cancellationToken) {
+        var existing = await _db.EntityStats
+            .Where(row => row.EntityId == entityId)
+            .ToArrayAsync(cancellationToken);
+        _db.EntityStats.RemoveRange(existing);
+        await UpsertStatsAsync(entityId, stats, now, cancellationToken);
     }
 
     private async Task UpsertPositionsAsync(EntityRow entity, IReadOnlyDictionary<string, int> positions, DateTimeOffset now, CancellationToken cancellationToken) {
@@ -357,6 +571,14 @@ public sealed class EntityMetadataApplyService {
         }
 
         await ApplyStructuralSortOrderAsync(entity, positions, now, cancellationToken);
+    }
+
+    private async Task ReplacePositionsAsync(EntityRow entity, IReadOnlyDictionary<string, int> positions, DateTimeOffset now, CancellationToken cancellationToken) {
+        var existing = await _db.EntityPositions
+            .Where(row => row.EntityId == entity.Id)
+            .ToArrayAsync(cancellationToken);
+        _db.EntityPositions.RemoveRange(existing);
+        await UpsertPositionsAsync(entity, positions, now, cancellationToken);
     }
 
     private async Task ApplyStructuralSortOrderAsync(
@@ -425,6 +647,64 @@ public sealed class EntityMetadataApplyService {
             existing.System = "plugin";
             existing.UpdatedAt = now;
         }
+    }
+
+    private async Task ReplaceClassificationAsync(Guid entityId, string? value, DateTimeOffset now, CancellationToken cancellationToken) {
+        var existing = await _db.EntityClassifications.FindAsync([entityId], cancellationToken);
+        if (string.IsNullOrWhiteSpace(value)) {
+            if (existing is not null) {
+                _db.EntityClassifications.Remove(existing);
+            }
+            return;
+        }
+
+        if (existing is null) {
+            _db.EntityClassifications.Add(new EntityClassificationRow { EntityId = entityId, Value = value.Trim(), System = "manual", UpdatedAt = now });
+        } else {
+            existing.Value = value.Trim();
+            existing.System = "manual";
+            existing.UpdatedAt = now;
+        }
+    }
+
+    private async Task UpsertRatingAsync(Guid entityId, int? value, DateTimeOffset now, CancellationToken cancellationToken) {
+        var existing = await _db.EntityRatings.FindAsync([entityId], cancellationToken);
+        if (value is null) {
+            if (existing is not null) {
+                _db.EntityRatings.Remove(existing);
+            }
+            return;
+        }
+
+        if (existing is null) {
+            _db.EntityRatings.Add(new EntityRatingRow { EntityId = entityId, Value = value.Value, UpdatedAt = now });
+        } else {
+            existing.Value = value.Value;
+            existing.UpdatedAt = now;
+        }
+    }
+
+    private async Task UpsertFlagsAsync(Guid entityId, EntityMetadataFlagsPatch? patch, DateTimeOffset now, CancellationToken cancellationToken) {
+        if (patch is null) {
+            return;
+        }
+
+        var existing = await _db.EntityFlags.FindAsync([entityId], cancellationToken);
+        if (existing is null) {
+            _db.EntityFlags.Add(new EntityFlagRow {
+                EntityId = entityId,
+                IsFavorite = patch.IsFavorite ?? false,
+                IsNsfw = patch.IsNsfw ?? false,
+                IsOrganized = patch.IsOrganized ?? false,
+                UpdatedAt = now
+            });
+            return;
+        }
+
+        existing.IsFavorite = patch.IsFavorite ?? existing.IsFavorite;
+        existing.IsNsfw = patch.IsNsfw ?? existing.IsNsfw;
+        existing.IsOrganized = patch.IsOrganized ?? existing.IsOrganized;
+        existing.UpdatedAt = now;
     }
 
     private async Task DownloadSelectedImagesAsync(

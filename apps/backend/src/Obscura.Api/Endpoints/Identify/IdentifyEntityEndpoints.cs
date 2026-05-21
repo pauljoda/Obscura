@@ -1,5 +1,6 @@
 using Obscura.Contracts.Plugins;
 using Obscura.Contracts.System;
+using Obscura.Contracts.Entities;
 using Obscura.Infrastructure.Plugins;
 
 namespace Obscura.Api.Endpoints;
@@ -24,14 +25,23 @@ internal static class IdentifyEntityEndpoints {
         group.MapPost("/entities/{entityId:guid}/apply", async (
             Guid entityId,
             ApplyIdentifyProposalRequest request,
-            IdentifyPluginService identify,
+            EntityMetadataApplyService metadata,
             CancellationToken cancellationToken) => {
-                var applied = await identify.ApplyAsync(
-                    entityId,
-                    request.Proposal,
-                    request.SelectedFields,
-                    request.SelectedImages,
-                    cancellationToken);
+                bool applied;
+                try {
+                    applied = await metadata.ApplyPatchAsync(
+                        entityId,
+                        new EntityMetadataUpdateRequest(
+                            request.SelectedFields,
+                            request.Proposal.Patch,
+                            request.SelectedImages,
+                            request.Proposal.Children,
+                            request.Proposal.Relationships),
+                        cancellationToken);
+                } catch (ArgumentException ex) {
+                    return Results.BadRequest(new ApiProblem("invalid_entity_metadata_patch", ex.Message));
+                }
+
                 if (!applied) {
                     return Results.NotFound(new ApiProblem("entity_not_found", $"Entity '{entityId}' was not found."));
                 }
@@ -41,6 +51,7 @@ internal static class IdentifyEntityEndpoints {
             .WithName("ApplyIdentifyProposal")
             .WithSummary("Applies selected fields from a transient identify proposal to the entity.")
             .Produces(StatusCodes.Status204NoContent)
+            .Produces<ApiProblem>(StatusCodes.Status400BadRequest)
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
         return group;
