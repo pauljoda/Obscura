@@ -294,10 +294,24 @@
 </div>
 
 <style>
+  /*
+   * The toolbar pins to the top of the layout's scrolling container so the
+   * search box, sort/filter controls, and the active filter chip row stay
+   * reachable as soon as the page scrolls past their natural position —
+   * mirroring how the pagination strip locks to the bottom of the same
+   * container. The solid background + soft drop shadow give the toolbar
+   * enough material weight to read as "docked" when cards are scrolling
+   * underneath it.
+   */
   .toolbar-shell {
+    position: sticky;
+    top: 0;
+    z-index: 4;
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
+    background: var(--color-bg);
+    box-shadow: 0 8px 16px rgb(0 0 0 / 0.35);
   }
 
   .toolbar-root {

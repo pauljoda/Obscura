@@ -904,14 +904,18 @@
    * transport hugs its content but always lands on the geometric centerline.
    */
   /*
-   * The pagination strip lives outside the scrolling .grid-viewport so the
-   * overscroll rubber-band on iOS/macOS can't shake the bar's anchored
-   * position. It still feels visually attached because the inner viewport's
-   * max-height accounts for the bar's height (see measureViewport), so the
-   * grid scrolls flush with the bar sitting just below.
+   * The pagination strip is a sibling of the scrolling .grid-viewport (not a
+   * child of it), so iOS/macOS overscroll bounce on the inner viewport does
+   * not shake the bar's anchored position. With `position: sticky; bottom: 0`
+   * the bar locks to the bottom of the layout's scrolling container once it
+   * has entered the visible area, mirroring how the toolbar above locks to
+   * the container's top edge — together they frame the cards as one stable
+   * control surface.
    */
   .pagination-bar {
-    position: relative;
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
