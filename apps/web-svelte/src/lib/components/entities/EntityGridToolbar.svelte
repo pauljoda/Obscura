@@ -275,21 +275,21 @@
         {/if}
       </div>
     </div>
-  </div>
 
-  <div class="filter-scroll" class:is-active={activeFilters.length > 0} aria-live="polite">
-    {#if activeFilters.length > 0}
-      <span class="filter-chip-label" aria-hidden="true">
-        <SlidersHorizontal class="h-3 w-3 shrink-0" />
-        ACTIVE
-      </span>
-      {#each activeFilters as option (option.id)}
-        <button type="button" class="filter-chip" onclick={() => removeFilter(option.id)}>
-          <span>{option.label}</span>
-          <X class="h-3 w-3" />
-        </button>
-      {/each}
-    {/if}
+    <div class="filter-scroll" class:is-active={activeFilters.length > 0} aria-live="polite">
+      {#if activeFilters.length > 0}
+        <span class="filter-chip-label" aria-hidden="true">
+          <SlidersHorizontal class="h-3 w-3 shrink-0" />
+          ACTIVE
+        </span>
+        {#each activeFilters as option (option.id)}
+          <button type="button" class="filter-chip" onclick={() => removeFilter(option.id)}>
+            <span>{option.label}</span>
+            <X class="h-3 w-3" />
+          </button>
+        {/each}
+      {/if}
+    </div>
   </div>
 </div>
 
@@ -322,19 +322,17 @@
     z-index: 4;
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
     padding-top: 0.5rem;
     background: var(--color-bg);
 
     --ctrl-border: rgb(255 255 255 / 0.07);
     --ctrl-border-hover: rgb(196 154 90 / 0.32);
     --ctrl-border-active: rgb(196 154 90 / 0.45);
-    --ctrl-bg:
-      linear-gradient(180deg, rgb(28 32 42 / 0.55), rgb(16 19 26 / 0.7));
+    --ctrl-bg: rgba(22, 26, 34, 0.55);
     --ctrl-bg-hover:
-      linear-gradient(180deg, rgb(46 38 24 / 0.75), rgb(28 22 12 / 0.9));
+      linear-gradient(180deg, rgb(46 38 24 / 0.65), rgb(28 22 12 / 0.75));
     --ctrl-bg-active:
-      linear-gradient(180deg, rgb(60 46 24 / 0.92), rgb(36 28 16 / 0.95));
+      linear-gradient(180deg, rgb(60 46 24 / 0.82), rgb(36 28 16 / 0.88));
     --ctrl-shadow:
       inset 0 1px 0 rgb(255 255 255 / 0.05),
       0 1px 2px rgb(0 0 0 / 0.25);
@@ -350,15 +348,14 @@
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
-    border: 1px solid rgb(255 255 255 / 0.08);
+    border: 1px solid rgb(255 255 255 / 0.1);
     border-top-color: rgb(196 154 90 / 0.22);
-    background:
-      linear-gradient(180deg, rgb(20 23 30 / 0.55), rgb(11 12 16 / 0.85)),
-      color-mix(in srgb, var(--color-surface-2) 92%, transparent);
-    backdrop-filter: blur(14px) saturate(1.15);
-    -webkit-backdrop-filter: blur(14px) saturate(1.15);
+    background: rgba(14, 17, 24, 0.72);
+    backdrop-filter: blur(16px) saturate(1.15);
+    -webkit-backdrop-filter: blur(16px) saturate(1.15);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.04),
+      inset 0 1px 0 rgb(255 255 255 / 0.06),
+      inset 0 0 0 0.5px rgb(255 255 255 / 0.04),
       inset 0 -1px 0 rgb(0 0 0 / 0.35),
       0 10px 28px rgb(0 0 0 / 0.45);
     padding: 0.7rem 0.75rem;
@@ -380,10 +377,9 @@
     min-width: 0;
     height: 2.1rem;
     border: 1px solid var(--ctrl-border);
-    background:
-      linear-gradient(180deg, rgb(8 10 14 / 0.72), rgb(12 14 20 / 0.78));
+    background: rgba(6, 8, 12, 0.55);
     box-shadow:
-      inset 0 2px 6px rgb(0 0 0 / 0.45),
+      inset 0 2px 6px rgb(0 0 0 / 0.4),
       inset 0 -1px 0 rgb(255 255 255 / 0.025);
     padding: 0 0.65rem;
     transition:
@@ -611,14 +607,14 @@
     top: calc(100% + 0.3rem);
     z-index: 50;
     min-width: 10rem;
-    border: 1px solid rgb(196 154 90 / 0.18);
-    background:
-      linear-gradient(180deg, rgb(24 28 38 / 0.96), rgb(14 17 22 / 0.98));
+    border: 1px solid rgb(255 255 255 / 0.1);
+    background: rgba(12, 14, 20, 0.82);
     box-shadow:
-      0 12px 36px rgb(0 0 0 / 0.55),
-      0 0 0 1px rgb(0 0 0 / 0.3),
-      inset 0 1px 0 rgb(255 255 255 / 0.04);
-    backdrop-filter: blur(16px);
+      inset 0 1px 0 rgb(255 255 255 / 0.05),
+      0 10px 40px rgb(0 0 0 / 0.5),
+      0 0 0 0.5px rgb(255 255 255 / 0.04);
+    backdrop-filter: blur(24px) saturate(1.3);
+    -webkit-backdrop-filter: blur(24px) saturate(1.3);
     padding: 0.3rem 0;
   }
 
@@ -672,10 +668,9 @@
     padding: 0 0.55rem;
     height: 2rem;
     border: 1px solid var(--ctrl-border);
-    background:
-      linear-gradient(180deg, rgb(8 10 14 / 0.7), rgb(12 14 20 / 0.75));
+    background: rgba(6, 8, 12, 0.5);
     box-shadow:
-      inset 0 2px 5px rgb(0 0 0 / 0.45),
+      inset 0 2px 5px rgb(0 0 0 / 0.4),
       inset 0 -1px 0 rgb(255 255 255 / 0.025);
     color: var(--color-text-muted);
   }
@@ -792,12 +787,6 @@
       inset 0 1px 0 rgb(196 154 90 / 0.1);
   }
 
-  /*
-   * The filter chip strip reserves its height even when no filters are
-   * active so the cards below don't jump when chips appear or disappear.
-   * The brass accent rail + label only fade in alongside chips, but the
-   * row's vertical footprint stays constant.
-   */
   .filter-scroll {
     display: flex;
     align-items: center;
@@ -805,13 +794,11 @@
     overflow-x: auto;
     padding: 0 0.1rem;
     scrollbar-width: thin;
-    min-height: 1.85rem;
-    border-left: 2px solid transparent;
-    transition: border-color var(--duration-fast) var(--ease-default);
   }
 
   .filter-scroll.is-active {
-    border-left-color: rgb(196 154 90 / 0.35);
+    min-height: 1.85rem;
+    border-left: 2px solid rgb(196 154 90 / 0.35);
     padding-left: 0.55rem;
   }
 
