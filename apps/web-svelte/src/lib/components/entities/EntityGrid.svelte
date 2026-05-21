@@ -158,6 +158,7 @@
   let scale = $state(5);
   let selectedIds = $state<string[]>([]);
   let viewportEl: HTMLDivElement | undefined = $state();
+  let paginationBarEl: HTMLElement | undefined = $state();
   let measuredScrollMaxHeight = $state<string | null>(null);
   // svelte-ignore state_referenced_locally
   let sortBy = $state<EntityGridSort>(initialSortBy);
@@ -274,6 +275,9 @@
     });
   });
 
+  let scheduleMeasureRef: (() => void) | null = $state(null);
+  let measureRef: (() => void) | null = $state(null);
+
   onMount(() => {
     let raf: number | null = null;
     let observer: ResizeObserver | null = null;
@@ -284,8 +288,13 @@
         return;
       }
 
+      // The pagination bar now sits in normal flow below the scrollable grid,
+      // so its rendered height has to come out of the inner viewport's budget
+      // — otherwise the bar would push the bottom of the grid off-screen.
+      const paginationHeight = paginationBarEl?.getBoundingClientRect().height ?? 0;
+
       measuredScrollMaxHeight = computeContainedScrollHeight({
-        bottomPadding: scrollBottomPadding,
+        bottomPadding: scrollBottomPadding + paginationHeight,
         minHeight: scrollMinHeight,
         top: viewportEl.getBoundingClientRect().top,
         viewportHeight: window.innerHeight,
@@ -300,6 +309,9 @@
       });
     }
 
+    measureRef = measureViewport;
+    scheduleMeasureRef = scheduleMeasure;
+
     observer = new ResizeObserver(scheduleMeasure);
     if (viewportEl) observer.observe(viewportEl);
     window.addEventListener("resize", scheduleMeasure, { passive: true });
@@ -311,7 +323,23 @@
       window.removeEventListener("resize", scheduleMeasure);
       window.removeEventListener("scroll", scheduleMeasure, { capture: true });
       if (raf !== null) cancelAnimationFrame(raf);
+      measureRef = null;
+      scheduleMeasureRef = null;
     };
+  });
+
+  /*
+   * The pagination element mounts and unmounts based on whether the grid has
+   * cards to page; observe its lifecycle separately so changes to its height
+   * (e.g. mobile reflow swapping between one- and two-row layouts) feed into
+   * the viewport height computation.
+   */
+  $effect(() => {
+    if (!paginationBarEl || !scheduleMeasureRef) return;
+    const observer = new ResizeObserver(scheduleMeasureRef);
+    observer.observe(paginationBarEl);
+    queueMicrotask(() => measureRef?.());
+    return () => observer.disconnect();
   });
 
   $effect(() => {
@@ -647,9 +675,10 @@
         <span>{emptyMessage}</span>
       </div>
     {/if}
+  </div>
 
-    {#if !loading && visibleCards.length > 0}
-      <nav class="pagination-bar" aria-label="Entity grid pagination">
+  {#if !loading && visibleCards.length > 0}
+    <nav class="pagination-bar" bind:this={paginationBarEl} aria-label="Entity grid pagination">
         <span
           class="pagination-progress"
           aria-hidden="true"
@@ -747,9 +776,8 @@
             </span>
           </label>
         </div>
-      </nav>
-    {/if}
-  </div>
+    </nav>
+  {/if}
 </section>
 
 <style>
@@ -810,10 +838,15 @@
    * to pin their content to the outer edges; the middle is `auto` so the
    * transport hugs its content but always lands on the geometric centerline.
    */
+  /*
+   * The pagination strip lives outside the scrolling .grid-viewport so the
+   * overscroll rubber-band on iOS/macOS can't shake the bar's anchored
+   * position. It still feels visually attached because the inner viewport's
+   * max-height accounts for the bar's height (see measureViewport), so the
+   * grid scrolls flush with the bar sitting just below.
+   */
   .pagination-bar {
-    position: sticky;
-    bottom: 0;
-    z-index: 5;
+    position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
