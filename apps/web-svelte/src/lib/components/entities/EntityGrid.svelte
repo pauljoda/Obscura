@@ -354,13 +354,11 @@
     if (viewportEl) observer.observe(viewportEl);
     if (sectionEl) observer.observe(sectionEl);
     window.addEventListener("resize", scheduleMeasure, { passive: true });
-    window.addEventListener("scroll", scheduleMeasure, { capture: true, passive: true });
     queueMicrotask(measureViewport);
 
     return () => {
       observer?.disconnect();
       window.removeEventListener("resize", scheduleMeasure);
-      window.removeEventListener("scroll", scheduleMeasure, { capture: true });
       if (raf !== null) cancelAnimationFrame(raf);
       measureRef = null;
       scheduleMeasureRef = null;

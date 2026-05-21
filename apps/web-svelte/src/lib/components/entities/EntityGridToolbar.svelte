@@ -771,18 +771,17 @@
       inset 0 1px 0 rgb(196 154 90 / 0.1);
   }
 
-  /* Reserve space for active filter row so its appearance doesn't reflow the grid below */
   .filter-scroll {
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    min-height: 2rem;
     overflow-x: auto;
     padding: 0 0.1rem;
     scrollbar-width: thin;
   }
 
   .filter-scroll.is-active {
+    min-height: 2rem;
     border-left: 2px solid rgb(196 154 90 / 0.35);
     padding-left: 0.55rem;
   }

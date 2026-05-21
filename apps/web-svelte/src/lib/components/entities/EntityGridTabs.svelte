@@ -73,11 +73,11 @@
     background: transparent;
     color: var(--color-text-disabled);
     font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.66rem;
+    font-size: 0.74rem;
     font-weight: 600;
     line-height: 1;
-    letter-spacing: 0.14em;
-    padding: 0.7rem 0.85rem 0.7rem;
+    letter-spacing: 0.12em;
+    padding: 0.85rem 1rem;
     text-transform: uppercase;
     transition:
       color var(--duration-fast) var(--ease-default);
@@ -124,7 +124,7 @@
   .tab strong {
     color: var(--color-text-disabled);
     font-weight: 600;
-    font-size: 0.62rem;
+    font-size: 0.68rem;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.04em;
   }
