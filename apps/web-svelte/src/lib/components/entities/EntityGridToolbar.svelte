@@ -299,9 +299,13 @@
    * search box, sort/filter controls, and the active filter chip row stay
    * reachable as soon as the page scrolls past their natural position —
    * mirroring how the pagination strip locks to the bottom of the same
-   * container. The solid background + soft drop shadow give the toolbar
-   * enough material weight to read as "docked" when cards are scrolling
-   * underneath it.
+   * container.
+   *
+   * `padding-bottom` extends the toolbar's bg into a small buffer below the
+   * filter-chip row so cards scrolling underneath don't butt right up
+   * against the controls; the heavy drop shadow + brass border-bottom hint
+   * give the docked state a clear material edge — matching the upward shadow
+   * + brass top-border on the pagination strip below.
    */
   .toolbar-shell {
     position: sticky;
@@ -310,8 +314,12 @@
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
+    padding-bottom: 0.55rem;
     background: var(--color-bg);
-    box-shadow: 0 8px 16px rgb(0 0 0 / 0.35);
+    border-bottom: 1px solid rgb(196 154 90 / 0.22);
+    box-shadow:
+      0 10px 28px rgb(0 0 0 / 0.45),
+      inset 0 -1px 0 rgb(0 0 0 / 0.4);
   }
 
   .toolbar-root {
