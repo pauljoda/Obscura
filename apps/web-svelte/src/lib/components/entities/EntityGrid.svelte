@@ -159,7 +159,9 @@
   let selectedIds = $state<string[]>([]);
   let viewportEl: HTMLDivElement | undefined = $state();
   let paginationBarEl: HTMLElement | undefined = $state();
+  let sectionEl: HTMLElement | undefined = $state();
   let measuredScrollMaxHeight = $state<string | null>(null);
+  let measuredFillHeight = $state<string | null>(null);
   // svelte-ignore state_referenced_locally
   let sortBy = $state<EntityGridSort>(initialSortBy);
   // svelte-ignore state_referenced_locally
@@ -303,6 +305,7 @@
     function measureViewport() {
       if (!viewportEl || scrollMaxHeight !== undefined) {
         measuredScrollMaxHeight = null;
+        measuredFillHeight = null;
         return;
       }
 
@@ -318,6 +321,22 @@
         top: viewportEl.getBoundingClientRect().top,
         viewportHeight: containerBottom,
       });
+
+      /*
+       * Total fill height for the entity-grid flex column. We anchor against
+       * the section's top edge (rather than the inner viewport's) so the
+       * toolbar/tabs above the viewport are included in the fill area. The
+       * column uses `margin-top: auto` on the pagination bar to push the bar
+       * to the bottom of this area when content doesn't fill it, instead of
+       * inflating the inner viewport with empty scrollable space.
+       */
+      if (sectionEl) {
+        const sectionTop = sectionEl.getBoundingClientRect().top;
+        const fill = Math.max(0, Math.floor(containerBottom - sectionTop - scrollBottomPadding));
+        measuredFillHeight = `${fill}px`;
+      } else {
+        measuredFillHeight = null;
+      }
     }
 
     function scheduleMeasure() {
@@ -333,6 +352,7 @@
 
     observer = new ResizeObserver(scheduleMeasure);
     if (viewportEl) observer.observe(viewportEl);
+    if (sectionEl) observer.observe(sectionEl);
     window.addEventListener("resize", scheduleMeasure, { passive: true });
     window.addEventListener("scroll", scheduleMeasure, { capture: true, passive: true });
     queueMicrotask(measureViewport);
@@ -568,7 +588,12 @@
   }
 </script>
 
-<section class="entity-grid" style:--col-count={scale}>
+<section
+  bind:this={sectionEl}
+  class="entity-grid"
+  style:--col-count={scale}
+  style:--entity-grid-fill-height={measuredFillHeight ?? undefined}
+>
   <EntityGridToolbar
     activeFilterIds={filterIds}
     {activePresetId}
@@ -800,11 +825,24 @@
 </section>
 
 <style>
+  /*
+   * Use a flex column instead of a grid so the pagination bar can be pushed
+   * to the bottom of the section with `margin-top: auto`. The section's
+   * `min-height` is set from JS to fill the available area below the page
+   * header; when the viewport's content is short, the bar floats to the
+   * bottom of that area while the inner viewport stays at content height
+   * (rather than ballooning into a tall scrollable empty region).
+   */
   .entity-grid {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 0.85rem;
-    min-height: 0;
+    min-height: var(--entity-grid-fill-height, 0);
     min-width: 0;
+  }
+
+  .entity-grid > .pagination-bar {
+    margin-top: auto;
   }
 
   .grid-viewport {
@@ -815,15 +853,13 @@
 
   .grid-viewport.is-contained {
     /*
-     * `min-height` and `max-height` are pinned to the same computed value so
-     * the inner grid always fills the available space below the toolbar/tabs.
-     * Without min-height the viewport would shrink to fit a sparse card set
-     * and the docked pagination strip would float in the middle of the page
-     * with a large empty area beneath it; with min-height the bar instead
-     * sits flush at the bottom of the available area and an empty viewport
-     * shows clean negative space rather than collapsing.
+     * The viewport sizes to its content (a sparse card set keeps the viewport
+     * short) but caps at `max-height` so a full page of cards scrolls
+     * internally. The pagination bar below is pushed to the bottom of the
+     * `.entity-grid` flex column with `margin-top: auto`, so the empty space
+     * on a sparse grid lives in the outer flex container as plain layout
+     * negative space — not as a tall scrollable area inside the viewport.
      */
-    min-height: var(--entity-grid-scroll-max-height, 0);
     max-height: var(--entity-grid-scroll-max-height, calc(100dvh - 2rem));
     overflow-y: auto;
     /*
