@@ -32,6 +32,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Browse grids now use docked pagination inside the shared entity grid, so large media lists keep a predictable scroll area and avoid rendering thousands of thumbnails at once.
 - Browse grids now fit their internal scroll area to the visible page instead of clipping below the app frame.
 
+### Changed
+- Clicking a thumbnail while items are selected now toggles selection instead of navigating, so multi-select flows no longer accidentally leave the page.
+- The bulk selection bar now shows Select All, Clear, and NSFW toggle as dedicated controls; page-specific actions move into an Actions flyout menu for a cleaner toolbar on mobile.
+
 ### Added
 - High-level v2 implementation summary for the rebuilt Obscura architecture, media model, playback pipeline, and UI surfaces.
 - EF-projected browse/detail APIs for videos, series, seasons, images, galleries, books, audio libraries/tracks, people, studios, tags, collections, and generic entity lists.
