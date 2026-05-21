@@ -263,6 +263,34 @@ public sealed class LibraryScanPersistenceServiceTests {
             position.Value == 1);
     }
 
+    [Fact]
+    public async Task RemoveStaleVideosByRootRemovesRootPathVideosWithoutLinkedRoot() {
+        await using var db = CreateContext();
+        var rootId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var videoId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var now = DateTimeOffset.UtcNow;
+
+        db.LibraryRoots.Add(new LibraryRootRow {
+            Id = rootId,
+            Path = "/media/videos",
+            Label = "Videos",
+            CreatedAt = now,
+            UpdatedAt = now
+        });
+        SeedVideo(db, videoId, "/media/videos/004.mkv");
+        db.VideoDetails.Add(new VideoDetailRow {
+            EntityId = videoId,
+            LibraryRootId = null
+        });
+        await db.SaveChangesAsync();
+
+        var service = new LibraryScanPersistenceService(db);
+        var removed = await service.RemoveStaleVideosByRootAsync(rootId, new HashSet<string>(), CancellationToken.None);
+
+        Assert.Equal(1, removed);
+        Assert.False(await db.Entities.AnyAsync(entity => entity.Id == videoId));
+    }
+
     private static ObscuraDbContext CreateContext() {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()
             .UseInMemoryDatabase($"library-scan-persistence-{Guid.NewGuid():N}")
@@ -271,7 +299,7 @@ public sealed class LibraryScanPersistenceServiceTests {
         return new ObscuraDbContext(options);
     }
 
-    private static void SeedVideo(ObscuraDbContext db, Guid videoId) {
+    private static void SeedVideo(ObscuraDbContext db, Guid videoId, string? sourcePath = null) {
         db.Entities.Add(new EntityRow {
             Id = videoId,
             KindCode = EntityKindRegistry.Video.Code,
@@ -283,7 +311,7 @@ public sealed class LibraryScanPersistenceServiceTests {
             Id = Guid.NewGuid(),
             EntityId = videoId,
             Role = EntityFileRole.Source,
-            Path = $"/media/{videoId}.mkv",
+            Path = sourcePath ?? $"/media/{videoId}.mkv",
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         });

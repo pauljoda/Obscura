@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The legacy "counters" concept was removed: scraped numeric metadata (runtime, vote counts, and similar) now lives in entity stats, and structural counts are derived from child items instead of being stored. Community identify plugins must send `stats` instead of `counters`, and you should rescan your library roots.
 - Entity hierarchy storage now uses each entity's parent pointer directly instead of a separate child-link table, reducing duplicated structure and preserving existing structural links during migration.
 - Video subtitles and thumbnail previews now recover from stale generated media cache entries, so rescans can rebuild missing subtitle files and browse thumbnails can use trickplay hover previews again.
+- Library rescans now remove deleted video files even when older rows were not linked to their library root, so stale videos disappear after the next scan.
 - Video playback controls now stay synchronized with the native media element, so playback, seeking, and the buffered range render correctly while HLS plays.
 - Adaptive video playback now keeps decoded video visible over stale poster artwork and can prebuffer more of the stream during local playback.
 - Browse grids now use docked pagination inside the shared entity grid, so large media lists keep a predictable scroll area and avoid rendering thousands of thumbnails at once.
@@ -69,6 +70,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Entity detail reference sections now render linked entity thumbnails in a single horizontal scrolling row without selection checkboxes, keeping checkbox selection scoped to full EntityGrid views.
 - Entity detail tabs now render shared rich metadata sections such as credits, studios, stats, technical data, sources, and fingerprints without each route having to provide a custom renderer.
 - Library scans now correctly remove galleries, books, and audio libraries only from the scanned root instead of accidentally deleting entities belonging to other roots.
+- Library scans now remove missing video files whose stored source path is under the scanned root even if the row is missing its root link.
 - Scanning a video library root now cleans up empty series and season container entities after their child videos are removed from disk.
 - Series and season browse and detail pages now load correctly; an entity-kind code mismatch previously made `/api/series` and season routes return empty lists and 404s.
 - Backend startup no longer reports pending EF model changes from entity-kind seed metadata drift.

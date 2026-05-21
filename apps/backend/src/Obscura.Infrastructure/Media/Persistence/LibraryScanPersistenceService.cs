@@ -359,6 +359,28 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
             .Select(vd => vd.EntityId)
             .ToListAsync(cancellationToken);
 
+        var rootPath = await db.LibraryRoots.AsNoTracking()
+            .Where(root => root.Id == rootId)
+            .Select(root => root.Path)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(rootPath)) {
+            var videoCode = EntityKindRegistry.Video.Code;
+            var sourceFiles = await db.EntityFiles.AsNoTracking()
+                .Where(file => file.Role == EntityFileRole.Source)
+                .Join(
+                    db.Entities.AsNoTracking().Where(entity => entity.KindCode == videoCode),
+                    file => file.EntityId,
+                    entity => entity.Id,
+                    (file, entity) => new { file.EntityId, file.Path })
+                .ToListAsync(cancellationToken);
+
+            videoIds.AddRange(sourceFiles
+                .Where(file => IsPathUnderRoot(file.Path, rootPath))
+                .Select(file => file.EntityId));
+        }
+
+        videoIds = videoIds.Distinct().ToList();
         return await RemoveStaleEntitiesBySourcePath(videoIds, validPaths, cancellationToken);
     }
 
@@ -1197,6 +1219,21 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
 
         return entitiesToRemove.Count;
     }
+
+    private static bool IsPathUnderRoot(string path, string rootPath) {
+        var normalizedPath = NormalizePath(path);
+        var normalizedRoot = NormalizePath(rootPath);
+
+        if (string.IsNullOrWhiteSpace(normalizedPath) || string.IsNullOrWhiteSpace(normalizedRoot)) {
+            return false;
+        }
+
+        return normalizedPath.Equals(normalizedRoot, StringComparison.OrdinalIgnoreCase) ||
+            normalizedPath.StartsWith(normalizedRoot + "/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizePath(string path) =>
+        path.Replace('\\', '/').TrimEnd('/');
 
     private static long? TryGetFileSize(string path) {
         try { return new FileInfo(path).Length; } catch { return null; }
