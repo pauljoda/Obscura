@@ -22,22 +22,32 @@
   import EntityGridFilterDrawer from "./EntityGridFilterDrawer.svelte";
   import EntityGridTabs from "./EntityGridTabs.svelte";
   import EntityGridToolbar from "./EntityGridToolbar.svelte";
+  import InfiniteLoadTrigger from "./InfiniteLoadTrigger.svelte";
 
   interface Props {
     bulkActions?: EntityGridBulkAction[];
     cards: EntityThumbnailCard[];
     emptyMessage?: string;
     emptyTitle?: string;
+    hasMore?: boolean;
     initialSortBy?: EntityGridSort;
     initialSortDir?: EntityGridSortDir;
     loading?: boolean;
+    loadingMore?: boolean;
+    loadMoreError?: string | null;
+    loadMoreHref?: string;
+    loadMoreKey?: string | number;
+    loadMoreLabel?: string;
     maxScale?: number;
     minScale?: number;
     nsfwMode?: "show" | "off" | "blur";
+    onLoadMore?: () => void | Promise<void>;
     onRequestChange?: (request: EntityGridRequest) => void;
     onSelectionChange?: (selectedIds: string[]) => void;
     prefsKey?: string;
     selectable?: boolean;
+    scrollMaxHeight?: string | null;
+    scrollThreshold?: number;
   }
 
   let {
@@ -45,16 +55,25 @@
     cards,
     emptyMessage = "Try adjusting your search or filters.",
     emptyTitle = "Nothing present",
+    hasMore = false,
     initialSortBy = "title",
     initialSortDir = "asc",
     loading = false,
+    loadingMore = false,
+    loadMoreError = null,
+    loadMoreHref = "#",
+    loadMoreKey,
+    loadMoreLabel = "Load more",
     maxScale = 12,
     minScale = 2,
     nsfwMode = "show",
+    onLoadMore,
     onRequestChange,
     onSelectionChange,
     prefsKey,
     selectable = true,
+    scrollMaxHeight = "calc(100dvh - 15rem)",
+    scrollThreshold = 500,
   }: Props = $props();
 
   function storageKey(): string | null {
@@ -359,47 +378,81 @@
     </div>
   {/if}
 
-  {#if loading}
-    <div class="loading-grid" aria-label="Loading entities" aria-busy="true">
-      {#each Array.from({ length: 12 }) as _, index (index)}
-        <div class="skeleton-card">
-          <div class="skeleton-media"></div>
-          <div class="skeleton-body">
-            <span></span>
-            <small></small>
-            <em></em>
+  <div
+    class={["grid-viewport", scrollMaxHeight && "is-contained"]}
+    style:--entity-grid-scroll-max-height={scrollMaxHeight ?? undefined}
+  >
+    {#if loading}
+      <div class="loading-grid" aria-label="Loading entities" aria-busy="true">
+        {#each Array.from({ length: 12 }) as _, index (index)}
+          <div class="skeleton-card">
+            <div class="skeleton-media"></div>
+            <div class="skeleton-body">
+              <span></span>
+              <small></small>
+              <em></em>
+            </div>
           </div>
-        </div>
-      {/each}
-    </div>
-  {:else if visibleCards.length > 0}
-    <div class="cards" class:is-list={viewMode === "list"} aria-label="Entities">
-      {#each visibleCards as card (card.entity.id)}
-        <EntityThumbnail
-          {card}
-          layout={viewMode}
-          {selectable}
-          selected={selectedIds.includes(card.entity.id)}
-          onSelectedChange={(selected) => updateSelection(card.entity.id, selected)}
-        />
-      {/each}
-    </div>
-  {:else}
-    <div class="empty" role="status">
-      <span class="empty-icon">
-        <SearchX aria-hidden="true" />
-      </span>
-      <strong>{emptyTitle}</strong>
-      <span>{emptyMessage}</span>
-    </div>
-  {/if}
+        {/each}
+      </div>
+    {:else if visibleCards.length > 0}
+      <div class="cards" class:is-list={viewMode === "list"} aria-label="Entities">
+        {#each visibleCards as card (card.entity.id)}
+          <EntityThumbnail
+            {card}
+            layout={viewMode}
+            {selectable}
+            selected={selectedIds.includes(card.entity.id)}
+            onSelectedChange={(selected) => updateSelection(card.entity.id, selected)}
+          />
+        {/each}
+      </div>
+    {:else}
+      <div class="empty" role="status">
+        <span class="empty-icon">
+          <SearchX aria-hidden="true" />
+        </span>
+        <strong>{emptyTitle}</strong>
+        <span>{emptyMessage}</span>
+      </div>
+    {/if}
+
+    {#if onLoadMore}
+      <InfiniteLoadTrigger
+        hasMore={hasMore}
+        loading={loadingMore}
+        error={loadMoreError}
+        nextHref={loadMoreHref}
+        loadKey={loadMoreKey}
+        label={loadMoreLabel}
+        threshold={scrollThreshold}
+        onLoad={onLoadMore}
+      />
+    {/if}
+  </div>
 </section>
 
 <style>
   .entity-grid {
     display: grid;
     gap: 0.85rem;
+    min-height: 0;
     min-width: 0;
+  }
+
+  .grid-viewport {
+    display: grid;
+    gap: 0.85rem;
+    min-height: 0;
+  }
+
+  .grid-viewport.is-contained {
+    max-height: var(--entity-grid-scroll-max-height);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.35rem;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
   }
 
   .cards,

@@ -34,7 +34,7 @@
     let parent: HTMLElement | null = el.parentElement;
     while (parent) {
       const overflow = getComputedStyle(parent).overflowY;
-      if ((overflow === "auto" || overflow === "scroll") && parent.scrollHeight > parent.clientHeight) {
+      if (overflow === "auto" || overflow === "scroll") {
         return parent;
       }
       parent = parent.parentElement;
