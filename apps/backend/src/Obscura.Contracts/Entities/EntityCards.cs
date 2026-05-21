@@ -79,6 +79,12 @@ public sealed record EntityCard : EntityDetail;
 /// </summary>
 /// <param name="Items">Current page of entity cards.</param>
 /// <param name="NextCursor">Cursor for the next page, or null when complete.</param>
+/// <param name="TotalCount">
+/// Total number of entities matching the same filters (kind, query, NSFW) as this
+/// response, ignoring the cursor. Allows the client to render accurate page-of-pages
+/// indicators and seek-to-end affordances without re-counting after every load.
+/// </param>
 public sealed record EntityListResponse(
     IReadOnlyList<EntityThumbnail> Items,
-    string? NextCursor);
+    string? NextCursor,
+    int TotalCount);

@@ -112,6 +112,7 @@
       hasMore={page.nextCursor !== null}
       loadingMore={page.loadingMore}
       loadMoreError={page.loadMoreError}
+      remoteTotalCount={page.totalCount}
       onPageSizeChange={(size) => page.setPageSize(size)}
       onLoadMore={() => page.loadMore()}
     />

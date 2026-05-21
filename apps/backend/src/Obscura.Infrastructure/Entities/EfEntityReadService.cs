@@ -62,6 +62,11 @@ public sealed class EfEntityReadService : IEntityReadService {
                 select entity;
         }
 
+        // Snapshot the unbounded filtered total before applying the cursor; this is what
+        // drives the client's page-of-pages and seek-to-end behaviour and must stay
+        // independent of where in the cursor sequence we currently are.
+        var totalCount = await entityQuery.CountAsync(cancellationToken);
+
         if (TryDecodeCursor(cursor, out var cursorTitle, out var cursorId)) {
             entityQuery = entityQuery.Where(entity =>
                 string.Compare(entity.Title, cursorTitle) > 0 ||
@@ -77,7 +82,7 @@ public sealed class EfEntityReadService : IEntityReadService {
         var page = rows.Take(pageSize).ToArray();
         var thumbnails = await ProjectThumbnailsAsync(page, cancellationToken);
         var nextCursor = rows.Length > pageSize ? EncodeCursor(page[^1].Title, page[^1].Id) : null;
-        return new EntityListResponse(thumbnails, nextCursor);
+        return new EntityListResponse(thumbnails, nextCursor, totalCount);
     }
 
     public async Task<EntityCard?> GetAsync(Guid id, CancellationToken cancellationToken) {

@@ -164,15 +164,34 @@
   /*
    * iOS Safari zooms the viewport when focused inputs use a computed font-size < 16px.
    * max(16px, 1em) stays at least 16px while still scaling up with component styles.
+   *
+   * Selects are opt-out via `.allow-compact-input-text` because tapping a native
+   * select on iOS opens the system picker rather than focusing inline text, so the
+   * zoom-trap doesn't apply and many UI surfaces need a smaller select to stay
+   * visually consistent with their surrounding monospace controls.
    */
   input:not(.allow-compact-input-text):not([type="button"]):not([type="checkbox"]):not(
       [type="color"]
     ):not([type="file"]):not([type="hidden"]):not([type="image"]):not([type="radio"]):not(
       [type="range"]
     ):not([type="reset"]):not([type="submit"]),
-  textarea,
-  select {
+  textarea {
     font-size: max(16px, 1em) !important;
+  }
+
+  select:not(.allow-compact-input-text) {
+    font-size: max(16px, 1em) !important;
+  }
+
+  /*
+   * Compact inline selects (per-page picker, dense toolbar dropdowns) inherit the
+   * surrounding font stack so they match adjacent monospace readouts and buttons
+   * instead of falling back to the user-agent system font at the iOS-safe size.
+   */
+  select.allow-compact-input-text,
+  input.allow-compact-input-text {
+    font: inherit;
+    font-variant-numeric: tabular-nums;
   }
 
   /* ── Typography voices ── */

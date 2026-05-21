@@ -21,6 +21,7 @@ export class EntityIndexPageState {
   loadingMore = $state(false);
   nextCursor = $state<string | null>(null);
   pageSize = $state(DEFAULT_ENTITY_PAGE_SIZE);
+  totalCount = $state(0);
 
   cards: EntityThumbnailCard[] = $derived.by(() =>
     this.items.map((item) => entityCardToThumbnailCard(item, this.hrefFor(item))),
@@ -38,6 +39,7 @@ export class EntityIndexPageState {
     this.loadMoreError = null;
     this.items = [];
     this.nextCursor = null;
+    this.totalCount = 0;
 
     try {
       const response = await fetchV2Entities({
@@ -47,6 +49,7 @@ export class EntityIndexPageState {
       });
       this.items = response.items;
       this.nextCursor = response.nextCursor;
+      this.totalCount = response.totalCount ?? response.items.length;
       this.loadState = "ready";
     } catch (err) {
       this.errorMessage = err instanceof Error ? err.message : String(err);
@@ -68,6 +71,9 @@ export class EntityIndexPageState {
       });
       this.items = [...this.items, ...response.items];
       this.nextCursor = response.nextCursor;
+      if (typeof response.totalCount === "number") {
+        this.totalCount = response.totalCount;
+      }
     } catch (err) {
       this.loadMoreError = err instanceof Error ? err.message : String(err);
     } finally {

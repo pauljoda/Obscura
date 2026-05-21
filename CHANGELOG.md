@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 - The entity browse experience was refined into a "reel-transport" control room aesthetic — the pagination strip now reads like a deck counter with a brass progress hairline and grouped transport buttons, the toolbar no longer reshuffles when you search, thumbnails carry a quieter shadow with a brass underline accent on hover and select, and the kind tabs gained a glowing brass indicator. Mobile layouts stay legible without pushing the grid around when filters appear.
+- Browse pagination now shows the true total count from the server, so the "showing" readout reads `1–250 of 4,500` instead of the loaded subset, the page indicator shows the real `01 / 18`, and the seek-to-end button jumps to the actual last page by buffering remaining cursor pages on demand. The centered transport buttons stay rock-steady as the readout digits grow.
 - Obscura v2 rebuilt the app around a .NET API, EF Core persistence, PostgreSQL, and a .NET worker, replacing the legacy server/runtime path with one backend-owned architecture.
 - The media library now uses EF-backed entity records with explicit child and relationship links for videos, series, seasons, images, galleries, books, audio, people, studios, tags, and collections, giving browse and detail pages a common model without a global graph abstraction.
 - Entity pages now load and display child and related items through a lighter relationship model, making large series, galleries, and collections faster to browse.
@@ -33,9 +34,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 - High-level v2 implementation summary for the rebuilt Obscura architecture, media model, playback pipeline, and UI surfaces.
 - EF-projected browse/detail APIs for videos, series, seasons, images, galleries, books, audio libraries/tracks, people, studios, tags, collections, and generic entity lists.
+- `EntityListResponse.totalCount` reports the unbounded count of entities matching the response's filters, so paginated UIs can render accurate `page X of Y` indicators and a true seek-to-end target without re-counting after every cursor advance.
 
 ### Changed
 - Entity browse pages received a visual polish pass: pagination became a transport-style strip with a brass progress indicator, the search toolbar layout is stable while typing and filtering, thumbnail hover/selection now uses a brass underline and gentler shadows, and the kind tabs got a glowing accent rail.
+- Browse pagination now displays the true matching-entity total from the API instead of the loaded subset, the centered transport stays geometrically pinned as the readout digit count grows, the search box no longer shows a redundant native clear button alongside the styled one, and the per-page selector inherits the surrounding monospace font instead of falling back to the iOS-safe system size.
 - The v2 development data model was simplified around generic entity children, relationships, and thumbnail projections; rescanning/importing v1 data is required.
 - Changelog entries are now curated release notes for important user-visible changes instead of an exhaustive development log.
 - Domain entities now use a breaking object-oriented model with enum entity kinds and attached mutable capabilities instead of registry/string capability lookups.

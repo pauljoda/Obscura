@@ -102,7 +102,7 @@
     loading={isLoading}
     hasMore={hasMore}
     loadingMore={false}
-    loadMoreLabel="Load more fixtures"
+    remoteTotalCount={hydratedCards.length}
     onLoadMore={loadMore}
     prefsKey="thumbnail-lab-entity-grid-surface"
     minScale={2}

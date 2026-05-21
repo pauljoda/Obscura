@@ -378,6 +378,15 @@
     font-style: italic;
   }
 
+  /* Hide the native WebKit/Chromium search clear so it doesn't collide with our
+     own brass-styled clear button. */
+  .search-box input::-webkit-search-cancel-button,
+  .search-box input::-webkit-search-decoration {
+    appearance: none;
+    -webkit-appearance: none;
+    display: none;
+  }
+
   .search-clear {
     display: inline-flex;
     align-items: center;

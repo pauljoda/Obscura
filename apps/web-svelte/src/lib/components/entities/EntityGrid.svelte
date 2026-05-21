@@ -50,6 +50,11 @@
     loading?: boolean;
     loadingMore?: boolean;
     loadMoreError?: string | null;
+    /**
+     * Deprecated. Held only for API compatibility; the pagination strip no longer
+     * surfaces a separate hint when more pages remain (the transport's seek-to-end
+     * button is the authoritative affordance).
+     */
     loadMoreLabel?: string;
     maxScale?: number;
     minScale?: number;
@@ -61,6 +66,13 @@
     onSelectionChange?: (selectedIds: string[]) => void;
     pageSizeOptions?: number[];
     prefsKey?: string;
+    /**
+     * Server-reported total number of entities matching the active filters, ignoring
+     * the cursor. When provided the pagination strip uses it for the readout total,
+     * `page X of Y` indicator, and seek-to-end target. Falls back to the locally
+     * loaded card count when omitted.
+     */
+    remoteTotalCount?: number | null;
     selectable?: boolean;
     scrollBottomPadding?: number;
     scrollMaxHeight?: string | null | undefined;
@@ -79,7 +91,8 @@
     loading = false,
     loadingMore = false,
     loadMoreError = null,
-    loadMoreLabel = "Load more",
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    loadMoreLabel: _loadMoreLabel = "Load more",
     maxScale = 12,
     minScale = 2,
     nsfwMode = "show",
@@ -90,6 +103,7 @@
     onSelectionChange,
     pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
     prefsKey,
+    remoteTotalCount = null,
     selectable = true,
     scrollBottomPadding = 24,
     scrollMaxHeight = undefined,
@@ -172,13 +186,40 @@
   const normalizedPageSizeOptions = $derived(
     Array.from(new Set([...pageSizeOptions, pageSize].map(normalizePageSize))).sort((a, b) => a - b),
   );
-  const pageCount = $derived(Math.max(1, Math.ceil(visibleCards.length / pageSize)));
+  /**
+   * Server total reflects what's matched by remote filters (kind, hideNsfw). When
+   * the grid additionally applies a local search/capability filter we fall back to
+   * the locally visible count so the pagination strip reads honestly. When no
+   * remote count is supplied (e.g. test harness, non-paged grids), we use the
+   * loaded card count plus a "+1" sentinel if more pages remain.
+   */
+  const isLocallyFiltered = $derived(visibleCards.length !== cards.length);
+  const knownRemoteTotal = $derived(remoteTotalCount != null && remoteTotalCount >= 0 ? remoteTotalCount : null);
+  const effectiveTotal = $derived(
+    isLocallyFiltered
+      ? visibleCards.length
+      : knownRemoteTotal != null
+        ? knownRemoteTotal
+        : cards.length + (hasMore ? 1 : 0),
+  );
+  /**
+   * True when the readout total is exact (server-confirmed full count of items in
+   * scope). When false we render the count with a trailing `+` so the user
+   * understands more results may exist beyond what's been loaded.
+   */
+  const totalIsExact = $derived(isLocallyFiltered ? !hasMore : knownRemoteTotal != null);
+  const pageCount = $derived(Math.max(1, Math.ceil(effectiveTotal / pageSize)));
   const currentPageIndex = $derived(Math.min(pageIndex, pageCount - 1));
-  const pageStart = $derived(visibleCards.length === 0 ? 0 : currentPageIndex * pageSize);
-  const pageEnd = $derived(Math.min(visibleCards.length, pageStart + pageSize));
-  const pagedCards = $derived(visibleCards.slice(pageStart, pageEnd));
+  const pageStart = $derived(effectiveTotal === 0 ? 0 : currentPageIndex * pageSize);
+  const pageEnd = $derived(Math.min(effectiveTotal, pageStart + pageSize));
+  const pagedCards = $derived(visibleCards.slice(pageStart, Math.min(visibleCards.length, pageStart + pageSize)));
   const canPageBack = $derived(currentPageIndex > 0);
   const canPageForward = $derived(currentPageIndex < pageCount - 1 || Boolean(hasMore && onLoadMore));
+  const canSeekToEnd = $derived(currentPageIndex < pageCount - 1);
+  /** Widest possible string for the readout, used to reserve a stable layout slot. */
+  const readoutPlaceholderWidth = $derived(
+    Math.max(String(effectiveTotal).length, String(pageStart + 1).length, String(pageEnd).length) * 2 + 4,
+  );
 
   interface EntityGridSnapshot {
     query: string;
@@ -438,23 +479,60 @@
     queueMicrotask(scrollPageToTop);
   }
 
+  /** Load enough remote pages to make the target page index renderable. */
+  async function ensurePageLoaded(targetPage: number) {
+    if (!hasMore || !onLoadMore) return;
+    const targetStart = targetPage * pageSize;
+    while (visibleCards.length <= targetStart && hasMore) {
+      const previousCount = visibleCards.length;
+      await onLoadMore();
+      if (visibleCards.length <= previousCount) break;
+    }
+  }
+
   async function goToNextPage() {
     if (currentPageIndex < pageCount - 1) {
-      setPageIndex(currentPageIndex + 1);
+      // If the next page exists locally, just jump. If it doesn't (we know the
+      // total but haven't buffered enough rows yet), buffer enough cursor pages
+      // to render it before advancing.
+      const targetPage = currentPageIndex + 1;
+      if (visibleCards.length > targetPage * pageSize || !hasMore) {
+        setPageIndex(targetPage);
+        return;
+      }
+      pendingAdvanceAfterLoad = true;
+      try {
+        await ensurePageLoaded(targetPage);
+        setPageIndex(targetPage);
+      } finally {
+        pendingAdvanceAfterLoad = false;
+      }
       return;
     }
 
     if (!hasMore || !onLoadMore || loadingMore) return;
     const targetPage = currentPageIndex + 1;
-    const targetStart = targetPage * pageSize;
     pendingAdvanceAfterLoad = true;
     try {
-      while (visibleCards.length <= targetStart && hasMore) {
-        const previousCount = visibleCards.length;
-        await onLoadMore();
-        if (visibleCards.length <= previousCount) break;
-      }
+      await ensurePageLoaded(targetPage);
       setPageIndex(targetPage);
+    } finally {
+      pendingAdvanceAfterLoad = false;
+    }
+  }
+
+  async function goToLastPage() {
+    const lastPage = pageCount - 1;
+    if (lastPage <= currentPageIndex) return;
+    // If we already have the data, just jump.
+    if (visibleCards.length > lastPage * pageSize || !hasMore) {
+      setPageIndex(lastPage);
+      return;
+    }
+    pendingAdvanceAfterLoad = true;
+    try {
+      await ensurePageLoaded(lastPage);
+      setPageIndex(Math.min(lastPage, pageCount - 1));
     } finally {
       pendingAdvanceAfterLoad = false;
     }
@@ -599,10 +677,10 @@
 
         <div class="page-readout" aria-live="polite">
           <span class="readout-label">SHOWING</span>
-          <span class="readout-range">
+          <span class="readout-range" style:--readout-ch="{readoutPlaceholderWidth}ch">
             <strong>{pageStart + 1}–{pageEnd}</strong>
             <span class="readout-divider">/</span>
-            <span class="readout-total">{visibleCards.length}{hasMore ? "+" : ""}</span>
+            <span class="readout-total">{effectiveTotal}{totalIsExact ? "" : "+"}</span>
           </span>
         </div>
 
@@ -650,44 +728,44 @@
           <button
             type="button"
             class="transport-btn"
-            title="Last loaded page"
-            aria-label="Last loaded page"
-            disabled={currentPageIndex >= pageCount - 1}
-            onclick={() => setPageIndex(pageCount - 1)}
+            title="Last page"
+            aria-label="Last page"
+            disabled={!canSeekToEnd || Boolean(loadMoreError) || loadingMore || pendingAdvanceAfterLoad}
+            onclick={() => void goToLastPage()}
           >
             <ChevronsRight aria-hidden="true" />
           </button>
         </div>
 
-        <label class="page-size-control">
-          <span class="page-size-label">PER PAGE</span>
-          <span class="page-size-field">
-            <select
-              aria-label="Per page"
-              value={pageSize}
-              onchange={(event) => setPageSize(Number((event.currentTarget as HTMLSelectElement).value))}
+        <div class="page-trailing">
+          {#if loadMoreError}
+            <button
+              type="button"
+              class="retry-load"
+              onclick={() => {
+                if (onLoadMore) void onLoadMore();
+              }}
             >
-              {#each normalizedPageSizeOptions as option (option)}
-                <option value={option}>{option}</option>
-              {/each}
-            </select>
-            <ChevronDown class="page-size-caret" aria-hidden="true" />
-          </span>
-        </label>
-
-        {#if loadMoreError}
-          <button
-            type="button"
-            class="retry-load"
-            onclick={() => {
-              if (onLoadMore) void onLoadMore();
-            }}
-          >
-            Try again
-          </button>
-        {:else if hasMore && currentPageIndex >= pageCount - 1}
-          <span class="more-hint" title={loadMoreLabel}>BUFFER ›</span>
-        {/if}
+              Try again
+            </button>
+          {/if}
+          <label class="page-size-control">
+            <span class="page-size-label">PER PAGE</span>
+            <span class="page-size-field">
+              <select
+                class="allow-compact-input-text"
+                aria-label="Per page"
+                value={pageSize}
+                onchange={(event) => setPageSize(Number((event.currentTarget as HTMLSelectElement).value))}
+              >
+                {#each normalizedPageSizeOptions as option (option)}
+                  <option value={option}>{option}</option>
+                {/each}
+              </select>
+              <ChevronDown class="page-size-caret" aria-hidden="true" />
+            </span>
+          </label>
+        </div>
       </nav>
     {/if}
   </div>
@@ -736,13 +814,20 @@
     gap: 0.5rem;
   }
 
+  /*
+   * The pagination strip is laid out as a 3-column grid so the centered transport
+   * stays perfectly centered regardless of how wide the left readout or right
+   * trailing controls grow. The two side columns are `1fr` and use `justify-self`
+   * to pin their content to the outer edges; the middle is `auto` so the
+   * transport hugs its content but always lands on the geometric centerline.
+   */
   .pagination-bar {
     position: sticky;
     bottom: 0;
     z-index: 5;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
-    flex-wrap: wrap;
     gap: 0.85rem;
     border: 1px solid var(--color-border-default);
     border-top-color: rgb(196 154 90 / 0.22);
@@ -760,16 +845,22 @@
     padding: 0.7rem 0.85rem;
   }
 
+  .pagination-bar > .page-readout {
+    justify-self: start;
+  }
+
   .pagination-bar > .transport {
-    margin-inline: auto;
+    justify-self: center;
   }
 
-  .pagination-bar > .page-size-control {
-    margin-inline-start: auto;
+  .pagination-bar > .page-trailing {
+    justify-self: end;
   }
 
-  .pagination-bar > .transport ~ .page-size-control {
-    margin-inline-start: 0;
+  .page-trailing {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
   }
 
   .pagination-progress {
@@ -812,6 +903,13 @@
     align-items: baseline;
     gap: 0.35rem;
     font-variant-numeric: tabular-nums;
+    /*
+     * Hold a stable minimum width derived from the widest possible digit count
+     * for the current total. Combined with tabular-nums above, this keeps the
+     * left readout column from changing width as the user pages forward — so the
+     * centered transport stays put even though the displayed numerals grow.
+     */
+    min-width: var(--readout-ch, 11ch);
   }
 
   .readout-range strong {
@@ -993,16 +1091,6 @@
     pointer-events: none;
   }
 
-  .more-hint {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    color: var(--color-text-accent);
-    font-size: 0.6rem;
-    font-weight: 600;
-    letter-spacing: 0.18em;
-  }
-
   .retry-load {
     display: inline-flex;
     align-items: center;
@@ -1168,39 +1256,43 @@
   }
 
   @media (max-width: 720px) {
+    /*
+     * Mobile stacks the readout, transport, and trailing controls into three
+     * rows. Two-column header (readout + trailing per-page select) keeps the
+     * status information visible on small screens; the transport gets its own
+     * full-width row so the buttons stay comfortably tappable.
+     */
     .pagination-bar {
-      gap: 0.55rem 0.65rem;
+      grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+      grid-template-areas:
+        "readout  trailing"
+        "transport transport";
+      gap: 0.6rem 0.7rem;
       padding: 0.65rem 0.7rem 0.7rem;
     }
 
     .pagination-bar > .page-readout {
-      order: 1;
-      flex: 1 1 auto;
+      grid-area: readout;
       font-size: 0.62rem;
     }
 
-    .pagination-bar > .page-size-control {
-      order: 2;
-      margin-inline-start: 0;
+    .pagination-bar > .page-trailing {
+      grid-area: trailing;
     }
 
     .pagination-bar > .transport {
-      order: 3;
-      flex: 1 1 100%;
-      margin: 0;
+      grid-area: transport;
+      justify-self: stretch;
       justify-content: space-between;
       padding: 0.25rem 0.35rem;
     }
 
-    .pagination-bar > .more-hint,
-    .pagination-bar > .retry-load {
-      order: 4;
-      flex: 1 1 100%;
-      justify-content: center;
-    }
-
     .readout-range strong {
       font-size: 0.72rem;
+    }
+
+    .readout-range {
+      min-width: 0; /* stable centering doesn't apply once the transport is full-width */
     }
 
     .transport-btn {
