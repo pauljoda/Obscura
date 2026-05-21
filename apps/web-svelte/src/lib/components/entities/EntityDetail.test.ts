@@ -190,4 +190,40 @@ describe("EntityDetail", () => {
     expect(screen.getByText("Links must be absolute http or https URLs.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save Links" })).toBeDisabled();
   });
+
+  it("edits external IDs separately from URL links", async () => {
+    const card = buildCard();
+    card.links = [
+      { label: "https://example.test", url: "https://example.test" },
+      { label: "tmdb: 6515881", url: null, provider: "tmdb" },
+    ];
+    const onMetadataSave = vi.fn().mockResolvedValue(undefined);
+
+    render(EntityDetail, {
+      props: {
+        card,
+        tabs: [{ id: "links", label: "Links", sections: ["links"] }],
+        onMetadataSave,
+      },
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Edit Links" }));
+
+    expect(screen.queryByText("Links must be absolute http or https URLs.")).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Links" })).toHaveValue("https://example.test");
+    expect(screen.getByRole("textbox", { name: "External IDs" })).toHaveValue("tmdb=6515881");
+
+    await fireEvent.input(screen.getByRole("textbox", { name: "External IDs" }), {
+      target: { value: "tmdb=6515882" },
+    });
+    await fireEvent.click(screen.getByRole("button", { name: "Save Links" }));
+
+    expect(onMetadataSave).toHaveBeenCalledWith({
+      fields: ["urls", "externalIds"],
+      patch: expect.objectContaining({
+        urls: ["https://example.test"],
+        externalIds: { tmdb: "6515882" },
+      }),
+    });
+  });
 });

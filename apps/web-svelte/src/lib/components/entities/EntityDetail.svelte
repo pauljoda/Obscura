@@ -66,6 +66,7 @@
 
   interface EntityDetailEditDraft {
     description: string;
+    externalIdsText: string;
     linksText: string;
     tagsText: string;
     datesText: string;
@@ -128,6 +129,7 @@
   let initialDraft = $state<EntityDetailEditDraft | null>(null);
   let editDraft = $state<EntityDetailEditDraft>({
     description: "",
+    externalIdsText: "",
     linksText: "",
     tagsText: "",
     datesText: "",
@@ -234,12 +236,28 @@
   function draftFromCard(): EntityDetailEditDraft {
     return {
       description: card.description ?? "",
-      linksText: card.links.map((link) => link.url ?? link.label).join("\n"),
+      externalIdsText: card.links
+        .filter(hasProvider)
+        .map((link) => `${link.provider}=${externalIdValue(link.label, link.provider)}`)
+        .join("\n"),
+      linksText: card.links
+        .filter((link) => !link.provider && link.url)
+        .map((link) => link.url)
+        .join("\n"),
       tagsText: card.tags.map((tag) => tag.title).join(", "),
       datesText: "dates" in card
         ? (card as EntityDetailCard & { dates?: Array<{ code: string; value: string }> }).dates?.map((date) => `${date.code}=${date.value}`).join("\n") ?? ""
         : "",
     };
+  }
+
+  function hasProvider(link: EntityDetailCard["links"][number]): link is EntityDetailCard["links"][number] & { provider: string } {
+    return Boolean(link.provider);
+  }
+
+  function externalIdValue(label: string, provider: string): string {
+    const prefix = `${provider}:`;
+    return label.startsWith(prefix) ? label.slice(prefix.length).trim() : label;
   }
 
   function serializeDraft(draft: EntityDetailEditDraft | null): string {
@@ -318,6 +336,12 @@
         }
       });
       if (invalid) errors.push("Links must be absolute http or https URLs.");
+
+      const invalidExternalId = parseListLines(draft.externalIdsText).find((line) => {
+        const separator = line.indexOf("=");
+        return separator <= 0 || separator === line.length - 1;
+      });
+      if (invalidExternalId) errors.push("External IDs must use provider=value lines.");
     }
     if (activeSections.some((section) => section.id === "dates")) {
       const invalidLine = parseListLines(draft.datesText).find((line) => {
@@ -354,7 +378,9 @@
     }
     if (activeSections.some((section) => section.id === "links")) {
       fields.push("urls");
+      fields.push("externalIds");
       patch.urls = parseListLines(draft.linksText);
+      patch.externalIds = parseKeyValueLines(draft.externalIdsText);
     }
     if (activeSections.some((section) => section.id === "tags")) {
       fields.push("tags");
@@ -455,6 +481,10 @@
     <label class="edit-field">
       <span>Links</span>
       <textarea bind:value={editDraft.linksText} aria-label="Links" rows="5"></textarea>
+    </label>
+    <label class="edit-field">
+      <span>External IDs</span>
+      <textarea bind:value={editDraft.externalIdsText} aria-label="External IDs" rows="4"></textarea>
     </label>
   </section>
 {/snippet}
