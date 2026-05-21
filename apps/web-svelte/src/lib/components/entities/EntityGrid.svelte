@@ -6,9 +6,14 @@
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
+    EllipsisVertical,
+    EyeOff,
+    Eye,
     LoaderCircle,
     SearchX,
     Check,
+    CheckCheck,
+    X,
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import { onMount } from "svelte";
@@ -147,6 +152,7 @@
     return normalizePageSize(Number(raw));
   }
 
+  let actionsMenuOpen = $state(false);
   let activeKind = $state(ENTITY_GRID_ALL_KINDS);
   let activePresetId = $state<string | null>(null);
   let drawerOpen = $state(false);
@@ -493,6 +499,7 @@
   function clearFiltersAndSort() {
     activeKind = ENTITY_GRID_ALL_KINDS;
     activePresetId = null;
+    actionsMenuOpen = false;
     filterIds = [];
     includeNsfw = true;
     query = "";
@@ -649,32 +656,92 @@
 
   {#if selectedIds.length > 0}
     <div class="bulk-bar" role="status" aria-live="polite">
-      <span>{selectedIds.length} selected</span>
-      <div class="bulk-actions">
+      <span class="bulk-count">{selectedIds.length} selected</span>
+      <div class="bulk-controls">
         <button
           type="button"
+          class="bulk-btn"
+          title="Select all visible"
           onclick={() => {
             selectedIds = visibleCards.map((c) => c.entity.id);
             onSelectionChange?.(selectedIds);
           }}
         >
-          Select all
+          <CheckCheck class="h-3.5 w-3.5" />
+          <span class="bulk-btn-label">Select all</span>
         </button>
-        {#each bulkActions as action (action.id)}
+        <button
+          type="button"
+          class="bulk-btn"
+          title="Clear selection"
+          onclick={() => {
+            selectedIds = [];
+            onSelectionChange?.(selectedIds);
+          }}
+        >
+          <X class="h-3.5 w-3.5" />
+          <span class="bulk-btn-label">Clear</span>
+        </button>
+
+        {#if nsfwMode === "show"}
+          <span class="bulk-divider" aria-hidden="true"></span>
           <button
             type="button"
-            class:danger={action.tone === "danger"}
-            onclick={() => action.onRun(selectedIds)}
+            class="bulk-btn"
+            class:is-active={!includeNsfw}
+            title={includeNsfw ? "Hide NSFW" : "Show NSFW"}
+            onclick={() => setIncludeNsfw(!includeNsfw)}
           >
-            {action.label}
+            {#if includeNsfw}
+              <EyeOff class="h-3.5 w-3.5" />
+              <span class="bulk-btn-label">Hide NSFW</span>
+            {:else}
+              <Eye class="h-3.5 w-3.5" />
+              <span class="bulk-btn-label">Show NSFW</span>
+            {/if}
           </button>
-        {/each}
-        <button type="button" onclick={() => {
-          selectedIds = [];
-          onSelectionChange?.(selectedIds);
-        }}>
-          Clear selection
-        </button>
+        {/if}
+
+        {#if bulkActions.length > 0}
+          <span class="bulk-divider" aria-hidden="true"></span>
+          <div class="bulk-actions-menu">
+            <button
+              type="button"
+              class="bulk-btn"
+              class:is-active={actionsMenuOpen}
+              title="Actions"
+              aria-label="Bulk actions"
+              aria-expanded={actionsMenuOpen}
+              onclick={() => (actionsMenuOpen = !actionsMenuOpen)}
+            >
+              <EllipsisVertical class="h-3.5 w-3.5" />
+              <span class="bulk-btn-label">Actions</span>
+            </button>
+            {#if actionsMenuOpen}
+              <button
+                type="button"
+                class="fixed inset-0 z-40 cursor-default"
+                aria-label="Close actions menu"
+                onclick={() => (actionsMenuOpen = false)}
+              ></button>
+              <div class="bulk-flyout">
+                {#each bulkActions as action (action.id)}
+                  <button
+                    type="button"
+                    class="bulk-flyout-item"
+                    class:danger={action.tone === "danger"}
+                    onclick={() => {
+                      action.onRun(selectedIds);
+                      actionsMenuOpen = false;
+                    }}
+                  >
+                    {action.label}
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        {/if}
       </div>
     </div>
   {/if}
@@ -704,6 +771,7 @@
             {card}
             layout={viewMode}
             {selectable}
+            selectMode={selectedCount > 0}
             selected={selectedIds.includes(card.entity.id)}
             onSelectedChange={(selected) => updateSelection(card.entity.id, selected)}
           />
@@ -1342,7 +1410,6 @@
   .bulk-bar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 0.75rem;
     border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
     background: rgba(12, 15, 21, 0.96);
@@ -1357,43 +1424,126 @@
     pointer-events: auto;
   }
 
-  .bulk-bar > span {
+  .bulk-count {
     color: var(--color-text-accent);
     text-transform: uppercase;
+    flex-shrink: 0;
   }
 
-  .bulk-actions {
+  .bulk-controls {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    justify-content: flex-end;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: auto;
   }
 
-  .bulk-actions button {
+  .bulk-divider {
+    display: inline-block;
+    width: 1px;
+    height: 1.1rem;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(255 255 255 / 0.08),
+      transparent
+    );
+    margin: 0 0.1rem;
+  }
+
+  .bulk-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    height: 1.85rem;
     border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
     background: var(--color-surface-2, #101420);
     color: var(--color-text-muted);
-    font-size: 0.68rem;
-    padding: 0.32rem 0.5rem;
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+    padding: 0 0.55rem;
     border-radius: 0;
     box-shadow: inset 0 2px 8px rgba(0,0,0,0.30);
     transition:
-      border-color var(--duration-fast) var(--ease-default),
-      background var(--duration-fast) var(--ease-default),
-      color var(--duration-fast) var(--ease-default),
-      box-shadow var(--duration-fast) var(--ease-default);
+      border-color var(--duration-fast, 80ms) var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1)),
+      background var(--duration-fast, 80ms) var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1)),
+      color var(--duration-fast, 80ms) var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1)),
+      box-shadow var(--duration-fast, 80ms) var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1));
   }
 
-  .bulk-actions button:hover {
+  .bulk-btn:hover {
     border-color: var(--color-border-accent, rgba(196, 154, 90, 0.25));
     background: var(--color-surface-3, #151a28);
-    color: var(--color-text-accent);
+    color: var(--color-text-primary);
     box-shadow: 0 0 0 1px rgba(196,154,90,0.35), 0 0 8px rgba(196,154,90,0.15);
   }
 
-  .bulk-actions button.danger:hover {
-    border-color: var(--color-error-border, rgb(179 79 86 / 0.5));
-    color: var(--color-error-text);
+  .bulk-btn.is-active {
+    border-color: var(--color-border-accent, rgba(196, 154, 90, 0.25));
+    background: var(--color-surface-4, #1c2235);
+    color: var(--color-text-accent, #c49a5a);
+    box-shadow: 0 0 0 1px rgba(196,154,90,0.35), 0 0 8px rgba(196,154,90,0.15);
+  }
+
+  .bulk-btn-label {
+    display: none;
+  }
+
+  @media (min-width: 520px) {
+    .bulk-btn-label {
+      display: inline;
+    }
+  }
+
+  .bulk-actions-menu {
+    position: relative;
+  }
+
+  .bulk-flyout {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.3rem);
+    z-index: 50;
+    min-width: 10rem;
+    border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
+    background: rgba(12, 15, 21, 0.98);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 0;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.60);
+    padding: 0.3rem 0;
+    overflow: hidden;
+  }
+
+  .bulk-flyout-item {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    padding: 0.45rem 0.85rem;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.74rem;
+    letter-spacing: 0.04em;
+    text-align: left;
+    transition:
+      background-color var(--duration-fast, 80ms) var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1)),
+      color var(--duration-fast, 80ms) var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1));
+  }
+
+  .bulk-flyout-item:hover {
+    background: rgb(255 255 255 / 0.04);
+    color: var(--color-text-primary);
+  }
+
+  .bulk-flyout-item.danger {
+    color: var(--color-text-muted);
+  }
+
+  .bulk-flyout-item.danger:hover {
+    background: rgb(168 72 80 / 0.12);
+    color: var(--color-error-text, #cc7880);
   }
 
   .empty strong {

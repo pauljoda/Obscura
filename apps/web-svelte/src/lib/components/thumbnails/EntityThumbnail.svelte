@@ -43,6 +43,7 @@
     linkable?: boolean;
     onSelectedChange?: (selected: boolean) => void;
     selectable?: boolean;
+    selectMode?: boolean;
     selected?: boolean;
     subtitleContent?: Snippet<[EntityThumbnailCard]>;
     titleAlign?: EntityThumbnailTitleAlign;
@@ -55,6 +56,7 @@
     linkable = true,
     onSelectedChange,
     selectable = false,
+    selectMode = false,
     selected = false,
     subtitleContent,
     titleAlign = "left",
@@ -119,8 +121,10 @@
   const imageOnly = $derived(card.entity.kind === ENTITY_KIND.bookPage);
   const bottomLeft = $derived(card.custom?.bottomLeft);
   const href = $derived(linkable ? resolveEntityThumbnailHref(card) : undefined);
-  const selectionRole = $derived(!href && selectable ? "checkbox" : href ? undefined : "group");
-  const selectionTabIndex = $derived(href ? undefined : 0);
+  const inSelectMode = $derived(selectMode && selectable);
+  const effectiveHref = $derived(inSelectMode ? undefined : href);
+  const selectionRole = $derived(inSelectMode || (!href && selectable) ? "checkbox" : href ? undefined : "group");
+  const selectionTabIndex = $derived(effectiveHref ? undefined : 0);
 
   function updatePointerRatio(event: PointerEvent) {
     if (!hoverable) return;
@@ -153,12 +157,14 @@
   }
 
   function toggleSurfaceSelection() {
-    if (!selectable || href) return;
+    if (!selectable) return;
+    if (!inSelectMode && href) return;
     onSelectedChange?.(!selected);
   }
 
   function handleSurfaceKeydown(event: KeyboardEvent) {
-    if (!selectable || href || (event.key !== "Enter" && event.key !== " ")) return;
+    if (!selectable || (event.key !== "Enter" && event.key !== " ")) return;
+    if (!inSelectMode && href) return;
     event.preventDefault();
     toggleSurfaceSelection();
   }
@@ -174,8 +180,8 @@
 </script>
 
 <svelte:element
-  this={href ? "a" : "article"}
-  href={href || undefined}
+  this={effectiveHref ? "a" : "article"}
+  href={effectiveHref || undefined}
   role={selectionRole}
   tabindex={selectionTabIndex}
   class="entity-thumbnail"
@@ -184,7 +190,7 @@
   class:is-list={layout === "list"}
   class:is-selected={selected}
   aria-label={card.entity.title}
-  aria-checked={!href && selectable ? selected : undefined}
+  aria-checked={inSelectMode || (!href && selectable) ? selected : undefined}
   onblur={clearHover}
   onclick={toggleSurfaceSelection}
   onfocus={handleFocus}
