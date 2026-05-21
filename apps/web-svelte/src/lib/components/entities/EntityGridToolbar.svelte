@@ -464,6 +464,8 @@
   .control-cluster-trailing {
     margin-left: auto;
     justify-content: flex-end;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
   }
 
   .cluster-divider {
