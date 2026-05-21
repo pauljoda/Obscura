@@ -19,3 +19,20 @@ export function calculateLoadAheadThreshold({
   const velocityThreshold = scrollVelocity * velocityLeadMs;
   return Math.min(maxThreshold, Math.ceil(Math.max(baseThreshold, screenThreshold, velocityThreshold)));
 }
+
+interface ShouldTriggerLoadInput {
+  clientHeight: number;
+  leadThreshold: number;
+  scrollHeight: number;
+  scrollTop: number;
+}
+
+export function shouldTriggerLoad({
+  clientHeight,
+  leadThreshold,
+  scrollHeight,
+  scrollTop,
+}: ShouldTriggerLoadInput): boolean {
+  const remaining = scrollHeight - (scrollTop + clientHeight);
+  return remaining <= leadThreshold;
+}

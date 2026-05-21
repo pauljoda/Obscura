@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Browse grids now keep infinite scrolling inside the shared entity grid, so long media lists scroll in a focused grid area instead of relying on page-level loading controls.
 - Browse grids now fit their internal scroll area to the visible page instead of clipping below the app frame.
 - Browse grids now prefetch additional results before users hit the end of the scroll area, including a larger buffer during fast scrolling.
+- Entity grid infinite scroll now continues loading when the end sentinel is already visible, so users do not have to press the fallback load button.
 
 ### Added
 - High-level v2 implementation summary for the rebuilt Obscura architecture, media model, playback pipeline, and UI surfaces.
@@ -60,6 +61,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Missing generated subtitle files now cause videos to be queued for subtitle extraction again, and re-extraction refreshes the existing subtitle track instead of adding a duplicate stale entry.
 - Video playback now drives the visible progress and buffer rails from the native video element, fixing stale player controls while adaptive HLS plays.
 - Adaptive video playback now keeps decoded video visible over stale poster artwork and can prebuffer more of the stream during local playback.
+- Entity grid infinite scroll now rechecks layout after the load button becomes visible, fixing a stall where additional rows were available but not fetched automatically.
 
 ### Removed
 - Historical v1-era release note detail was pruned from the changelog; git history remains the complete record.

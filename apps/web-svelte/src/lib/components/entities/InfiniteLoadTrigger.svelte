@@ -1,7 +1,10 @@
 <script lang="ts">
   import { LoaderCircle } from "@lucide/svelte";
   import { onMount, untrack } from "svelte";
-  import { calculateLoadAheadThreshold } from "./infinite-load-trigger.svelte";
+  import {
+    calculateLoadAheadThreshold,
+    shouldTriggerLoad,
+  } from "./infinite-load-trigger.svelte";
 
   interface Props {
     error?: string | null;
@@ -19,6 +22,8 @@
     screenLead?: number;
     /** Time window used to convert scroll speed into predictive pixels. */
     velocityLeadMs?: number;
+    /** Interval for layout-settled self checks while more results are available. */
+    autoCheckMs?: number;
   }
 
   let {
@@ -33,6 +38,7 @@
     maxThreshold = 6000,
     screenLead = 1.75,
     velocityLeadMs = 1000,
+    autoCheckMs = 160,
   }: Props = $props();
 
   let sentinelEl: HTMLDivElement | undefined = $state();
@@ -78,7 +84,6 @@
     if (loadKey !== undefined && loadKey === lastFiredKey) return;
 
     const metrics = readMetrics();
-    const remaining = metrics.scrollHeight - (metrics.scrollTop + metrics.clientHeight);
     const leadThreshold = calculateLoadAheadThreshold({
       baseThreshold: threshold,
       clientHeight: metrics.clientHeight,
@@ -88,7 +93,7 @@
       velocityLeadMs,
     });
 
-    if (remaining < leadThreshold) {
+    if (shouldTriggerLoad({ ...metrics, leadThreshold })) {
       lastFiredKey = loadKey;
       untrack(() => void onLoad());
     }
@@ -132,6 +137,12 @@
   $effect(() => {
     if (loadKey === undefined || loadKey === lastFiredKey || loading || !hasMore || error) return;
     queueMicrotask(check);
+  });
+
+  $effect(() => {
+    if (!hasMore || loading || error) return;
+    const interval = window.setInterval(check, autoCheckMs);
+    return () => window.clearInterval(interval);
   });
 </script>
 
