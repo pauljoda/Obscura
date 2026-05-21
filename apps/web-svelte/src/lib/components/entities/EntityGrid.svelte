@@ -1,6 +1,7 @@
 <script lang="ts">
   import { browser } from "$app/environment";
   import {
+    ChevronDown,
     ChevronLeft,
     ChevronRight,
     ChevronsLeft,
@@ -590,26 +591,25 @@
 
     {#if !loading && visibleCards.length > 0}
       <nav class="pagination-bar" aria-label="Entity grid pagination">
-        <div class="page-range" aria-live="polite">
-          <strong>{pageStart + 1}-{pageEnd}</strong>
-          <span>of {visibleCards.length}{hasMore ? "+" : ""}</span>
+        <span
+          class="pagination-progress"
+          aria-hidden="true"
+          style:--progress="{Math.max(0, Math.min(1, pageCount > 1 ? (currentPageIndex + 1) / pageCount : 1)) * 100}%"
+        ></span>
+
+        <div class="page-readout" aria-live="polite">
+          <span class="readout-label">SHOWING</span>
+          <span class="readout-range">
+            <strong>{pageStart + 1}–{pageEnd}</strong>
+            <span class="readout-divider">/</span>
+            <span class="readout-total">{visibleCards.length}{hasMore ? "+" : ""}</span>
+          </span>
         </div>
 
-        <label class="page-size-control">
-          <span>Per page</span>
-          <select
-            value={pageSize}
-            onchange={(event) => setPageSize(Number((event.currentTarget as HTMLSelectElement).value))}
-          >
-            {#each normalizedPageSizeOptions as option (option)}
-              <option value={option}>{option}</option>
-            {/each}
-          </select>
-        </label>
-
-        <div class="page-controls">
+        <div class="transport">
           <button
             type="button"
+            class="transport-btn"
             title="First page"
             aria-label="First page"
             disabled={!canPageBack}
@@ -619,6 +619,7 @@
           </button>
           <button
             type="button"
+            class="transport-btn"
             title="Previous page"
             aria-label="Previous page"
             disabled={!canPageBack}
@@ -626,9 +627,15 @@
           >
             <ChevronLeft aria-hidden="true" />
           </button>
-          <span class="page-count">Page {currentPageIndex + 1} / {pageCount}</span>
+          <span class="page-count" aria-hidden="true">
+            <span class="page-count-current">{String(currentPageIndex + 1).padStart(String(pageCount).length, "0")}</span>
+            <span class="page-count-sep">/</span>
+            <span class="page-count-total">{pageCount}</span>
+          </span>
+          <span class="sr-only">Page {currentPageIndex + 1} / {pageCount}</span>
           <button
             type="button"
+            class="transport-btn"
             title="Next page"
             aria-label="Next page"
             disabled={!canPageForward || Boolean(loadMoreError) || loadingMore || pendingAdvanceAfterLoad}
@@ -642,6 +649,7 @@
           </button>
           <button
             type="button"
+            class="transport-btn"
             title="Last loaded page"
             aria-label="Last loaded page"
             disabled={currentPageIndex >= pageCount - 1}
@@ -650,6 +658,22 @@
             <ChevronsRight aria-hidden="true" />
           </button>
         </div>
+
+        <label class="page-size-control">
+          <span class="page-size-label">PER PAGE</span>
+          <span class="page-size-field">
+            <select
+              aria-label="Per page"
+              value={pageSize}
+              onchange={(event) => setPageSize(Number((event.currentTarget as HTMLSelectElement).value))}
+            >
+              {#each normalizedPageSizeOptions as option (option)}
+                <option value={option}>{option}</option>
+              {/each}
+            </select>
+            <ChevronDown class="page-size-caret" aria-hidden="true" />
+          </span>
+        </label>
 
         {#if loadMoreError}
           <button
@@ -662,7 +686,7 @@
             Try again
           </button>
         {:else if hasMore && currentPageIndex >= pageCount - 1}
-          <span class="more-hint">{loadMoreLabel}</span>
+          <span class="more-hint" title={loadMoreLabel}>BUFFER ›</span>
         {/if}
       </nav>
     {/if}
@@ -716,109 +740,275 @@
     position: sticky;
     bottom: 0;
     z-index: 5;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, auto) 1fr minmax(0, auto);
     align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    border: 1px solid var(--color-border-subtle);
-    background: color-mix(in srgb, var(--color-surface-2) 88%, transparent);
+    gap: 0.85rem;
+    border: 1px solid var(--color-border-default);
+    border-top-color: rgb(196 154 90 / 0.22);
+    background:
+      linear-gradient(180deg, rgb(20 23 30 / 0.55), rgb(11 12 16 / 0.85)),
+      color-mix(in srgb, var(--color-surface-2) 92%, transparent);
     box-shadow:
-      0 -8px 24px rgb(0 0 0 / 0.35),
-      inset 0 1px 0 rgb(255 255 255 / 0.04);
-    backdrop-filter: blur(12px);
+      0 -10px 28px rgb(0 0 0 / 0.45),
+      inset 0 1px 0 rgb(255 255 255 / 0.04),
+      inset 0 -1px 0 rgb(0 0 0 / 0.4);
+    backdrop-filter: blur(14px) saturate(1.15);
+    -webkit-backdrop-filter: blur(14px) saturate(1.15);
     color: var(--color-text-muted);
     font-family: var(--font-mono, "JetBrains Mono", monospace);
-    padding: 0.55rem 0.65rem;
+    padding: 0.7rem 0.85rem;
+    overflow: hidden;
   }
 
-  .page-range,
-  .page-size-control,
-  .page-controls,
-  .more-hint {
+  .pagination-progress {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background:
+      linear-gradient(
+        to right,
+        rgb(196 154 90 / 0.85) 0%,
+        rgb(221 180 119 / 0.95) calc(var(--progress, 0%) - 0.5%),
+        rgb(196 154 90 / 0.15) var(--progress, 0%),
+        rgb(196 154 90 / 0.05) 100%
+      );
+    box-shadow: 0 0 12px rgb(196 154 90 / 0.35);
+    pointer-events: none;
+    transition: background var(--duration-normal) var(--ease-default);
+  }
+
+  .page-readout {
     display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
+    align-items: baseline;
+    gap: 0.55rem;
     min-width: 0;
+    color: var(--color-text-muted);
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
     white-space: nowrap;
   }
 
-  .page-range {
-    font-size: 0.68rem;
-  }
-
-  .page-range strong {
-    color: var(--color-text-primary);
-    font-weight: 650;
-  }
-
-  .page-size-control {
+  .readout-label {
     color: var(--color-text-disabled);
-    font-size: 0.64rem;
-    text-transform: uppercase;
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
   }
 
-  .page-size-control select {
-    height: 1.8rem;
-    border: 1px solid var(--color-border-subtle);
-    background: var(--color-surface-1);
+  .readout-range {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .readout-range strong {
     color: var(--color-text-primary);
-    font: inherit;
-    padding: 0 1.65rem 0 0.45rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-shadow: 0 0 14px rgb(255 255 255 / 0.06);
   }
 
-  .page-controls {
-    justify-content: center;
+  .readout-divider {
+    color: var(--color-text-disabled);
   }
 
-  .page-controls button,
-  .retry-load {
+  .readout-total {
+    color: var(--color-text-muted);
+  }
+
+  .transport {
+    display: inline-flex;
+    justify-self: center;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.3rem;
+    border: 1px solid rgb(0 0 0 / 0.45);
+    background:
+      linear-gradient(180deg, rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.15));
+    box-shadow:
+      inset 0 1px 3px rgb(0 0 0 / 0.55),
+      inset 0 -1px 0 rgb(255 255 255 / 0.02);
+  }
+
+  .transport-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 1.85rem;
+    width: 2rem;
     height: 1.85rem;
-    border: 1px solid var(--color-border-subtle);
-    background: var(--color-surface-1);
+    border: 1px solid rgb(255 255 255 / 0.05);
+    background:
+      linear-gradient(180deg, rgb(34 38 48 / 0.95), rgb(18 21 28 / 0.95));
     color: var(--color-text-muted);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.05),
+      0 1px 2px rgb(0 0 0 / 0.35);
     transition:
-      border-color var(--duration-fast) var(--ease-default),
       color var(--duration-fast) var(--ease-default),
-      box-shadow var(--duration-fast) var(--ease-default);
+      border-color var(--duration-fast) var(--ease-default),
+      box-shadow var(--duration-fast) var(--ease-default),
+      transform var(--duration-fast) var(--ease-mechanical),
+      background var(--duration-fast) var(--ease-default);
   }
 
-  .page-controls button:hover:not(:disabled),
-  .retry-load:hover {
-    border-color: var(--color-border-accent);
-    color: var(--color-text-accent);
-    box-shadow: 0 0 12px rgb(196 154 90 / 0.18);
+  .transport-btn:hover:not(:disabled) {
+    border-color: rgb(196 154 90 / 0.4);
+    color: var(--color-text-accent-bright);
+    background:
+      linear-gradient(180deg, rgb(44 36 22 / 0.95), rgb(28 22 12 / 0.95));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.08),
+      0 0 12px rgb(196 154 90 / 0.18);
   }
 
-  .page-controls button:disabled {
+  .transport-btn:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow:
+      inset 0 2px 5px rgb(0 0 0 / 0.6),
+      0 0 8px rgb(196 154 90 / 0.15);
+  }
+
+  .transport-btn:focus-visible {
+    outline: none;
+    border-color: rgb(196 154 90 / 0.7);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.08),
+      0 0 0 2px rgb(196 154 90 / 0.25);
+  }
+
+  .transport-btn:disabled {
     cursor: not-allowed;
+    color: var(--color-text-disabled);
     opacity: 0.38;
   }
 
-  .page-controls :global(svg) {
+  .transport :global(svg) {
     width: 0.95rem;
     height: 0.95rem;
   }
 
-  .page-controls :global(.is-spinning) {
+  .transport :global(.is-spinning) {
     animation: spin 0.85s linear infinite;
+    color: var(--color-text-accent-bright);
   }
 
-  .page-count,
-  .more-hint {
+  .page-count {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.25rem;
+    padding: 0 0.55rem;
     color: var(--color-text-disabled);
-    font-size: 0.64rem;
-    text-transform: uppercase;
+    font-size: 0.7rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  .page-count-current {
+    color: var(--color-text-accent-bright);
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-shadow: 0 0 14px rgb(196 154 90 / 0.5);
+  }
+
+  .page-count-sep {
+    color: var(--color-text-disabled);
+  }
+
+  .page-count-total {
+    color: var(--color-text-muted);
+  }
+
+  .page-size-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-self: end;
+    color: var(--color-text-disabled);
+    white-space: nowrap;
+  }
+
+  .page-size-label {
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+  }
+
+  .page-size-field {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .page-size-field select {
+    height: 1.85rem;
+    border: 1px solid rgb(255 255 255 / 0.06);
+    background:
+      linear-gradient(180deg, rgb(34 38 48 / 0.95), rgb(18 21 28 / 0.95));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.04),
+      0 1px 2px rgb(0 0 0 / 0.3);
+    color: var(--color-text-primary);
+    font: inherit;
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+    padding: 0 1.7rem 0 0.65rem;
+    appearance: none;
+    -webkit-appearance: none;
+    transition:
+      border-color var(--duration-fast) var(--ease-default),
+      box-shadow var(--duration-fast) var(--ease-default);
+  }
+
+  .page-size-field select:hover,
+  .page-size-field select:focus-visible {
+    outline: none;
+    border-color: rgb(196 154 90 / 0.45);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.06),
+      0 0 0 2px rgb(196 154 90 / 0.15);
+  }
+
+  .page-size-field :global(.page-size-caret) {
+    position: absolute;
+    right: 0.5rem;
+    width: 0.8rem;
+    height: 0.8rem;
+    color: var(--color-text-disabled);
+    pointer-events: none;
+  }
+
+  .more-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--color-text-accent);
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
   }
 
   .retry-load {
-    min-width: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 1.85rem;
+    border: 1px solid rgb(204 120 128 / 0.4);
+    background: rgb(40 18 22 / 0.65);
     color: var(--color-error-text);
-    font-size: 0.68rem;
-    padding: 0 0.65rem;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    padding: 0 0.85rem;
+    transition: background var(--duration-fast) var(--ease-default);
+  }
+
+  .retry-load:hover {
+    background: rgb(54 22 28 / 0.85);
   }
 
   @keyframes spin {
@@ -968,22 +1158,42 @@
 
   @media (max-width: 720px) {
     .pagination-bar {
-      align-items: stretch;
-      flex-wrap: wrap;
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        "readout  size"
+        "transport transport";
+      row-gap: 0.6rem;
+      padding: 0.65rem 0.7rem 0.7rem;
     }
 
-    .page-range {
-      flex: 1 1 auto;
+    .page-readout {
+      grid-area: readout;
+      font-size: 0.62rem;
     }
 
-    .page-controls {
-      order: 3;
-      width: 100%;
+    .readout-range strong {
+      font-size: 0.72rem;
+    }
+
+    .page-size-control {
+      grid-area: size;
+    }
+
+    .transport {
+      grid-area: transport;
+      justify-self: stretch;
+      justify-content: space-between;
+      padding: 0.25rem 0.35rem;
+    }
+
+    .transport-btn {
+      flex: 0 0 auto;
     }
 
     .page-count {
-      flex: 1;
-      text-align: center;
+      flex: 1 1 auto;
+      justify-content: center;
+      padding: 0 0.25rem;
     }
   }
 

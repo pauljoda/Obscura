@@ -383,27 +383,88 @@
 
 <style>
   .entity-thumbnail {
+    position: relative;
     display: grid;
     grid-template-rows: auto 1fr;
     overflow: hidden;
-    border: 1px solid rgb(255 255 255 / 0.12);
+    border: 1px solid rgb(255 255 255 / 0.08);
     background:
-      linear-gradient(180deg, rgb(255 255 255 / 0.055), rgb(255 255 255 / 0.018)),
+      linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0.012)),
       rgb(12 12 13 / 0.92);
     color: var(--color-text, #f4efe6);
     text-decoration: none;
     min-width: 0;
     box-shadow:
-      inset 0 0 0 1px rgb(0 0 0 / 0.42),
-      0 14px 28px rgb(0 0 0 / 0.24);
+      inset 0 0 0 1px rgb(0 0 0 / 0.5),
+      0 2px 6px rgb(0 0 0 / 0.32);
+    transition:
+      border-color 200ms var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1)),
+      box-shadow 200ms var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1)),
+      transform 200ms var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1));
+  }
+
+  .entity-thumbnail::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgb(221 180 119) 50%,
+      transparent
+    );
+    box-shadow: 0 0 12px rgb(196 154 90 / 0.55);
+    opacity: 0;
+    transform: scaleX(0.4);
+    transform-origin: center;
+    transition:
+      opacity 200ms var(--ease-default, cubic-bezier(0.4, 0, 0.2, 1)),
+      transform 280ms var(--ease-mechanical, cubic-bezier(0.25, 0, 0.25, 1));
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  .entity-thumbnail:is(:hover, :focus-visible) {
+    border-color: rgb(196 154 90 / 0.32);
+    box-shadow:
+      inset 0 0 0 1px rgb(0 0 0 / 0.5),
+      0 0 0 1px rgb(196 154 90 / 0.18),
+      0 10px 22px rgb(0 0 0 / 0.42),
+      0 0 24px rgb(196 154 90 / 0.07);
+    transform: translateY(-1px);
+  }
+
+  .entity-thumbnail:is(:hover, :focus-visible)::after {
+    opacity: 0.85;
+    transform: scaleX(1);
   }
 
   .entity-thumbnail.is-selected {
-    border-color: rgb(196 154 90 / 0.55);
+    border-color: rgb(196 154 90 / 0.6);
     box-shadow:
-      inset 0 0 0 1px rgb(196 154 90 / 0.22),
-      0 0 24px rgb(196 154 90 / 0.12),
-      0 14px 28px rgb(0 0 0 / 0.24);
+      inset 0 0 0 1px rgb(196 154 90 / 0.28),
+      0 0 0 1px rgb(196 154 90 / 0.45),
+      0 0 26px rgb(196 154 90 / 0.18),
+      0 10px 22px rgb(0 0 0 / 0.4);
+  }
+
+  .entity-thumbnail.is-selected::after {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .entity-thumbnail,
+    .entity-thumbnail::after {
+      transition: none;
+    }
+
+    .entity-thumbnail:is(:hover, :focus-visible) {
+      transform: none;
+    }
   }
 
   .entity-thumbnail.is-list {

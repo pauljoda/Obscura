@@ -65,7 +65,7 @@ describe("EntityGrid pagination", () => {
     await fireEvent.click(screen.getByLabelText("Next page"));
 
     await waitFor(() => {
-      expect(screen.getByText("101-200")).toBeInTheDocument();
+      expect(screen.getByText("101–200")).toBeInTheDocument();
       expect(screen.getByText("Page 2 / 6")).toBeInTheDocument();
     });
   });

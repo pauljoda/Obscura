@@ -116,115 +116,89 @@
   }
 </script>
 
-<div class="space-y-0">
-  <div class="surface-well px-3 py-2 toolbar-root">
-    <!-- Stacked search: shown when toolbar container is narrow -->
-    <div class="search-stacked">
+<div class="toolbar-shell">
+  <div class="toolbar-root">
+    <div class="search-row">
       <label class="search-box">
-        <Search class="h-3.5 w-3.5 text-text-disabled shrink-0" />
+        <Search class="search-icon" aria-hidden="true" />
         <input
           type="search"
-          placeholder="Search..."
+          placeholder="Search the library…"
           value={query}
           oninput={(event) => onQueryChange((event.currentTarget as HTMLInputElement).value)}
         />
-      </label>
-    </div>
-
-    <div class="flex items-center gap-2">
-      <!-- Inline search: shown when toolbar container is wide enough -->
-      <div class="search-inline">
-        <label class="search-box">
-          <Search class="h-3.5 w-3.5 text-text-disabled shrink-0" />
-          <input
-            type="search"
-            placeholder="Search..."
-            value={query}
-            oninput={(event) => onQueryChange((event.currentTarget as HTMLInputElement).value)}
-          />
-        </label>
-      </div>
-
-      <div class="hidden min-w-0 items-center gap-1 xl:flex">
-        {#each activeFilters.slice(0, 3) as option (option.id)}
-          <button type="button" class="filter-chip" onclick={() => removeFilter(option.id)}>
-            <span>{option.label}</span>
-            <X class="h-3 w-3" />
-          </button>
-        {/each}
-        {#if activeFilters.length > 3}
-          <span class="count-chip">+{activeFilters.length - 3}</span>
-        {/if}
-      </div>
-
-      {#if activeFilters.length > 0}
-        <div class="hidden h-5 w-px bg-border-subtle sm:block"></div>
-      {/if}
-
-      <!-- Custom sort dropdown -->
-      <div class="relative">
-        <button
-          type="button"
-          class="sort-btn"
-          onclick={() => (sortOpen = !sortOpen)}
-        >
-          <ArrowUpDown class="h-3.5 w-3.5" />
-          <span class="hidden sm:inline">{SORT_LABELS[sortBy]}</span>
-          <ChevronDown class="h-3 w-3 text-text-disabled" />
-        </button>
-
-        {#if sortOpen}
+        {#if query}
           <button
             type="button"
-            class="fixed inset-0 z-40"
-            aria-label="Close sort menu"
-            onclick={() => (sortOpen = false)}
-          ></button>
-          <div class="sort-menu">
-            {#each SORT_OPTIONS as opt (opt.value)}
-              <button
-                type="button"
-                class={cn("sort-menu-item", sortBy === opt.value && "is-active")}
-                onclick={() => {
-                  onSortByChange(opt.value);
-                  sortOpen = false;
-                }}
-              >
-                <Check class={cn("h-3 w-3", sortBy === opt.value ? "opacity-100" : "opacity-0")} />
-                {opt.label}
-              </button>
-            {/each}
-          </div>
+            class="search-clear"
+            title="Clear search"
+            aria-label="Clear search"
+            onclick={() => onQueryChange("")}
+          >
+            <X class="h-3 w-3" />
+          </button>
         {/if}
-      </div>
+      </label>
 
-      <button
-        type="button"
-        class="icon-control"
-        title={sortDir === "asc" ? "Ascending — click to reverse" : "Descending — click to reverse"}
-        aria-label={`Sort direction: ${sortDir}`}
-        onclick={() => onSortDirChange(sortDir === "asc" ? "desc" : "asc")}
-      >
-        <ChevronDown class={cn("h-3.5 w-3.5", sortDir === "asc" && "rotate-180")} />
-      </button>
+      <span class="count-readout" aria-live="polite">
+        <span class="count-shown">{visibleCount}</span>
+        <span class="count-divider">/</span>
+        <span class="count-total">{totalCount}</span>
+        {#if selectedCount > 0}
+          <span class="count-selected">· {selectedCount} SEL</span>
+        {/if}
+      </span>
+    </div>
 
-      <div class="ml-auto flex items-center gap-2">
-        <div class="hidden items-center border-l border-border-subtle pl-1 sm:flex">
-          <label class="thumb-size-control" title="Drag to change thumbnail size">
-            <Grid2x2 class="h-3.5 w-3.5 shrink-0 text-text-disabled" />
-            <span class="sr-only">Thumbnail columns</span>
-            <input
-              type="range"
-              aria-label="Thumbnail columns"
-              min={minScale}
-              max={maxScale}
-              step="1"
-              value={scale}
-              oninput={parseScale}
-            />
-            <Grid3x3 class="h-3 w-3 shrink-0 rotate-180 text-text-disabled" />
-          </label>
+    <div class="controls-row">
+      <div class="control-cluster">
+        <div class="relative">
+          <button
+            type="button"
+            class="ctrl-btn ctrl-sort"
+            onclick={() => (sortOpen = !sortOpen)}
+          >
+            <ArrowUpDown class="h-3.5 w-3.5" />
+            <span class="ctrl-label">{SORT_LABELS[sortBy]}</span>
+            <ChevronDown class="h-3 w-3 text-text-disabled" />
+          </button>
+
+          {#if sortOpen}
+            <button
+              type="button"
+              class="fixed inset-0 z-40"
+              aria-label="Close sort menu"
+              onclick={() => (sortOpen = false)}
+            ></button>
+            <div class="sort-menu">
+              {#each SORT_OPTIONS as opt (opt.value)}
+                <button
+                  type="button"
+                  class={cn("sort-menu-item", sortBy === opt.value && "is-active")}
+                  onclick={() => {
+                    onSortByChange(opt.value);
+                    sortOpen = false;
+                  }}
+                >
+                  <Check class={cn("h-3 w-3", sortBy === opt.value ? "opacity-100" : "opacity-0")} />
+                  {opt.label}
+                </button>
+              {/each}
+            </div>
+          {/if}
         </div>
+
+        <button
+          type="button"
+          class="ctrl-btn ctrl-icon"
+          title={sortDir === "asc" ? "Ascending — click to reverse" : "Descending — click to reverse"}
+          aria-label={`Sort direction: ${sortDir}`}
+          onclick={() => onSortDirChange(sortDir === "asc" ? "desc" : "asc")}
+        >
+          <ChevronDown class={cn("h-3.5 w-3.5 dir-arrow", sortDir === "asc" && "is-up")} />
+        </button>
+
+        <span class="cluster-divider" aria-hidden="true"></span>
 
         <div class="view-toggle" aria-label="View mode">
           <button
@@ -249,19 +223,31 @@
           </button>
         </div>
 
+        <label class="thumb-size-control" title="Drag to change thumbnail size">
+          <Grid2x2 class="thumb-size-icon thumb-size-icon-min" aria-hidden="true" />
+          <span class="sr-only">Thumbnail columns</span>
+          <input
+            type="range"
+            aria-label="Thumbnail columns"
+            min={minScale}
+            max={maxScale}
+            step="1"
+            value={scale}
+            oninput={parseScale}
+          />
+          <Grid3x3 class="thumb-size-icon thumb-size-icon-max" aria-hidden="true" />
+        </label>
+      </div>
+
+      <div class="control-cluster control-cluster-trailing">
         <button
           type="button"
-          class={cn(
-            "flex items-center gap-1.5 px-2 py-1.5 text-[0.72rem] transition-colors duration-fast",
-            drawerOpen
-              ? "bg-accent-950 text-text-accent"
-              : "text-text-muted hover:bg-surface-2 hover:text-text-primary",
-          )}
+          class={cn("ctrl-btn ctrl-filters", drawerOpen && "is-active")}
           aria-expanded={drawerOpen}
           onclick={() => onDrawerOpenChange(!drawerOpen)}
         >
           <SlidersHorizontal class="h-3.5 w-3.5" />
-          <span class="hidden sm:inline">Filters</span>
+          <span class="ctrl-label">Filters</span>
           {#if activeFilterIds.length > 0}
             <span class="filter-count">{activeFilterIds.length}</span>
           {/if}
@@ -280,44 +266,23 @@
           <button
             type="button"
             title="Clear filters, sort, search, and saved preferences"
-            class="flex items-center gap-1 px-2 py-1.5 text-[0.72rem] text-text-muted transition-colors duration-fast hover:bg-surface-2 hover:text-text-primary"
+            class="ctrl-btn ctrl-clear"
             onclick={onClearFiltersAndSort}
           >
             <RotateCcw class="h-3.5 w-3.5 shrink-0" />
-            <span class="hidden sm:inline">Clear</span>
+            <span class="ctrl-label">Clear</span>
           </button>
         {/if}
-
-        <div class="hidden items-center gap-1.5 font-mono text-[0.68rem] text-text-disabled lg:flex">
-          <span>{visibleCount}/{totalCount}</span>
-          {#if selectedCount > 0}
-            <span class="text-text-accent">{selectedCount} selected</span>
-          {/if}
-        </div>
       </div>
-    </div>
-
-    <div class="flex items-center gap-2 border-t border-border-subtle pt-1.5 sm:hidden">
-      <span class="shrink-0 font-mono text-[0.6rem] uppercase tracking-wider text-text-disabled">Size</span>
-      <label class="thumb-size-control flex-1 justify-end">
-        <Grid2x2 class="h-3.5 w-3.5 shrink-0 text-text-disabled" />
-        <input
-          type="range"
-          aria-label="Thumbnail columns"
-          min={minScale}
-          max={maxScale}
-          step="1"
-          value={scale}
-          oninput={parseScale}
-        />
-        <Grid3x3 class="h-3 w-3 shrink-0 rotate-180 text-text-disabled" />
-      </label>
     </div>
   </div>
 
-  <div class="filter-scroll">
+  <div class="filter-scroll" class:is-active={activeFilters.length > 0} aria-live="polite">
     {#if activeFilters.length > 0}
-      <SlidersHorizontal class="h-3.5 w-3.5 shrink-0 text-text-disabled" />
+      <span class="filter-chip-label" aria-hidden="true">
+        <SlidersHorizontal class="h-3 w-3 shrink-0" />
+        ACTIVE
+      </span>
       {#each activeFilters as option (option.id)}
         <button type="button" class="filter-chip" onclick={() => removeFilter(option.id)}>
           <span>{option.label}</span>
@@ -329,41 +294,71 @@
 </div>
 
 <style>
+  .toolbar-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
   .toolbar-root {
-    container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    border: 1px solid var(--color-border-subtle);
+    background:
+      linear-gradient(180deg, rgb(16 19 26 / 0.7), rgb(11 13 18 / 0.85)),
+      var(--color-surface-1);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.04),
+      inset 0 -1px 0 rgb(0 0 0 / 0.35),
+      0 1px 0 rgb(0 0 0 / 0.45);
+    padding: 0.7rem 0.75rem;
   }
 
-  .search-stacked {
-    display: block;
-    margin-bottom: 0.5rem;
-  }
-
-  .search-inline {
-    display: none;
-    flex: 1;
+  .search-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
     min-width: 0;
-  }
-
-  @container (min-width: 1000px) {
-    .search-stacked {
-      display: none;
-    }
-
-    .search-inline {
-      display: block;
-    }
   }
 
   .search-box {
+    position: relative;
     display: flex;
+    flex: 1 1 auto;
     align-items: center;
-    gap: 0.45rem;
-    height: 1.8rem;
+    gap: 0.55rem;
     min-width: 0;
-    border: 1px solid var(--color-border-subtle);
-    background: var(--color-surface-1);
-    box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.45);
-    padding: 0 0.55rem;
+    height: 2.1rem;
+    border: 1px solid rgb(255 255 255 / 0.05);
+    background:
+      linear-gradient(180deg, rgb(7 8 11 / 0.95), rgb(11 13 18 / 0.95));
+    box-shadow:
+      inset 0 2px 8px rgb(0 0 0 / 0.55),
+      inset 0 -1px 0 rgb(255 255 255 / 0.02);
+    padding: 0 0.65rem;
+    transition:
+      border-color var(--duration-fast) var(--ease-default),
+      box-shadow var(--duration-fast) var(--ease-default);
+  }
+
+  .search-box:focus-within {
+    border-color: rgb(196 154 90 / 0.45);
+    box-shadow:
+      inset 0 2px 8px rgb(0 0 0 / 0.55),
+      0 0 0 1px rgb(196 154 90 / 0.18),
+      0 0 18px rgb(196 154 90 / 0.08);
+  }
+
+  .search-box :global(.search-icon) {
+    width: 0.95rem;
+    height: 0.95rem;
+    color: var(--color-text-disabled);
+    flex-shrink: 0;
+  }
+
+  .search-box:focus-within :global(.search-icon) {
+    color: var(--color-text-accent);
   }
 
   .search-box input {
@@ -372,65 +367,214 @@
     border: 0;
     background: transparent;
     color: var(--color-text-primary);
-    font-size: 0.72rem;
+    font-family: var(--font-inter, "Inter Variable", sans-serif);
+    font-size: 0.82rem;
+    letter-spacing: 0.005em;
     outline: 0;
   }
 
   .search-box input::placeholder {
     color: var(--color-text-disabled);
+    font-style: italic;
   }
 
-  .sort-btn,
-  .icon-control {
+  .search-clear {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    min-height: 1.85rem;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
     border: 1px solid transparent;
     background: transparent;
+    color: var(--color-text-disabled);
+    flex-shrink: 0;
+    transition:
+      color var(--duration-fast) var(--ease-default),
+      border-color var(--duration-fast) var(--ease-default);
+  }
+
+  .search-clear:hover {
+    color: var(--color-text-accent);
+    border-color: rgb(196 154 90 / 0.3);
+  }
+
+  .count-readout {
+    display: none;
+    align-items: baseline;
+    gap: 0.35rem;
+    flex-shrink: 0;
+    color: var(--color-text-disabled);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.62rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .count-shown {
+    color: var(--color-text-primary);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-shadow: 0 0 12px rgb(255 255 255 / 0.06);
+  }
+
+  .count-divider {
+    color: var(--color-text-disabled);
+  }
+
+  .count-total {
+    color: var(--color-text-muted);
+  }
+
+  .count-selected {
+    color: var(--color-text-accent);
+    text-shadow: 0 0 10px rgb(196 154 90 / 0.4);
+  }
+
+  @media (min-width: 720px) {
+    .count-readout {
+      display: inline-flex;
+    }
+  }
+
+  .controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .control-cluster {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .control-cluster-trailing {
+    justify-content: flex-end;
+  }
+
+  .cluster-divider {
+    display: inline-block;
+    width: 1px;
+    height: 1.1rem;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(255 255 255 / 0.08),
+      transparent
+    );
+    margin: 0 0.15rem;
+  }
+
+  .ctrl-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2rem;
+    border: 1px solid rgb(255 255 255 / 0.05);
+    background:
+      linear-gradient(180deg, rgb(24 28 36 / 0.65), rgb(14 17 22 / 0.85));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.03),
+      0 1px 2px rgb(0 0 0 / 0.25);
     color: var(--color-text-muted);
     font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.72rem;
-    padding: 0 0.4rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    padding: 0 0.6rem;
     transition:
-      background-color var(--duration-fast) var(--ease-default),
-      color var(--duration-fast) var(--ease-default);
+      background var(--duration-fast) var(--ease-default),
+      border-color var(--duration-fast) var(--ease-default),
+      color var(--duration-fast) var(--ease-default),
+      box-shadow var(--duration-fast) var(--ease-default);
   }
 
-  .sort-btn:hover,
-  .icon-control:hover {
-    background: var(--color-surface-2);
+  .ctrl-btn:hover {
+    border-color: rgb(196 154 90 / 0.32);
+    background:
+      linear-gradient(180deg, rgb(36 30 19 / 0.85), rgb(20 17 11 / 0.95));
     color: var(--color-text-primary);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.05),
+      0 0 12px rgb(196 154 90 / 0.12);
   }
 
-  .icon-control {
+  .ctrl-btn:focus-visible {
+    outline: none;
+    border-color: rgb(196 154 90 / 0.7);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.05),
+      0 0 0 2px rgb(196 154 90 / 0.2);
+  }
+
+  .ctrl-btn.is-active {
+    border-color: rgb(196 154 90 / 0.45);
+    background:
+      linear-gradient(180deg, rgb(54 41 22 / 0.95), rgb(32 25 14 / 0.95));
+    color: var(--color-text-accent-bright);
+    box-shadow:
+      inset 0 1px 0 rgb(196 154 90 / 0.1),
+      0 0 18px rgb(196 154 90 / 0.15);
+  }
+
+  .ctrl-label {
+    display: none;
+  }
+
+  @media (min-width: 520px) {
+    .ctrl-label {
+      display: inline;
+    }
+  }
+
+  .ctrl-icon {
+    width: 2rem;
     justify-content: center;
-    width: 1.85rem;
     padding: 0;
+  }
+
+  :global(.dir-arrow) {
+    transition: transform var(--duration-normal) var(--ease-mechanical);
+  }
+
+  :global(.dir-arrow.is-up) {
+    transform: rotate(180deg);
   }
 
   .sort-menu {
     position: absolute;
-    right: 0;
-    top: calc(100% + 0.25rem);
+    left: 0;
+    top: calc(100% + 0.3rem);
     z-index: 50;
     min-width: 10rem;
-    border: 1px solid var(--color-border-subtle);
-    background: var(--color-surface-3);
+    border: 1px solid rgb(196 154 90 / 0.18);
+    background:
+      linear-gradient(180deg, rgb(24 28 38 / 0.96), rgb(14 17 22 / 0.98));
     box-shadow:
-      0 4px 16px rgb(0 0 0 / 0.45),
-      0 1px 4px rgb(0 0 0 / 0.2);
-    padding: 0.25rem 0;
+      0 12px 36px rgb(0 0 0 / 0.55),
+      0 0 0 1px rgb(0 0 0 / 0.3),
+      inset 0 1px 0 rgb(255 255 255 / 0.04);
+    backdrop-filter: blur(16px);
+    padding: 0.3rem 0;
   }
 
   .sort-menu-item {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.55rem;
     width: 100%;
-    padding: 0.38rem 0.75rem;
+    padding: 0.45rem 0.85rem;
+    background: transparent;
     color: var(--color-text-muted);
-    font-size: 0.72rem;
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.74rem;
+    letter-spacing: 0.04em;
     text-align: left;
     transition:
       background-color var(--duration-fast) var(--ease-default),
@@ -438,37 +582,64 @@
   }
 
   .sort-menu-item:hover {
-    background: var(--color-surface-4, var(--color-surface-3));
+    background: rgb(255 255 255 / 0.04);
     color: var(--color-text-primary);
   }
 
   .sort-menu-item.is-active {
-    background: var(--color-accent-950);
-    color: var(--color-text-accent);
+    background: linear-gradient(90deg, rgb(196 154 90 / 0.15), transparent);
+    color: var(--color-text-accent-bright);
   }
 
   .filter-count {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     height: 1rem;
     min-width: 1rem;
-    background: var(--color-accent-800);
-    color: var(--color-accent-200);
-    font-size: 0.55rem;
+    border: 1px solid rgb(196 154 90 / 0.4);
+    background: linear-gradient(180deg, rgb(196 154 90 / 0.9), rgb(140 108 50 / 0.95));
+    color: #1a1408;
+    font-size: 0.58rem;
     font-weight: 700;
+    letter-spacing: 0;
+    box-shadow: 0 0 10px rgb(196 154 90 / 0.35);
+    padding: 0 0.25rem;
   }
 
   .thumb-size-control {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.38rem;
-    padding: 0.35rem 0.5rem;
+    gap: 0.45rem;
+    padding: 0 0.55rem;
+    height: 2rem;
+    border: 1px solid rgb(0 0 0 / 0.5);
+    background:
+      linear-gradient(180deg, rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.15));
+    box-shadow:
+      inset 0 2px 4px rgb(0 0 0 / 0.5),
+      inset 0 -1px 0 rgb(255 255 255 / 0.02);
     color: var(--color-text-muted);
   }
 
+  .thumb-size-control :global(.thumb-size-icon) {
+    color: var(--color-text-disabled);
+    flex-shrink: 0;
+  }
+
+  .thumb-size-control :global(.thumb-size-icon-min) {
+    width: 0.78rem;
+    height: 0.78rem;
+  }
+
+  .thumb-size-control :global(.thumb-size-icon-max) {
+    width: 0.9rem;
+    height: 0.9rem;
+    transform: rotate(180deg);
+  }
+
   .thumb-size-control input {
-    width: 6rem;
+    width: 5rem;
     height: 14px;
     appearance: none;
     -webkit-appearance: none;
@@ -477,90 +648,148 @@
 
   .thumb-size-control input::-webkit-slider-runnable-track {
     height: 2px;
-    background: var(--color-border-subtle);
+    background: linear-gradient(
+      to right,
+      rgb(196 154 90 / 0.5),
+      rgb(196 154 90 / 0.05)
+    );
+    box-shadow: inset 0 0 4px rgb(0 0 0 / 0.6);
   }
 
   .thumb-size-control input::-moz-range-track {
     height: 2px;
-    background: var(--color-border-subtle);
+    background: linear-gradient(
+      to right,
+      rgb(196 154 90 / 0.5),
+      rgb(196 154 90 / 0.05)
+    );
   }
 
   .thumb-size-control input::-webkit-slider-thumb {
-    width: 10px;
-    height: 10px;
-    margin-top: -4px;
+    width: 11px;
+    height: 11px;
+    margin-top: -4.5px;
     appearance: none;
     -webkit-appearance: none;
-    border: 1px solid var(--color-accent-500);
-    background: var(--color-accent-500);
-    box-shadow: 0 0 6px rgb(196 154 90 / 0.35);
+    border: 1px solid rgb(244 220 170);
+    background: radial-gradient(circle at 30% 30%, #f3e6cc, #c79b5c 65%);
+    box-shadow:
+      0 0 6px rgb(196 154 90 / 0.55),
+      0 0 12px rgb(196 154 90 / 0.25),
+      inset 0 1px 0 rgb(255 255 255 / 0.3);
   }
 
   .thumb-size-control input::-moz-range-thumb {
-    width: 10px;
-    height: 10px;
-    border: 1px solid var(--color-accent-500);
-    background: var(--color-accent-500);
-    box-shadow: 0 0 6px rgb(196 154 90 / 0.35);
+    width: 11px;
+    height: 11px;
+    border: 1px solid rgb(244 220 170);
+    background: radial-gradient(circle at 30% 30%, #f3e6cc, #c79b5c 65%);
+    box-shadow:
+      0 0 6px rgb(196 154 90 / 0.55),
+      0 0 12px rgb(196 154 90 / 0.25);
+  }
+
+  .thumb-size-control input:focus-visible {
+    outline: none;
+  }
+
+  .thumb-size-control input:focus-visible::-webkit-slider-thumb {
+    box-shadow:
+      0 0 0 3px rgb(196 154 90 / 0.25),
+      0 0 12px rgb(196 154 90 / 0.4);
   }
 
   .view-toggle {
-    display: none;
-    border-left: 1px solid var(--color-border-subtle);
-    padding-left: 0.35rem;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgb(255 255 255 / 0.05);
+    background:
+      linear-gradient(180deg, rgb(24 28 36 / 0.65), rgb(14 17 22 / 0.85));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.03),
+      0 1px 2px rgb(0 0 0 / 0.25);
   }
 
   .view-toggle button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 1.85rem;
-    width: 1.85rem;
+    height: 1.95rem;
+    width: 2rem;
+    background: transparent;
     color: var(--color-text-muted);
     transition:
-      background-color var(--duration-fast) var(--ease-default),
+      background var(--duration-fast) var(--ease-default),
       color var(--duration-fast) var(--ease-default);
   }
 
   .view-toggle button:not(:disabled):hover {
-    background: var(--color-surface-2);
+    background: rgb(255 255 255 / 0.04);
     color: var(--color-text-primary);
   }
 
   .view-toggle button.is-active {
-    background: var(--color-accent-950);
-    color: var(--color-text-accent);
+    background:
+      linear-gradient(180deg, rgb(54 41 22 / 0.95), rgb(32 25 14 / 0.95));
+    color: var(--color-text-accent-bright);
+    box-shadow:
+      inset 0 0 12px rgb(196 154 90 / 0.18),
+      inset 0 1px 0 rgb(196 154 90 / 0.1);
   }
 
+  /* Reserve space for active filter row so its appearance doesn't reflow the grid below */
   .filter-scroll {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    min-height: 0;
+    gap: 0.4rem;
+    min-height: 2rem;
     overflow-x: auto;
-    padding-top: 0.35rem;
+    padding: 0 0.1rem;
+    scrollbar-width: thin;
   }
 
-  .filter-chip,
-  .count-chip {
+  .filter-scroll.is-active {
+    border-left: 2px solid rgb(196 154 90 / 0.35);
+    padding-left: 0.55rem;
+  }
+
+  .filter-chip-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-shrink: 0;
+    color: var(--color-text-disabled);
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+  }
+
+  .filter-chip {
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
-    gap: 0.35rem;
-    border: 1px solid var(--color-border-subtle);
-    background: var(--color-surface-2);
+    gap: 0.4rem;
+    height: 1.6rem;
+    border: 1px solid rgb(255 255 255 / 0.06);
+    background:
+      linear-gradient(180deg, rgb(28 32 42 / 0.85), rgb(16 19 26 / 0.95));
     color: var(--color-text-muted);
-    font-size: 0.68rem;
+    font-family: var(--font-mono, "JetBrains Mono", monospace);
+    font-size: 0.66rem;
     line-height: 1;
-    padding: 0.35rem 0.45rem;
+    padding: 0 0.5rem;
     transition:
       border-color var(--duration-fast) var(--ease-default),
-      color var(--duration-fast) var(--ease-default);
+      color var(--duration-fast) var(--ease-default),
+      background var(--duration-fast) var(--ease-default);
   }
 
   .filter-chip:hover {
-    border-color: var(--color-border-accent);
-    color: var(--color-text-accent);
+    border-color: rgb(204 120 128 / 0.5);
+    background:
+      linear-gradient(180deg, rgb(54 22 28 / 0.85), rgb(34 14 18 / 0.95));
+    color: rgb(255 184 184);
   }
 
   .filter-chip span {
@@ -570,9 +799,15 @@
     white-space: nowrap;
   }
 
-  @media (min-width: 640px) {
-    .view-toggle {
-      display: inline-flex;
-    }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 </style>
