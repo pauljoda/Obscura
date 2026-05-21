@@ -211,7 +211,22 @@
           </button>
         </div>
 
-        <div class="relative">
+        <label class="thumb-size-inline" title="Drag to change thumbnail size">
+          <Grid2x2 class="thumb-size-icon thumb-size-icon-min" aria-hidden="true" />
+          <span class="sr-only">Thumbnail columns</span>
+          <input
+            type="range"
+            aria-label="Thumbnail columns"
+            min={minScale}
+            max={maxScale}
+            step="1"
+            value={scale}
+            oninput={parseScale}
+          />
+          <Grid3x3 class="thumb-size-icon thumb-size-icon-max" aria-hidden="true" />
+        </label>
+
+        <div class="thumb-size-compact relative">
           <button
             type="button"
             class={cn("ctrl-btn ctrl-icon", thumbSizeOpen && "is-active")}
@@ -628,12 +643,112 @@
     padding: 0 0.25rem;
   }
 
-  /*
-   * Thumbnail size lives in a popover so the slider gets enough width to be
-   * grabbed comfortably on touch devices without taking up a permanent slot
-   * in the toolbar. The trigger is a single icon button; the popover floats
-   * below it with the min/max grid icons flanking a wider slider.
-   */
+  .thumb-size-inline {
+    display: none;
+  }
+
+  .thumb-size-compact {
+    display: inline-flex;
+  }
+
+  @media (min-width: 520px) {
+    .thumb-size-inline {
+      display: inline-flex;
+    }
+    .thumb-size-compact {
+      display: none;
+    }
+  }
+
+  .thumb-size-inline {
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0 0.55rem;
+    height: 2rem;
+    border: 1px solid var(--color-border-subtle, rgba(148, 158, 178, 0.07));
+    background: var(--color-surface-1, #0c0f15);
+    border-radius: 0;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.30);
+    color: var(--color-text-muted);
+  }
+
+  .thumb-size-inline :global(.thumb-size-icon) {
+    color: var(--color-text-disabled);
+    flex-shrink: 0;
+  }
+
+  .thumb-size-inline :global(.thumb-size-icon-min) {
+    width: 0.78rem;
+    height: 0.78rem;
+  }
+
+  .thumb-size-inline :global(.thumb-size-icon-max) {
+    width: 0.9rem;
+    height: 0.9rem;
+    transform: rotate(180deg);
+  }
+
+  .thumb-size-inline input {
+    width: 5rem;
+    height: 14px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+  }
+
+  .thumb-size-inline input::-webkit-slider-runnable-track {
+    height: 2px;
+    background: linear-gradient(
+      to right,
+      rgb(196 154 90 / 0.5),
+      rgb(196 154 90 / 0.05)
+    );
+    box-shadow: inset 0 0 4px rgb(0 0 0 / 0.6);
+  }
+
+  .thumb-size-inline input::-moz-range-track {
+    height: 2px;
+    background: linear-gradient(
+      to right,
+      rgb(196 154 90 / 0.5),
+      rgb(196 154 90 / 0.05)
+    );
+  }
+
+  .thumb-size-inline input::-webkit-slider-thumb {
+    width: 11px;
+    height: 11px;
+    margin-top: -4.5px;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid rgb(244 220 170);
+    background: radial-gradient(circle at 30% 30%, #f3e6cc, #c79b5c 65%);
+    box-shadow:
+      0 0 6px rgb(196 154 90 / 0.55),
+      0 0 12px rgb(196 154 90 / 0.25),
+      inset 0 1px 0 rgb(255 255 255 / 0.3);
+  }
+
+  .thumb-size-inline input::-moz-range-thumb {
+    width: 11px;
+    height: 11px;
+    border: 1px solid rgb(244 220 170);
+    background: radial-gradient(circle at 30% 30%, #f3e6cc, #c79b5c 65%);
+    box-shadow:
+      0 0 6px rgb(196 154 90 / 0.55),
+      0 0 12px rgb(196 154 90 / 0.25);
+  }
+
+  .thumb-size-inline input:focus-visible {
+    outline: none;
+  }
+
+  .thumb-size-inline input:focus-visible::-webkit-slider-thumb {
+    box-shadow:
+      0 0 0 3px rgb(196 154 90 / 0.25),
+      0 0 12px rgb(196 154 90 / 0.4);
+  }
+
   .thumb-size-popover {
     position: absolute;
     right: 0;
