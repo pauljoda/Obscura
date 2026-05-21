@@ -49,8 +49,6 @@
     selectedCount: number;
     sortBy: EntityGridSort;
     sortDir: EntityGridSortDir;
-    totalCount: number;
-    visibleCount: number;
     viewMode: EntityGridViewMode;
   }
 
@@ -80,8 +78,6 @@
     selectedCount,
     sortBy,
     sortDir,
-    totalCount,
-    visibleCount,
     viewMode,
   }: Props = $props();
 
@@ -139,15 +135,6 @@
           </button>
         {/if}
       </label>
-
-      <span class="count-readout" aria-live="polite">
-        <span class="count-shown">{visibleCount}</span>
-        <span class="count-divider">/</span>
-        <span class="count-total">{totalCount}</span>
-        {#if selectedCount > 0}
-          <span class="count-selected">· {selectedCount} SEL</span>
-        {/if}
-      </span>
     </div>
 
     <div class="controls-row">
@@ -452,47 +439,7 @@
     border-color: rgb(196 154 90 / 0.3);
   }
 
-  .count-readout {
-    display: none;
-    align-items: baseline;
-    gap: 0.35rem;
-    flex-shrink: 0;
-    color: var(--color-text-disabled);
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.62rem;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-
-  .count-shown {
-    color: var(--color-text-primary);
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-shadow: 0 0 12px rgb(255 255 255 / 0.06);
-  }
-
-  .count-divider {
-    color: var(--color-text-disabled);
-  }
-
-  .count-total {
-    color: var(--color-text-muted);
-  }
-
-  .count-selected {
-    color: var(--color-text-accent);
-    text-shadow: 0 0 10px rgb(196 154 90 / 0.4);
-  }
-
-  @media (min-width: 720px) {
-    .count-readout {
-      display: inline-flex;
-    }
-  }
-
-  /*
+/*
    * Two clusters share one wrapping row. The trailing cluster uses
    * `margin-left: auto` so it always hugs the right edge — both when the
    * row has spare width and when the leading cluster wraps and pushes

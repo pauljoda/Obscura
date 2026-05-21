@@ -626,8 +626,6 @@
     {selectedCount}
     {sortBy}
     {sortDir}
-    totalCount={cards.length}
-    visibleCount={visibleCards.length}
     {viewMode}
   />
 
