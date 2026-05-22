@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The temporary v2 migration, fresh-start, backup, and legacy-import tools were removed now that current builds run directly on the EF-backed entity model.
 - Identify review now separates structural children from related people and studios, so series cascades can carry seasons, episodes, credits, and artwork together.
 - Identify review now shows children and related proposals as separate thumbnail strips, letting users open an item for review from the card while the checkbox only controls whether it will be applied.
+- Identify review now keeps relationship-backed cast, crew, and studio proposals in the Related section, so users do not have to reconcile duplicate review areas.
 - Identify now applies full credit lists even when the same person has multiple roles on a title, preserving the combined credit metadata without crashing.
 - Series, season, and video detail pages now show identified cast, crew, studio, and tag relationships from the v2 relationship model.
 - Identify review now recognizes existing tags and credits in the v2 relationship model and lets review thumbnails be selected without navigating away.
@@ -44,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 - Plugin identification now receives richer structural ancestor context and applies relationship proposals with their full metadata, artwork, external IDs, URLs, stats, and descriptions.
 - Identify review children and related proposals now share the same horizontal thumbnail-strip interaction, with selection separated from drilling into the proposal.
+- Related proposal checkboxes now also control the matching credit and studio patch values during apply, preventing deselected related items from being recreated through the root metadata patch.
 - The person browse section and person detail links now use People terminology and `/people` URLs instead of Actors and `/performers`.
 - Entity thumbnail titles now wrap to two lines instead of scrolling on a single line, and the details section layout was updated to gracefully adapt to varying title lengths while keeping metadata aligned.
 - Clicking a thumbnail while items are selected now toggles selection instead of navigating, so multi-select flows no longer accidentally leave the page.

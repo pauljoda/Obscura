@@ -121,11 +121,11 @@ export function buildProposalForApply(
     Object.fromEntries(fieldKeys.map((field) => [field, hasField(result, field)]));
   const selectedResultCredits = selections.selectedCreditsByProposal[result.proposalId] ?? {};
   const selectedResultTags = selections.selectedTagsByProposal[result.proposalId] ?? {};
-  const credits = result.patch.credits.filter((credit, index) =>
-    selectedResultCredits[creditKey(credit, index)] !== false,
-  );
+  const credits = result.patch.credits
+    .filter((credit, index) => selectedResultCredits[creditKey(credit, index)] !== false)
+    .filter((credit) => !isDeselectedRelationshipTitle(result, "person", credit.name, selections.selectedCascade));
   const tags = result.patch.tags.filter((tag) => selectedResultTags[tag] !== false);
-  const patch = patchForSelectedFields(result, fields, credits, tags);
+  const patch = patchForSelectedFields(result, fields, credits, tags, selections.selectedCascade);
 
   return {
     ...result,
@@ -169,21 +169,37 @@ function patchForSelectedFields(
   fields: Record<string, boolean>,
   credits: CreditPatch[],
   tags: string[],
+  selectedCascade: Record<string, boolean>,
 ): EntityMetadataPatch {
   const patch = result.patch;
+  const studio = isDeselectedRelationshipTitle(result, "studio", patch.studio, selectedCascade) ? null : patch.studio;
   return {
     title: fields.title ? patch.title : null,
     description: fields.description ? patch.description : null,
     externalIds: fields.externalIds ? patch.externalIds : {},
     urls: fields.urls ? patch.urls : [],
     tags: fields.tags ? tags : [],
-    studio: fields.studio ? patch.studio : null,
+    studio: fields.studio ? studio : null,
     credits: fields.credits ? credits : [],
     dates: fields.dates ? patch.dates : {},
     stats: fields.stats ? patch.stats : {},
     positions: fields.positions ? patch.positions : {},
     classification: fields.classification ? patch.classification : null,
   };
+}
+
+function isDeselectedRelationshipTitle(
+  result: EntityMetadataProposal,
+  targetKind: string,
+  title: string | null | undefined,
+  selectedCascade: Record<string, boolean>,
+): boolean {
+  if (!title) return false;
+  return relationshipProposals(result).some((child) =>
+    child.targetKind === targetKind &&
+    selectedCascade[child.proposalId] === false &&
+    (child.patch.title ?? "").localeCompare(title, undefined, { sensitivity: "accent" }) === 0,
+  );
 }
 
 function imagesForSelectedProposal(

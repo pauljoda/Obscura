@@ -96,16 +96,18 @@ describe("identify review helpers", () => {
     expect(expectSingle(payloadEpisode.relationships).patch.title).toBe("Guest Actor");
   });
 
-  it("uses cascade selection to exclude relationship proposals", () => {
+  it("uses related selections to exclude relationship-backed patch values", () => {
     const actor = proposal("actor-1", "person", { title: "Series Actor" });
+    const studio = proposal("studio-1", "studio", { title: "HBO" });
     const root = proposal("series", "video-series", {
+      studio: "HBO",
       credits: [{ name: "Series Actor", role: "actor", character: "Host", sortOrder: 0 }],
-      relationships: [actor],
+      relationships: [actor, studio],
     });
 
     const payload = buildProposalForApply(root, {
       selectedFieldsByProposal: {
-        series: { credits: true },
+        series: { credits: true, studio: true },
       },
       selectedImagesByProposal: {},
       selectedCreditsByProposal: {
@@ -114,10 +116,12 @@ describe("identify review helpers", () => {
       selectedTagsByProposal: {},
       selectedCascade: {
         "actor-1": false,
+        "studio-1": false,
       },
     });
 
-    expect(payload.patch.credits).toHaveLength(1);
+    expect(payload.patch.credits).toEqual([]);
+    expect(payload.patch.studio).toBeNull();
     expect(payload.relationships).toEqual([]);
   });
 
@@ -150,6 +154,7 @@ function proposal(
     title?: string;
     imageKind?: string;
     imageUrl?: string;
+    studio?: string;
     credits?: EntityMetadataProposal["patch"]["credits"];
     children?: EntityMetadataProposal[];
     relationships?: EntityMetadataProposal[];
@@ -167,7 +172,7 @@ function proposal(
       externalIds: {},
       urls: [],
       tags: [],
-      studio: null,
+      studio: options.studio ?? null,
       credits: options.credits ?? [],
       dates: {},
       stats: {},

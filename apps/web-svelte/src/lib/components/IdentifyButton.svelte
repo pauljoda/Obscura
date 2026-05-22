@@ -381,6 +381,8 @@
     if (!activeProposal) return [];
     return proposalRowsToCascadeRows(groupProposalRows(relationshipProposals(activeProposal)));
   });
+  const hasRelatedPersonProposals = $derived(activeProposal ? relationshipProposals(activeProposal).some((child) => child.targetKind === "person") : false);
+  const hasRelatedStudioProposals = $derived(activeProposal ? relationshipProposals(activeProposal).some((child) => child.targetKind === "studio") : false);
 
   const childCascadeTotalCount = $derived(childCascadeRows.reduce((sum, row) => sum + row.nodes.reduce((rowSum, node) => rowSum + cascadeNodeCount(node), 0), 0));
   const childCascadeSelectedCount = $derived(childCascadeRows.reduce((sum, row) => sum + row.nodes.reduce((rowSum, node) => rowSum + selectedCascadeNodeCount(node), 0), 0));
@@ -1054,7 +1056,7 @@
             {/if}
 
             <!-- Studio -->
-            {#if activeProposal.patch.studio && studioCard}
+            {#if activeProposal.patch.studio && studioCard && !hasRelatedStudioProposals}
               <section class="section-card" class:muted={!selectedFields.studio}>
                 <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('studio')} onkeydown={(e) => e.key === 'Enter' && toggleSection('studio')}>
                   <h4>Studio</h4>
@@ -1081,7 +1083,7 @@
             {/if}
 
             <!-- Credits -->
-            {#if activeProposal.patch.credits.length > 0}
+            {#if activeProposal.patch.credits.length > 0 && !hasRelatedPersonProposals}
               <section class="section-card" class:muted={!selectedFields.credits}>
                 <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('credits')} onkeydown={(e) => e.key === 'Enter' && toggleSection('credits')}>
                   <h4>Cast & Crew</h4>
