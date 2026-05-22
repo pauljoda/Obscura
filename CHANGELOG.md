@@ -42,7 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Python plugin and Stash scraper commands now run exactly as declared, so manifests should use `python3` explicitly when they need Python 3 instead of relying on an automatic command rewrite.
 - Video playback controls now stay synchronized with the native media element, so playback, seeking, and the buffered range render correctly while HLS plays.
 - Adaptive video playback now keeps decoded video visible over stale poster artwork and can prebuffer more of the stream during local playback.
-- HDR and Dolby Vision videos now avoid direct browser playback unless support is explicit, and adaptive playback plus generated preview artwork use SDR tone mapping to avoid purple or washed-out colors. Docker builds now ship Jellyfin FFmpeg, and local installs prefer a `jellyfin-ffmpeg` command when available, so Dolby Vision tone mapping has the required encoder/filter support by default.
+- HDR and Dolby Vision videos now avoid direct browser playback unless support is explicit, and adaptive playback plus generated preview artwork use SDR tone mapping to avoid purple or washed-out colors. Docker builds now ship Jellyfin FFmpeg, local installs prefer a `jellyfin-ffmpeg` command when available, and force-rebuilding previews now clears stale generated media files before regeneration.
 - Browse grids now use docked pagination inside the shared entity grid, so large media lists keep a predictable scroll area and avoid rendering thousands of thumbnails at once.
 - Browse grids now fit their internal scroll area to the visible page instead of clipping below the app frame.
 - The Jobs dashboard now keeps running and failed jobs visible even when a large backlog fills the queue, so the live work count and job list stay accurate while workers are active.
@@ -113,6 +113,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - HDR and Dolby Vision videos now route through SDR tone-mapped adaptive playback by default, and generated thumbnails, preview clips, and trickplay tiles use the same color-aware path.
 - Local adaptive playback now prefers `jellyfin-ffmpeg`/`jellyfin-ffprobe` when those commands are installed, fixing Dolby Vision HLS segment failures caused by stock FFmpeg builds without `tonemapx`.
 - Force rebuilding previews now clears old generated thumbnails, preview clips, trickplay data, and waveforms before queueing rebuild jobs, so stale purple HDR/Dolby Vision artwork is not reused.
+- Force rebuilding previews now also removes stale adaptive HLS rendition caches and old on-disk trickplay tile directories, so previously generated purple segments and scrubber thumbnails do not survive a rebuild.
+- Entity refresh now invalidates generated preview files before deciding what downstream work is needed, so stale thumbnails and trickplay tiles are actually regenerated.
 - Configured custom ffmpeg builds now apply consistently to media probing, playback transcodes, thumbnails, previews, subtitles, waveforms, and trickplay generation instead of only adaptive HLS.
 - The Jobs dashboard no longer drops running or failed jobs from the live work and failure panels when newer queued jobs exceed the recent-history limit.
 

@@ -20,7 +20,7 @@ public interface IMaintenancePersistence {
     /// <summary>
     /// Removes generated preview/cache records and files for an entity so a rebuild job
     /// creates fresh derived media instead of reusing stale thumbnails, previews,
-    /// trickplay sheets, or waveforms.
+    /// adaptive streams, trickplay sheets, or waveforms.
     /// </summary>
     /// <param name="kind">Entity kind whose generated asset paths should be invalidated.</param>
     /// <param name="entityId">Entity identifier to invalidate.</param>

@@ -10,7 +10,8 @@ namespace Obscura.Application.Jobs.Handlers.Maintenance;
 /// </summary>
 public sealed class RefreshEntityJobHandler(
     ILogger<RefreshEntityJobHandler> logger,
-    ILibraryScanPersistence persistence) : IJobHandler {
+    ILibraryScanPersistence persistence,
+    IMaintenancePersistence maintenance) : IJobHandler {
 
     public JobType Type => JobType.RefreshEntity;
 
@@ -30,6 +31,12 @@ public sealed class RefreshEntityJobHandler(
 
         var settings = await persistence.GetSettingsAsync(cancellationToken);
         var ids = tree.Select(e => e.Id).ToList();
+        foreach (var entity in tree) {
+            if (EntityKindRegistry.TryGet(entity.KindCode, out var kind)) {
+                await maintenance.ClearGeneratedPreviewAssetsAsync(kind, entity.Id, cancellationToken);
+            }
+        }
+
         var needs = await persistence.CheckDownstreamNeedsBatchAsync(ids, cancellationToken);
 
         var jobRequests = new List<EnqueueJobRequest>();

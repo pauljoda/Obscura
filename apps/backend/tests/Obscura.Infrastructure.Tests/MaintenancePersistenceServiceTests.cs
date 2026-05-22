@@ -25,7 +25,8 @@ public sealed class MaintenancePersistenceServiceTests : IDisposable {
             FileRow(videoId, EntityFileRole.Source, "/media/source.mkv"),
             FileRow(videoId, EntityFileRole.Thumbnail, "/assets/videos/thumb.jpg"),
             FileRow(videoId, EntityFileRole.Preview, "/assets/videos/preview.mp4"),
-            FileRow(videoId, EntityFileRole.Trickplay, "/Videos/trickplay.m3u8"));
+            FileRow(videoId, EntityFileRole.Trickplay, "/Videos/trickplay.m3u8"),
+            FileRow(videoId, EntityFileRole.Hls, "/Videos/master.m3u8"));
         db.TrickplayInfos.Add(new TrickplayInfoRow {
             EntityId = videoId,
             Width = 320,
@@ -43,13 +44,24 @@ public sealed class MaintenancePersistenceServiceTests : IDisposable {
         var cacheRoot = Path.Combine(_dataDir, "cache");
         var videoCache = Path.Combine(cacheRoot, "videos", videoId.ToString());
         var trickplayCache = Path.Combine(cacheRoot, "trickplay", videoId.ToString(), "320");
+        var hlsvCache = Path.Combine(cacheRoot, "hlsv", videoId.ToString(), "audio_00001", "720p");
+        var hls2Cache = Path.Combine(cacheRoot, "hls2", videoId.ToString());
+        var hlsCache = Path.Combine(cacheRoot, "hls", videoId.ToString());
         Directory.CreateDirectory(Path.Combine(videoCache, "trickplay-frames"));
+        Directory.CreateDirectory(Path.Combine(videoCache, "subtitles"));
         Directory.CreateDirectory(trickplayCache);
+        Directory.CreateDirectory(hlsvCache);
+        Directory.CreateDirectory(hls2Cache);
+        Directory.CreateDirectory(hlsCache);
         await File.WriteAllTextAsync(Path.Combine(videoCache, "thumb.jpg"), "old");
         await File.WriteAllTextAsync(Path.Combine(videoCache, "preview.mp4"), "old");
         await File.WriteAllTextAsync(Path.Combine(videoCache, "trickplay.vtt"), "old");
         await File.WriteAllTextAsync(Path.Combine(videoCache, "trickplay-frames", "000001.jpg"), "old");
+        await File.WriteAllTextAsync(Path.Combine(videoCache, "subtitles", "embedded-eng-2.vtt"), "keep");
         await File.WriteAllTextAsync(Path.Combine(trickplayCache, "0.jpg"), "old");
+        await File.WriteAllTextAsync(Path.Combine(hlsvCache, "seg_00001.ts"), "old");
+        await File.WriteAllTextAsync(Path.Combine(hls2Cache, "master.m3u8"), "old");
+        await File.WriteAllTextAsync(Path.Combine(hlsCache, "master.m3u8"), "old");
 
         var service = new MaintenancePersistenceService(db, _dataDir);
         await service.ClearGeneratedPreviewAssetsAsync(EntityKind.Video, videoId, CancellationToken.None);
@@ -61,7 +73,11 @@ public sealed class MaintenancePersistenceServiceTests : IDisposable {
         Assert.False(File.Exists(Path.Combine(videoCache, "preview.mp4")));
         Assert.False(File.Exists(Path.Combine(videoCache, "trickplay.vtt")));
         Assert.False(Directory.Exists(Path.Combine(videoCache, "trickplay-frames")));
+        Assert.True(File.Exists(Path.Combine(videoCache, "subtitles", "embedded-eng-2.vtt")));
         Assert.False(Directory.Exists(Path.Combine(cacheRoot, "trickplay", videoId.ToString())));
+        Assert.False(Directory.Exists(Path.Combine(cacheRoot, "hlsv", videoId.ToString())));
+        Assert.False(Directory.Exists(Path.Combine(cacheRoot, "hls2", videoId.ToString())));
+        Assert.False(Directory.Exists(Path.Combine(cacheRoot, "hls", videoId.ToString())));
     }
 
     public void Dispose() {

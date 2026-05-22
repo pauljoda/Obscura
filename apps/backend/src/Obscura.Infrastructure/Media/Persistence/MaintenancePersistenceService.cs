@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Obscura.Application.Jobs.Ports;
 using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
+using Obscura.Infrastructure.Videos;
 
 namespace Obscura.Infrastructure.Media.Persistence;
 
@@ -14,7 +15,8 @@ public sealed class MaintenancePersistenceService(ObscuraDbContext db, string da
         EntityFileRole.Thumbnail,
         EntityFileRole.Preview,
         EntityFileRole.Sprite,
-        EntityFileRole.Trickplay
+        EntityFileRole.Trickplay,
+        EntityFileRole.Hls
     ];
 
     private static readonly EntityFileRole[] GeneratedImagePreviewRoles = [EntityFileRole.Thumbnail];
@@ -64,12 +66,16 @@ public sealed class MaintenancePersistenceService(ObscuraDbContext db, string da
         var id = entityId.ToString();
         switch (kind) {
             case EntityKind.Video:
+                HlsAssetService.CancelActiveGenerationsForItem(entityId);
                 DeleteFileIfExists(Path.Combine(cacheBase, "videos", id, "thumb.jpg"));
                 DeleteFileIfExists(Path.Combine(cacheBase, "videos", id, "preview.mp4"));
                 DeleteFileIfExists(Path.Combine(cacheBase, "videos", id, "sprite.jpg"));
                 DeleteFileIfExists(Path.Combine(cacheBase, "videos", id, "trickplay.vtt"));
                 DeleteDirectoryIfExists(Path.Combine(cacheBase, "videos", id, "trickplay-frames"));
                 DeleteDirectoryIfExists(Path.Combine(cacheBase, "trickplay", id));
+                DeleteDirectoryIfExists(Path.Combine(cacheBase, "hlsv", id));
+                DeleteDirectoryIfExists(Path.Combine(cacheBase, "hls2", id));
+                DeleteDirectoryIfExists(Path.Combine(cacheBase, "hls", id));
                 break;
             case EntityKind.Image:
                 DeleteFileIfExists(Path.Combine(cacheBase, "images", id, "thumb.jpg"));
@@ -84,6 +90,38 @@ public sealed class MaintenancePersistenceService(ObscuraDbContext db, string da
     }
 
     private static void DeleteFileIfExists(string path) {
+        if (!File.Exists(path)) {
+            return;
+        }
+
+        try {
+            var deletePath = $"{path}.deleting-{Guid.NewGuid():N}";
+            File.Move(path, deletePath, overwrite: true);
+            File.Delete(deletePath);
+        } catch (IOException) {
+            TryDeleteFile(path);
+        } catch (UnauthorizedAccessException) {
+            TryDeleteFile(path);
+        }
+    }
+
+    private static void DeleteDirectoryIfExists(string path) {
+        if (!Directory.Exists(path)) {
+            return;
+        }
+
+        try {
+            var deletePath = $"{path}.deleting-{Guid.NewGuid():N}";
+            Directory.Move(path, deletePath);
+            TryDeleteDirectory(deletePath);
+        } catch (IOException) {
+            TryDeleteDirectory(path);
+        } catch (UnauthorizedAccessException) {
+            TryDeleteDirectory(path);
+        }
+    }
+
+    private static void TryDeleteFile(string path) {
         try {
             if (File.Exists(path)) {
                 File.Delete(path);
@@ -95,7 +133,7 @@ public sealed class MaintenancePersistenceService(ObscuraDbContext db, string da
         }
     }
 
-    private static void DeleteDirectoryIfExists(string path) {
+    private static void TryDeleteDirectory(string path) {
         try {
             if (Directory.Exists(path)) {
                 Directory.Delete(path, recursive: true);
