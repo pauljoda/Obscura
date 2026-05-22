@@ -16,6 +16,7 @@ public sealed record PlaybackInfoQuery {
     public bool? EnableTranscoding { get; init; }
     public string? MediaSourceId { get; init; }
     public string? PlaySessionId { get; init; }
+    public IReadOnlyList<string>? SupportedVideoRangeTypes { get; init; }
 }
 
 /// <summary>
@@ -62,7 +63,22 @@ public sealed record MediaStreamInfoResult(
     int? SampleRate,
     int? Channels,
     bool IsDefault = false,
-    bool IsForced = false);
+    bool IsForced = false,
+    string? VideoRange = null,
+    string? VideoRangeType = null,
+    string? PixelFormat = null,
+    int? BitDepth = null,
+    string? ColorRange = null,
+    string? ColorSpace = null,
+    string? ColorTransfer = null,
+    string? ColorPrimaries = null,
+    int? DvProfile = null,
+    int? DvLevel = null,
+    bool? RpuPresentFlag = null,
+    bool? ElPresentFlag = null,
+    bool? BlPresentFlag = null,
+    int? DvBlSignalCompatibilityId = null,
+    bool Hdr10PlusPresentFlag = false);
 
 /// <summary>
 /// Application result describing a selected transcoding strategy.

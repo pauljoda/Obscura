@@ -38,4 +38,6 @@ export interface PlaybackInfoRequest {
   MediaSourceId?: string | null;
   /** @nullable */
   PlaySessionId?: string | null;
+  /** @nullable */
+  SupportedVideoRangeTypes?: string[] | null;
 }

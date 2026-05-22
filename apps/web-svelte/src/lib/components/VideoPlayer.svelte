@@ -104,6 +104,7 @@
     codec?: string | null;
     sourceWidth?: number | null;
     sourceHeight?: number | null;
+    colorPipelineLabel?: string | null;
     poster?: string;
     markers?: VideoPlayerMarker[];
     duration?: number;
@@ -166,6 +167,7 @@
     codec,
     sourceWidth = null,
     sourceHeight = null,
+    colorPipelineLabel = null,
     poster,
     markers = [],
     duration: propDuration,
@@ -313,6 +315,9 @@
   });
   const activePlaybackLabel = $derived(
     effectiveMode === "direct" ? "Direct Playback" : "Adaptive HLS",
+  );
+  const activePlaybackDetailLabel = $derived(
+    colorPipelineLabel ?? (effectiveMode === "direct" ? null : "SDR -> H.264 SDR"),
   );
   const playbackProgressPercent = $derived(
     duration > 0 ? Math.max(0, Math.min(100, (currentTime / duration) * 100)) : 0,
@@ -1520,8 +1525,13 @@
       )}
     >
       <div class="flex flex-wrap gap-1.5 sm:gap-2">
-        <span class="pointer-events-auto player-chip border-accent-500/40 px-2 py-0.5 text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-accent-100 sm:px-2.5 sm:py-1 sm:text-[0.62rem]">
-          {activePlaybackLabel}
+        <span class="pointer-events-auto player-chip flex max-w-[14rem] flex-col border-accent-500/40 px-2 py-0.5 text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-accent-100 sm:px-2.5 sm:py-1 sm:text-[0.62rem]">
+          <span class="truncate">{activePlaybackLabel}</span>
+          {#if activePlaybackDetailLabel}
+            <span class="truncate text-[0.5rem] tracking-[0.12em] text-white/50 sm:text-[0.56rem]">
+              {activePlaybackDetailLabel}
+            </span>
+          {/if}
         </span>
         {#if effectiveMode !== "direct"}
           <span

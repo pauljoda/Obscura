@@ -222,7 +222,7 @@ public sealed class HlsAssetServiceTests : IDisposable {
 
         Assert.NotNull(asset);
         var metadata = await File.ReadAllTextAsync(Path.Combine(virtualRoot, "metadata.json"));
-        Assert.Contains("\"FormatVersion\": 5", metadata);
+        Assert.Contains("\"FormatVersion\": 7", metadata);
         Assert.False(File.Exists(Path.Combine(virtualRoot, "v", "720p", "seg_00000.ts")));
     }
 
@@ -598,6 +598,88 @@ public sealed class HlsAssetServiceTests : IDisposable {
         var arguments = Assert.Single(process.ArgumentHistory);
         Assert.Contains("-map", arguments);
         Assert.Contains("0:2?", arguments);
+    }
+
+    [Fact]
+    public async Task VirtualSegmentsToneMapHdrSourcesToBt709SoftwareOutput() {
+        var videoId = Guid.Parse("abababab-abab-abab-abab-abababababab");
+        var sourcePath = Path.Combine(_cacheRoot, "hdr-source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var process = new ManifestWritingProcessExecutor();
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot, HlsTranscoderProfile.Vaapi),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 180,
+                Width: 3840,
+                Height: 2160,
+                Streams:
+                [
+                    new(0, "Video", "hevc", null, "Video", 3840, 2160, 24, null, null, null, true, false) {
+                        PixelFormat = "yuv420p10le",
+                        ColorTransfer = "smpte2084",
+                        ColorPrimaries = "bt2020",
+                        ColorSpace = "bt2020nc"
+                    }
+                ])),
+            process,
+            NullLogger<HlsAssetService>.Instance);
+
+        var segment = await service.GetAssetAsync(videoId, "v/8mbps/seg_00000.ts", null, CancellationToken.None);
+
+        Assert.NotNull(segment);
+        var arguments = Assert.Single(process.ArgumentHistory);
+        Assert.Contains("libx264", arguments);
+        Assert.DoesNotContain("h264_vaapi", arguments);
+        Assert.Contains(arguments, argument =>
+            argument.Contains("zscale=t=linear", StringComparison.Ordinal) &&
+            argument.Contains("tonemap=tonemap=hable", StringComparison.Ordinal) &&
+            argument.Contains("zscale=t=bt709:m=bt709:p=bt709", StringComparison.Ordinal) &&
+            argument.Contains("format=yuv420p", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task VirtualSegmentsUseTonemapxForDolbyVisionProfileFiveSources() {
+        var videoId = Guid.Parse("bcbcbcbc-bcbc-bcbc-bcbc-bcbcbcbcbcbc");
+        var sourcePath = Path.Combine(_cacheRoot, "dovi-source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var process = new ManifestWritingProcessExecutor();
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot, HlsTranscoderProfile.Software),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 180,
+                Width: 3840,
+                Height: 1920,
+                Streams:
+                [
+                    new(0, "Video", "hevc", null, "Video", 3840, 1920, 24, null, null, null, true, false) {
+                        PixelFormat = "yuv420p10le",
+                        ColorRange = "pc",
+                        DvProfile = 5,
+                        DvLevel = 6,
+                        RpuPresentFlag = true,
+                        BlPresentFlag = true,
+                        DvBlSignalCompatibilityId = 0
+                    }
+                ])),
+            process,
+            NullLogger<HlsAssetService>.Instance);
+
+        var segment = await service.GetAssetAsync(videoId, "v/8mbps/seg_00000.ts", null, CancellationToken.None);
+
+        Assert.NotNull(segment);
+        var arguments = Assert.Single(process.ArgumentHistory);
+        Assert.Contains(arguments, argument =>
+            argument.Contains("tonemapx=tonemap=bt2390", StringComparison.Ordinal) &&
+            argument.Contains("peak=400", StringComparison.Ordinal) &&
+            argument.Contains("t=bt709:m=bt709:p=bt709:format=yuv420p", StringComparison.Ordinal));
     }
 
     [Fact]

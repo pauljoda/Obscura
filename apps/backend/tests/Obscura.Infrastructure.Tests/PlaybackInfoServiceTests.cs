@@ -78,6 +78,52 @@ public sealed class PlaybackInfoServiceTests {
         Assert.True(audioStreams.Single(stream => stream.Index == 2).IsDefault);
     }
 
+    [Fact]
+    public async Task PlaybackInfoDisablesDirectPlayForHdrUnlessClientAdvertisesRangeSupport() {
+        var videoId = Guid.Parse("45454545-4545-4545-4545-454545454545");
+        var service = new PlaybackInfoService(
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                "/media/movie.mp4",
+                "video/mp4",
+                true,
+                DurationSeconds: 60,
+                Width: 3840,
+                Height: 2160,
+                Streams:
+                [
+                    new(0, "Video", "hevc", null, "Video", 3840, 2160, 24, null, null, null, true, false) {
+                        ColorTransfer = "smpte2084",
+                        ColorPrimaries = "bt2020",
+                        ColorSpace = "bt2020nc"
+                    }
+                ])),
+            new TranscodeSessionService());
+
+        var defaultInfo = await service.GetPlaybackInfoAsync(videoId, new PlaybackInfoQuery {
+            EnableDirectPlay = true,
+            EnableTranscoding = true
+        }, CancellationToken.None);
+
+        var hdrInfo = await service.GetPlaybackInfoAsync(videoId, new PlaybackInfoQuery {
+            EnableDirectPlay = true,
+            EnableTranscoding = true,
+            SupportedVideoRangeTypes = ["HDR10"]
+        }, CancellationToken.None);
+
+        Assert.NotNull(defaultInfo);
+        var defaultSource = Assert.Single(defaultInfo.MediaSources);
+        Assert.False(defaultSource.SupportsDirectPlay);
+        Assert.StartsWith($"/Videos/{videoId:D}/master.m3u8", defaultSource.TranscodingUrl);
+        Assert.Equal("HDR", Assert.Single(defaultSource.MediaStreams).VideoRange);
+        Assert.Equal("HDR10", Assert.Single(defaultSource.MediaStreams).VideoRangeType);
+
+        Assert.NotNull(hdrInfo);
+        var hdrSource = Assert.Single(hdrInfo.MediaSources);
+        Assert.True(hdrSource.SupportsDirectPlay);
+        Assert.Null(hdrSource.TranscodingUrl);
+    }
+
     private sealed class FakeVideoSourceService : IVideoSourceService {
         private readonly VideoSourceFile _source;
 

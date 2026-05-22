@@ -147,7 +147,20 @@ public sealed record MediaStreamProbeData(
     int? SampleRate,
     int? Channels,
     bool IsDefault,
-    bool IsForced);
+    bool IsForced,
+    string? PixelFormat = null,
+    int? BitDepth = null,
+    string? ColorRange = null,
+    string? ColorSpace = null,
+    string? ColorTransfer = null,
+    string? ColorPrimaries = null,
+    int? DvProfile = null,
+    int? DvLevel = null,
+    bool? RpuPresentFlag = null,
+    bool? ElPresentFlag = null,
+    bool? BlPresentFlag = null,
+    int? DvBlSignalCompatibilityId = null,
+    bool Hdr10PlusPresentFlag = false);
 
 public sealed record TrickplayInfoData(
     int Width,

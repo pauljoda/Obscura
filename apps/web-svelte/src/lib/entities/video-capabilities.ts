@@ -27,6 +27,7 @@ export interface VideoPlayerProps {
   mediaSourceId: string | null;
   subtitleTracks: VideoSubtitleTrack[];
   audioTracks: VideoPlayerAudioTrack[];
+  colorPipelineLabel: string | null;
 }
 
 export function extractVideoPlayerProps(
@@ -82,6 +83,7 @@ export function extractVideoPlayerProps(
     trickplayPlaylist,
     playSessionId: playbackInfo?.PlaySessionId ?? null,
     mediaSourceId: mediaSource?.Id ?? null,
+    colorPipelineLabel: colorPipelineLabel(videoStream, mediaSource?.TranscodingInfo ?? null),
     audioTracks: audioStreams.map((stream) => ({
       id: `audio-${stream.Index}`,
       streamIndex: stream.Index,
@@ -92,6 +94,53 @@ export function extractVideoPlayerProps(
       mapEntitySubtitle(videoId, { ...s, source: String(s.source) }),
     ),
   };
+}
+
+function colorPipelineLabel(
+  videoStream: {
+    VideoRange?: string | null;
+    VideoRangeType?: string | null;
+    DvProfile?: number | null;
+  } | null | undefined,
+  transcodingInfo: {
+    VideoCodec?: string | null;
+    IsVideoDirect?: boolean | null;
+  } | null | undefined,
+): string | null {
+  const sourceRange = sourceRangeLabel(videoStream);
+  if (transcodingInfo?.IsVideoDirect) {
+    return `${sourceRange} direct`;
+  }
+
+  const outputCodec = codecLabel(transcodingInfo?.VideoCodec);
+  if (sourceRange === "SDR") {
+    return `SDR -> ${outputCodec} SDR`;
+  }
+
+  return `${sourceRange} -> SDR tone map ${outputCodec}`;
+}
+
+function codecLabel(codec: string | null | undefined): string {
+  if (!codec) return "H.264";
+  const normalized = codec.toLowerCase();
+  if (normalized === "h264" || normalized === "avc") return "H.264";
+  if (normalized === "h265" || normalized === "hevc") return "HEVC";
+  return codec.toUpperCase();
+}
+
+function sourceRangeLabel(
+  videoStream: {
+    VideoRange?: string | null;
+    VideoRangeType?: string | null;
+    DvProfile?: number | null;
+  } | null | undefined,
+): string {
+  const type = videoStream?.VideoRangeType?.trim();
+  if (!type || type.toUpperCase() === "SDR") return "SDR";
+  if (type.toUpperCase() === "DOVI") {
+    return videoStream?.DvProfile ? `DOVI P${videoStream.DvProfile}` : "DOVI";
+  }
+  return type;
 }
 
 function audioStreamLabel(stream: {

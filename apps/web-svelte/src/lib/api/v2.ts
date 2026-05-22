@@ -193,6 +193,7 @@ export interface JellyfinPlaybackInfoRequest {
   EnableTranscoding?: boolean | null;
   MediaSourceId?: string | null;
   PlaySessionId?: string | null;
+  SupportedVideoRangeTypes?: string[] | null;
 }
 
 export interface JellyfinMediaStreamInfo {
@@ -209,6 +210,30 @@ export interface JellyfinMediaStreamInfo {
   Channels?: number | null;
   IsDefault?: boolean | null;
   IsForced?: boolean | null;
+  VideoRange?: string | null;
+  VideoRangeType?: string | null;
+  PixelFormat?: string | null;
+  BitDepth?: number | null;
+  ColorRange?: string | null;
+  ColorSpace?: string | null;
+  ColorTransfer?: string | null;
+  ColorPrimaries?: string | null;
+  DvProfile?: number | null;
+  DvLevel?: number | null;
+  RpuPresentFlag?: boolean | null;
+  ElPresentFlag?: boolean | null;
+  BlPresentFlag?: boolean | null;
+  DvBlSignalCompatibilityId?: number | null;
+  Hdr10PlusPresentFlag?: boolean | null;
+}
+
+export interface JellyfinTranscodingInfo {
+  Container: string;
+  VideoCodec: string;
+  AudioCodec: string;
+  Protocol: string;
+  IsVideoDirect: boolean;
+  IsAudioDirect: boolean;
 }
 
 export interface JellyfinMediaSourceInfo {
@@ -226,6 +251,7 @@ export interface JellyfinMediaSourceInfo {
   TranscodingSubProtocol?: string | null;
   TranscodingContainer?: string | null;
   MediaStreams: JellyfinMediaStreamInfo[];
+  TranscodingInfo?: JellyfinTranscodingInfo | null;
 }
 
 export interface JellyfinPlaybackInfoResponse {

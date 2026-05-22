@@ -35,6 +35,9 @@ public sealed record PlaybackInfoRequest {
 
     [JsonPropertyName("PlaySessionId")]
     public string? PlaySessionId { get; init; }
+
+    [JsonPropertyName("SupportedVideoRangeTypes")]
+    public IReadOnlyList<string>? SupportedVideoRangeTypes { get; init; }
 }
 
 /// <summary>
@@ -81,7 +84,22 @@ public sealed record MediaStreamInfo(
     [property: JsonPropertyName("SampleRate")] int? SampleRate,
     [property: JsonPropertyName("Channels")] int? Channels,
     [property: JsonPropertyName("IsDefault")] bool IsDefault = false,
-    [property: JsonPropertyName("IsForced")] bool IsForced = false);
+    [property: JsonPropertyName("IsForced")] bool IsForced = false,
+    [property: JsonPropertyName("VideoRange")] string? VideoRange = null,
+    [property: JsonPropertyName("VideoRangeType")] string? VideoRangeType = null,
+    [property: JsonPropertyName("PixelFormat")] string? PixelFormat = null,
+    [property: JsonPropertyName("BitDepth")] int? BitDepth = null,
+    [property: JsonPropertyName("ColorRange")] string? ColorRange = null,
+    [property: JsonPropertyName("ColorSpace")] string? ColorSpace = null,
+    [property: JsonPropertyName("ColorTransfer")] string? ColorTransfer = null,
+    [property: JsonPropertyName("ColorPrimaries")] string? ColorPrimaries = null,
+    [property: JsonPropertyName("DvProfile")] int? DvProfile = null,
+    [property: JsonPropertyName("DvLevel")] int? DvLevel = null,
+    [property: JsonPropertyName("RpuPresentFlag")] bool? RpuPresentFlag = null,
+    [property: JsonPropertyName("ElPresentFlag")] bool? ElPresentFlag = null,
+    [property: JsonPropertyName("BlPresentFlag")] bool? BlPresentFlag = null,
+    [property: JsonPropertyName("DvBlSignalCompatibilityId")] int? DvBlSignalCompatibilityId = null,
+    [property: JsonPropertyName("Hdr10PlusPresentFlag")] bool Hdr10PlusPresentFlag = false);
 
 /// <summary>
 /// Summary of the server-side media transformation selected during negotiation.

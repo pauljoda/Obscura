@@ -54,6 +54,12 @@ public sealed class PlaybackInfoService : IPlaybackInfoService {
         var directPlayAllowed = request?.EnableDirectPlay != false && source.DirectPlayable;
         var transcodingAllowed = request?.EnableTranscoding != false;
         var mediaSourceId = (source.MediaSourceId ?? itemId).ToString("N");
+        var videoStream = PrimaryVideoStream(source);
+        var videoRange = VideoPlaybackRangePolicy.Classify(videoStream);
+        var directRangeAllowed = VideoPlaybackRangePolicy.AllowsDirectPlayback(
+            videoRange,
+            request?.SupportedVideoRangeTypes);
+        var supportsDirectPlayback = directPlayAllowed && directRangeAllowed;
 
         if (transcodingAllowed) {
             _transcodes.Register(playSessionId, itemId);
@@ -72,16 +78,16 @@ public sealed class PlaybackInfoService : IPlaybackInfoService {
             fileInfo.Exists ? fileInfo.Length : null,
             Path.GetFileName(source.Path),
             ToTicks(source.DurationSeconds),
-            directPlayAllowed,
-            source.DirectPlayable,
+            supportsDirectPlayback,
+            supportsDirectPlayback,
             transcodingAllowed,
-            transcodingAllowed && !directPlayAllowed
+            transcodingAllowed && !supportsDirectPlayback
                 ? BuildTranscodingUrl(itemId, mediaSourceId, playSessionId, selectedAudioStream?.StreamIndex)
                 : null,
-            transcodingAllowed && !directPlayAllowed ? "hls" : null,
-            transcodingAllowed && !directPlayAllowed ? "ts" : null,
+            transcodingAllowed && !supportsDirectPlayback ? "hls" : null,
+            transcodingAllowed && !supportsDirectPlayback ? "ts" : null,
             BuildStreams(source, selectedAudioStream?.StreamIndex),
-            transcodingAllowed && !directPlayAllowed
+            transcodingAllowed && !supportsDirectPlayback
                 ? new TranscodingInfoResult("ts", "h264", "aac", "hls", IsVideoDirect: false, IsAudioDirect: false)
                 : null);
 
@@ -196,20 +202,40 @@ public sealed class PlaybackInfoService : IPlaybackInfoService {
         if (source.Streams is { Count: > 0 }) {
             return source.Streams
                 .OrderBy(stream => stream.StreamIndex)
-                .Select(stream => new MediaStreamInfoResult(
-                    stream.StreamIndex,
-                    stream.Type,
-                    stream.Codec,
-                    stream.Language,
-                    StreamDisplayTitle(stream),
-                    stream.Width,
-                    stream.Height,
-                    stream.FrameRate,
-                    stream.BitRate,
-                    stream.SampleRate,
-                    stream.Channels,
-                    IsDefault: StreamIsSelected(stream, selectedAudioStreamIndex),
-                    IsForced: stream.IsForced))
+                .Select(stream => {
+                    var range = stream.Type.Equals("Video", StringComparison.OrdinalIgnoreCase)
+                        ? VideoPlaybackRangePolicy.Classify(stream)
+                        : null;
+                    return new MediaStreamInfoResult(
+                        stream.StreamIndex,
+                        stream.Type,
+                        stream.Codec,
+                        stream.Language,
+                        StreamDisplayTitle(stream),
+                        stream.Width,
+                        stream.Height,
+                        stream.FrameRate,
+                        stream.BitRate,
+                        stream.SampleRate,
+                        stream.Channels,
+                        IsDefault: StreamIsSelected(stream, selectedAudioStreamIndex),
+                        IsForced: stream.IsForced,
+                        VideoRange: range?.VideoRange,
+                        VideoRangeType: range?.VideoRangeType,
+                        PixelFormat: stream.PixelFormat,
+                        BitDepth: stream.BitDepth,
+                        ColorRange: stream.ColorRange,
+                        ColorSpace: stream.ColorSpace,
+                        ColorTransfer: stream.ColorTransfer,
+                        ColorPrimaries: stream.ColorPrimaries,
+                        DvProfile: stream.DvProfile,
+                        DvLevel: stream.DvLevel,
+                        RpuPresentFlag: stream.RpuPresentFlag,
+                        ElPresentFlag: stream.ElPresentFlag,
+                        BlPresentFlag: stream.BlPresentFlag,
+                        DvBlSignalCompatibilityId: stream.DvBlSignalCompatibilityId,
+                        Hdr10PlusPresentFlag: stream.Hdr10PlusPresentFlag);
+                })
                 .ToList();
         }
 
@@ -247,6 +273,12 @@ public sealed class PlaybackInfoService : IPlaybackInfoService {
 
         return [videoStream, audioStream];
     }
+
+    private static VideoSourceStream? PrimaryVideoStream(VideoSourceFile source) =>
+        source.Streams?
+            .Where(stream => stream.Type.Equals("Video", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(stream => stream.StreamIndex)
+            .FirstOrDefault();
 
     private static string StreamDisplayTitle(VideoSourceStream stream) {
         if (!string.IsNullOrWhiteSpace(stream.Title)) {

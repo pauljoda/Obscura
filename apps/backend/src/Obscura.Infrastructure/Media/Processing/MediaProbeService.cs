@@ -19,7 +19,7 @@ public sealed class MediaProbeService {
     public async Task<VideoProbeResult?> ProbeVideoAsync(string filePath, CancellationToken cancellationToken) {
         var result = await RunFfprobeAsync(
             ["-v", "error",
-             "-show_entries", "format=duration,size,bit_rate,format_name:stream=index,codec_type,codec_name,width,height,avg_frame_rate,bit_rate,sample_rate,channels:stream_tags=language,title:stream_disposition=default,forced",
+             "-show_entries", "format=duration,size,bit_rate,format_name:stream=index,codec_type,codec_name,pix_fmt,width,height,avg_frame_rate,bit_rate,sample_rate,channels,color_range,color_space,color_transfer,color_primaries:stream_side_data=side_data_type,dv_profile,dv_level,rpu_present_flag,el_present_flag,bl_present_flag,dv_bl_signal_compatibility_id:stream_tags=language,title:stream_disposition=default,forced",
              "-of", "json",
              filePath],
             cancellationToken);
@@ -47,6 +47,8 @@ public sealed class MediaProbeService {
 
                 var tags = stream.GetPropertyOrDefault("tags");
                 var disposition = stream.GetPropertyOrDefault("disposition");
+                var sideData = ParseVideoSideData(stream);
+                var pixelFormat = stream.GetStringOrDefault("pix_fmt");
                 streamResults.Add(new MediaStreamProbeResult(
                     stream.GetIntOrDefault("index") ?? 0,
                     codecType == "video" ? "Video" : "Audio",
@@ -60,7 +62,20 @@ public sealed class MediaProbeService {
                     stream.GetIntOrDefault("sample_rate"),
                     stream.GetIntOrDefault("channels"),
                     disposition.GetIntOrDefault("default") == 1,
-                    disposition.GetIntOrDefault("forced") == 1));
+                    disposition.GetIntOrDefault("forced") == 1,
+                    PixelFormat: pixelFormat,
+                    BitDepth: ParseBitDepth(pixelFormat),
+                    ColorRange: stream.GetStringOrDefault("color_range"),
+                    ColorSpace: stream.GetStringOrDefault("color_space"),
+                    ColorTransfer: stream.GetStringOrDefault("color_transfer"),
+                    ColorPrimaries: stream.GetStringOrDefault("color_primaries"),
+                    DvProfile: sideData.DvProfile,
+                    DvLevel: sideData.DvLevel,
+                    RpuPresentFlag: sideData.RpuPresentFlag,
+                    ElPresentFlag: sideData.ElPresentFlag,
+                    BlPresentFlag: sideData.BlPresentFlag,
+                    DvBlSignalCompatibilityId: sideData.DvBlSignalCompatibilityId,
+                    Hdr10PlusPresentFlag: sideData.Hdr10PlusPresentFlag));
             }
         }
 
@@ -243,7 +258,63 @@ public sealed class MediaProbeService {
 
         return double.TryParse(value, out var flat) ? flat : null;
     }
+
+    private static VideoSideData ParseVideoSideData(JsonElement stream) {
+        var sideDataList = stream.GetPropertyOrDefault("side_data_list");
+        if (sideDataList.ValueKind != JsonValueKind.Array) {
+            return new VideoSideData();
+        }
+
+        var result = new VideoSideData();
+        foreach (var sideData in sideDataList.EnumerateArray()) {
+            var sideDataType = sideData.GetStringOrDefault("side_data_type");
+            if (string.Equals(sideDataType, "DOVI configuration record", StringComparison.OrdinalIgnoreCase)) {
+                result = result with {
+                    DvProfile = sideData.GetIntOrDefault("dv_profile"),
+                    DvLevel = sideData.GetIntOrDefault("dv_level"),
+                    RpuPresentFlag = Flag(sideData, "rpu_present_flag"),
+                    ElPresentFlag = Flag(sideData, "el_present_flag"),
+                    BlPresentFlag = Flag(sideData, "bl_present_flag"),
+                    DvBlSignalCompatibilityId = sideData.GetIntOrDefault("dv_bl_signal_compatibility_id")
+                };
+            } else if (string.Equals(sideDataType, "HDR Dynamic Metadata SMPTE2094-40 (HDR10+)", StringComparison.OrdinalIgnoreCase)) {
+                result = result with { Hdr10PlusPresentFlag = true };
+            }
+        }
+
+        return result;
+    }
+
+    private static bool? Flag(JsonElement element, string name) =>
+        element.GetIntOrDefault(name) switch {
+            0 => false,
+            1 => true,
+            _ => null
+        };
+
+    private static int? ParseBitDepth(string? pixelFormat) {
+        if (string.IsNullOrWhiteSpace(pixelFormat)) {
+            return null;
+        }
+
+        foreach (var marker in new[] { "12", "10", "9", "8" }) {
+            if (pixelFormat.Contains(marker, StringComparison.OrdinalIgnoreCase)) {
+                return int.Parse(marker);
+            }
+        }
+
+        return pixelFormat.Contains('p', StringComparison.OrdinalIgnoreCase) ? 8 : null;
+    }
 }
+
+internal sealed record VideoSideData(
+    int? DvProfile = null,
+    int? DvLevel = null,
+    bool? RpuPresentFlag = null,
+    bool? ElPresentFlag = null,
+    bool? BlPresentFlag = null,
+    int? DvBlSignalCompatibilityId = null,
+    bool Hdr10PlusPresentFlag = false);
 
 public sealed record VideoProbeResult(
     double? DurationSeconds,
@@ -272,7 +343,20 @@ public sealed record MediaStreamProbeResult(
     int? SampleRate,
     int? Channels,
     bool IsDefault,
-    bool IsForced);
+    bool IsForced,
+    string? PixelFormat = null,
+    int? BitDepth = null,
+    string? ColorRange = null,
+    string? ColorSpace = null,
+    string? ColorTransfer = null,
+    string? ColorPrimaries = null,
+    int? DvProfile = null,
+    int? DvLevel = null,
+    bool? RpuPresentFlag = null,
+    bool? ElPresentFlag = null,
+    bool? BlPresentFlag = null,
+    int? DvBlSignalCompatibilityId = null,
+    bool Hdr10PlusPresentFlag = false);
 
 public sealed record AudioProbeResult(
     double? DurationSeconds,

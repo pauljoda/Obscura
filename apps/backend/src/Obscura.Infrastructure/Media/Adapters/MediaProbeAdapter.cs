@@ -26,7 +26,20 @@ public sealed class MediaProbeAdapter(MediaProbeService inner) : IMediaProbe {
                 stream.SampleRate,
                 stream.Channels,
                 stream.IsDefault,
-                stream.IsForced)).ToList());
+                stream.IsForced,
+                stream.PixelFormat,
+                stream.BitDepth,
+                stream.ColorRange,
+                stream.ColorSpace,
+                stream.ColorTransfer,
+                stream.ColorPrimaries,
+                stream.DvProfile,
+                stream.DvLevel,
+                stream.RpuPresentFlag,
+                stream.ElPresentFlag,
+                stream.BlPresentFlag,
+                stream.DvBlSignalCompatibilityId,
+                stream.Hdr10PlusPresentFlag)).ToList());
     }
 
     public async Task<AudioProbeData?> ProbeAudioAsync(string filePath, CancellationToken cancellationToken) {

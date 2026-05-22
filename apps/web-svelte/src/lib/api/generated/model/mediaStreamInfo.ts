@@ -47,4 +47,45 @@ export interface MediaStreamInfo {
   Channels: number | string | null;
   IsDefault?: boolean;
   IsForced?: boolean;
+  /** @nullable */
+  VideoRange?: string | null;
+  /** @nullable */
+  VideoRangeType?: string | null;
+  /** @nullable */
+  PixelFormat?: string | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  BitDepth?: number | string | null;
+  /** @nullable */
+  ColorRange?: string | null;
+  /** @nullable */
+  ColorSpace?: string | null;
+  /** @nullable */
+  ColorTransfer?: string | null;
+  /** @nullable */
+  ColorPrimaries?: string | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  DvProfile?: number | string | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  DvLevel?: number | string | null;
+  /** @nullable */
+  RpuPresentFlag?: boolean | null;
+  /** @nullable */
+  ElPresentFlag?: boolean | null;
+  /** @nullable */
+  BlPresentFlag?: boolean | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  DvBlSignalCompatibilityId?: number | string | null;
+  Hdr10PlusPresentFlag?: boolean;
 }

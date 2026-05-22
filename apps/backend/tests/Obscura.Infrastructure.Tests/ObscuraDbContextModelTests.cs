@@ -186,6 +186,7 @@ public sealed class ObscuraDbContextModelTests {
         Assert.Contains("20260513002000_RemoveGalleryPhotographer", migrations);
         Assert.Contains("20260513041249_SlimCapabilityFirstDetails", migrations);
         Assert.Contains("20260515164712_AddMediaPlaybackSpine", migrations);
+        Assert.Contains("20260522152444_AddHdrPlaybackMetadata", migrations);
     }
 
     [Theory]
@@ -196,6 +197,8 @@ public sealed class ObscuraDbContextModelTests {
     [InlineData(typeof(EntityTechnicalRow), nameof(EntityTechnicalRow.DurationSeconds), "duration_seconds")]
     [InlineData(typeof(MediaSourceRow), nameof(MediaSourceRow.VideoCodec), "video_codec")]
     [InlineData(typeof(MediaStreamRow), nameof(MediaStreamRow.StreamIndex), "stream_index")]
+    [InlineData(typeof(MediaStreamRow), nameof(MediaStreamRow.ColorTransfer), "color_transfer")]
+    [InlineData(typeof(MediaStreamRow), nameof(MediaStreamRow.Hdr10PlusPresentFlag), "hdr10_plus_present_flag")]
     [InlineData(typeof(TrickplayInfoRow), nameof(TrickplayInfoRow.TileWidth), "tile_width")]
     [InlineData(typeof(EntitySourceRow), nameof(EntitySourceRow.Value), "value")]
     [InlineData(typeof(EntityProgressRow), nameof(EntityProgressRow.CurrentEntityId), "current_entity_id")]

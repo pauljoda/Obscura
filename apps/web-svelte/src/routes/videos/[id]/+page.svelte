@@ -548,6 +548,7 @@
             codec={playerProps.codec}
             sourceWidth={playerProps.sourceWidth}
             sourceHeight={playerProps.sourceHeight}
+            colorPipelineLabel={playerProps.colorPipelineLabel}
             poster={playerProps.poster}
             markers={playerProps.markers}
             duration={playerProps.duration || undefined}

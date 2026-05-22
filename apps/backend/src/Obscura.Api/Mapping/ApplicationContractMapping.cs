@@ -15,7 +15,8 @@ internal static class ApplicationContractMapping {
             EnableDirectStream = request.EnableDirectStream,
             EnableTranscoding = request.EnableTranscoding,
             MediaSourceId = request.MediaSourceId,
-            PlaySessionId = request.PlaySessionId
+            PlaySessionId = request.PlaySessionId,
+            SupportedVideoRangeTypes = request.SupportedVideoRangeTypes
         };
 
     public static PlaybackSessionCommand ToApplication(this PlaybackSessionRequest request) =>
@@ -63,7 +64,22 @@ internal static class ApplicationContractMapping {
             result.SampleRate,
             result.Channels,
             result.IsDefault,
-            result.IsForced);
+            result.IsForced,
+            result.VideoRange,
+            result.VideoRangeType,
+            result.PixelFormat,
+            result.BitDepth,
+            result.ColorRange,
+            result.ColorSpace,
+            result.ColorTransfer,
+            result.ColorPrimaries,
+            result.DvProfile,
+            result.DvLevel,
+            result.RpuPresentFlag,
+            result.ElPresentFlag,
+            result.BlPresentFlag,
+            result.DvBlSignalCompatibilityId,
+            result.Hdr10PlusPresentFlag);
 
     private static TranscodingInfo ToContract(this TranscodingInfoResult result) =>
         new(

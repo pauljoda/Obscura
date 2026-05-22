@@ -150,6 +150,98 @@ public sealed class VideoSourceServiceTests : IDisposable {
         Assert.Equal("eng", audioStreams.Single(stream => stream.StreamIndex == 2).Language);
     }
 
+    [Fact]
+    public async Task ProbesStaleHevcStreamsMissingHdrMetadata() {
+        await using var db = CreateContext();
+        var videoId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        var sourceId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+        var filePath = Path.Combine(_tempDir, "video.mkv");
+        await File.WriteAllTextAsync(filePath, "video-bytes");
+        SeedVideoSource(db, videoId, filePath, null);
+        db.MediaSources.Add(new MediaSourceRow {
+            Id = sourceId,
+            EntityId = videoId,
+            Path = filePath,
+            Protocol = "File",
+            Container = "matroska",
+            VideoCodec = "hevc",
+            DurationSeconds = 42,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        db.MediaStreams.Add(new MediaStreamRow {
+            Id = Guid.NewGuid(),
+            MediaSourceId = sourceId,
+            EntityId = videoId,
+            StreamIndex = 0,
+            Type = "Video",
+            Codec = "hevc",
+            IsDefault = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        db.MediaStreams.Add(new MediaStreamRow {
+            Id = Guid.NewGuid(),
+            MediaSourceId = sourceId,
+            EntityId = videoId,
+            StreamIndex = 1,
+            Type = "Audio",
+            Codec = "aac",
+            IsDefault = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        db.MediaStreams.Add(new MediaStreamRow {
+            Id = Guid.NewGuid(),
+            MediaSourceId = sourceId,
+            EntityId = videoId,
+            StreamIndex = 2,
+            Type = "Audio",
+            Codec = "aac",
+            IsDefault = false,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+        var probe = new MediaProbeService(new JsonProcessExecutor("""
+            {
+              "format": { "duration": "42", "format_name": "matroska" },
+              "streams": [
+                {
+                  "index": 0,
+                  "codec_type": "video",
+                  "codec_name": "hevc",
+                  "pix_fmt": "yuv420p10le",
+                  "width": 3840,
+                  "height": 1920,
+                  "avg_frame_rate": "24000/1001",
+                  "color_range": "pc",
+                  "side_data_list": [
+                    {
+                      "side_data_type": "DOVI configuration record",
+                      "dv_profile": 5,
+                      "dv_level": 6,
+                      "rpu_present_flag": 1,
+                      "el_present_flag": 0,
+                      "bl_present_flag": 1,
+                      "dv_bl_signal_compatibility_id": 0
+                    }
+                  ],
+                  "disposition": { "default": 1, "forced": 0 }
+                },
+                { "index": 1, "codec_type": "audio", "codec_name": "aac", "sample_rate": "48000", "channels": 2, "disposition": { "default": 1, "forced": 0 } },
+                { "index": 2, "codec_type": "audio", "codec_name": "aac", "sample_rate": "48000", "channels": 2, "disposition": { "default": 0, "forced": 0 } }
+              ]
+            }
+            """));
+
+        var service = new VideoSourceService(db, probe);
+        var source = await service.GetSourceAsync(videoId, CancellationToken.None);
+
+        Assert.NotNull(source);
+        var video = Assert.Single(source.Streams!, stream => stream.Type == "Video");
+        Assert.Equal("yuv420p10le", video.PixelFormat);
+        Assert.Equal(5, video.DvProfile);
+        Assert.True(video.RpuPresentFlag);
+    }
+
     public void Dispose() {
         if (Directory.Exists(_tempDir)) {
             Directory.Delete(_tempDir, recursive: true);

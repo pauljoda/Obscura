@@ -149,11 +149,13 @@ describe("VideoPlayer", () => {
         src: "/api/video-stream/video-1/hls2/master.m3u8",
         directSrc: "/api/video-stream/video-1/source",
         defaultPlaybackMode: "hls",
+        colorPipelineLabel: "DOVI P5 -> SDR tone map H.264",
       },
     });
 
     expect(screen.getByTestId("vidstack-video-player")).toBeInTheDocument();
     expect(screen.getByText("Adaptive HLS")).toBeInTheDocument();
+    expect(screen.getByText("DOVI P5 -> SDR tone map H.264")).toBeInTheDocument();
     expect(screen.getByTestId("playback-quality-chip")).toHaveTextContent("Auto");
     expect(screen.getByRole("button", { name: "Cast" })).toBeInTheDocument();
     const settingsButton = screen.getByRole("button", { name: "Player settings" });

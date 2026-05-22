@@ -41,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Python plugin and Stash scraper commands now run exactly as declared, so manifests should use `python3` explicitly when they need Python 3 instead of relying on an automatic command rewrite.
 - Video playback controls now stay synchronized with the native media element, so playback, seeking, and the buffered range render correctly while HLS plays.
 - Adaptive video playback now keeps decoded video visible over stale poster artwork and can prebuffer more of the stream during local playback.
+- HDR and Dolby Vision videos now avoid direct browser playback unless support is explicit, and adaptive playback tone maps HDR sources to SDR to avoid purple or washed-out colors.
 - Browse grids now use docked pagination inside the shared entity grid, so large media lists keep a predictable scroll area and avoid rendering thousands of thumbnails at once.
 - Browse grids now fit their internal scroll area to the visible page instead of clipping below the app frame.
 
@@ -106,6 +107,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Missing generated subtitle files now cause videos to be queued for subtitle extraction again, and re-extraction refreshes the existing subtitle track instead of adding a duplicate stale entry.
 - Video playback now drives the visible progress and buffer rails from the native video element, fixing stale player controls while adaptive HLS plays.
 - Adaptive video playback now keeps decoded video visible over stale poster artwork and can prebuffer more of the stream during local playback.
+- HDR and Dolby Vision videos now route through SDR tone-mapped adaptive playback by default, fixing incorrect color rendering on browsers that cannot directly display those formats.
 
 ### Removed
 - Historical v1-era release note detail was pruned from the changelog; git history remains the complete record.

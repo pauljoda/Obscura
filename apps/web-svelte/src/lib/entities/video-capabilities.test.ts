@@ -211,4 +211,68 @@ describe("extractVideoPlayerProps", () => {
       expect.objectContaining({ streamIndex: 2, label: "English · AAC · 2ch · Default", selected: true }),
     ]);
   });
+
+  it("trusts playback negotiation when HDR sources must transcode", () => {
+    const props = extractVideoPlayerProps("video-1", [
+      {
+        kind: "files",
+        items: [
+          {
+            role: "source",
+            path: "/media/movie.mp4",
+            mimeType: "video/mp4",
+          },
+        ],
+      },
+      {
+        kind: "technical",
+        duration: "00:01:00",
+        width: 3840,
+        height: 2160,
+        frameRate: 24,
+        bitRate: null,
+        sampleRate: null,
+        channels: null,
+        codec: "hevc",
+        container: "mp4",
+        format: null,
+      },
+    ], {
+      PlaySessionId: "session-1",
+      ErrorCode: null,
+      MediaSources: [
+        {
+          Id: "source-1",
+          Path: "/media/movie.mp4",
+          Protocol: "File",
+          Container: "mp4",
+          SupportsDirectPlay: false,
+          SupportsDirectStream: false,
+          SupportsTranscoding: true,
+          TranscodingUrl: "/Videos/video-1/master.m3u8",
+          TranscodingSubProtocol: "hls",
+          TranscodingContainer: "ts",
+          MediaStreams: [
+            {
+              Index: 0,
+              Type: "Video",
+              Codec: "hevc",
+              Width: 3840,
+              Height: 2160,
+              VideoRange: "HDR",
+              VideoRangeType: "HDR10",
+              ColorTransfer: "smpte2084",
+              ColorPrimaries: "bt2020",
+              ColorSpace: "bt2020nc",
+              IsDefault: true,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(props.directSrc).toBe("");
+    expect(props.src).toBe("/Videos/video-1/master.m3u8");
+    expect(props.colorPipelineLabel).toBe("HDR10 -> SDR tone map H.264");
+  });
 });

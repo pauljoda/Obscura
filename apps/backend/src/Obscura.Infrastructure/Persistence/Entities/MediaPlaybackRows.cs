@@ -35,6 +35,19 @@ public sealed class MediaStreamRow {
     public int? BitRate { get; set; }
     public int? SampleRate { get; set; }
     public int? Channels { get; set; }
+    public string? PixelFormat { get; set; }
+    public int? BitDepth { get; set; }
+    public string? ColorRange { get; set; }
+    public string? ColorSpace { get; set; }
+    public string? ColorTransfer { get; set; }
+    public string? ColorPrimaries { get; set; }
+    public int? DvProfile { get; set; }
+    public int? DvLevel { get; set; }
+    public bool? RpuPresentFlag { get; set; }
+    public bool? ElPresentFlag { get; set; }
+    public bool? BlPresentFlag { get; set; }
+    public int? DvBlSignalCompatibilityId { get; set; }
+    public bool Hdr10PlusPresentFlag { get; set; }
     public bool IsDefault { get; set; }
     public bool IsForced { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

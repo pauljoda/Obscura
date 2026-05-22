@@ -87,10 +87,22 @@ public sealed class VideoSourceService : IVideoSourceService {
                     row.SampleRate,
                     row.Channels,
                     row.IsDefault,
-                    row.IsForced))
+                    row.IsForced,
+                    row.PixelFormat,
+                    row.BitDepth,
+                    row.ColorRange,
+                    row.ColorSpace,
+                    row.ColorTransfer,
+                    row.ColorPrimaries,
+                    row.DvProfile,
+                    row.DvLevel,
+                    row.RpuPresentFlag,
+                    row.ElPresentFlag,
+                    row.BlPresentFlag,
+                    row.DvBlSignalCompatibilityId,
+                    row.Hdr10PlusPresentFlag))
                 .ToListAsync(cancellationToken);
-        if (_mediaProbe is not null && streams.Count(stream =>
-                stream.Type.Equals("Audio", StringComparison.OrdinalIgnoreCase)) <= 1) {
+        if (_mediaProbe is not null && ShouldProbeStreams(source.File.Path, mediaSource?.VideoCodec ?? source.Technical?.Codec, streams)) {
             var probed = await _mediaProbe.ProbeVideoAsync(source.File.Path, cancellationToken);
             if (probed?.Streams is { Count: > 0 }) {
                 streams = probed.Streams
@@ -107,7 +119,20 @@ public sealed class VideoSourceService : IVideoSourceService {
                         stream.SampleRate,
                         stream.Channels,
                         stream.IsDefault,
-                        stream.IsForced))
+                        stream.IsForced,
+                        stream.PixelFormat,
+                        stream.BitDepth,
+                        stream.ColorRange,
+                        stream.ColorSpace,
+                        stream.ColorTransfer,
+                        stream.ColorPrimaries,
+                        stream.DvProfile,
+                        stream.DvLevel,
+                        stream.RpuPresentFlag,
+                        stream.ElPresentFlag,
+                        stream.BlPresentFlag,
+                        stream.DvBlSignalCompatibilityId,
+                        stream.Hdr10PlusPresentFlag))
                     .OrderBy(stream => stream.StreamIndex)
                     .ToList();
             }
@@ -150,4 +175,41 @@ public sealed class VideoSourceService : IVideoSourceService {
             _ => "application/octet-stream"
         };
     }
+
+    private static bool ShouldProbeStreams(
+        string path,
+        string? videoCodec,
+        IReadOnlyList<VideoSourceStream> streams) {
+        if (streams.Count(stream => stream.Type.Equals("Audio", StringComparison.OrdinalIgnoreCase)) <= 1) {
+            return true;
+        }
+
+        var primaryVideo = streams
+            .Where(stream => stream.Type.Equals("Video", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(stream => stream.StreamIndex)
+            .FirstOrDefault();
+        if (primaryVideo is null) {
+            return true;
+        }
+
+        var codec = primaryVideo.Codec ?? videoCodec;
+        if (!IsHdrProneCodec(codec) && !Path.GetExtension(path).Equals(".mkv", StringComparison.OrdinalIgnoreCase)) {
+            return false;
+        }
+
+        return primaryVideo.PixelFormat is null &&
+            primaryVideo.BitDepth is null &&
+            primaryVideo.ColorTransfer is null &&
+            primaryVideo.ColorPrimaries is null &&
+            primaryVideo.DvProfile is null &&
+            primaryVideo.RpuPresentFlag is null &&
+            !primaryVideo.Hdr10PlusPresentFlag;
+    }
+
+    private static bool IsHdrProneCodec(string? codec) =>
+        codec is not null && (
+            codec.Equals("hevc", StringComparison.OrdinalIgnoreCase) ||
+            codec.Equals("h265", StringComparison.OrdinalIgnoreCase) ||
+            codec.Equals("av1", StringComparison.OrdinalIgnoreCase) ||
+            codec.Equals("vp9", StringComparison.OrdinalIgnoreCase));
 }

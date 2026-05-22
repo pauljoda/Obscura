@@ -13,7 +13,7 @@ namespace Obscura.Infrastructure.Videos;
 /// </summary>
 public sealed class HlsAssetService : IHlsAssetService {
     private const int SegmentDurationSeconds = 6;
-    private const int VirtualCacheFormatVersion = 5;
+    private const int VirtualCacheFormatVersion = 7;
     private const int ActiveGenerationReuseWindowSegments = 12;
     private static readonly TimeSpan SegmentPollInterval = TimeSpan.FromMilliseconds(100);
     private static readonly ConcurrentDictionary<string, VirtualRenditionGeneration> ActiveRenditions = new();
@@ -208,13 +208,14 @@ public sealed class HlsAssetService : IHlsAssetService {
         var sourceInfo = new FileInfo(source.Path);
         var transcoderOptions = await ResolveTranscoderOptionsAsync(cancellationToken);
         var transcoderProfile = ResolveTranscoderProfile(transcoderOptions);
+        var effectiveTranscoderProfile = ResolveEffectiveTranscoderProfile(source, transcoderProfile);
         var nextMeta = new VirtualCacheMetadata(
             source.Path,
             sourceInfo.Length,
             sourceInfo.LastWriteTimeUtc,
             source.DurationSeconds!.Value,
             renditions.Select(rendition => rendition.Name).ToArray(),
-            transcoderProfile.ToString(),
+            effectiveTranscoderProfile.ToString(),
             VirtualCacheFormatVersion);
 
         if (File.Exists(metaPath)) {
@@ -389,6 +390,13 @@ public sealed class HlsAssetService : IHlsAssetService {
         Directory.CreateDirectory(Path.GetDirectoryName(playlistPath)!);
         var transcoderOptions = await ResolveTranscoderOptionsAsync(cancellationToken);
         var transcoderProfile = ResolveTranscoderProfile(transcoderOptions);
+        var effectiveTranscoderProfile = ResolveEffectiveTranscoderProfile(source, transcoderProfile);
+        if (effectiveTranscoderProfile != transcoderProfile) {
+            _logger?.LogInformation(
+                "Virtual HLS generation for HDR/Dolby Vision source {VideoId} is using software tone mapping instead of {TranscoderProfile}.",
+                id,
+                transcoderProfile);
+        }
 
         ProcessExecutionResult result;
         try {
@@ -401,15 +409,15 @@ public sealed class HlsAssetService : IHlsAssetService {
                     startSegment,
                     playlistPath,
                     segmentPattern,
-                    transcoderProfile,
+                    effectiveTranscoderProfile,
                     transcoderOptions.VaapiDevice),
                 environment: null,
                 cancellationToken);
 
-            if (result.ExitCode != 0 && transcoderProfile != HlsTranscoderProfile.Software) {
+            if (result.ExitCode != 0 && effectiveTranscoderProfile != HlsTranscoderProfile.Software) {
                 _logger?.LogWarning(
                     "Virtual HLS generation using {TranscoderProfile} failed for {VideoId} rendition {Rendition}; retrying with software x264. Error: {Error}",
-                    transcoderProfile,
+                    effectiveTranscoderProfile,
                     id,
                     rendition.Name,
                     result.StandardError);
@@ -763,6 +771,14 @@ public sealed class HlsAssetService : IHlsAssetService {
         VideoSourceFile source,
         VirtualHlsRendition rendition,
         HlsTranscoderProfile transcoderProfile) {
+        if (NeedsToneMapping(source)) {
+            return
+            [
+                "-vf",
+                ToneMappingFilter(source, rendition)
+            ];
+        }
+
         if (transcoderProfile == HlsTranscoderProfile.Vaapi) {
             var width = ScaledWidth(source.Width, source.Height, rendition.Height);
             var scaleWidth = width?.ToString() ?? "-2";
@@ -779,6 +795,24 @@ public sealed class HlsAssetService : IHlsAssetService {
             "-vf",
             $"scale=w=-2:h={rendition.Height}:force_original_aspect_ratio=decrease:force_divisible_by=2,format={outputFormat}"
         ];
+    }
+
+    private static string InputHdrColorParameters(VideoSourceFile source) {
+        var videoStream = PrimaryVideoStream(source);
+        var transfer = videoStream?.ColorTransfer;
+        var colorTransfer = string.Equals(transfer, "arib-std-b67", StringComparison.OrdinalIgnoreCase)
+            ? "arib-std-b67"
+            : "smpte2084";
+        return $"setparams=color_primaries=bt2020:color_trc={colorTransfer}:colorspace=bt2020nc";
+    }
+
+    private static string ToneMappingFilter(VideoSourceFile source, VirtualHlsRendition rendition) {
+        var scale = $"scale=w=-2:h={rendition.Height}:force_original_aspect_ratio=decrease:force_divisible_by=2";
+        if (RequiresDolbyVisionToneMapping(source)) {
+            return $"{InputHdrColorParameters(source)},{scale},tonemapx=tonemap=bt2390:desat=0:peak=400:t=bt709:m=bt709:p=bt709:format=yuv420p";
+        }
+
+        return $"{InputHdrColorParameters(source)},zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0:peak=100,zscale=t=bt709:m=bt709:p=bt709:out_range=tv,{scale},format=yuv420p";
     }
 
     private static IReadOnlyList<string> VideoEncoderArguments(
@@ -938,6 +972,29 @@ public sealed class HlsAssetService : IHlsAssetService {
             codec.Equals("h265", StringComparison.OrdinalIgnoreCase) ||
             codec.Equals("av1", StringComparison.OrdinalIgnoreCase) ||
             codec.Equals("vp9", StringComparison.OrdinalIgnoreCase));
+
+    private static HlsTranscoderProfile ResolveEffectiveTranscoderProfile(
+        VideoSourceFile source,
+        HlsTranscoderProfile requestedProfile) =>
+        NeedsToneMapping(source) ? HlsTranscoderProfile.Software : requestedProfile;
+
+    private static bool NeedsToneMapping(VideoSourceFile source) {
+        var range = VideoPlaybackRangePolicy.Classify(PrimaryVideoStream(source));
+        return !range.VideoRangeType.Equals("SDR", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool RequiresDolbyVisionToneMapping(VideoSourceFile source) {
+        var stream = PrimaryVideoStream(source);
+        return stream?.DvProfile is 5 ||
+            stream?.DvBlSignalCompatibilityId is 0 ||
+            VideoPlaybackRangePolicy.Classify(stream).VideoRangeType.Equals("DOVI", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static VideoSourceStream? PrimaryVideoStream(VideoSourceFile source) =>
+        source.Streams?
+            .Where(stream => stream.Type.Equals("Video", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(stream => stream.StreamIndex)
+            .FirstOrDefault();
 
     private static string ToRate(int bitsPerSecond) =>
         bitsPerSecond % 1_000_000 == 0
