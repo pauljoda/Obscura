@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Obscura.Application.Jobs;
 using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
+using Obscura.Infrastructure.Persistence.Entities;
 using Obscura.Infrastructure.Queue;
 
 namespace Obscura.Infrastructure.Tests;
@@ -21,6 +22,32 @@ public sealed class JobQueueServiceTests {
         Assert.Equal(2, jobs.Count);
         Assert.Equal(second.Id, jobs[0].Id);
         Assert.Equal(first.Id, jobs[1].Id);
+    }
+
+    [Fact]
+    public async Task ListKeepsActiveAndFailedRunsVisibleWhenBacklogExceedsRecentLimit() {
+        await using var db = CreateContext();
+        var service = new JobQueueService(db);
+        var now = DateTimeOffset.UtcNow;
+        var running = NewJobRun(JobType.GeneratePreview, JobRunStatus.Running, now.AddHours(-3));
+        var failed = NewJobRun(JobType.FingerprintVideo, JobRunStatus.Failed, now.AddHours(-2));
+        db.JobRuns.AddRange(running, failed);
+
+        for (var i = 0; i < 210; i++) {
+            db.JobRuns.Add(NewJobRun(
+                JobType.ProbeVideo,
+                JobRunStatus.Queued,
+                now.AddMinutes(i),
+                targetEntityId: i.ToString()));
+        }
+
+        await db.SaveChangesAsync();
+
+        var jobs = await service.ListAsync(CancellationToken.None);
+
+        Assert.Contains(jobs, job => job.Id == running.Id);
+        Assert.Contains(jobs, job => job.Id == failed.Id);
+        Assert.True(jobs.Count <= 200);
     }
 
     [Fact]
@@ -106,4 +133,24 @@ public sealed class JobQueueServiceTests {
 
         return new ObscuraDbContext(options);
     }
+
+    private static JobRunRow NewJobRun(
+        JobType type,
+        JobRunStatus status,
+        DateTimeOffset createdAt,
+        string? targetEntityId = null) =>
+        new() {
+            Id = Guid.NewGuid(),
+            Type = type,
+            Status = status,
+            PayloadJson = "{}",
+            Attempts = status == JobRunStatus.Running ? 1 : 0,
+            MaxAttempts = 3,
+            Progress = status == JobRunStatus.Running ? 50 : 0,
+            TargetEntityId = targetEntityId,
+            AvailableAt = createdAt,
+            CreatedAt = createdAt,
+            StartedAt = status == JobRunStatus.Running ? createdAt.AddMinutes(1) : null,
+            FinishedAt = status == JobRunStatus.Failed ? createdAt.AddMinutes(1) : null
+        };
 }

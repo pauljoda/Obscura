@@ -44,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - HDR and Dolby Vision videos now avoid direct browser playback unless support is explicit, and adaptive playback plus generated preview artwork use SDR tone mapping to avoid purple or washed-out colors. Docker builds now ship Jellyfin FFmpeg, and local installs prefer a `jellyfin-ffmpeg` command when available, so Dolby Vision tone mapping has the required encoder/filter support by default.
 - Browse grids now use docked pagination inside the shared entity grid, so large media lists keep a predictable scroll area and avoid rendering thousands of thumbnails at once.
 - Browse grids now fit their internal scroll area to the visible page instead of clipping below the app frame.
+- The Jobs dashboard now keeps running and failed jobs visible even when a large backlog fills the queue, so the live work count and job list stay accurate while workers are active.
 
 ### Changed
 - Plugin identification now receives richer structural ancestor context and applies relationship proposals with their full metadata, artwork, external IDs, URLs, stats, and descriptions.
@@ -111,6 +112,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Local adaptive playback now prefers `jellyfin-ffmpeg`/`jellyfin-ffprobe` when those commands are installed, fixing Dolby Vision HLS segment failures caused by stock FFmpeg builds without `tonemapx`.
 - Force rebuilding previews now clears old generated thumbnails, preview clips, trickplay data, and waveforms before queueing rebuild jobs, so stale purple HDR/Dolby Vision artwork is not reused.
 - Configured custom ffmpeg builds now apply consistently to media probing, playback transcodes, thumbnails, previews, subtitles, waveforms, and trickplay generation instead of only adaptive HLS.
+- The Jobs dashboard no longer drops running or failed jobs from the live work and failure panels when newer queued jobs exceed the recent-history limit.
 
 ### Removed
 - Historical v1-era release note detail was pruned from the changelog; git history remains the complete record.

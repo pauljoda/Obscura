@@ -28,7 +28,7 @@ public sealed class JobService {
     }
 
     /// <summary>
-    /// Lists recent job runs for the operations dashboard.
+    /// Lists active and recent job runs for the operations dashboard.
     /// </summary>
     public async Task<JobListResponse> ListAsync(CancellationToken cancellationToken) {
         var items = (await _queue.ListAsync(cancellationToken)).Select(ToContract).ToArray();

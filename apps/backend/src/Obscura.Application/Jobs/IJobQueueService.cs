@@ -7,7 +7,7 @@ namespace Obscura.Application.Jobs;
 /// </summary>
 public interface IJobQueueService {
     /// <summary>
-    /// Lists recent background job runs for operational surfaces.
+    /// Lists active and recent background job runs for operational surfaces.
     /// </summary>
     Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken);
 

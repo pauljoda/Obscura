@@ -14,12 +14,34 @@ public sealed class JobQueueService : IJobQueueService {
     }
 
     public async Task<IReadOnlyList<JobRunSnapshot>> ListAsync(CancellationToken cancellationToken) {
-        return await _db.JobRuns
+        const int limit = 200;
+
+        var activeRows = await _db.JobRuns
             .AsNoTracking()
-            .OrderByDescending(row => row.CreatedAt)
-            .Take(200)
-            .Select(row => ToSnapshot(row))
+            .Where(row => row.Status == JobRunStatus.Running || row.Status == JobRunStatus.Failed)
+            .OrderByDescending(row => row.StartedAt ?? row.FinishedAt ?? row.CreatedAt)
+            .ThenByDescending(row => row.CreatedAt)
+            .Take(limit)
             .ToListAsync(cancellationToken);
+
+        var activeIds = activeRows.Select(row => row.Id).ToList();
+        var recentRows = await _db.JobRuns
+            .AsNoTracking()
+            .Where(row => !activeIds.Contains(row.Id))
+            .OrderByDescending(row => row.CreatedAt)
+            .Take(Math.Max(0, limit - activeRows.Count))
+            .ToListAsync(cancellationToken);
+
+        return activeRows
+            .Concat(recentRows)
+            .OrderBy(row =>
+                row.Status == JobRunStatus.Running ? 0 :
+                row.Status == JobRunStatus.Failed ? 1 :
+                2)
+            .ThenByDescending(row => row.StartedAt ?? row.FinishedAt ?? row.CreatedAt)
+            .ThenByDescending(row => row.CreatedAt)
+            .Select(row => ToSnapshot(row))
+            .ToList();
     }
 
     public async Task<JobRunSnapshot> EnqueueAsync(JobType type, CancellationToken cancellationToken) {
