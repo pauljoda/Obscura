@@ -18,9 +18,13 @@
   import {
     buildProposalForApply,
     findRelationshipImage,
+    groupProposalRows,
     isNewRelationshipTitle,
+    relationshipProposals,
     reviewChildProposals,
     relationshipTitlesFromEntityThumbnails,
+    structuralChildProposals,
+    type IdentifyProposalRow,
     type IdentifyRelationshipTitles,
   } from "$lib/components/identify-review";
   import {
@@ -107,7 +111,7 @@
   let loadingViewEntity = $state(false);
   let applying = $state(false);
   let error = $state<string | null>(null);
-  let expandedSections = $state<Record<string, boolean>>({ fields: true, tags: true, credits: true, studio: true, seasons: true, artwork: true, candidates: true });
+  let expandedSections = $state<Record<string, boolean>>({ fields: true, tags: true, credits: true, studio: true, seasons: true, related: true, artwork: true, candidates: true });
   let lightboxGroup = $state<string | null>(null);
   let modalBodyElement = $state<HTMLDivElement | null>(null);
 
@@ -309,10 +313,9 @@
     };
   }
 
-  function toggleCascadeNode(node: CascadeNode) {
-    const nextValue = !isCascadeSelected(node);
+  function setCascadeNodeSelected(node: CascadeNode, selected: boolean) {
     const next = { ...selectedCascade };
-    for (const id of cascadeNodeIds(node)) next[id] = nextValue;
+    for (const id of cascadeNodeIds(node)) next[id] = selected;
     selectedCascade = next;
   }
 
@@ -363,13 +366,26 @@
     targetEntityId: string | null;
   }
 
-  const relationshipCascade = $derived.by((): CascadeNode[] => {
+  interface CascadeNodeRow {
+    id: string;
+    label: string;
+    nodes: CascadeNode[];
+  }
+
+  const childCascadeRows = $derived.by((): CascadeNodeRow[] => {
     if (!activeProposal) return [];
-    return relationshipChildren(activeProposal).map(toCascadeNode).sort(compareCascadeNodes);
+    return proposalRowsToCascadeRows(groupProposalRows(structuralChildProposals(activeProposal)));
   });
 
-  const cascadeTotalCount = $derived(relationshipCascade.reduce((sum, node) => sum + cascadeNodeCount(node), 0));
-  const cascadeSelectedCount = $derived(relationshipCascade.reduce((sum, node) => sum + selectedCascadeNodeCount(node), 0));
+  const relatedCascadeRows = $derived.by((): CascadeNodeRow[] => {
+    if (!activeProposal) return [];
+    return proposalRowsToCascadeRows(groupProposalRows(relationshipProposals(activeProposal)));
+  });
+
+  const childCascadeTotalCount = $derived(childCascadeRows.reduce((sum, row) => sum + row.nodes.reduce((rowSum, node) => rowSum + cascadeNodeCount(node), 0), 0));
+  const childCascadeSelectedCount = $derived(childCascadeRows.reduce((sum, row) => sum + row.nodes.reduce((rowSum, node) => rowSum + selectedCascadeNodeCount(node), 0), 0));
+  const relatedCascadeTotalCount = $derived(relatedCascadeRows.reduce((sum, row) => sum + row.nodes.reduce((rowSum, node) => rowSum + cascadeNodeCount(node), 0), 0));
+  const relatedCascadeSelectedCount = $derived(relatedCascadeRows.reduce((sum, row) => sum + row.nodes.reduce((rowSum, node) => rowSum + selectedCascadeNodeCount(node), 0), 0));
 
   const studioCard = $derived.by((): EntityThumbnailCard | null => {
     if (!activeProposal?.patch.studio) return null;
@@ -599,6 +615,14 @@
     return reviewChildProposals(result);
   }
 
+  function proposalRowsToCascadeRows(rows: IdentifyProposalRow[]): CascadeNodeRow[] {
+    return rows.map((row) => ({
+      id: row.id,
+      label: row.label,
+      nodes: row.proposals.map(toCascadeNode).sort(compareCascadeNodes),
+    }));
+  }
+
   function toCascadeNode(child: EntityMetadataProposal): CascadeNode {
     const nested = relationshipChildren(child).map(toCascadeNode).sort(compareCascadeNodes);
     return {
@@ -614,6 +638,43 @@
       children: nested,
       targetEntityId: child.targetEntityId ?? null,
     };
+  }
+
+  function cascadeNodeToCard(node: CascadeNode): EntityThumbnailCard {
+    return {
+      entity: {
+        id: node.proposalId,
+        kind: node.kind,
+        title: node.title,
+        parentEntityId: null,
+        sortOrder: null,
+        relationships: [],
+        capabilities: [],
+        childrenByKind: [],
+      },
+      aspectRatio: cascadeNodeAspectRatio(node),
+      cover: node.imageUrl ? { src: node.imageUrl, alt: node.title } : null,
+      hover: { kind: "none" },
+      subtitle: cascadeNodeSubtitle(node),
+    };
+  }
+
+  function cascadeNodeAspectRatio(node: CascadeNode): EntityThumbnailCard["aspectRatio"] {
+    if (node.kind === "person") return { width: 4, height: 5 };
+    if (node.kind === "studio") return "wide";
+    if (node.kind.includes("season")) return { width: 2, height: 3 };
+    return "video";
+  }
+
+  function cascadeNodeSubtitle(node: CascadeNode): string {
+    const parts = [
+      node.positionLabel,
+      node.date,
+      node.children.length > 0 ? `${node.children.length} ${node.children.length === 1 ? "child" : "children"}` : null,
+      node.creditCount > 0 ? `${node.creditCount} credit${node.creditCount === 1 ? "" : "s"}` : null,
+      `${node.metadataCount} fields`,
+    ].filter((part): part is string => Boolean(part));
+    return parts.join(" / ");
   }
 
   function fallbackCascadeTitle(child: EntityMetadataProposal): string {
@@ -685,24 +746,6 @@
 
   function isCascadeSelected(node: CascadeNode): boolean {
     return selectedCascade[node.proposalId] !== false;
-  }
-
-  function childCountLabel(node: CascadeNode): string | null {
-    if (node.children.length === 0) return null;
-    const childKinds = Array.from(new Set(node.children.map((child) => child.kind)));
-    const label = childKinds.length === 1
-      ? entityKindLabel(childKinds[0], node.children.length)
-      : node.children.length === 1 ? "Child" : "Children";
-    return `${node.children.length} ${label}`;
-  }
-
-  function entityKindLabel(kind: string, count: number): string {
-    const normalized = kind.toLowerCase();
-    if (normalized.includes("episode")) return count === 1 ? "Episode" : "Episodes";
-    if (normalized.includes("season")) return count === 1 ? "Season" : "Seasons";
-    if (normalized.includes("chapter")) return count === 1 ? "Chapter" : "Chapters";
-    if (normalized.includes("volume")) return count === 1 ? "Volume" : "Volumes";
-    return count === 1 ? "Child" : "Children";
   }
 
   function defaultCascadeSelection(result: EntityMetadataProposal): Record<string, boolean> {
@@ -1142,66 +1185,85 @@
               </section>
             {/if}
 
-            <!-- Relationship Cascade -->
-            {#if relationshipCascade.length > 0}
+            <!-- Children -->
+            {#if childCascadeRows.length > 0}
               <section class="section-card">
                 <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('seasons')} onkeydown={(e) => e.key === 'Enter' && toggleSection('seasons')}>
                   <h4>Children</h4>
                   <div class="section-meta">
-                    <span class="count-badge">{cascadeSelectedCount} / {cascadeTotalCount}</span>
+                    <span class="count-badge">{childCascadeSelectedCount} / {childCascadeTotalCount}</span>
                     <span class="chevron" class:rotated={!expandedSections.seasons}><ChevronDown class="h-3.5 w-3.5" /></span>
                   </div>
                 </div>
                 {#if expandedSections.seasons}
                   <div class="section-body">
-                    <div class="child-list">
-                      {#each relationshipCascade as node (node.proposalId)}
-                        {@const childCount = childCountLabel(node)}
-                        <article class="child-card" class:muted={!isCascadeSelected(node)}>
-                          <button
-                            type="button"
-                            class="field-check child-check"
-                            class:active={isCascadeSelected(node)}
-                            onclick={() => toggleCascadeNode(node)}
-                            aria-label={`Toggle ${node.title}`}
-                          >
-                            {#if isCascadeSelected(node)}
-                              <Check class="h-3 w-3" />
-                            {/if}
-                          </button>
-                          {#if node.imageUrl}
-                            <img src={node.imageUrl} alt="" class="child-thumb" />
-                          {:else}
-                            <div class="child-thumb child-thumb-empty">
-                              <ImageIcon class="h-4 w-4" />
-                            </div>
-                          {/if}
-                          <div class="child-main">
-                            <div class="child-heading">
-                              <span class="child-kind">{node.positionLabel}</span>
-                              <strong>{node.title}</strong>
-                            </div>
-                            {#if node.description}
-                              <p class="child-description">{node.description}</p>
-                            {/if}
-                            <div class="child-meta">
-                              {#if node.date}
-                                <span>{node.date}</span>
-                              {/if}
-                              {#if childCount}
-                                <span>{childCount}</span>
-                              {/if}
-                              {#if node.creditCount > 0}
-                                <span>{node.creditCount} credit{node.creditCount === 1 ? "" : "s"}</span>
-                              {/if}
-                              <span>{node.metadataCount} fields</span>
-                            </div>
+                    <div class="proposal-row-stack">
+                      {#each childCascadeRows as row (row.id)}
+                        <div class="proposal-row">
+                          <div class="proposal-row-header">
+                            <span>{row.label}</span>
+                            <small>{row.nodes.filter(isCascadeSelected).length} / {row.nodes.length}</small>
                           </div>
-                          <button type="button" class="review-node-btn" onclick={() => enterReviewScope(node)}>
-                            Review
-                            <ChevronRight class="h-3 w-3" />
-                          </button>
-                        </article>
+                          <div class="proposal-thumbnail-strip">
+                            {#each row.nodes as node (node.proposalId)}
+                              <div class="proposal-thumbnail" class:muted={!isCascadeSelected(node)}>
+                                <EntityThumbnail
+                                  card={cascadeNodeToCard(node)}
+                                  titleAlign="center"
+                                  titleSize="compact"
+                                  linkable={false}
+                                  selectable
+                                  selected={isCascadeSelected(node)}
+                                  onActivate={() => enterReviewScope(node)}
+                                  onSelectedChange={(selected) => setCascadeNodeSelected(node, selected)}
+                                />
+                              </div>
+                            {/each}
+                          </div>
+                        </div>
+                      {/each}
+                    </div>
+                  </div>
+                {/if}
+              </section>
+            {/if}
+
+            <!-- Related -->
+            {#if relatedCascadeRows.length > 0}
+              <section class="section-card">
+                <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('related')} onkeydown={(e) => e.key === 'Enter' && toggleSection('related')}>
+                  <h4>Related</h4>
+                  <div class="section-meta">
+                    <span class="count-badge">{relatedCascadeSelectedCount} / {relatedCascadeTotalCount}</span>
+                    <span class="chevron" class:rotated={!expandedSections.related}><ChevronDown class="h-3.5 w-3.5" /></span>
+                  </div>
+                </div>
+                {#if expandedSections.related}
+                  <div class="section-body">
+                    <div class="proposal-row-stack">
+                      {#each relatedCascadeRows as row (row.id)}
+                        <div class="proposal-row">
+                          <div class="proposal-row-header">
+                            <span>{row.label}</span>
+                            <small>{row.nodes.filter(isCascadeSelected).length} / {row.nodes.length}</small>
+                          </div>
+                          <div class="proposal-thumbnail-strip">
+                            {#each row.nodes as node (node.proposalId)}
+                              <div class="proposal-thumbnail" class:muted={!isCascadeSelected(node)}>
+                                <EntityThumbnail
+                                  card={cascadeNodeToCard(node)}
+                                  titleAlign="center"
+                                  titleSize="compact"
+                                  linkable={false}
+                                  selectable
+                                  selected={isCascadeSelected(node)}
+                                  onActivate={() => enterReviewScope(node)}
+                                  onSelectedChange={(selected) => setCascadeNodeSelected(node, selected)}
+                                />
+                              </div>
+                            {/each}
+                          </div>
+                        </div>
                       {/each}
                     </div>
                   </div>
@@ -1872,6 +1934,66 @@
     width: 100%;
   }
 
+  .proposal-row-stack {
+    display: grid;
+    gap: 0.8rem;
+    min-width: 0;
+  }
+
+  .proposal-row {
+    display: grid;
+    gap: 0.45rem;
+    min-width: 0;
+  }
+
+  .proposal-row-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    color: var(--color-text-muted, #8a93a6);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .proposal-row-header small {
+    color: var(--color-text-disabled, #4a5260);
+    font-size: 0.58rem;
+  }
+
+  .proposal-thumbnail-strip {
+    display: grid;
+    max-width: 100%;
+    min-width: 0;
+    grid-auto-columns: clamp(5.8rem, 24vw, 8rem);
+    grid-auto-flow: column;
+    gap: 0.6rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-padding-inline: 0.25rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(196, 154, 90, 0.15) transparent;
+    padding-bottom: 0.25rem;
+  }
+
+  .proposal-thumbnail {
+    min-width: 0;
+    width: 100%;
+    transition: opacity 0.15s;
+  }
+
+  .proposal-thumbnail.muted {
+    opacity: 0.45;
+  }
+
+  .proposal-thumbnail :global(.entity-thumbnail) {
+    min-width: 0;
+    width: 100%;
+  }
+
   .credit-role-label {
     display: block;
     overflow: hidden;
@@ -1896,124 +2018,6 @@
     font-family: "JetBrains Mono", monospace;
     text-align: center;
     letter-spacing: 0.06em;
-  }
-
-  /* === Generic relationship children === */
-  .child-list {
-    display: grid;
-    gap: 0.4rem;
-  }
-
-  .child-card {
-    display: grid;
-    grid-template-columns: auto clamp(4.2rem, 18vw, 6rem) minmax(0, 1fr) auto;
-    gap: 0.6rem;
-    align-items: center;
-    min-width: 0;
-    border: 1px solid var(--color-border, #1c2235);
-    background: var(--color-surface-1, #0c0f15);
-    transition: opacity 0.15s;
-  }
-  .child-card.muted {
-    opacity: 0.45;
-  }
-
-  .child-check {
-    width: 1.05rem;
-    height: 1.05rem;
-    padding: 0;
-    margin-left: 0.55rem;
-  }
-
-  .child-thumb {
-    display: block;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    border-inline: 1px solid var(--color-border, #1c2235);
-    background: var(--color-surface-2, #101420);
-  }
-
-  .child-thumb-empty {
-    display: grid;
-    place-items: center;
-    color: var(--color-text-disabled, #4a5260);
-  }
-
-  .child-main {
-    display: grid;
-    min-width: 0;
-    gap: 0.28rem;
-    padding-block: 0.5rem;
-  }
-
-  .child-heading {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.28rem 0.45rem;
-    min-width: 0;
-  }
-
-  .child-heading strong {
-    min-width: 0;
-    color: var(--color-text-secondary, #c4c9d4);
-    font-size: 0.68rem;
-    font-weight: 550;
-    overflow-wrap: anywhere;
-  }
-
-  .child-kind {
-    padding: 0.1rem 0.32rem;
-    border: 1px solid rgba(196, 154, 90, 0.3);
-    background: rgba(196, 154, 90, 0.06);
-    color: var(--color-text-muted, #8a93a6);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 0.52rem;
-    font-weight: 600;
-  }
-
-  .child-description {
-    display: -webkit-box;
-    margin: 0;
-    overflow: hidden;
-    color: var(--color-text-muted, #8a93a6);
-    font-size: 0.6rem;
-    line-height: 1.4;
-    overflow-wrap: anywhere;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-  }
-
-  .child-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-  }
-  .child-meta span {
-    border: 1px solid var(--color-border, #1c2235);
-    background: var(--color-surface-2, #101420);
-    color: var(--color-text-disabled, #4a5260);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 0.52rem;
-    padding: 0.08rem 0.28rem;
-  }
-
-  .review-node-btn {
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    gap: 0.2rem;
-    border: 1px solid rgba(196, 154, 90, 0.35);
-    background: rgba(196, 154, 90, 0.05);
-    color: var(--color-text-secondary, #c4c9d4);
-    padding: 0.18rem 0.42rem;
-    margin-right: 0.55rem;
-    font-size: 0.56rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
   }
 
   /* === Artwork cards === */
@@ -2435,15 +2439,6 @@
     .art-grid {
       grid-template-columns: repeat(auto-fill, minmax(min(100%, 6.5rem), 8rem));
     }
-    .child-card {
-      grid-template-columns: auto clamp(4rem, 24vw, 5.5rem) minmax(0, 1fr);
-      padding-right: 0.55rem;
-    }
-    .review-node-btn {
-      grid-column: 3 / -1;
-      justify-self: start;
-      margin-right: 0;
-    }
     .lightbox-panel {
       min-height: 100dvh;
       border: none;
@@ -2462,23 +2457,6 @@
     }
     .section-body {
       padding-inline: 0.55rem;
-    }
-    .child-card {
-      grid-template-columns: auto minmax(0, 1fr);
-      align-items: start;
-      padding: 0.5rem;
-    }
-    .child-check {
-      margin-left: 0;
-    }
-    .child-thumb {
-      grid-column: 2 / -1;
-      width: min(100%, 12rem);
-      border: 1px solid var(--color-border, #1c2235);
-    }
-    .child-main,
-    .review-node-btn {
-      grid-column: 2 / -1;
     }
   }
 </style>

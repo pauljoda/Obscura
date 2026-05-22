@@ -41,6 +41,7 @@
     card: EntityThumbnailCard;
     layout?: "grid" | "list";
     linkable?: boolean;
+    onActivate?: (card: EntityThumbnailCard) => void;
     onSelectedChange?: (selected: boolean) => void;
     selectable?: boolean;
     selectMode?: boolean;
@@ -54,6 +55,7 @@
     card,
     layout = "grid",
     linkable = true,
+    onActivate,
     onSelectedChange,
     selectable = false,
     selectMode = false,
@@ -123,7 +125,11 @@
   const href = $derived(linkable ? resolveEntityThumbnailHref(card) : undefined);
   const inSelectMode = $derived(selectMode && selectable);
   const effectiveHref = $derived(inSelectMode ? undefined : href);
-  const selectionRole = $derived(inSelectMode || (!href && selectable) ? "checkbox" : href ? undefined : "group");
+  const selectionRole = $derived(
+    onActivate && !effectiveHref
+      ? "button"
+      : inSelectMode || (!href && selectable) ? "checkbox" : href ? undefined : "group",
+  );
   const selectionTabIndex = $derived(effectiveHref ? undefined : 0);
 
   function updatePointerRatio(event: PointerEvent) {
@@ -162,9 +168,24 @@
     onSelectedChange?.(!selected);
   }
 
+  function handleSurfaceClick() {
+    if (onActivate && !effectiveHref) {
+      onActivate(card);
+      return;
+    }
+
+    toggleSurfaceSelection();
+  }
+
   function handleSurfaceKeydown(event: KeyboardEvent) {
-    if (!selectable || (event.key !== "Enter" && event.key !== " ")) return;
-    if (!inSelectMode && href) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    if (onActivate && !effectiveHref) {
+      event.preventDefault();
+      onActivate(card);
+      return;
+    }
+
+    if (!selectable || (!inSelectMode && href)) return;
     event.preventDefault();
     toggleSurfaceSelection();
   }
@@ -190,9 +211,9 @@
   class:is-list={layout === "list"}
   class:is-selected={selected}
   aria-label={card.entity.title}
-  aria-checked={inSelectMode || (!href && selectable) ? selected : undefined}
+  aria-checked={!onActivate && (inSelectMode || (!href && selectable)) ? selected : undefined}
   onblur={clearHover}
-  onclick={toggleSurfaceSelection}
+  onclick={handleSurfaceClick}
   onfocus={handleFocus}
   onkeydown={handleSurfaceKeydown}
 >

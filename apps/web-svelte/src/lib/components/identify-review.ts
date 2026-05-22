@@ -37,6 +37,12 @@ export interface IdentifyRelationshipTitles {
   credits: string[];
 }
 
+export interface IdentifyProposalRow {
+  id: string;
+  label: string;
+  proposals: EntityMetadataProposal[];
+}
+
 export function structuralChildProposals(result: EntityMetadataProposal): EntityMetadataProposal[] {
   return (result.children ?? []).filter((child) => !isRelationshipKind(child.targetKind));
 }
@@ -59,6 +65,20 @@ export function reviewChildProposals(result: EntityMetadataProposal): EntityMeta
     ...structuralChildProposals(result),
     ...relationshipProposals(result),
   ];
+}
+
+export function groupProposalRows(proposals: EntityMetadataProposal[]): IdentifyProposalRow[] {
+  const groups = new Map<string, EntityMetadataProposal[]>();
+  for (const proposal of proposals) {
+    const id = proposal.targetKind;
+    groups.set(id, [...(groups.get(id) ?? []), proposal]);
+  }
+
+  return Array.from(groups, ([id, rows]) => ({
+    id,
+    label: entityKindLabel(id),
+    proposals: rows,
+  }));
 }
 
 export function findRelationshipImage(
@@ -217,6 +237,19 @@ function titlesForRelationship(
 function isRelationshipKind(kind: string): boolean {
   const normalized = kind.toLowerCase();
   return normalized === "person" || normalized === "studio" || normalized === "tag";
+}
+
+function entityKindLabel(kind: string): string {
+  const normalized = kind.toLowerCase();
+  if (normalized === "person") return "People";
+  if (normalized === "studio") return "Studios";
+  if (normalized === "tag") return "Tags";
+  if (normalized.includes("episode")) return "Episodes";
+  if (normalized.includes("season")) return "Seasons";
+  if (normalized.includes("series")) return "Series";
+  if (normalized.includes("chapter")) return "Chapters";
+  if (normalized.includes("volume")) return "Volumes";
+  return "Items";
 }
 
 function creditKey(credit: CreditPatch, index: number): string {

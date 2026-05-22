@@ -3,6 +3,7 @@ import type { EntityMetadataProposal } from "$lib/api/identify";
 import {
   buildProposalForApply,
   findRelationshipImage,
+  groupProposalRows,
   isNewRelationshipTitle,
   reviewChildProposals,
   relationshipProposals,
@@ -26,6 +27,27 @@ describe("identify review helpers", () => {
     expect(relationshipProposals(root).map((child) => child.proposalId)).toEqual(["actor-1", "studio-1"]);
     expect(reviewChildProposals(root).map((child) => child.proposalId)).toEqual(["season-1", "actor-1", "studio-1"]);
     expect(findRelationshipImage(root, "person", "Series Actor")).toBe("https://example.test/actor.jpg");
+  });
+
+  it("groups structural children and relationships into separate review rows", () => {
+    const root = proposal("series", "video-series", {
+      children: [
+        proposal("season-1", "video-season"),
+        proposal("season-2", "video-season"),
+      ],
+      relationships: [
+        proposal("actor-1", "person", { title: "Series Actor" }),
+        proposal("studio-1", "studio", { title: "Chair Pictures" }),
+      ],
+    });
+
+    expect(groupProposalRows(structuralChildProposals(root))).toEqual([
+      { id: "video-season", label: "Seasons", proposals: [root.children[0], root.children[1]] },
+    ]);
+    expect(groupProposalRows(relationshipProposals(root))).toEqual([
+      { id: "person", label: "People", proposals: [root.relationships[0]] },
+      { id: "studio", label: "Studios", proposals: [root.relationships[1]] },
+    ]);
   });
 
   it("keeps nested cascade selections and relationship proposals in the apply payload", () => {

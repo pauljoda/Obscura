@@ -83,6 +83,32 @@ describe("EntityThumbnail", () => {
     expect(onSelectedChange).toHaveBeenCalledWith(false);
   });
 
+  it("can activate from the card surface while keeping checkbox selection separate", async () => {
+    const onActivate = vi.fn();
+    const onSelectedChange = vi.fn();
+    const { container } = render(EntityThumbnail, {
+      props: {
+        card: personCard(),
+        linkable: false,
+        selectable: true,
+        selected: true,
+        onActivate,
+        onSelectedChange,
+      },
+    });
+
+    const surface = container.querySelector<HTMLElement>(".entity-thumbnail");
+    const checkbox = container.querySelector<HTMLInputElement>(".selection");
+
+    await fireEvent.click(surface!);
+    expect(onActivate).toHaveBeenCalledWith(personCard());
+    expect(onSelectedChange).not.toHaveBeenCalled();
+
+    await fireEvent.click(checkbox!);
+    await fireEvent.change(checkbox!, { target: { checked: false } });
+    expect(onSelectedChange).toHaveBeenCalledWith(false);
+  });
+
   it("renders credit subtitles when present", () => {
     const { container } = render(EntityThumbnail, {
       props: {
