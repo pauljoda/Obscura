@@ -403,6 +403,7 @@
 
   .linked-grid {
     margin: 0 -0.75rem;
+    padding: 0.25rem 0.5rem;
   }
 
   .preview {
