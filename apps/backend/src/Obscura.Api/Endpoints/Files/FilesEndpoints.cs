@@ -1,0 +1,168 @@
+using Obscura.Application.Files;
+using Obscura.Contracts.Files;
+using Obscura.Contracts.System;
+
+namespace Obscura.Api.Endpoints;
+
+public static class FilesEndpoints {
+    public static RouteGroupBuilder MapFilesEndpoints(this IEndpointRouteBuilder routes) {
+        var group = routes.MapGroup("/api/files")
+            .WithTags("Files");
+
+        group.MapGet("/roots", (
+            FilesService files,
+            CancellationToken cancellationToken) =>
+            files.ListRootsAsync(cancellationToken))
+            .WithName("ListFileRoots")
+            .WithSummary("Lists watched roots for the Files page.")
+            .Produces<FileRootsResponse>();
+
+        group.MapGet("/children", async (
+            Guid rootId,
+            string? path,
+            FilesService files,
+            CancellationToken cancellationToken) =>
+            ToResult(await RunAsync(
+                () => files.ListChildrenAsync(new FileChildrenRequest(rootId, path), cancellationToken))))
+            .WithName("ListFileChildren")
+            .WithSummary("Lists direct children under one watched-root directory.")
+            .Produces<FileChildrenResponse>();
+
+        group.MapGet("/detail", async (
+            Guid rootId,
+            string? path,
+            FilesService files,
+            CancellationToken cancellationToken) =>
+            ToResult(await RunAsync(
+                () => files.GetDetailAsync(new FileDetailRequest(rootId, path), cancellationToken))))
+            .WithName("GetFileDetail")
+            .WithSummary("Gets file or directory details for the Files page.")
+            .Produces<FileDetail>();
+
+        group.MapMethods("/content", ["GET", "HEAD"], async (
+            Guid rootId,
+            string? path,
+            FilesService files,
+            CancellationToken cancellationToken) => {
+            var result = await RunAsync(
+                () => files.GetContentInfoAsync(new FileDetailRequest(rootId, path), cancellationToken));
+            if (result.Error is { } error) {
+                return ToProblem(error);
+            }
+
+            var content = result.Value!;
+            return Results.File(
+                File.OpenRead(content.AbsolutePath),
+                content.MimeType,
+                enableRangeProcessing: true,
+                lastModified: content.LastModified);
+        })
+            .WithName("GetFileContent")
+            .WithSummary("Streams a watched-root file with range support.");
+
+        group.MapPost("/folders", async (
+            FileCreateFolderRequest request,
+            FilesService files,
+            CancellationToken cancellationToken) =>
+            ToResult(await RunAsync(() => files.CreateFolderAsync(request, cancellationToken))))
+            .WithName("CreateFileFolder")
+            .WithSummary("Creates a folder under a watched root.")
+            .Produces<FileOperationResponse>();
+
+        group.MapPost("/upload", async (
+            HttpRequest request,
+            FilesService files,
+            CancellationToken cancellationToken) => {
+            if (!request.HasFormContentType) {
+                return Results.BadRequest(new ApiProblem("invalid_upload", "Files upload expects multipart form data."));
+            }
+
+            var form = await request.ReadFormAsync(cancellationToken);
+            if (!Guid.TryParse(form["rootId"], out var rootId)) {
+                return Results.BadRequest(new ApiProblem("invalid_upload", "Files upload requires a rootId."));
+            }
+
+            var targetPath = form["targetPath"].FirstOrDefault();
+            var relativePaths = form["relativePaths"].ToArray();
+            var uploadItems = form.Files.Select((file, index) =>
+                new FileUploadItem(
+                    index < relativePaths.Length && !string.IsNullOrWhiteSpace(relativePaths[index])
+                        ? relativePaths[index]!
+                        : file.FileName,
+                    file.OpenReadStream())).ToArray();
+
+            var result = await RunAsync(() =>
+                files.UploadAsync(new FileUploadRequest(rootId, targetPath, uploadItems), cancellationToken));
+            foreach (var item in uploadItems) {
+                await item.Content.DisposeAsync();
+            }
+
+            return ToResult(result);
+        })
+            .WithName("UploadFiles")
+            .WithSummary("Uploads files into a watched-root folder.")
+            .DisableAntiforgery()
+            .Produces<FileOperationResponse>();
+
+        group.MapPatch("/rename", async (
+            FileRenameRequest request,
+            FilesService files,
+            CancellationToken cancellationToken) =>
+            ToResult(await RunAsync(() => files.RenameAsync(request, cancellationToken))))
+            .WithName("RenameFile")
+            .WithSummary("Renames a watched-root file or folder.")
+            .Produces<FileOperationResponse>();
+
+        group.MapPost("/move", async (
+            FileMoveRequest request,
+            FilesService files,
+            CancellationToken cancellationToken) =>
+            ToResult(await RunAsync(() => files.MoveAsync(request, cancellationToken))))
+            .WithName("MoveFile")
+            .WithSummary("Moves a watched-root file or folder.")
+            .Produces<FileOperationResponse>();
+
+        group.MapDelete("", async (
+            Guid rootId,
+            string path,
+            FilesService files,
+            CancellationToken cancellationToken) =>
+            ToResult(await RunAsync(() => files.DeleteAsync(new FileDeleteRequest(rootId, path), cancellationToken))))
+            .WithName("DeleteFile")
+            .WithSummary("Permanently deletes a watched-root file or folder.")
+            .Produces<FileOperationResponse>();
+
+        group.MapPost("/rescan", async (
+            FileRescanRequest request,
+            FilesService files,
+            CancellationToken cancellationToken) =>
+            ToResult(await RunAsync(() => files.RescanAsync(request, cancellationToken))))
+            .WithName("RescanFileRoot")
+            .WithSummary("Queues scan jobs for a watched root.")
+            .Produces<FileOperationResponse>();
+
+        return group;
+    }
+
+    private static async Task<ResultOrError<T>> RunAsync<T>(Func<Task<T>> action) {
+        try {
+            return new ResultOrError<T>(await action(), null);
+        } catch (FileOperationException ex) {
+            return new ResultOrError<T>(default, ex);
+        }
+    }
+
+    private static IResult ToResult<T>(ResultOrError<T> result) =>
+        result.Error is null ? Results.Ok(result.Value) : ToProblem(result.Error);
+
+    private static IResult ToProblem(FileOperationException error) {
+        var problem = new ApiProblem(error.Code, error.Message);
+        return error switch {
+            FileConflictException => Results.Conflict(problem),
+            _ when error.Code == "root_not_found" || error.Code == "not_found" => Results.NotFound(problem),
+            _ => Results.BadRequest(problem),
+        };
+    }
+
+    private readonly record struct ResultOrError<T>(T? Value, FileOperationException? Error);
+}

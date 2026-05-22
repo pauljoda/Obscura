@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Obscura.Domain.Entities;
 using Obscura.Application.Entities;
+using Obscura.Application.Files;
 using Obscura.Application.Jobs;
 using Obscura.Application.Jobs.Ports;
 using Obscura.Application.Organization;
@@ -14,6 +15,7 @@ using Obscura.Infrastructure.Collections;
 using Obscura.Infrastructure.Database;
 using Obscura.Infrastructure.Entities;
 using Obscura.Infrastructure.Entities.Mappers;
+using Obscura.Infrastructure.Files;
 using Obscura.Infrastructure.Media.Adapters;
 using Obscura.Infrastructure.Media.Persistence;
 using Obscura.Infrastructure.Media.Processing;
@@ -93,6 +95,8 @@ public static class DependencyInjection {
         services.AddScoped<IEntityWriteRepository>(provider => provider.GetRequiredService<EfEntityRepository>());
         services.AddScoped<IEntityReadService, EfEntityReadService>();
         services.AddScoped<IOrganizePersistence, EfOrganizePersistence>();
+        services.AddScoped<IFilesPersistence, EfFilesPersistence>();
+        services.AddSingleton<IManagedFileStorage, LocalManagedFileStorage>();
         services.AddScoped<IVideoSourceService, VideoSourceService>();
         services.AddSingleton(new HlsAssetServiceOptions(
             cacheDir,

@@ -19,6 +19,7 @@ public static class EndpointRouteBuilderExtensions {
         routes.MapJobEndpoints();
         routes.MapSettingsEndpoints();
         routes.MapLibraryEndpoints();
+        routes.MapFilesEndpoints();
         routes.MapUserStateEndpoints();
         routes.MapPluginEndpoints();
         routes.MapIdentifyEndpoints();
