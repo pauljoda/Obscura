@@ -202,6 +202,7 @@ public sealed class GeneratePreviewJobHandlerTests : IDisposable {
         public Task MarkSubtitlesExtractedAsync(Guid entityId, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task UpsertSubtitleAsync(Guid entityId, string language, string? label, string format, EntitySubtitleSource source, string storagePath, string sourceFormat, int streamIndex, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task UpsertAudioTrackTagsAsync(Guid entityId, string? artist, string? album, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<IReadOnlyList<EntityRefreshTarget>> GetEntityTreeAsync(Guid entityId, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
     private sealed class NoopJobQueue : IJobQueueService {

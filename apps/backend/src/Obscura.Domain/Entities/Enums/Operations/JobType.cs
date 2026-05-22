@@ -80,5 +80,10 @@ public enum JobType {
 
     /// <summary>Moves video-derived assets between cache and media-adjacent storage.</summary>
     [Code("library-maintenance")]
-    LibraryMaintenance
+    LibraryMaintenance,
+
+    // ── Entity refresh ─────────────────────────────────────────
+    /// <summary>Re-runs the processing pipeline for a single entity and its children.</summary>
+    [Code("refresh-entity")]
+    RefreshEntity
 }

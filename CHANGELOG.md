@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 - The Files manager was redesigned as a VS Code-style split-pane workspace with a resizable file tree, compact toolbar, and proper shell integration — moved under Operate in the sidebar and restyled to match the Dark Room design system. Selecting a directory now shows aggregate stats (total size, file count) and linked entity thumbnails, context menus are styled and viewport-clamped, and drag-drop targets highlight with a brass accent.
+- Individual entities can now be refreshed from detail pages or the API — the new refresh-entity job re-runs the full processing pipeline (probe, fingerprint, preview, subtitles) for an entity and all of its structural children.
 - Media detail pages no longer show their own file list tabs, making Files the primary place to inspect and operate on disk files.
 - Metadata edits and plugin identify results now use kind-guarded patch routes, so plugins can safely update videos, series, people, studios, and related metadata without crossing entity types.
 - People now replaces Actors across the app navigation and browse experience, including the canonical `/people` route for person profiles.
@@ -57,6 +58,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Plugin execution no longer rewrites `python` commands to `python3`; the manifest `script` executable is now used verbatim.
 
 ### Added
+- `POST /api/entities/{id}/refresh` endpoint queues a refresh-entity job that re-processes the entity and its children, deduplicating against already-pending refreshes.
 - A new Files page centralizes watched-root file management with a lazy directory tree, metadata/detail panel, preview support, upload actions, and common file operations.
 - Entity metadata patching now supports guarded kind-aware routes and domain PATCH routes for videos, series, studios, tags, and other entity detail pages.
 - MarkdownEditor form component: tiptap-based WYSIWYG with Dark Room toolbar styling, markdown serialization, and formatting support (bold, italic, headings, lists, blockquotes, code, links).

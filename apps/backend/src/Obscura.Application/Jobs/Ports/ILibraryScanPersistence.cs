@@ -98,6 +98,12 @@ public interface ILibraryScanPersistence {
     Task UpsertAudioTrackTagsAsync(Guid entityId, string? artist, string? album, CancellationToken cancellationToken);
 
     Task<EntityTechnicalData?> GetEntityTechnicalAsync(Guid entityId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns summary info for an entity and all its descendants (recursive children).
+    /// Used by the refresh-entity job to re-queue processing for an entity tree.
+    /// </summary>
+    Task<IReadOnlyList<EntityRefreshTarget>> GetEntityTreeAsync(Guid entityId, CancellationToken cancellationToken);
 }
 
 public sealed record LibraryRootData(
@@ -227,3 +233,11 @@ public sealed record DownstreamNeeds(
     bool NeedsPreview,
     bool NeedsTrickplay,
     bool NeedsSubtitleExtraction);
+
+/// <summary>
+/// Lightweight entity info used by the refresh-entity job to decide which downstream jobs to queue.
+/// </summary>
+/// <param name="Id">Entity identifier.</param>
+/// <param name="KindCode">Entity kind code (e.g. "video", "image", "audio-track").</param>
+/// <param name="Title">Entity title for dashboard display.</param>
+public sealed record EntityRefreshTarget(Guid Id, string KindCode, string Title);

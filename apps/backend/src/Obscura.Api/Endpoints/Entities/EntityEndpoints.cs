@@ -12,6 +12,7 @@ public static class EntityEndpoints {
         group.MapEntityFlagsEndpoint();
         group.MapEntityPlaybackEndpoint();
         group.MapEntityMarkerEndpoints();
+        group.MapEntityRefreshEndpoint();
 
         return routes;
     }

@@ -164,6 +164,7 @@ public sealed class ExtractSubtitlesJobHandlerTests : IDisposable {
         public Task<Guid?> GetSourceFileIdAsync(Guid entityId, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task UpsertAudioTrackTagsAsync(Guid entityId, string? artist, string? album, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<EntityTechnicalData?> GetEntityTechnicalAsync(Guid entityId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<IReadOnlyList<EntityRefreshTarget>> GetEntityTreeAsync(Guid entityId, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
     private sealed record RecordedSubtitle(string Language, string? Label, string StoragePath);

@@ -81,6 +81,7 @@ public static class DependencyInjection {
         // Metadata / collections / maintenance
         services.AddTransient<IJobHandler, ImportMetadataJobHandler>();
         services.AddTransient<IJobHandler, RefreshCollectionJobHandler>();
+        services.AddTransient<IJobHandler, RefreshEntityJobHandler>();
         services.AddTransient<IJobHandler, LibraryMaintenanceJobHandler>();
 
         // Background services

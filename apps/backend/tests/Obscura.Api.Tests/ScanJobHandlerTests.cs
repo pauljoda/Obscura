@@ -329,6 +329,9 @@ public sealed class ScanJobHandlerTests {
 
         public Task<EntityTechnicalData?> GetEntityTechnicalAsync(Guid entityId, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+
+        public Task<IReadOnlyList<EntityRefreshTarget>> GetEntityTreeAsync(Guid entityId, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 
     private sealed class NoopFileDiscovery : IFileDiscovery {

@@ -906,6 +906,23 @@ export async function rescanV2FileRoot(
   );
 }
 
+export interface V2EntityRefreshResponse {
+  jobId: string | null;
+  alreadyPending: boolean;
+}
+
+export async function refreshV2Entity(
+  entityId: string,
+  options?: V2RequestOptions,
+): Promise<V2EntityRefreshResponse> {
+  const response = await fetch(`/api/entities/${entityId}/refresh`, {
+    method: "POST",
+    signal: options?.signal,
+  });
+  if (!response.ok) throw new Error(`Failed to queue entity refresh: ${response.status}`);
+  return response.json();
+}
+
 export async function rebuildV2Previews(
   options?: V2RequestOptions,
 ): Promise<V2BulkJobResponse> {
