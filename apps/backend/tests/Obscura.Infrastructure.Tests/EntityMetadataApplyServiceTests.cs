@@ -759,6 +759,58 @@ public sealed class EntityMetadataApplyServiceTests {
     }
 
     [Fact]
+    public async Task ApplyRelationshipProposalsUpsertsRepeatedExternalIdsWithinOneSave() {
+        await using var db = CreateContext();
+        var movieId = Guid.Parse("34343434-3434-3434-3434-343434343434");
+        SeedEntity(db, movieId, "video", "Old Movie");
+        await db.SaveChangesAsync();
+
+        static EntityMetadataProposal ActorRelationship(string description) => new(
+            ProposalId: $"tmdb:person:31:{description}",
+            Provider: "tmdb",
+            TargetKind: "person",
+            Confidence: 1,
+            MatchReason: "credit",
+            Patch: EmptyPatch() with {
+                Title = "Lead Actor",
+                Description = description,
+                ExternalIds = new Dictionary<string, string> { ["tmdb"] = "31" },
+                Urls = ["https://www.themoviedb.org/person/31"]
+            },
+            Images: [],
+            Children: [],
+            Candidates: []);
+
+        var proposal = new EntityMetadataProposal(
+            ProposalId: "tmdb:movie:1",
+            Provider: "tmdb",
+            TargetKind: "video",
+            Confidence: 1,
+            MatchReason: "external-id",
+            Patch: EmptyPatch() with {
+                Credits = [new CreditPatch("Lead Actor", "cast", "Lead", 0)]
+            },
+            Images: [],
+            Children: [],
+            Candidates: [],
+            Relationships: [ActorRelationship("First hydrate."), ActorRelationship("Second hydrate.")]);
+
+        var service = new EntityMetadataApplyService(db, new PluginArtworkServiceOptions(Path.GetTempPath()));
+        await service.ApplyAsync(movieId, proposal, selectedFields: ["credits"], selectedImages: null, CancellationToken.None);
+
+        var actorId = await db.Entities
+            .Where(row => row.KindCode == "person" && row.Title == "Lead Actor")
+            .Select(row => row.Id)
+            .SingleAsync();
+        Assert.Equal("Second hydrate.", (await db.EntityDescriptions.FindAsync([actorId]))?.Value);
+        Assert.Equal("31", (await db.EntityExternalIds.SingleAsync(row => row.EntityId == actorId && row.Provider == "tmdb")).Value);
+        Assert.Equal("https://www.themoviedb.org/person/31", await db.EntityUrls
+            .Where(row => row.EntityId == actorId)
+            .Select(row => row.Url)
+            .SingleAsync());
+    }
+
+    [Fact]
     public async Task ApplyMergesMultipleCreditRolesForSamePersonIntoOneRelationship() {
         await using var db = CreateContext();
         var episodeId = Guid.Parse("17171717-1717-1717-1717-171717171717");

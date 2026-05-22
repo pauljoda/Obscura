@@ -366,21 +366,27 @@ public sealed class EntityMetadataApplyService : IEntityMetadataPatchService {
                 continue;
             }
 
-            var existing = await _db.EntityExternalIds
-                .FirstOrDefaultAsync(row => row.EntityId == entityId && row.Provider == provider, cancellationToken);
-            var url = urls.FirstOrDefault(candidate => candidate.Contains(rawValue, StringComparison.OrdinalIgnoreCase));
+            var providerKey = provider.Trim();
+            var value = rawValue.Trim();
+            var existing = _db.EntityExternalIds.Local.FirstOrDefault(row =>
+                row.EntityId == entityId &&
+                row.Provider == providerKey &&
+                _db.Entry(row).State != EntityState.Deleted) ??
+                await _db.EntityExternalIds
+                    .FirstOrDefaultAsync(row => row.EntityId == entityId && row.Provider == providerKey, cancellationToken);
+            var url = urls.FirstOrDefault(candidate => candidate.Contains(value, StringComparison.OrdinalIgnoreCase));
             if (existing is null) {
                 _db.EntityExternalIds.Add(new EntityExternalIdRow {
                     Id = Guid.NewGuid(),
                     EntityId = entityId,
-                    Provider = provider.Trim(),
-                    Value = rawValue.Trim(),
+                    Provider = providerKey,
+                    Value = value,
                     Url = url,
                     CreatedAt = now,
                     UpdatedAt = now
                 });
             } else {
-                existing.Value = rawValue.Trim();
+                existing.Value = value;
                 existing.Url = url ?? existing.Url;
                 existing.UpdatedAt = now;
             }
@@ -392,7 +398,10 @@ public sealed class EntityMetadataApplyService : IEntityMetadataPatchService {
             .Where(row => row.EntityId == entityId)
             .Select(row => row.Url)
             .ToArrayAsync(cancellationToken);
-        var seen = existing.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var tracked = _db.EntityUrls.Local
+            .Where(row => row.EntityId == entityId && _db.Entry(row).State != EntityState.Deleted)
+            .Select(row => row.Url);
+        var seen = existing.Concat(tracked).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var sortOrder = existing.Length;
 
         foreach (var url in urls.Where(url => !string.IsNullOrWhiteSpace(url)).Select(url => url.Trim())) {
