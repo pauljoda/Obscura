@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import type { ContextMenuItem, ContextMenuOpenContext, FileTree, FileTreeDirectoryHandle } from "@pierre/trees";
-  import { Search } from "@lucide/svelte";
   import type { FileActionId } from "$lib/files/file-actions";
   import { fileContextActions } from "$lib/files/file-actions";
   import type { FileTreeNodeMeta } from "$lib/files/file-tree-state";
@@ -281,7 +280,6 @@
 
 <section class="files-tree-pane" aria-label="Directory tree">
   <div class="tree-toolbar">
-    <Search class="h-4 w-4" />
     <input
       type="search"
       placeholder="Filter loaded files"
