@@ -112,20 +112,20 @@
 </script>
 
 <svelte:head>
-  <title>{person?.title ?? "Performer"} · Obscura</title>
+  <title>{person?.title ?? "Person"} · Obscura</title>
 </svelte:head>
 
 <div class="detail-page">
-  <a href="/performers" class="back-link">
+  <a href="/people" class="back-link">
     <ArrowLeft class="h-4 w-4" />
-    Performers
+    People
   </a>
 
   {#if loadState === "loading"}
     <div class="loading-shell" aria-busy="true"></div>
   {:else if loadState === "error"}
     <div class="error-notice">
-      <p>{errorMessage ?? "Failed to load performer."}</p>
+      <p>{errorMessage ?? "Failed to load person."}</p>
       <button type="button" onclick={() => void loadPerson()}>Retry</button>
     </div>
   {:else if card && person}
@@ -177,10 +177,10 @@
         </h2>
         <EntityGrid
           cards={relatedCards}
-          prefsKey={`performer-${person?.id}-appearances`}
+          prefsKey={`person-${person?.id}-appearances`}
           selectable={false}
           emptyTitle="No appearances"
-          emptyMessage="No content linked to this performer."
+          emptyMessage="No content linked to this person."
         />
       </section>
     {/if}

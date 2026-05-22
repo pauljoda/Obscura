@@ -136,7 +136,7 @@
           <div class="credits-section">
             <h2 class="section-label">
               <Users class="h-4 w-4" />
-              Performers
+              People
             </h2>
             <div class="credits-grid">
               {#each credits as person (person.id)}

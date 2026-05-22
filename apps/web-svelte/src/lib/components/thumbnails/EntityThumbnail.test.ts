@@ -58,7 +58,7 @@ describe("EntityThumbnail", () => {
     });
 
     const link = container.querySelector<HTMLAnchorElement>("a.entity-thumbnail");
-    expect(link?.getAttribute("href")).toBe("/performers/person-1");
+    expect(link?.getAttribute("href")).toBe("/people/person-1");
   });
 
   it("can disable the default link and toggle selection from the card surface", async () => {

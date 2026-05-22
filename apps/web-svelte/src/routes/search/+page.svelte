@@ -363,7 +363,7 @@
     <div class="flex flex-col items-center justify-center py-20 text-text-disabled">
       <SearchIcon class="mb-3 h-8 w-8 opacity-30" />
       <div class="text-sm">
-        Enter a search term to find videos, actors, studios, and more
+        Enter a search term to find videos, people, studios, and more
       </div>
     </div>
   {:else if loading && !results}

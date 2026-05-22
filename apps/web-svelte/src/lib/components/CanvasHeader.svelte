@@ -14,7 +14,7 @@
 
   const SEGMENT_LABELS: Record<string, string> = {
     videos: "Videos",
-    performers: "Actors",
+    people: "People",
   };
 
   function segmentLabel(seg: string): string {

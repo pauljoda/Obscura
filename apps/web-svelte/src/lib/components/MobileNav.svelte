@@ -19,7 +19,7 @@
     { label: "Videos", href: "/videos", icon: Film },
     { label: "Galleries", href: "/galleries", icon: Images },
     { label: "Books", href: "/books", icon: BookOpen },
-    { label: "Actors", href: "/performers", icon: Users },
+    { label: "People", href: "/people", icon: Users },
   ];
 
   const primaryHrefs = new Set(primaryTabs.map((tab) => tab.href));

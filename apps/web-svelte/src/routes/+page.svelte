@@ -36,7 +36,7 @@
     { kind: "book", label: "Books", icon: BookOpen, href: "/books" },
     { kind: "image", label: "Images", icon: ImageIcon, href: "/images" },
     { kind: "audio-library", label: "Audio", icon: Music, href: "/audio" },
-    { kind: "person", label: "Actors", icon: Users, href: "/performers" },
+    { kind: "person", label: "People", icon: Users, href: "/people" },
     { kind: "studio", label: "Studios", icon: Building2, href: "/studios" },
     { kind: "tag", label: "Tags", icon: Tag, href: "/tags" },
   ];

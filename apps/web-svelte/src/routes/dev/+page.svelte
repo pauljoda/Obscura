@@ -85,8 +85,8 @@
 
   const taxonomyLinks: DevLink[] = [
     {
-      label: "Actors",
-      href: "/performers",
+      label: "People",
+      href: "/people",
       description: "Open people thumbnails and filters.",
       icon: Users,
     },

@@ -21,6 +21,11 @@ describe("v2 code registries", () => {
     }
   });
 
+  it("uses people as the canonical person route", () => {
+    expect(resolveEntityBrowsePath("person")).toBe("/people");
+    expect(resolveEntityHref("person", "person-1")).toBe("/people/person-1");
+  });
+
   it("requires parent context for structural child routes", () => {
     expect(resolveEntityHref("book-chapter", "chapter")).toBeUndefined();
     expect(resolveEntityHref("book-chapter", "chapter", { kind: "book", id: "book" })).toBe(

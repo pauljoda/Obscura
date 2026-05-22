@@ -72,9 +72,9 @@
     sceneByFragment: { label: "Video by fragment", category: "scene" },
     sceneByName: { label: "Video by name", category: "scene" },
     sceneByQueryFragment: { label: "Video by query", category: "scene" },
-    performerByURL: { label: "Actor by URL", category: "performer" },
-    performerByName: { label: "Actor by name", category: "performer" },
-    performerByFragment: { label: "Actor by fragment", category: "performer" },
+    performerByURL: { label: "Person by URL", category: "performer" },
+    performerByName: { label: "Person by name", category: "performer" },
+    performerByFragment: { label: "Person by fragment", category: "performer" },
     galleryByURL: { label: "Gallery by URL", category: "gallery" },
     galleryByFragment: { label: "Gallery by fragment", category: "gallery" },
     bookByURL: { label: "Book by URL", category: "book" },
@@ -706,7 +706,7 @@
         <div class="text-lg font-semibold text-text-primary leading-tight">{videoCount}</div>
       </div>
       <div class="surface-stat px-3 py-2">
-        <span class="text-kicker !text-text-disabled">{entityTerms.performer} Scrapers</span>
+        <span class="text-kicker !text-text-disabled">{entityTerms.performers} Scrapers</span>
         <div class="text-lg font-semibold text-text-primary leading-tight">{performerCount}</div>
       </div>
       <div class="surface-stat px-3 py-2">

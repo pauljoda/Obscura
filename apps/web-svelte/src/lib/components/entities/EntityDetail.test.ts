@@ -157,7 +157,7 @@ describe("EntityDetail", () => {
     expect(screen.getByRole("heading", { name: "Studio" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Blender Foundation" })).toHaveAttribute("href", "/studios/studio-1");
     expect(screen.getByRole("heading", { name: "Credits" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Sacha Goedegebure" })).toHaveAttribute("href", "/performers/person-1");
+    expect(screen.getByRole("link", { name: "Sacha Goedegebure" })).toHaveAttribute("href", "/people/person-1");
     expect(screen.getByText("Views")).toBeInTheDocument();
     expect(screen.getByText("1842")).toBeInTheDocument();
     expect(screen.getByText("Release")).toBeInTheDocument();
@@ -209,7 +209,7 @@ describe("EntityDetail", () => {
       expect(list).toHaveClass("is-horizontal-rail");
     }
     expect(screen.getByRole("link", { name: "Blender Foundation" })).toHaveAttribute("href", "/studios/studio-1");
-    expect(screen.getByRole("link", { name: "Sacha Goedegebure" })).toHaveAttribute("href", "/performers/person-1");
+    expect(screen.getByRole("link", { name: "Sacha Goedegebure" })).toHaveAttribute("href", "/people/person-1");
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(container.querySelector(".selection")).not.toBeInTheDocument();
   });
