@@ -17,7 +17,6 @@ export { capabilityKeys } from "./types";
 // YAML Parser
 export {
   parseScraperYaml,
-  resolveScriptDef,
   resolveActionDef,
   ScraperParseError,
 } from "./yaml-parser";

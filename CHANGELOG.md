@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Entity hierarchy storage now uses each entity's parent pointer directly instead of a separate child-link table, reducing duplicated structure and preserving existing structural links during migration.
 - Video subtitles and thumbnail previews now recover from stale generated media cache entries, so rescans can rebuild missing subtitle files and browse thumbnails can use trickplay hover previews again.
 - Library rescans now remove deleted video files even when older rows were not linked to their library root, so stale videos disappear after the next scan.
+- Python plugin and Stash scraper commands now run exactly as declared, so manifests should use `python3` explicitly when they need Python 3 instead of relying on an automatic command rewrite.
 - Video playback controls now stay synchronized with the native media element, so playback, seeking, and the buffered range render correctly while HLS plays.
 - Adaptive video playback now keeps decoded video visible over stale poster artwork and can prebuffer more of the stream during local playback.
 - Browse grids now use docked pagination inside the shared entity grid, so large media lists keep a predictable scroll area and avoid rendering thousands of thumbnails at once.
@@ -39,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 - Clicking a thumbnail while items are selected now toggles selection instead of navigating, so multi-select flows no longer accidentally leave the page.
 - The bulk selection bar now shows Select All, Clear, and NSFW toggle as dedicated controls; page-specific actions move into an Actions flyout menu for a cleaner toolbar on mobile.
+- Plugin execution no longer rewrites `python` commands to `python3`; the manifest `script` executable is now used verbatim.
 
 ### Added
 - MarkdownEditor form component: tiptap-based WYSIWYG with Dark Room toolbar styling, markdown serialization, and formatting support (bold, italic, headings, lists, blockquotes, code, links).

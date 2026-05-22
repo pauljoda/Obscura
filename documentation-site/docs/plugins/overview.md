@@ -64,7 +64,7 @@ A plugin returns a **normalized result** matched to the action it ran:
 | `galleryByURL`, `galleryByFragment` | `NormalizedGalleryResult` |
 | `imageByURL` | `NormalizedImageResult` |
 | `audioByURL`, `audioByFragment`, `audioLibraryByName` | `NormalizedAudioTrackResult` / `NormalizedAudioLibraryResult` |
-| `performer*` | Performer result (via Stash adapter for legacy parity) |
+| `performer*` | Performer result (via the Stash adapter compatibility layer) |
 | `movieByName`, `movieByURL`, `movieByFragment` | `NormalizedMovieResult` |
 | `seriesByName`, `seriesByURL`, `seriesByFragment` | `NormalizedSeriesResult` (with optional disambig `candidates[]`) |
 | `seriesCascade` | `NormalizedSeriesResult` with full `seasons[].episodes[]` tree |

@@ -51,7 +51,6 @@ export async function runNativePythonPlugin<T = unknown>(
   }
 
   const [command, ...args] = manifest.script;
-  const resolvedCommand = command === "python" ? "python3" : command;
 
   // Set PYTHONPATH for sibling package imports
   const pythonPath = pluginsRootDir ?? path.dirname(installDir);
@@ -70,7 +69,7 @@ export async function runNativePythonPlugin<T = unknown>(
   };
 
   return new Promise<T | null>((resolve, reject) => {
-    const child = spawn(resolvedCommand, args, {
+    const child = spawn(command, args, {
       cwd: installDir,
       stdio: ["pipe", "pipe", "pipe"],
       env,
@@ -185,7 +184,6 @@ export async function runNativePythonPluginBatch<T = unknown>(
   }
 
   const [command, ...args] = manifest.script;
-  const resolvedCommand = command === "python" ? "python3" : command;
 
   const pythonPath = pluginsRootDir ?? path.dirname(installDir);
   const env = {
@@ -204,7 +202,7 @@ export async function runNativePythonPluginBatch<T = unknown>(
 
   return new Promise<Array<{ id: string; result: T | null }>>(
     (resolve, reject) => {
-      const child = spawn(resolvedCommand, args, {
+      const child = spawn(command, args, {
         cwd: installDir,
         stdio: ["pipe", "pipe", "pipe"],
         env,

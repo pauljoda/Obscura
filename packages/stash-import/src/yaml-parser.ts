@@ -4,7 +4,6 @@ import {
   type ScraperYamlDef,
   type ScraperCapabilities,
   type ScraperActionDef,
-  type ScraperScriptDef,
   type ScraperXPathDef,
   capabilityKeys,
 } from "./types";
@@ -96,17 +95,4 @@ export function resolveActionDef(
 
   // Fallback to first valid action
   return defs.find((d) => !!d.action) ?? null;
-}
-
-/**
- * @deprecated Use resolveActionDef instead
- */
-export function resolveScriptDef(
-  definition: ScraperYamlDef,
-  action: string,
-  inputUrl?: string
-): ScraperScriptDef | null {
-  const def = resolveActionDef(definition, action, inputUrl);
-  if (!def || def.action !== "script") return null;
-  return def;
 }

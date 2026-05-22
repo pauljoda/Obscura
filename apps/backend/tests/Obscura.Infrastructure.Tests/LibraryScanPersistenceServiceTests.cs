@@ -115,7 +115,7 @@ public sealed class LibraryScanPersistenceServiceTests {
     }
 
     [Fact]
-    public async Task UpsertSubtitleRefreshesLegacyLanguageRowWhenStoredFileIsMissing() {
+    public async Task UpsertSubtitleCreatesStreamSpecificRowWhenLanguageRowAlreadyExists() {
         await using var db = CreateContext();
         var videoId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var subtitleId = Guid.Parse("77777777-7777-7777-7777-777777777777");
@@ -145,29 +145,31 @@ public sealed class LibraryScanPersistenceServiceTests {
             3,
             CancellationToken.None);
 
-        var subtitle = Assert.Single(db.EntitySubtitles.Where(row => row.EntityId == videoId));
-        Assert.Equal(subtitleId, subtitle.Id);
-        Assert.Equal("/data/cache/videos/666/subtitles/embedded-eng-3.vtt", subtitle.StoragePath);
-        Assert.Equal("3", subtitle.SourcePath);
+        var subtitles = db.EntitySubtitles.Where(row => row.EntityId == videoId).ToArray();
+        Assert.Equal(2, subtitles.Length);
+        Assert.Contains(subtitles, subtitle => subtitle.Id == subtitleId && subtitle.Language == "eng" && subtitle.SourcePath is null);
+        Assert.Contains(subtitles, subtitle => subtitle.Language == "eng.3"
+            && subtitle.StoragePath == "/data/cache/videos/666/subtitles/embedded-eng-3.vtt"
+            && subtitle.SourcePath == "3");
     }
 
     [Fact]
-    public async Task UpsertSubtitleRemovesMissingLegacyConflictBeforeNormalizingStreamLanguage() {
+    public async Task UpsertSubtitleKeepsStreamLanguageWhenRequestedLanguageAlreadyExists() {
         await using var db = CreateContext();
         var videoId = Guid.Parse("88888888-8888-8888-8888-888888888888");
-        var legacyId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+        var conflictId = Guid.Parse("99999999-9999-9999-9999-999999999999");
         var streamId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         SeedVideo(db, videoId);
         db.EntitySubtitles.AddRange(
             new EntitySubtitleRow {
-                Id = legacyId,
+                Id = conflictId,
                 EntityId = videoId,
                 Language = "eng",
                 Format = "vtt",
                 Source = EntitySubtitleSource.Embedded,
-                StoragePath = "/tmp/obscura/stale.vtt",
+                StoragePath = "/tmp/obscura/other-stream.vtt",
                 SourceFormat = "vtt",
-                SourcePath = null,
+                SourcePath = "1",
                 CreatedAt = DateTimeOffset.UtcNow
             },
             new EntitySubtitleRow {
@@ -195,11 +197,13 @@ public sealed class LibraryScanPersistenceServiceTests {
             3,
             CancellationToken.None);
 
-        var subtitle = Assert.Single(db.EntitySubtitles.Where(row => row.EntityId == videoId));
-        Assert.Equal(streamId, subtitle.Id);
-        Assert.Equal("eng", subtitle.Language);
-        Assert.Equal("/data/cache/videos/888/subtitles/embedded-eng-3.vtt", subtitle.StoragePath);
-        Assert.Equal("3", subtitle.SourcePath);
+        var subtitles = db.EntitySubtitles.Where(row => row.EntityId == videoId).ToArray();
+        Assert.Equal(2, subtitles.Length);
+        Assert.Contains(subtitles, subtitle => subtitle.Id == conflictId && subtitle.Language == "eng");
+        Assert.Contains(subtitles, subtitle => subtitle.Id == streamId
+            && subtitle.Language == "eng.3"
+            && subtitle.StoragePath == "/data/cache/videos/888/subtitles/embedded-eng-3.vtt"
+            && subtitle.SourcePath == "3");
     }
 
     [Fact]

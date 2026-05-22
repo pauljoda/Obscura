@@ -217,7 +217,6 @@ The executor in `packages/plugins/src/executor.ts` does roughly this:
 
 ```ts
 const [command, ...args] = manifest.script;       // ["python3", "main.py"]
-const resolvedCommand = command === 'python' ? 'python3' : command;
 
 const pythonPath = pluginsRootDir ?? path.dirname(installDir);
 const env = {
@@ -226,7 +225,7 @@ const env = {
     (process.env.PYTHONPATH ? ':' + process.env.PYTHONPATH : ''),
 };
 
-const child = spawn(resolvedCommand, args, {
+const child = spawn(command, args, {
   cwd: installDir,
   stdio: ['pipe', 'pipe', 'pipe'],
   env,
@@ -238,7 +237,7 @@ So:
 - **`cwd`** is your plugin's install directory.
 - **`PYTHONPATH`** is set so `requires:` siblings resolve cleanly.
 - **stderr** is captured and surfaced in worker logs and the failed-job error string.
-- The legacy alias `python` is silently rewritten to `python3` (Alpine's default).
+- The first `script` item is executed exactly as written; use `python3` when that is the interpreter you require.
 
 ## Sharing helpers across plugins
 

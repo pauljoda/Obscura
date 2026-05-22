@@ -1084,15 +1084,11 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
                 && s.SourcePath == streamKey, cancellationToken);
         if (streamMatch is not null) {
             if (!string.Equals(streamMatch.Language, langKey, StringComparison.Ordinal)) {
-                var legacyConflict = await db.EntitySubtitles
+                var languageConflict = await db.EntitySubtitles
                     .FirstOrDefaultAsync(s => s.EntityId == entityId && s.Source == source
                         && s.Language == langKey && s.Id != streamMatch.Id, cancellationToken);
 
-                if (legacyConflict is not null &&
-                    string.IsNullOrWhiteSpace(legacyConflict.SourcePath) &&
-                    !File.Exists(legacyConflict.StoragePath)) {
-                    db.EntitySubtitles.Remove(legacyConflict);
-                } else if (legacyConflict is not null) {
+                if (languageConflict is not null) {
                     langKey = streamMatch.Language;
                 }
             }
@@ -1111,16 +1107,6 @@ public sealed class LibraryScanPersistenceService(ObscuraDbContext db) : ILibrar
                 && s.Source == source, cancellationToken);
 
         if (existing is not null) {
-            if (string.IsNullOrWhiteSpace(existing.SourcePath) && !File.Exists(existing.StoragePath)) {
-                existing.Label = label;
-                existing.Format = format;
-                existing.StoragePath = storagePath;
-                existing.SourceFormat = sourceFormat;
-                existing.SourcePath = streamKey;
-                await db.SaveChangesAsync(cancellationToken);
-                return;
-            }
-
             langKey = $"{language}.{streamIndex}";
             var duplicate = await db.EntitySubtitles
                 .AnyAsync(s => s.EntityId == entityId && s.Language == langKey

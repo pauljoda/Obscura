@@ -8,7 +8,7 @@ import type {
   StashScrapedScene,
   StashScrapedPerformer,
 } from "./types";
-import { resolveScriptDef, resolveActionDef } from "./yaml-parser";
+import { resolveActionDef } from "./yaml-parser";
 
 export class ScraperExecutionError extends Error {
   constructor(
@@ -52,8 +52,8 @@ export async function runScraperScript<T = StashScrapedScene>(
   const inputUrl =
     "url" in input && typeof input.url === "string" ? input.url : undefined;
 
-  const scriptDef = resolveScriptDef(definition, action, inputUrl);
-  if (!scriptDef) {
+  const actionDef = resolveActionDef(definition, action, inputUrl);
+  if (!actionDef || actionDef.action !== "script") {
     throw new ScraperExecutionError(
       `Scraper "${definition.name}" does not support action "${action}"`,
       definition.name,
@@ -63,10 +63,7 @@ export async function runScraperScript<T = StashScrapedScene>(
 
   const scraperDir = path.dirname(yamlPath);
 
-  // Build the command: replace "python" with python3 if available
-  const [command, ...args] = scriptDef.script;
-  const resolvedCommand =
-    command === "python" ? "python3" : command;
+  const [command, ...args] = actionDef.script;
 
   // Set PYTHONPATH so sibling packages (py_common, etc.) resolve
   const pythonPath = scrapersRootDir ?? path.dirname(scraperDir);
@@ -76,7 +73,7 @@ export async function runScraperScript<T = StashScrapedScene>(
   };
 
   return new Promise<T | null>((resolve, reject) => {
-    const child = spawn(resolvedCommand, args, {
+    const child = spawn(command, args, {
       cwd: scraperDir,
       stdio: ["pipe", "pipe", "pipe"],
       env,

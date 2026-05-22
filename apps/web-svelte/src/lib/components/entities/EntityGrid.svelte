@@ -56,12 +56,6 @@
     loading?: boolean;
     loadingMore?: boolean;
     loadMoreError?: string | null;
-    /**
-     * Deprecated. Held only for API compatibility; the pagination strip no longer
-     * surfaces a separate hint when more pages remain (the transport's seek-to-end
-     * button is the authoritative affordance).
-     */
-    loadMoreLabel?: string;
     maxScale?: number;
     minScale?: number;
     nsfwMode?: "show" | "off" | "blur";
@@ -97,8 +91,6 @@
     loading = false,
     loadingMore = false,
     loadMoreError = null,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    loadMoreLabel: _loadMoreLabel = "Load more",
     maxScale = 12,
     minScale = 2,
     nsfwMode = "show",
