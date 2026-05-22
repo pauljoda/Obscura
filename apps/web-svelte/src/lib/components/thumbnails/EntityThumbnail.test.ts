@@ -96,14 +96,15 @@ describe("EntityThumbnail", () => {
     expect(container.textContent).toContain("Character Ronnie");
   });
 
-  it("uses the shared overflow ticker for card titles", () => {
+  it("renders card titles as wrapping static text", () => {
     const { container } = render(EntityThumbnail, {
       props: {
         card: personCard(),
       },
     });
 
-    expect(container.querySelector(".ticker-shell")?.textContent).toContain("Tim Robinson");
+    expect(container.querySelector("h3")?.textContent).toContain("Tim Robinson");
+    expect(container.querySelector(".ticker-shell")).toBeNull();
     expect(container.querySelector(".ticker-title")).toBeNull();
   });
 
@@ -116,7 +117,7 @@ describe("EntityThumbnail", () => {
     });
 
     expect(container.querySelector("h3")?.classList.contains("title-align-center")).toBe(true);
-    expect(container.querySelector(".ticker-shell")?.getAttribute("data-align")).toBe("center");
+    expect(container.querySelector("h3")?.classList.contains("title-size-default")).toBe(true);
   });
 
   it("allows callers to choose compact thumbnail title sizing", () => {
