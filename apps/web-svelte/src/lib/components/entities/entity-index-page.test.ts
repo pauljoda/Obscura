@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { V2EntityCard } from "$lib/api/v2";
 import { EntityIndexPageState } from "./entity-index-page.svelte";
 
@@ -17,15 +17,21 @@ describe("EntityIndexPageState", () => {
     fetchV2Entities.mockReset();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("loads initial and cursor pages into thumbnail cards with browse links", async () => {
     fetchV2Entities
       .mockResolvedValueOnce({
         items: [entity("video-1", "video", "First Video")],
         nextCursor: "next-page",
+        totalCount: 2,
       })
       .mockResolvedValueOnce({
         items: [entity("video-2", "video", "Second Video")],
         nextCursor: null,
+        totalCount: 2,
       });
 
     const state = new EntityIndexPageState({
@@ -42,6 +48,7 @@ describe("EntityIndexPageState", () => {
     expect(state.loadState).toBe("ready");
     expect(state.cards.map((card) => card.href)).toEqual(["/videos/video-1"]);
     expect(state.nextCursor).toBe("next-page");
+    expect(state.totalCount).toBe(2);
 
     await state.loadMore();
 
@@ -61,10 +68,12 @@ describe("EntityIndexPageState", () => {
       .mockResolvedValueOnce({
         items: [entity("video-1", "video", "First Video")],
         nextCursor: "next-page",
+        totalCount: 2,
       })
       .mockResolvedValueOnce({
         items: [entity("video-2", "video", "Second Video")],
         nextCursor: null,
+        totalCount: 1,
       });
 
     const state = new EntityIndexPageState({
@@ -83,6 +92,41 @@ describe("EntityIndexPageState", () => {
       { signal: expect.any(AbortSignal) },
     );
     expect(state.cards.map((card) => card.entity.title)).toEqual(["Second Video"]);
+    expect(state.totalCount).toBe(1);
+  });
+
+  it("debounces query changes and reloads with the trimmed query", async () => {
+    vi.useFakeTimers();
+    fetchV2Entities
+      .mockResolvedValueOnce({
+        items: [entity("video-1", "video", "First Video")],
+        nextCursor: null,
+        totalCount: 1,
+      })
+      .mockResolvedValueOnce({
+        items: [entity("video-2", "video", "Second Video")],
+        nextCursor: null,
+        totalCount: 1,
+      });
+
+    const state = new EntityIndexPageState({
+      getKind: () => "video",
+      getHideNsfw: () => false,
+    });
+
+    await state.loadInitial();
+    state.setQuery("  bunny  ");
+
+    expect(fetchV2Entities).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(fetchV2Entities).toHaveBeenCalledTimes(2);
+    expect(fetchV2Entities).toHaveBeenLastCalledWith(
+      { kind: "video", query: "bunny", hideNsfw: false, limit: 250 },
+      { signal: expect.any(AbortSignal) },
+    );
+    expect(state.query).toBe("bunny");
+    expect(state.totalCount).toBe(1);
   });
 });
 

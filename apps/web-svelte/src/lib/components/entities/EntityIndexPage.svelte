@@ -4,6 +4,7 @@
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import EntityGrid from "./EntityGrid.svelte";
   import { EntityIndexPageState } from "./entity-index-page.svelte";
+  import type { EntityGridRequest } from "$lib/entities/entity-grid";
   import type { V2EntityCard } from "$lib/api/v2";
 
   interface Props {
@@ -44,6 +45,7 @@
   });
 
   let lastNsfwMode = $state(nsfw.mode);
+  let remoteTotalCount = $derived(page.totalCount);
 
   onMount(() => {
     void page.loadInitial();
@@ -55,6 +57,10 @@
       void page.loadInitial();
     }
   });
+
+  function handleRequestChange(request: EntityGridRequest) {
+    page.setQuery(request.query ?? "");
+  }
 </script>
 
 <svelte:head>
@@ -112,10 +118,10 @@
       hasMore={page.nextCursor !== null}
       loadingMore={page.loadingMore}
       loadMoreError={page.loadMoreError}
-      remoteTotalCount={page.totalCount}
+      {remoteTotalCount}
       onPageSizeChange={(size) => page.setPageSize(size)}
       onLoadMore={() => page.loadMore()}
-      onRequestChange={(request) => page.setQuery(request.query ?? "")}
+      onRequestChange={handleRequestChange}
     />
   {/if}
 </section>
