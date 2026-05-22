@@ -7,9 +7,11 @@ namespace Obscura.Infrastructure.Media.Processing;
 /// </summary>
 public sealed class ThumbnailService {
     private readonly ProcessExecutor _processExecutor;
+    private readonly MediaProbeService? _mediaProbe;
 
-    public ThumbnailService(ProcessExecutor processExecutor) {
+    public ThumbnailService(ProcessExecutor processExecutor, MediaProbeService? mediaProbe = null) {
         _processExecutor = processExecutor;
+        _mediaProbe = mediaProbe;
     }
 
     /// <summary>
@@ -19,13 +21,14 @@ public sealed class ThumbnailService {
         string inputPath, string outputPath, double seekSeconds,
         int width, int height, int quality, CancellationToken cancellationToken) {
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+        var videoFilter = await BuildVideoFilterAsync(inputPath, $"scale={width}:{height}", cancellationToken);
 
         var result = await _processExecutor.RunAsync("ffmpeg",
             ["-hide_banner", "-loglevel", "error", "-y",
              "-ss", seekSeconds.ToString("F2"),
              "-i", inputPath,
              "-frames:v", "1",
-             "-vf", $"scale={width}:{height}",
+             "-vf", videoFilter,
              "-q:v", quality.ToString(),
              outputPath],
             null, cancellationToken);
@@ -41,13 +44,14 @@ public sealed class ThumbnailService {
         double startSeconds, int durationSeconds,
         CancellationToken cancellationToken) {
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+        var videoFilter = await BuildVideoFilterAsync(inputPath, "scale=960:-2", cancellationToken);
 
         var result = await _processExecutor.RunAsync("ffmpeg",
             ["-hide_banner", "-loglevel", "error", "-y",
              "-ss", startSeconds.ToString("F2"),
              "-t", durationSeconds.ToString(),
              "-i", inputPath,
-             "-vf", "scale=960:-2",
+             "-vf", videoFilter,
              "-an",
              "-c:v", "libx264",
              "-preset", "veryfast",
@@ -67,6 +71,10 @@ public sealed class ThumbnailService {
         double seekSeconds, int width, int height, int jpegQuality,
         CancellationToken cancellationToken) {
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+        var videoFilter = await BuildVideoFilterAsync(
+            inputPath,
+            $"scale={width}:{height}:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,format=yuvj420p",
+            cancellationToken);
 
         var result = await _processExecutor.RunAsync("ffmpeg",
             ["-hide_banner", "-loglevel", "error", "-y",
@@ -74,7 +82,7 @@ public sealed class ThumbnailService {
              "-ss", seekSeconds.ToString("F2"),
              "-i", inputPath,
              "-frames:v", "1",
-             "-vf", $"scale={width}:{height}:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,format=yuvj420p",
+             "-vf", videoFilter,
              "-q:v", jpegQuality.ToString(),
              outputPath],
             null, cancellationToken);
@@ -160,6 +168,10 @@ public sealed class ThumbnailService {
         int intervalSeconds, int width, int height, int jpegQuality,
         CancellationToken cancellationToken) {
         Directory.CreateDirectory(outputDir);
+        var frameFilter = await BuildVideoFilterAsync(
+            inputPath,
+            $"scale={width}:{height}:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,format=yuvj420p",
+            cancellationToken);
 
         var totalFrames = (int)(duration / intervalSeconds);
         if (totalFrames < 1) return 0;
@@ -174,7 +186,7 @@ public sealed class ThumbnailService {
             var outputPath = Path.Combine(outputDir, $"frame-{i + 1:D5}.jpg");
             tasks.Add(ExtractSingleKeyframeAsync(
                 semaphore, inputPath, outputPath, seekSeconds,
-                width, height, jpegQuality, cancellationToken));
+                frameFilter, jpegQuality, cancellationToken));
         }
 
         var results = await Task.WhenAll(tasks);
@@ -266,7 +278,7 @@ public sealed class ThumbnailService {
 
     private async Task<bool> ExtractSingleKeyframeAsync(
         SemaphoreSlim semaphore, string inputPath, string outputPath,
-        double seekSeconds, int width, int height, int jpegQuality,
+        double seekSeconds, string videoFilter, int jpegQuality,
         CancellationToken cancellationToken) {
         await semaphore.WaitAsync(cancellationToken);
         try {
@@ -276,7 +288,7 @@ public sealed class ThumbnailService {
                  "-ss", seekSeconds.ToString("F2"),
                  "-i", inputPath,
                  "-frames:v", "1",
-                 "-vf", $"scale={width}:{height}:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,format=yuvj420p",
+                 "-vf", videoFilter,
                  "-q:v", jpegQuality.ToString(),
                  outputPath],
                 null, cancellationToken);
@@ -298,13 +310,15 @@ public sealed class ThumbnailService {
         CancellationToken cancellationToken) {
         Directory.CreateDirectory(Path.GetDirectoryName(thumbnailPath)!);
         Directory.CreateDirectory(Path.GetDirectoryName(previewPath)!);
+        var thumbFilter = await BuildVideoFilterAsync(inputPath, $"scale={thumbWidth}:{thumbHeight}", cancellationToken);
+        var previewFilter = await BuildVideoFilterAsync(inputPath, "scale=960:-2", cancellationToken);
 
         var thumbResult = await _processExecutor.RunAsync("ffmpeg",
             ["-hide_banner", "-loglevel", "error", "-y",
              "-ss", thumbSeekSeconds.ToString("F2"),
              "-i", inputPath,
              "-frames:v", "1",
-             "-vf", $"scale={thumbWidth}:{thumbHeight}",
+             "-vf", thumbFilter,
              "-q:v", thumbQuality.ToString(),
              thumbnailPath],
             null, cancellationToken);
@@ -314,7 +328,7 @@ public sealed class ThumbnailService {
              "-ss", previewStartSeconds.ToString("F2"),
              "-t", previewDurationSeconds.ToString(),
              "-i", inputPath,
-             "-vf", "scale=960:-2",
+             "-vf", previewFilter,
              "-an",
              "-c:v", "libx264",
              "-preset", "veryfast",
@@ -326,6 +340,51 @@ public sealed class ThumbnailService {
         return (
             thumbResult.ExitCode == 0 && File.Exists(thumbnailPath),
             previewResult.ExitCode == 0 && File.Exists(previewPath));
+    }
+
+    private async Task<string> BuildVideoFilterAsync(
+        string inputPath,
+        string outputTransform,
+        CancellationToken cancellationToken) {
+        if (_mediaProbe is null) {
+            return outputTransform;
+        }
+
+        var probe = await _mediaProbe.ProbeVideoAsync(inputPath, cancellationToken);
+        var videoStream = probe?.Streams?
+            .Where(stream => stream.Type.Equals("Video", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(stream => stream.StreamIndex)
+            .FirstOrDefault();
+
+        if (!NeedsToneMapping(videoStream)) {
+            return outputTransform;
+        }
+
+        if (RequiresDolbyVisionToneMapping(videoStream)) {
+            return $"{InputHdrColorParameters(videoStream)},{outputTransform},tonemapx=tonemap=bt2390:desat=0:peak=400:t=bt709:m=bt709:p=bt709:format=yuv420p";
+        }
+
+        return $"{InputHdrColorParameters(videoStream)},zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0:peak=100,zscale=t=bt709:m=bt709:p=bt709:out_range=tv,{outputTransform}";
+    }
+
+    private static bool NeedsToneMapping(MediaStreamProbeResult? stream) =>
+        stream is not null &&
+        (RequiresDolbyVisionToneMapping(stream) ||
+            stream.Hdr10PlusPresentFlag ||
+            string.Equals(stream.ColorTransfer, "arib-std-b67", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(stream.ColorTransfer, "smpte2084", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(stream.ColorPrimaries, "bt2020", StringComparison.OrdinalIgnoreCase));
+
+    private static bool RequiresDolbyVisionToneMapping(MediaStreamProbeResult? stream) =>
+        stream?.DvProfile is not null ||
+        stream?.RpuPresentFlag == true ||
+        stream?.DvBlSignalCompatibilityId is 0;
+
+    private static string InputHdrColorParameters(MediaStreamProbeResult? stream) {
+        var colorTransfer = string.Equals(stream?.ColorTransfer, "arib-std-b67", StringComparison.OrdinalIgnoreCase)
+            ? "arib-std-b67"
+            : "smpte2084";
+        return $"setparams=color_primaries=bt2020:color_trc={colorTransfer}:colorspace=bt2020nc";
     }
 
     /// <summary>

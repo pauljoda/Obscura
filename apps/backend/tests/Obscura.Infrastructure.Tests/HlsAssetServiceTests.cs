@@ -460,7 +460,7 @@ public sealed class HlsAssetServiceTests : IDisposable {
 
     [Fact]
     public async Task FarVirtualSegmentStartsSeparateGenerationWhenInitialGenerationIsStillRunning() {
-        var videoId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+        var videoId = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
         await File.WriteAllTextAsync(sourcePath, "source");
         var process = new BlockingInitialSegmentProcessExecutor();
@@ -705,6 +705,29 @@ public sealed class HlsAssetServiceTests : IDisposable {
         Assert.Null(segment);
     }
 
+    [Fact]
+    public async Task FailedVirtualSegmentGenerationReturnsNullAsset() {
+        var videoId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 180,
+                Width: 1920,
+                Height: 960)),
+            new FailingProcessExecutor(),
+            NullLogger<HlsAssetService>.Instance);
+
+        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00000.ts", null, CancellationToken.None);
+
+        Assert.Null(segment);
+    }
+
     public void Dispose() {
         if (Directory.Exists(_cacheRoot)) {
             DeleteDirectoryWithRetry(_cacheRoot);
@@ -814,6 +837,15 @@ public sealed class HlsAssetServiceTests : IDisposable {
             await File.WriteAllTextAsync(outputPath, "playlist", cancellationToken);
             return new ProcessExecutionResult(0, string.Empty, string.Empty);
         }
+    }
+
+    private sealed class FailingProcessExecutor : ProcessExecutor {
+        public override Task<ProcessExecutionResult> RunAsync(
+            string fileName,
+            IReadOnlyList<string> arguments,
+            IReadOnlyDictionary<string, string>? environment,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new ProcessExecutionResult(1, string.Empty, "No such filter: 'tonemapx'"));
     }
 
     private sealed class WritesOnlyNextSegmentProcessExecutor : ProcessExecutor {

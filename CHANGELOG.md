@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
-- Files now has a dedicated workspace for managing watched-root folders, including browsing, previews, uploads, folder creation, rename, move, permanent delete, and rescan actions from one place.
+- The Files manager was redesigned as a VS Code-style split-pane workspace with a resizable file tree, compact toolbar, and proper shell integration — moved under Operate in the sidebar and restyled to match the Dark Room design system.
 - Media detail pages no longer show their own file list tabs, making Files the primary place to inspect and operate on disk files.
 - Metadata edits and plugin identify results now use kind-guarded patch routes, so plugins can safely update videos, series, people, studios, and related metadata without crossing entity types.
 - People now replaces Actors across the app navigation and browse experience, including the canonical `/people` route for person profiles.
@@ -41,7 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Python plugin and Stash scraper commands now run exactly as declared, so manifests should use `python3` explicitly when they need Python 3 instead of relying on an automatic command rewrite.
 - Video playback controls now stay synchronized with the native media element, so playback, seeking, and the buffered range render correctly while HLS plays.
 - Adaptive video playback now keeps decoded video visible over stale poster artwork and can prebuffer more of the stream during local playback.
-- HDR and Dolby Vision videos now avoid direct browser playback unless support is explicit, and adaptive playback tone maps HDR sources to SDR to avoid purple or washed-out colors.
+- HDR and Dolby Vision videos now avoid direct browser playback unless support is explicit, and adaptive playback plus generated preview artwork use SDR tone mapping to avoid purple or washed-out colors.
 - Browse grids now use docked pagination inside the shared entity grid, so large media lists keep a predictable scroll area and avoid rendering thousands of thumbnails at once.
 - Browse grids now fit their internal scroll area to the visible page instead of clipping below the app frame.
 
@@ -107,7 +107,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Missing generated subtitle files now cause videos to be queued for subtitle extraction again, and re-extraction refreshes the existing subtitle track instead of adding a duplicate stale entry.
 - Video playback now drives the visible progress and buffer rails from the native video element, fixing stale player controls while adaptive HLS plays.
 - Adaptive video playback now keeps decoded video visible over stale poster artwork and can prebuffer more of the stream during local playback.
-- HDR and Dolby Vision videos now route through SDR tone-mapped adaptive playback by default, fixing incorrect color rendering on browsers that cannot directly display those formats.
+- HDR and Dolby Vision videos now route through SDR tone-mapped adaptive playback by default, and generated thumbnails, preview clips, and trickplay tiles use the same color-aware path.
 
 ### Removed
 - Historical v1-era release note detail was pruned from the changelog; git history remains the complete record.

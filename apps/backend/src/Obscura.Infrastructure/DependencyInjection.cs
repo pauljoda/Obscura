@@ -57,7 +57,9 @@ public static class DependencyInjection {
         services.AddSingleton<FileDiscoveryService>();
         services.AddSingleton(new AssetPathService(dataDir));
         services.AddSingleton(provider => new MediaProbeService(provider.GetRequiredService<ProcessExecutor>()));
-        services.AddSingleton(provider => new ThumbnailService(provider.GetRequiredService<ProcessExecutor>()));
+        services.AddSingleton(provider => new ThumbnailService(
+            provider.GetRequiredService<ProcessExecutor>(),
+            provider.GetRequiredService<MediaProbeService>()));
         services.AddSingleton<HashingService>();
         services.AddSingleton(new PluginCatalogOptions(
             ResolvePluginDevPaths(configuration, pathBase),

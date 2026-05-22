@@ -38,6 +38,71 @@ public sealed class ThumbnailServiceTests : IDisposable {
     }
 
     [Fact]
+    public async Task ThumbnailAndPreviewUseDolbyVisionToneMappingFilterWhenAvailable() {
+        var inputPath = Path.Combine(_root, "dovi.mkv");
+        var thumbPath = Path.Combine(_root, "thumb.jpg");
+        var previewPath = Path.Combine(_root, "preview.mp4");
+        await File.WriteAllTextAsync(inputPath, "source");
+        var process = new ProbedVideoProcessExecutor(DolbyVisionProbeJson);
+        var service = new ThumbnailService(process, new MediaProbeService(process));
+
+        var result = await service.GenerateThumbnailAndPreviewAsync(
+            inputPath,
+            thumbPath,
+            thumbSeekSeconds: 12,
+            thumbWidth: 640,
+            thumbHeight: 320,
+            thumbQuality: 3,
+            previewPath: previewPath,
+            previewStartSeconds: 20,
+            previewDurationSeconds: 8,
+            CancellationToken.None);
+
+        Assert.True(result.Thumbnail);
+        Assert.True(result.Preview);
+        Assert.Equal(2, process.FfmpegArguments.Count);
+        Assert.All(process.FfmpegArguments, arguments => {
+            var filterIndex = arguments.ToList().IndexOf("-vf");
+            Assert.True(filterIndex >= 0);
+            var filter = arguments[filterIndex + 1];
+            Assert.Contains("setparams=color_primaries=bt2020", filter);
+            Assert.Contains("tonemapx=tonemap=bt2390", filter);
+            Assert.Contains("peak=400", filter);
+            Assert.Contains("t=bt709:m=bt709:p=bt709:format=yuv420p", filter);
+        });
+    }
+
+    [Fact]
+    public async Task TrickplayExtractionUsesHdrToneMappingFilter() {
+        var inputPath = Path.Combine(_root, "hdr10.mkv");
+        var frameDir = Path.Combine(_root, "frames");
+        await File.WriteAllTextAsync(inputPath, "source");
+        var process = new ProbedVideoProcessExecutor(Hdr10ProbeJson);
+        var service = new ThumbnailService(process, new MediaProbeService(process));
+
+        var count = await service.ExtractTrickplayFramesBatchAsync(
+            inputPath,
+            frameDir,
+            duration: 12,
+            intervalSeconds: 6,
+            width: 320,
+            height: 180,
+            jpegQuality: 3,
+            CancellationToken.None);
+
+        Assert.Equal(2, count);
+        Assert.All(process.FfmpegArguments, arguments => {
+            var filterIndex = arguments.ToList().IndexOf("-vf");
+            Assert.True(filterIndex >= 0);
+            var filter = arguments[filterIndex + 1];
+            Assert.Contains("zscale=t=linear", filter);
+            Assert.Contains("tonemap=tonemap=hable", filter);
+            Assert.Contains("zscale=t=bt709:m=bt709:p=bt709", filter);
+            Assert.Contains("format=yuvj420p", filter);
+        });
+    }
+
+    [Fact]
     public void AssetPathsNormalizeRelativeDataDirectoriesToAbsoluteCacheRoots() {
         var relativeDataDir = Path.GetRelativePath(
             Directory.GetCurrentDirectory(),
@@ -73,4 +138,76 @@ public sealed class ThumbnailServiceTests : IDisposable {
             return new ProcessExecutionResult(0, string.Empty, string.Empty);
         }
     }
+
+    private sealed class ProbedVideoProcessExecutor(string probeJson) : ProcessExecutor {
+        public List<IReadOnlyList<string>> FfmpegArguments { get; } = [];
+
+        public override async Task<ProcessExecutionResult> RunAsync(
+            string fileName,
+            IReadOnlyList<string> arguments,
+            IReadOnlyDictionary<string, string>? environment,
+            CancellationToken cancellationToken) {
+            if (fileName.Equals("ffprobe", StringComparison.OrdinalIgnoreCase)) {
+                return new ProcessExecutionResult(0, probeJson, string.Empty);
+            }
+
+            FfmpegArguments.Add(arguments);
+            var outputPath = arguments[^1];
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+            await File.WriteAllTextAsync(outputPath, "asset", cancellationToken);
+            return new ProcessExecutionResult(0, string.Empty, string.Empty);
+        }
+    }
+
+    private const string DolbyVisionProbeJson = """
+        {
+          "format": { "duration": "42", "format_name": "matroska" },
+          "streams": [
+            {
+              "index": 0,
+              "codec_type": "video",
+              "codec_name": "hevc",
+              "pix_fmt": "yuv420p10le",
+              "width": 3840,
+              "height": 1920,
+              "avg_frame_rate": "24000/1001",
+              "color_range": "pc",
+              "side_data_list": [
+                {
+                  "side_data_type": "DOVI configuration record",
+                  "dv_profile": 5,
+                  "dv_level": 6,
+                  "rpu_present_flag": 1,
+                  "el_present_flag": 0,
+                  "bl_present_flag": 1,
+                  "dv_bl_signal_compatibility_id": 0
+                }
+              ],
+              "disposition": { "default": 1, "forced": 0 }
+            }
+          ]
+        }
+        """;
+
+    private const string Hdr10ProbeJson = """
+        {
+          "format": { "duration": "42", "format_name": "matroska" },
+          "streams": [
+            {
+              "index": 0,
+              "codec_type": "video",
+              "codec_name": "hevc",
+              "pix_fmt": "yuv420p10le",
+              "width": 3840,
+              "height": 2160,
+              "avg_frame_rate": "24/1",
+              "color_range": "tv",
+              "color_space": "bt2020nc",
+              "color_transfer": "smpte2084",
+              "color_primaries": "bt2020",
+              "disposition": { "default": 1, "forced": 0 }
+            }
+          ]
+        }
+        """;
 }

@@ -176,6 +176,14 @@ public sealed class HlsAssetService : IHlsAssetService {
                     id,
                     rendition.Name);
                 return null;
+            } catch (InvalidOperationException ex) {
+                _logger?.LogWarning(
+                    ex,
+                    "Virtual HLS segment {SegmentIndex} failed to generate for {VideoId}/{Rendition}.",
+                    segmentIndex.Value,
+                    id,
+                    rendition.Name);
+                return null;
             }
 
             return new HlsAsset(segmentPath, "video/mp2t", "public, max-age=31536000, immutable");
