@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
-- The Files manager was redesigned as a VS Code-style split-pane workspace with a resizable file tree, compact toolbar, and proper shell integration — moved under Operate in the sidebar and restyled to match the Dark Room design system.
+- The Files manager was redesigned as a VS Code-style split-pane workspace with a resizable file tree, compact toolbar, and proper shell integration — moved under Operate in the sidebar and restyled to match the Dark Room design system. Selecting a directory now shows aggregate stats (total size, file count) and linked entity thumbnails, context menus are styled and viewport-clamped, and drag-drop targets highlight with a brass accent.
 - Media detail pages no longer show their own file list tabs, making Files the primary place to inspect and operate on disk files.
 - Metadata edits and plugin identify results now use kind-guarded patch routes, so plugins can safely update videos, series, people, studios, and related metadata without crossing entity types.
 - People now replaces Actors across the app navigation and browse experience, including the canonical `/people` route for person profiles.
