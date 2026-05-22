@@ -11,6 +11,7 @@
     fetchV2FileDetail,
     fetchV2FileRoots,
     moveV2File,
+    refreshV2Entity,
     renameV2File,
     rescanV2FileRoot,
     uploadV2Files,
@@ -222,6 +223,11 @@
 
   async function rescan(meta: FileTreeNodeMeta): Promise<void> {
     await rescanV2FileRoot({ rootId: meta.rootId, path: meta.path || null });
+    if (detail?.linkedEntities?.length) {
+      await Promise.allSettled(
+        detail.linkedEntities.map((linked) => refreshV2Entity(linked.entityId)),
+      );
+    }
     await refreshSelected();
   }
 

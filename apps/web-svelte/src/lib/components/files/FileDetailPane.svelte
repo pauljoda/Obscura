@@ -13,6 +13,7 @@
   import { v2FileContentUrl } from "$lib/api/v2";
   import type { FileActionId } from "$lib/files/file-actions";
   import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import { entityReferenceToThumbnailCard } from "$lib/entities/entity-thumbnail";
 
   interface Props {
@@ -53,12 +54,22 @@
   const mime = $derived(entry?.mimeType ?? "");
   const previewKind = $derived(resolvePreviewKind(entry?.name ?? "", mime, isDirectory));
 
+  const primaryLinked = $derived(detail?.linkedEntities?.length === 1 ? detail.linkedEntities[0] : null);
+  const heroCard = $derived(
+    primaryLinked
+      ? entityReferenceToThumbnailCard(
+          { id: primaryLinked.entityId, kind: primaryLinked.kind, title: primaryLinked.title, thumbnailUrl: primaryLinked.coverUrl },
+        )
+      : null,
+  );
   const linkedCards = $derived(
-    (detail?.linkedEntities ?? []).map((linked) =>
-      entityReferenceToThumbnailCard(
-        { id: linked.entityId, kind: linked.kind, title: linked.title, thumbnailUrl: linked.coverUrl },
+    (detail?.linkedEntities ?? [])
+      .filter((linked) => linked.entityId !== primaryLinked?.entityId)
+      .map((linked) =>
+        entityReferenceToThumbnailCard(
+          { id: linked.entityId, kind: linked.kind, title: linked.title, thumbnailUrl: linked.coverUrl },
+        ),
       ),
-    ),
   );
 
   function resolvePreviewKind(name: string, mimeType: string, directory: boolean): "image" | "video" | "audio" | "text" | "none" {
@@ -189,6 +200,12 @@
     />
 
     <div class="detail-body">
+      {#if heroCard}
+        <div class="entity-hero">
+          <EntityThumbnail card={heroCard} linkable selectable={false} />
+        </div>
+      {/if}
+
       {#if previewKind !== "none"}
         <div class="preview" data-kind={previewKind}>
           {#if previewKind === "image"}
@@ -402,6 +419,13 @@
     font-family: var(--font-mono);
     font-size: 0.75rem;
     font-weight: 500;
+  }
+
+  .entity-hero {
+    display: flex;
+    justify-content: center;
+    max-width: 16rem;
+    margin: 0 auto;
   }
 
   .linked-grid {
