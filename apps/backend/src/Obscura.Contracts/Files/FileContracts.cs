@@ -62,7 +62,8 @@ public sealed record FileDetailRequest(Guid RootId, string? Path);
 /// <param name="EntityId">Entity identifier.</param>
 /// <param name="Kind">Entity kind code.</param>
 /// <param name="Title">Entity title.</param>
-public sealed record FileLinkedEntity(Guid EntityId, string Kind, string Title);
+/// <param name="CoverUrl">Thumbnail or poster artwork path for display; null when the entity has no artwork.</param>
+public sealed record FileLinkedEntity(Guid EntityId, string Kind, string Title, string? CoverUrl = null);
 
 /// <summary>
 /// Detailed metadata for a watched-root file or directory.

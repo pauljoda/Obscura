@@ -48,15 +48,37 @@ public sealed class EfFilesPersistence(ObscuraDbContext db) : IFilesPersistence 
         string absolutePath,
         CancellationToken cancellationToken) {
         var normalized = Path.GetFullPath(absolutePath);
-        return await db.EntityFiles.AsNoTracking()
+        var entities = await db.EntityFiles.AsNoTracking()
             .Where(file => file.Role == EntityFileRole.Source &&
                            (file.Path == normalized || EF.Functions.Like(file.Path, normalized + Path.DirectorySeparatorChar + "%")))
             .Join(
                 db.Entities.AsNoTracking().Where(entity => entity.DeletedAt == null),
                 file => file.EntityId,
                 entity => entity.Id,
-                (_, entity) => new FileLinkedEntity(entity.Id, entity.KindCode, entity.Title))
+                (_, entity) => entity)
+            .Distinct()
             .ToArrayAsync(cancellationToken);
+
+        if (entities.Length == 0) return [];
+
+        var ids = entities.Select(e => e.Id).ToArray();
+        var coverByEntity = await db.EntityFiles.AsNoTracking()
+            .Where(file => ids.Contains(file.EntityId))
+            .Where(file => file.Role == EntityFileRole.Thumbnail || file.Role == EntityFileRole.Poster ||
+                           file.Role == EntityFileRole.Cover || file.Role == EntityFileRole.Backdrop)
+            .OrderBy(file => file.Role == EntityFileRole.Thumbnail ? 0 :
+                file.Role == EntityFileRole.Poster ? 1 :
+                file.Role == EntityFileRole.Cover ? 2 : 3)
+            .ThenBy(file => file.CreatedAt)
+            .GroupBy(file => file.EntityId)
+            .Select(group => new { group.Key, Path = group.First().Path })
+            .ToDictionaryAsync(x => x.Key, x => x.Path, cancellationToken);
+
+        return entities.Select(entity => new FileLinkedEntity(
+            entity.Id,
+            entity.KindCode,
+            entity.Title,
+            coverByEntity.GetValueOrDefault(entity.Id))).ToArray();
     }
 
     /// <inheritdoc />

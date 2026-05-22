@@ -9,4 +9,6 @@ export interface FileLinkedEntity {
   entityId: string;
   kind: string;
   title: string;
+  /** @nullable */
+  coverUrl?: string | null;
 }

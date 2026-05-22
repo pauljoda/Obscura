@@ -55,8 +55,7 @@
   const linkedCards = $derived(
     (detail?.linkedEntities ?? []).map((linked) =>
       entityReferenceToThumbnailCard(
-        { id: linked.entityId, kind: linked.kind, title: linked.title },
-        { aspectRatio: "square" },
+        { id: linked.entityId, kind: linked.kind, title: linked.title, thumbnailUrl: linked.coverUrl },
       ),
     ),
   );
