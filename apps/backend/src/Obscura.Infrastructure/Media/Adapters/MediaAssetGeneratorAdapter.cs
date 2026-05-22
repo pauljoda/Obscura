@@ -1,39 +1,54 @@
 using Obscura.Infrastructure.Media.Processing;
 using Obscura.Application.Jobs.Ports;
+using Obscura.Application.Settings;
 
 namespace Obscura.Infrastructure.Media.Adapters;
 
 /// <summary>
 /// Adapts the Infrastructure ThumbnailService and AssetPathService to the Application port interface.
 /// </summary>
-public sealed class MediaAssetGeneratorAdapter(ThumbnailService thumbnails, AssetPathService paths) : IMediaAssetGenerator {
-    public Task<bool> GenerateVideoThumbnailAsync(
+public sealed class MediaAssetGeneratorAdapter(
+    ThumbnailService thumbnails,
+    AssetPathService paths,
+    ISettingsPersistence? settings = null,
+    MediaToolOptions? defaultToolOptions = null) : IMediaAssetGenerator {
+    public async Task<bool> GenerateVideoThumbnailAsync(
         string inputPath, string outputPath, double seekSeconds,
         int width, int height, int quality, CancellationToken cancellationToken) =>
-        thumbnails.GenerateVideoThumbnailAsync(inputPath, outputPath, seekSeconds, width, height, quality, cancellationToken);
+        await thumbnails.GenerateVideoThumbnailAsync(
+            inputPath, outputPath, seekSeconds, width, height, quality, cancellationToken,
+            await ResolveVideoToolsAsync(cancellationToken));
 
-    public Task<bool> GeneratePreviewClipAsync(
+    public async Task<bool> GeneratePreviewClipAsync(
         string inputPath, string outputPath, double startSeconds, int durationSeconds, CancellationToken cancellationToken) =>
-        thumbnails.GeneratePreviewClipAsync(inputPath, outputPath, startSeconds, durationSeconds, cancellationToken);
+        await thumbnails.GeneratePreviewClipAsync(
+            inputPath, outputPath, startSeconds, durationSeconds, cancellationToken,
+            await ResolveVideoToolsAsync(cancellationToken));
 
-    public Task<bool> ExtractTrickplayFrameAsync(
+    public async Task<bool> ExtractTrickplayFrameAsync(
         string inputPath, string outputPath, double seekSeconds,
         int width, int height, int jpegQuality, CancellationToken cancellationToken) =>
-        thumbnails.ExtractTrickplayFrameAsync(inputPath, outputPath, seekSeconds, width, height, jpegQuality, cancellationToken);
+        await thumbnails.ExtractTrickplayFrameAsync(
+            inputPath, outputPath, seekSeconds, width, height, jpegQuality, cancellationToken,
+            await ResolveVideoToolsAsync(cancellationToken));
 
-    public Task<int> ExtractTrickplayFramesBatchAsync(
+    public async Task<int> ExtractTrickplayFramesBatchAsync(
         string inputPath, string outputDir, double duration,
         int intervalSeconds, int width, int height, int jpegQuality,
         CancellationToken cancellationToken) =>
-        thumbnails.ExtractTrickplayFramesBatchAsync(inputPath, outputDir, duration, intervalSeconds, width, height, jpegQuality, cancellationToken);
+        await thumbnails.ExtractTrickplayFramesBatchAsync(
+            inputPath, outputDir, duration, intervalSeconds, width, height, jpegQuality, cancellationToken,
+            await ResolveVideoToolsAsync(cancellationToken));
 
-    public Task<bool> ComposeSpriteSheetAsync(
+    public async Task<bool> ComposeSpriteSheetAsync(
         string frameDir, string outputPath, int columns,
         int frameWidth, int frameHeight, int jpegQuality,
         CancellationToken cancellationToken) =>
-        thumbnails.ComposeSpriteSheetAsync(frameDir, outputPath, columns, frameWidth, frameHeight, jpegQuality, cancellationToken);
+        await thumbnails.ComposeSpriteSheetAsync(
+            frameDir, outputPath, columns, frameWidth, frameHeight, jpegQuality, cancellationToken,
+            await ResolveVideoToolsAsync(cancellationToken));
 
-    public Task<int> ComposeTiledJpegSheetsAsync(
+    public async Task<int> ComposeTiledJpegSheetsAsync(
         string frameDir,
         string outputDir,
         int columns,
@@ -42,31 +57,40 @@ public sealed class MediaAssetGeneratorAdapter(ThumbnailService thumbnails, Asse
         int frameHeight,
         int jpegQuality,
         CancellationToken cancellationToken) =>
-        thumbnails.ComposeTiledJpegSheetsAsync(frameDir, outputDir, columns, rows, frameWidth, frameHeight, jpegQuality, cancellationToken);
+        await thumbnails.ComposeTiledJpegSheetsAsync(
+            frameDir, outputDir, columns, rows, frameWidth, frameHeight, jpegQuality, cancellationToken,
+            await ResolveVideoToolsAsync(cancellationToken));
 
-    public Task<(bool Thumbnail, bool Preview)> GenerateThumbnailAndPreviewAsync(
+    public async Task<(bool Thumbnail, bool Preview)> GenerateThumbnailAndPreviewAsync(
         string inputPath,
         string thumbnailPath, double thumbSeekSeconds, int thumbWidth, int thumbHeight, int thumbQuality,
         string previewPath, double previewStartSeconds, int previewDurationSeconds,
         CancellationToken cancellationToken) =>
-        thumbnails.GenerateThumbnailAndPreviewAsync(inputPath, thumbnailPath, thumbSeekSeconds, thumbWidth, thumbHeight, thumbQuality,
-            previewPath, previewStartSeconds, previewDurationSeconds, cancellationToken);
+        await thumbnails.GenerateThumbnailAndPreviewAsync(inputPath, thumbnailPath, thumbSeekSeconds, thumbWidth, thumbHeight, thumbQuality,
+            previewPath, previewStartSeconds, previewDurationSeconds, cancellationToken,
+            await ResolveVideoToolsAsync(cancellationToken));
 
-    public Task<bool> GenerateImageThumbnailAsync(
+    public async Task<bool> GenerateImageThumbnailAsync(
         string inputPath, string outputPath, int targetWidth, int quality, CancellationToken cancellationToken) =>
-        thumbnails.GenerateImageThumbnailAsync(inputPath, outputPath, targetWidth, quality, cancellationToken);
+        await thumbnails.GenerateImageThumbnailAsync(
+            inputPath, outputPath, targetWidth, quality, cancellationToken,
+            await ResolveVideoToolsAsync(cancellationToken));
 
     public async Task<IReadOnlyList<string>> ExtractSubtitlesAsync(
         string inputPath, string outputDir, IReadOnlyList<SubtitleStreamData> streams, CancellationToken cancellationToken) {
         var infraStreams = streams
             .Select(s => new SubtitleStreamInfo(s.StreamIndex, s.CodecName, s.Language, s.Title))
             .ToList();
-        return await thumbnails.ExtractSubtitlesAsync(inputPath, outputDir, infraStreams, cancellationToken);
+        return await thumbnails.ExtractSubtitlesAsync(
+            inputPath, outputDir, infraStreams, cancellationToken,
+            await ResolveVideoToolsAsync(cancellationToken));
     }
 
-    public Task<int[]?> GenerateWaveformDataAsync(
+    public async Task<int[]?> GenerateWaveformDataAsync(
         string inputPath, double durationSeconds, int pixelsPerSecond, CancellationToken cancellationToken) =>
-        thumbnails.GenerateWaveformDataAsync(inputPath, durationSeconds, pixelsPerSecond, cancellationToken);
+        await thumbnails.GenerateWaveformDataAsync(
+            inputPath, durationSeconds, pixelsPerSecond, cancellationToken,
+            await ResolveVideoToolsAsync(cancellationToken));
 
     public string VideoThumbnailPath(Guid entityId) => paths.VideoThumbnailPath(entityId);
     public string VideoPreviewPath(Guid entityId) => paths.VideoPreviewPath(entityId);
@@ -87,4 +111,18 @@ public sealed class MediaAssetGeneratorAdapter(ThumbnailService thumbnails, Asse
     public string BookPageThumbnailUrl(Guid entityId) => AssetPathService.BookPageThumbnailUrl(entityId);
     public string AudioWaveformUrl(Guid entityId) => AssetPathService.AudioWaveformUrl(entityId);
     public string SubtitleUrl(Guid entityId, string fileName) => AssetPathService.SubtitleUrl(entityId, fileName);
+
+    private async Task<MediaToolOptions> ResolveVideoToolsAsync(CancellationToken cancellationToken) {
+        var defaults = defaultToolOptions ?? new MediaToolOptions();
+        if (settings is null) {
+            return defaults;
+        }
+
+        var librarySettings = await settings.GetLibrarySettingsAsync(cancellationToken);
+        var ffmpegPath = string.IsNullOrWhiteSpace(librarySettings.HlsFfmpegPath) ||
+            string.Equals(librarySettings.HlsFfmpegPath.Trim(), "ffmpeg", StringComparison.OrdinalIgnoreCase)
+                ? defaults.FfmpegPath
+                : librarySettings.HlsFfmpegPath.Trim();
+        return new MediaToolOptions(ffmpegPath, defaults.ConfiguredFfprobePath);
+    }
 }

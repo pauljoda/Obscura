@@ -8,10 +8,15 @@ namespace Obscura.Infrastructure.Media.Processing;
 public sealed class ThumbnailService {
     private readonly ProcessExecutor _processExecutor;
     private readonly MediaProbeService? _mediaProbe;
+    private readonly MediaToolOptions _toolOptions;
 
-    public ThumbnailService(ProcessExecutor processExecutor, MediaProbeService? mediaProbe = null) {
+    public ThumbnailService(
+        ProcessExecutor processExecutor,
+        MediaProbeService? mediaProbe = null,
+        MediaToolOptions? toolOptions = null) {
         _processExecutor = processExecutor;
         _mediaProbe = mediaProbe;
+        _toolOptions = toolOptions ?? new MediaToolOptions();
     }
 
     /// <summary>
@@ -19,11 +24,13 @@ public sealed class ThumbnailService {
     /// </summary>
     public async Task<bool> GenerateVideoThumbnailAsync(
         string inputPath, string outputPath, double seekSeconds,
-        int width, int height, int quality, CancellationToken cancellationToken) {
+        int width, int height, int quality, CancellationToken cancellationToken,
+        MediaToolOptions? toolOptions = null) {
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-        var videoFilter = await BuildVideoFilterAsync(inputPath, $"scale={width}:{height}", cancellationToken);
+        var tools = toolOptions ?? _toolOptions;
+        var videoFilter = await BuildVideoFilterAsync(inputPath, $"scale={width}:{height}", cancellationToken, tools);
 
-        var result = await _processExecutor.RunAsync("ffmpeg",
+        var result = await _processExecutor.RunAsync(tools.FfmpegPath,
             ["-hide_banner", "-loglevel", "error", "-y",
              "-ss", seekSeconds.ToString("F2"),
              "-i", inputPath,
@@ -42,11 +49,13 @@ public sealed class ThumbnailService {
     public async Task<bool> GeneratePreviewClipAsync(
         string inputPath, string outputPath,
         double startSeconds, int durationSeconds,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken,
+        MediaToolOptions? toolOptions = null) {
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-        var videoFilter = await BuildVideoFilterAsync(inputPath, "scale=960:-2", cancellationToken);
+        var tools = toolOptions ?? _toolOptions;
+        var videoFilter = await BuildVideoFilterAsync(inputPath, "scale=960:-2", cancellationToken, tools);
 
-        var result = await _processExecutor.RunAsync("ffmpeg",
+        var result = await _processExecutor.RunAsync(tools.FfmpegPath,
             ["-hide_banner", "-loglevel", "error", "-y",
              "-ss", startSeconds.ToString("F2"),
              "-t", durationSeconds.ToString(),
@@ -69,14 +78,17 @@ public sealed class ThumbnailService {
     public async Task<bool> ExtractTrickplayFrameAsync(
         string inputPath, string outputPath,
         double seekSeconds, int width, int height, int jpegQuality,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken,
+        MediaToolOptions? toolOptions = null) {
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+        var tools = toolOptions ?? _toolOptions;
         var videoFilter = await BuildVideoFilterAsync(
             inputPath,
             $"scale={width}:{height}:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,format=yuvj420p",
-            cancellationToken);
+            cancellationToken,
+            tools);
 
-        var result = await _processExecutor.RunAsync("ffmpeg",
+        var result = await _processExecutor.RunAsync(tools.FfmpegPath,
             ["-hide_banner", "-loglevel", "error", "-y",
              "-skip_frame", "nokey",
              "-ss", seekSeconds.ToString("F2"),
@@ -96,10 +108,12 @@ public sealed class ThumbnailService {
     public async Task<bool> GenerateImageThumbnailAsync(
         string inputPath, string outputPath,
         int targetWidth, int quality,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken,
+        MediaToolOptions? toolOptions = null) {
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+        var tools = toolOptions ?? _toolOptions;
 
-        var result = await _processExecutor.RunAsync("ffmpeg",
+        var result = await _processExecutor.RunAsync(tools.FfmpegPath,
             ["-hide_banner", "-loglevel", "error", "-y",
              "-i", inputPath,
              "-frames:v", "1",
@@ -119,8 +133,10 @@ public sealed class ThumbnailService {
     public async Task<IReadOnlyList<string>> ExtractSubtitlesAsync(
         string inputPath, string outputDir,
         IReadOnlyList<SubtitleStreamInfo> streams,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken,
+        MediaToolOptions? toolOptions = null) {
         Directory.CreateDirectory(outputDir);
+        var tools = toolOptions ?? _toolOptions;
 
         if (streams.Count == 0)
             return [];
@@ -136,7 +152,7 @@ public sealed class ThumbnailService {
             args.AddRange(["-map", $"0:{streams[i].StreamIndex}", "-c:s", "webvtt", outputPaths[i]]);
         }
 
-        var result = await _processExecutor.RunAsync("ffmpeg", args, null, cancellationToken);
+        var result = await _processExecutor.RunAsync(tools.FfmpegPath, args, null, cancellationToken);
         if (result.ExitCode == 0) {
             return outputPaths.Where(File.Exists).ToList();
         }
@@ -144,7 +160,7 @@ public sealed class ThumbnailService {
         // Fallback: extract one stream at a time
         var succeeded = new List<string>();
         foreach (var (stream, outputPath) in streams.Zip(outputPaths)) {
-            var perStreamResult = await _processExecutor.RunAsync("ffmpeg",
+            var perStreamResult = await _processExecutor.RunAsync(tools.FfmpegPath,
                 ["-y", "-v", "error", "-i", inputPath,
                  "-map", $"0:{stream.StreamIndex}", "-c:s", "webvtt", outputPath],
                 null, cancellationToken);
@@ -166,12 +182,15 @@ public sealed class ThumbnailService {
     public async Task<int> ExtractTrickplayFramesBatchAsync(
         string inputPath, string outputDir, double duration,
         int intervalSeconds, int width, int height, int jpegQuality,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken,
+        MediaToolOptions? toolOptions = null) {
         Directory.CreateDirectory(outputDir);
+        var tools = toolOptions ?? _toolOptions;
         var frameFilter = await BuildVideoFilterAsync(
             inputPath,
             $"scale={width}:{height}:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,format=yuvj420p",
-            cancellationToken);
+            cancellationToken,
+            tools);
 
         var totalFrames = (int)(duration / intervalSeconds);
         if (totalFrames < 1) return 0;
@@ -186,7 +205,7 @@ public sealed class ThumbnailService {
             var outputPath = Path.Combine(outputDir, $"frame-{i + 1:D5}.jpg");
             tasks.Add(ExtractSingleKeyframeAsync(
                 semaphore, inputPath, outputPath, seekSeconds,
-                frameFilter, jpegQuality, cancellationToken));
+                frameFilter, jpegQuality, tools, cancellationToken));
         }
 
         var results = await Task.WhenAll(tasks);
@@ -201,7 +220,8 @@ public sealed class ThumbnailService {
     public async Task<bool> ComposeSpriteSheetAsync(
         string frameDir, string outputPath, int columns,
         int frameWidth, int frameHeight, int jpegQuality,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken,
+        MediaToolOptions? toolOptions = null) {
         var frames = Directory.GetFiles(frameDir, "frame-*.jpg")
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToArray();
@@ -215,7 +235,8 @@ public sealed class ThumbnailService {
             frames.Select(f => $"file '{f}'"),
             cancellationToken);
 
-        var result = await _processExecutor.RunAsync("ffmpeg",
+        var tools = toolOptions ?? _toolOptions;
+        var result = await _processExecutor.RunAsync(tools.FfmpegPath,
             ["-hide_banner", "-loglevel", "error", "-y",
              "-f", "concat", "-safe", "0", "-i", concatList,
              "-vf", $"scale={frameWidth}:{frameHeight},tile={columns}x{rows}",
@@ -239,7 +260,8 @@ public sealed class ThumbnailService {
         int frameWidth,
         int frameHeight,
         int jpegQuality,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken,
+        MediaToolOptions? toolOptions = null) {
         var frames = Directory.GetFiles(frameDir, "frame-*.jpg")
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToArray();
@@ -257,7 +279,8 @@ public sealed class ThumbnailService {
                 chunk.Select(frame => $"file '{Path.GetFullPath(frame).Replace("'", "'\\''")}'"),
                 cancellationToken);
 
-            var result = await _processExecutor.RunAsync("ffmpeg",
+            var tools = toolOptions ?? _toolOptions;
+            var result = await _processExecutor.RunAsync(tools.FfmpegPath,
                 ["-hide_banner", "-loglevel", "error", "-y",
                  "-f", "concat", "-safe", "0", "-i", concatList,
                  "-vf", $"scale={frameWidth}:{frameHeight},tile={columns}x{rows}",
@@ -279,10 +302,11 @@ public sealed class ThumbnailService {
     private async Task<bool> ExtractSingleKeyframeAsync(
         SemaphoreSlim semaphore, string inputPath, string outputPath,
         double seekSeconds, string videoFilter, int jpegQuality,
+        MediaToolOptions toolOptions,
         CancellationToken cancellationToken) {
         await semaphore.WaitAsync(cancellationToken);
         try {
-            var result = await _processExecutor.RunAsync("ffmpeg",
+            var result = await _processExecutor.RunAsync(toolOptions.FfmpegPath,
                 ["-hide_banner", "-loglevel", "error", "-y",
                  "-skip_frame", "nokey",
                  "-ss", seekSeconds.ToString("F2"),
@@ -307,13 +331,15 @@ public sealed class ThumbnailService {
         string inputPath,
         string thumbnailPath, double thumbSeekSeconds, int thumbWidth, int thumbHeight, int thumbQuality,
         string previewPath, double previewStartSeconds, int previewDurationSeconds,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken,
+        MediaToolOptions? toolOptions = null) {
         Directory.CreateDirectory(Path.GetDirectoryName(thumbnailPath)!);
         Directory.CreateDirectory(Path.GetDirectoryName(previewPath)!);
-        var thumbFilter = await BuildVideoFilterAsync(inputPath, $"scale={thumbWidth}:{thumbHeight}", cancellationToken);
-        var previewFilter = await BuildVideoFilterAsync(inputPath, "scale=960:-2", cancellationToken);
+        var tools = toolOptions ?? _toolOptions;
+        var thumbFilter = await BuildVideoFilterAsync(inputPath, $"scale={thumbWidth}:{thumbHeight}", cancellationToken, tools);
+        var previewFilter = await BuildVideoFilterAsync(inputPath, "scale=960:-2", cancellationToken, tools);
 
-        var thumbResult = await _processExecutor.RunAsync("ffmpeg",
+        var thumbResult = await _processExecutor.RunAsync(tools.FfmpegPath,
             ["-hide_banner", "-loglevel", "error", "-y",
              "-ss", thumbSeekSeconds.ToString("F2"),
              "-i", inputPath,
@@ -323,7 +349,7 @@ public sealed class ThumbnailService {
              thumbnailPath],
             null, cancellationToken);
 
-        var previewResult = await _processExecutor.RunAsync("ffmpeg",
+        var previewResult = await _processExecutor.RunAsync(tools.FfmpegPath,
             ["-hide_banner", "-loglevel", "error", "-y",
              "-ss", previewStartSeconds.ToString("F2"),
              "-t", previewDurationSeconds.ToString(),
@@ -345,12 +371,13 @@ public sealed class ThumbnailService {
     private async Task<string> BuildVideoFilterAsync(
         string inputPath,
         string outputTransform,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken,
+        MediaToolOptions toolOptions) {
         if (_mediaProbe is null) {
             return outputTransform;
         }
 
-        var probe = await _mediaProbe.ProbeVideoAsync(inputPath, cancellationToken);
+        var probe = await _mediaProbe.ProbeVideoAsync(inputPath, cancellationToken, toolOptions.FfprobePath);
         var videoStream = probe?.Streams?
             .Where(stream => stream.Type.Equals("Video", StringComparison.OrdinalIgnoreCase))
             .OrderBy(stream => stream.StreamIndex)
@@ -393,9 +420,11 @@ public sealed class ThumbnailService {
     /// </summary>
     public async Task<int[]?> GenerateWaveformDataAsync(
         string inputPath, double durationSeconds, int pixelsPerSecond,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken,
+        MediaToolOptions? toolOptions = null) {
         const int sampleRate = 8000;
-        var result = await _processExecutor.RunAsync("ffmpeg",
+        var tools = toolOptions ?? _toolOptions;
+        var result = await _processExecutor.RunAsync(tools.FfmpegPath,
             ["-hide_banner", "-loglevel", "error",
              "-i", inputPath,
              "-f", "s16le", "-ac", "1", "-ar", sampleRate.ToString(),

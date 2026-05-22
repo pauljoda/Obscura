@@ -30,7 +30,7 @@ export OBSCURA_SECRET
 # ── Initialize PostgreSQL if fresh ────────────────────────────────
 if [ ! -f "$PGDATA/PG_VERSION" ]; then
   echo "[obscura] Initializing PostgreSQL database..."
-  su-exec postgres initdb -D "$PGDATA" --auth=trust --encoding=UTF8
+  gosu postgres initdb -D "$PGDATA" --auth=trust --encoding=UTF8
 
   # Configure for local-only access
   cat > "$PGDATA/pg_hba.conf" <<CONF
@@ -54,11 +54,11 @@ fi
 
 # ── Start PostgreSQL ──────────────────────────────────────────────
 echo "[obscura] Starting PostgreSQL..."
-su-exec postgres pg_ctl -D "$PGDATA" -l /data/postgres/log -w -t 30 start
+gosu postgres pg_ctl -D "$PGDATA" -l /data/postgres/log -w -t 30 start
 
 # Create database if it doesn't exist
-su-exec postgres psql -h 127.0.0.1 -tc "SELECT 1 FROM pg_database WHERE datname = 'obscura'" | grep -q 1 || \
-  su-exec postgres createdb -h 127.0.0.1 obscura
+gosu postgres psql -h 127.0.0.1 -tc "SELECT 1 FROM pg_database WHERE datname = 'obscura'" | grep -q 1 || \
+  gosu postgres createdb -h 127.0.0.1 obscura
 
 # Note: database migrations run automatically in the shared .NET runtime
 # used by the API and worker.

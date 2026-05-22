@@ -7,13 +7,16 @@ namespace Obscura.Infrastructure.Media.Processing;
 /// </summary>
 public sealed class MediaToolService {
     private readonly ProcessExecutor _processExecutor;
+    private readonly MediaToolOptions _toolOptions;
 
     /// <summary>
     /// Creates the media tool checker.
     /// </summary>
     /// <param name="processExecutor">Process runner used to invoke media binaries.</param>
-    public MediaToolService(ProcessExecutor processExecutor) {
+    /// <param name="toolOptions">Configured media tool paths.</param>
+    public MediaToolService(ProcessExecutor processExecutor, MediaToolOptions? toolOptions = null) {
         _processExecutor = processExecutor;
+        _toolOptions = toolOptions ?? new MediaToolOptions();
     }
 
     /// <summary>
@@ -22,8 +25,8 @@ public sealed class MediaToolService {
     /// <param name="cancellationToken">Token used to cancel process checks.</param>
     /// <returns>Current media tool availability status.</returns>
     public async Task<MediaToolStatus> CheckAsync(CancellationToken cancellationToken) {
-        var ffmpeg = await CheckToolAsync("ffmpeg", cancellationToken);
-        var ffprobe = await CheckToolAsync("ffprobe", cancellationToken);
+        var ffmpeg = await CheckToolAsync(_toolOptions.FfmpegPath, cancellationToken);
+        var ffprobe = await CheckToolAsync(_toolOptions.FfprobePath, cancellationToken);
 
         return new MediaToolStatus(
             ffmpeg.Available,

@@ -20,6 +20,23 @@ public sealed class MediaToolServiceTests {
     }
 
     [Fact]
+    public async Task CheckUsesConfiguredFfmpegAndCompanionFfprobePaths() {
+        var process = new FakeProcessExecutor(new Dictionary<string, ProcessExecutionResult> {
+            ["/usr/lib/jellyfin-ffmpeg/ffmpeg"] = new(0, "ffmpeg version 7.1\nbuilt with clang", ""),
+            ["/usr/lib/jellyfin-ffmpeg/ffprobe"] = new(0, "ffprobe version 7.1\nbuilt with clang", "")
+        });
+        var service = new MediaToolService(
+            process,
+            new MediaToolOptions("/usr/lib/jellyfin-ffmpeg/ffmpeg"));
+
+        await service.CheckAsync(CancellationToken.None);
+
+        Assert.Equal(
+            ["/usr/lib/jellyfin-ffmpeg/ffmpeg", "/usr/lib/jellyfin-ffmpeg/ffprobe"],
+            process.FileNames);
+    }
+
+    [Fact]
     public async Task CheckHandlesMissingTools() {
         var service = new MediaToolService(new ThrowingProcessExecutor());
 
@@ -33,6 +50,7 @@ public sealed class MediaToolServiceTests {
 
     private sealed class FakeProcessExecutor : ProcessExecutor {
         private readonly IReadOnlyDictionary<string, ProcessExecutionResult> _results;
+        public List<string> FileNames { get; } = [];
 
         public FakeProcessExecutor(IReadOnlyDictionary<string, ProcessExecutionResult> results) {
             _results = results;
@@ -43,6 +61,7 @@ public sealed class MediaToolServiceTests {
             IReadOnlyList<string> arguments,
             IReadOnlyDictionary<string, string>? environment,
             CancellationToken cancellationToken) {
+            FileNames.Add(fileName);
             return Task.FromResult(_results[fileName]);
         }
     }

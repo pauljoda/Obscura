@@ -64,6 +64,21 @@ public sealed class MediaProbeServiceTests {
     }
 
     [Fact]
+    public async Task ProbeVideoUsesConfiguredCompanionFfprobePath() {
+        var process = new JsonProcessExecutor("""
+            {
+              "format": { "duration": "42", "format_name": "matroska" },
+              "streams": []
+            }
+            """);
+        var service = new MediaProbeService(process, new MediaToolOptions("/usr/lib/jellyfin-ffmpeg/ffmpeg"));
+
+        await service.ProbeVideoAsync("/media/movie.mkv", CancellationToken.None);
+
+        Assert.Equal("/usr/lib/jellyfin-ffmpeg/ffprobe", process.LastFileName);
+    }
+
+    [Fact]
     public async Task ProbeVideoClassifiesHlgWithoutDolbyVisionSideData() {
         var service = new MediaProbeService(new JsonProcessExecutor("""
             {
@@ -104,12 +119,14 @@ public sealed class MediaProbeServiceTests {
         }
 
         public IReadOnlyList<string> LastArguments { get; private set; } = [];
+        public string? LastFileName { get; private set; }
 
         public override Task<ProcessExecutionResult> RunAsync(
             string fileName,
             IReadOnlyList<string> arguments,
             IReadOnlyDictionary<string, string>? environment,
             CancellationToken cancellationToken) {
+            LastFileName = fileName;
             LastArguments = arguments;
             return Task.FromResult(new ProcessExecutionResult(0, _json, string.Empty));
         }

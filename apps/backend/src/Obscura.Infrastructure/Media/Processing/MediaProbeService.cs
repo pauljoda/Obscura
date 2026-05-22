@@ -8,21 +8,27 @@ namespace Obscura.Infrastructure.Media.Processing;
 /// </summary>
 public sealed class MediaProbeService {
     private readonly ProcessExecutor _processExecutor;
+    private readonly MediaToolOptions _toolOptions;
 
-    public MediaProbeService(ProcessExecutor processExecutor) {
+    public MediaProbeService(ProcessExecutor processExecutor, MediaToolOptions? toolOptions = null) {
         _processExecutor = processExecutor;
+        _toolOptions = toolOptions ?? new MediaToolOptions();
     }
 
     /// <summary>
     /// Probes a video file for duration, dimensions, codec, bitrate, and container info.
     /// </summary>
-    public async Task<VideoProbeResult?> ProbeVideoAsync(string filePath, CancellationToken cancellationToken) {
+    public async Task<VideoProbeResult?> ProbeVideoAsync(
+        string filePath,
+        CancellationToken cancellationToken,
+        string? ffprobePath = null) {
         var result = await RunFfprobeAsync(
             ["-v", "error",
              "-show_entries", "format=duration,size,bit_rate,format_name:stream=index,codec_type,codec_name,pix_fmt,width,height,avg_frame_rate,bit_rate,sample_rate,channels,color_range,color_space,color_transfer,color_primaries:stream_side_data=side_data_type,dv_profile,dv_level,rpu_present_flag,el_present_flag,bl_present_flag,dv_bl_signal_compatibility_id:stream_tags=language,title:stream_disposition=default,forced",
              "-of", "json",
              filePath],
-            cancellationToken);
+            cancellationToken,
+            ffprobePath);
 
         if (result is null)
             return null;
@@ -113,13 +119,17 @@ public sealed class MediaProbeService {
     /// <summary>
     /// Probes an audio file for duration, codec, bitrate, sample rate, channels, and embedded tags.
     /// </summary>
-    public async Task<AudioProbeResult?> ProbeAudioAsync(string filePath, CancellationToken cancellationToken) {
+    public async Task<AudioProbeResult?> ProbeAudioAsync(
+        string filePath,
+        CancellationToken cancellationToken,
+        string? ffprobePath = null) {
         var result = await RunFfprobeAsync(
             ["-v", "error",
              "-show_entries", "format=duration,size,bit_rate,format_name:format_tags=artist,album,title,track:stream=codec_name,sample_rate,channels",
              "-of", "json",
              filePath],
-            cancellationToken);
+            cancellationToken,
+            ffprobePath);
 
         if (result is null)
             return null;
@@ -159,14 +169,17 @@ public sealed class MediaProbeService {
     /// Probes for subtitle streams in a video file, returning stream metadata.
     /// </summary>
     public async Task<IReadOnlyList<SubtitleStreamInfo>> ProbeSubtitleStreamsAsync(
-        string filePath, CancellationToken cancellationToken) {
+        string filePath,
+        CancellationToken cancellationToken,
+        string? ffprobePath = null) {
         var result = await RunFfprobeAsync(
             ["-v", "error",
              "-select_streams", "s",
              "-show_entries", "stream=index,codec_name,codec_type:stream_tags=language,title",
              "-of", "json",
              filePath],
-            cancellationToken);
+            cancellationToken,
+            ffprobePath);
 
         if (result is null)
             return [];
@@ -201,14 +214,18 @@ public sealed class MediaProbeService {
     /// <summary>
     /// Probes an image file for dimensions and codec.
     /// </summary>
-    public async Task<ImageProbeResult?> ProbeImageAsync(string filePath, CancellationToken cancellationToken) {
+    public async Task<ImageProbeResult?> ProbeImageAsync(
+        string filePath,
+        CancellationToken cancellationToken,
+        string? ffprobePath = null) {
         var result = await RunFfprobeAsync(
             ["-v", "error",
              "-select_streams", "v:0",
              "-show_entries", "stream=width,height,codec_name",
              "-of", "json",
              filePath],
-            cancellationToken);
+            cancellationToken,
+            ffprobePath);
 
         if (result is null)
             return null;
@@ -230,9 +247,14 @@ public sealed class MediaProbeService {
 
     private async Task<JsonDocument?> RunFfprobeAsync(
         IReadOnlyList<string> arguments,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken,
+        string? ffprobePath = null) {
         try {
-            var result = await _processExecutor.RunAsync("ffprobe", arguments, null, cancellationToken);
+            var result = await _processExecutor.RunAsync(
+                string.IsNullOrWhiteSpace(ffprobePath) ? _toolOptions.FfprobePath : ffprobePath.Trim(),
+                arguments,
+                null,
+                cancellationToken);
             if (result.ExitCode != 0)
                 return null;
 

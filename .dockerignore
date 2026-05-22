@@ -1,5 +1,7 @@
 node_modules
 **/node_modules
+**/bin
+**/obj
 .next
 dist
 **/dist
@@ -25,6 +27,8 @@ build
 coverage
 **/coverage
 tmp
+apps/backend/data
+apps/backend/tests
 docs
 tests
 e2e

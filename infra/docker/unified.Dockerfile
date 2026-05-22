@@ -49,13 +49,23 @@ COPY infra/phash/ ./
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /out/obscura-phash .
 
 # ── Stage 3: Build audiowaveform from source ────────────────────
-FROM alpine:3.20 AS audiowaveform-builder
+FROM ubuntu:noble AS audiowaveform-builder
 
-RUN apk add --no-cache \
-    cmake make g++ \
-    libmad-dev libid3tag-dev libsndfile-dev gd-dev \
-    boost-dev boost-program_options boost-regex \
-    git
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    cmake \
+    git \
+    g++ \
+    make \
+    libboost-filesystem-dev \
+    libboost-program-options-dev \
+    libboost-regex-dev \
+    libgd-dev \
+    libid3tag0-dev \
+    libmad0-dev \
+    libsndfile1-dev \
+  && rm -rf /var/lib/apt/lists/*
 
 RUN git clone --depth 1 https://github.com/bbc/audiowaveform.git /build/audiowaveform \
   && cd /build/audiowaveform \
@@ -74,19 +84,39 @@ RUN dotnet publish apps/backend/src/Obscura.Api/Obscura.Api.csproj -c Release -o
   && dotnet publish apps/backend/src/Obscura.Worker/Obscura.Worker.csproj -c Release -o /out/worker
 
 # ── Stage 5: Unified production image ────────────────────────────
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runner
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS runner
 
-# Install runtime dependencies (including audiowaveform runtime libs)
-RUN apk add --no-cache \
-    ffmpeg \
-    libheif \
-    postgresql16 \
-    postgresql16-contrib \
-    su-exec \
-    libmad libid3tag libsndfile libgd \
-    boost1.84-filesystem boost1.84-program_options boost1.84-regex \
-  && mkdir -p /data/postgres /data/cache /media /run/postgresql \
-  && chown -R postgres:postgres /data/postgres /run/postgresql
+# Install runtime dependencies, PostgreSQL 16, and Jellyfin FFmpeg.
+ARG TARGETARCH
+ARG JELLYFIN_FFMPEG_VERSION=7.1.3-6
+RUN set -eux; \
+  apt-get update; \
+  apt-get install -y --no-install-recommends ca-certificates curl; \
+  case "$TARGETARCH" in \
+    amd64) jellyfin_arch=amd64 ;; \
+    arm64) jellyfin_arch=arm64 ;; \
+    *) echo "Unsupported Jellyfin FFmpeg architecture: $TARGETARCH" >&2; exit 1 ;; \
+  esac; \
+  curl -fsSL \
+    "https://repo.jellyfin.org/files/ffmpeg/ubuntu/latest-7.x/${jellyfin_arch}/jellyfin-ffmpeg7_${JELLYFIN_FFMPEG_VERSION}-noble_${jellyfin_arch}.deb" \
+    -o /tmp/jellyfin-ffmpeg.deb; \
+  apt-get install -y --no-install-recommends \
+    /tmp/jellyfin-ffmpeg.deb \
+    gosu \
+    libboost-filesystem1.83.0 \
+    libboost-program-options1.83.0 \
+    libboost-regex1.83.0 \
+    libgd3 \
+    libheif1 \
+    libid3tag0 \
+    libmad0 \
+    libsndfile1 \
+    postgresql-16 \
+    postgresql-client-16 \
+    postgresql-contrib-16; \
+  rm -rf /var/lib/apt/lists/* /tmp/jellyfin-ffmpeg.deb; \
+  mkdir -p /data/postgres /data/cache /media /run/postgresql; \
+  chown -R postgres:postgres /data/postgres /run/postgresql
 
 # Copy audiowaveform binary from builder
 COPY --from=audiowaveform-builder /usr/local/bin/audiowaveform /usr/local/bin/audiowaveform
@@ -103,6 +133,9 @@ ENV PUBLIC_APP_URL=http://localhost:8008
 ENV PUBLIC_API_URL=/api
 ENV ASPNETCORE_URLS=http://0.0.0.0:8008
 ENV OBSCURA_STATIC_WEB_ROOT=/app/wwwroot
+ENV OBSCURA_FFMPEG_PATH=/usr/lib/jellyfin-ffmpeg/ffmpeg
+ENV OBSCURA_FFPROBE_PATH=/usr/lib/jellyfin-ffmpeg/ffprobe
+ENV PATH="/usr/lib/postgresql/16/bin:/usr/lib/jellyfin-ffmpeg:${PATH}"
 
 COPY --from=dotnet-builder /out/api ./api
 COPY --from=dotnet-builder /out/worker ./worker

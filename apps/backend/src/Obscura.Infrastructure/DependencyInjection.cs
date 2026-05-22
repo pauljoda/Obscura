@@ -53,13 +53,21 @@ public static class DependencyInjection {
         services.AddDbContext<ObscuraDbContext>((provider, options) =>
             options.UseNpgsql(provider.GetRequiredService<NpgsqlDataSource>()));
         services.AddSingleton<ProcessExecutor>();
+        var mediaToolOptions = new MediaToolOptions(
+            configuration["OBSCURA_FFMPEG_PATH"] ?? configuration["Obscura:Hls:FfmpegPath"] ?? "ffmpeg",
+            configuration["OBSCURA_FFPROBE_PATH"] ?? configuration["Obscura:Hls:FfprobePath"]);
+
+        services.AddSingleton(mediaToolOptions);
         services.AddSingleton<MediaToolService>();
         services.AddSingleton<FileDiscoveryService>();
         services.AddSingleton(new AssetPathService(dataDir));
-        services.AddSingleton(provider => new MediaProbeService(provider.GetRequiredService<ProcessExecutor>()));
+        services.AddSingleton(provider => new MediaProbeService(
+            provider.GetRequiredService<ProcessExecutor>(),
+            provider.GetRequiredService<MediaToolOptions>()));
         services.AddSingleton(provider => new ThumbnailService(
             provider.GetRequiredService<ProcessExecutor>(),
-            provider.GetRequiredService<MediaProbeService>()));
+            provider.GetRequiredService<MediaProbeService>(),
+            provider.GetRequiredService<MediaToolOptions>()));
         services.AddSingleton<HashingService>();
         services.AddSingleton(new PluginCatalogOptions(
             ResolvePluginDevPaths(configuration, pathBase),
@@ -83,10 +91,12 @@ public static class DependencyInjection {
             new MediaProbeAdapter(provider.GetRequiredService<MediaProbeService>()));
         services.AddSingleton<IMediaHashing>(provider =>
             new MediaHashingAdapter(provider.GetRequiredService<HashingService>()));
-        services.AddSingleton<IMediaAssetGenerator>(provider =>
+        services.AddScoped<IMediaAssetGenerator>(provider =>
             new MediaAssetGeneratorAdapter(
                 provider.GetRequiredService<ThumbnailService>(),
-                provider.GetRequiredService<AssetPathService>()));
+                provider.GetRequiredService<AssetPathService>(),
+                provider.GetRequiredService<ISettingsPersistence>(),
+                provider.GetRequiredService<MediaToolOptions>()));
         services.AddScoped<ILibraryScanPersistence, LibraryScanPersistenceService>();
         services.AddScoped<IMaintenancePersistence>(provider =>
             new MaintenancePersistenceService(provider.GetRequiredService<ObscuraDbContext>(), dataDir));
@@ -103,7 +113,7 @@ public static class DependencyInjection {
         services.AddSingleton(new HlsAssetServiceOptions(
             cacheDir,
             HlsTranscoderProfiles.ParseOrDefault(configuration["OBSCURA_HLS_TRANSCODER"] ?? configuration["Obscura:Hls:Transcoder"]),
-            configuration["OBSCURA_FFMPEG_PATH"] ?? configuration["Obscura:Hls:FfmpegPath"] ?? "ffmpeg",
+            mediaToolOptions.FfmpegPath,
             configuration["OBSCURA_VAAPI_DEVICE"] ?? configuration["Obscura:Hls:VaapiDevice"] ?? "/dev/dri/renderD128"));
         services.AddSingleton<ITranscodeSessionService, TranscodeSessionService>();
         services.AddScoped<IHlsAssetService, HlsAssetService>();

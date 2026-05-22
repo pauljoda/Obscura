@@ -355,6 +355,42 @@ public sealed class HlsAssetServiceTests : IDisposable {
     }
 
     [Fact]
+    public async Task VirtualSegmentsUseConfiguredDefaultFfmpegWhenSavedSettingsStillHaveLegacyDefault() {
+        await using var db = CreateContext();
+        var videoId = Guid.Parse("56565656-5656-5656-5656-565656565656");
+        var sourcePath = Path.Combine(_cacheRoot, "source.mkv");
+        await File.WriteAllTextAsync(sourcePath, "source");
+        db.LibrarySettings.Add(new LibrarySettingsRow {
+            Id = Guid.NewGuid(),
+            HlsTranscoderProfile = "Software",
+            HlsFfmpegPath = "ffmpeg",
+            HlsVaapiDevice = "/dev/dri/renderD128",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+        var process = new ManifestWritingProcessExecutor();
+        var service = new HlsAssetService(
+            new HlsAssetServiceOptions(_cacheRoot, FfmpegPath: "/usr/lib/jellyfin-ffmpeg/ffmpeg"),
+            new FakeVideoSourceService(new VideoSourceFile(
+                videoId,
+                sourcePath,
+                "video/x-matroska",
+                false,
+                DurationSeconds: 13,
+                Width: 1920,
+                Height: 960)),
+            process,
+            NullLogger<HlsAssetService>.Instance,
+            db);
+
+        var segment = await service.GetAssetAsync(videoId, "v/720p/seg_00000.ts", null, CancellationToken.None);
+
+        Assert.NotNull(segment);
+        Assert.Equal("/usr/lib/jellyfin-ffmpeg/ffmpeg", Assert.Single(process.FileNameHistory));
+    }
+
+    [Fact]
     public async Task VirtualSegmentsAreGeneratedByOneContinuousHlsMuxer() {
         var videoId = Guid.Parse("77777777-7777-7777-7777-777777777777");
         var sourcePath = Path.Combine(_cacheRoot, "source.mkv");

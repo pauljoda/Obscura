@@ -73,6 +73,36 @@ public sealed class ThumbnailServiceTests : IDisposable {
     }
 
     [Fact]
+    public async Task ThumbnailAndPreviewUseConfiguredFfmpegAndCompanionFfprobePaths() {
+        var inputPath = Path.Combine(_root, "dovi-configured.mkv");
+        var thumbPath = Path.Combine(_root, "configured-thumb.jpg");
+        var previewPath = Path.Combine(_root, "configured-preview.mp4");
+        await File.WriteAllTextAsync(inputPath, "source");
+        var process = new ProbedVideoProcessExecutor(DolbyVisionProbeJson);
+        var tools = new MediaToolOptions("/usr/lib/jellyfin-ffmpeg/ffmpeg");
+        var service = new ThumbnailService(process, new MediaProbeService(process, tools), tools);
+
+        await service.GenerateThumbnailAndPreviewAsync(
+            inputPath,
+            thumbPath,
+            thumbSeekSeconds: 12,
+            thumbWidth: 640,
+            thumbHeight: 320,
+            thumbQuality: 3,
+            previewPath: previewPath,
+            previewStartSeconds: 20,
+            previewDurationSeconds: 8,
+            CancellationToken.None);
+
+        Assert.Equal(2, process.FfprobeFileNames.Count);
+        Assert.All(process.FfprobeFileNames, fileName =>
+            Assert.Equal("/usr/lib/jellyfin-ffmpeg/ffprobe", fileName));
+        Assert.Equal(2, process.FfmpegFileNames.Count);
+        Assert.All(process.FfmpegFileNames, fileName =>
+            Assert.Equal("/usr/lib/jellyfin-ffmpeg/ffmpeg", fileName));
+    }
+
+    [Fact]
     public async Task TrickplayExtractionUsesHdrToneMappingFilter() {
         var inputPath = Path.Combine(_root, "hdr10.mkv");
         var frameDir = Path.Combine(_root, "frames");
@@ -141,16 +171,20 @@ public sealed class ThumbnailServiceTests : IDisposable {
 
     private sealed class ProbedVideoProcessExecutor(string probeJson) : ProcessExecutor {
         public List<IReadOnlyList<string>> FfmpegArguments { get; } = [];
+        public List<string> FfmpegFileNames { get; } = [];
+        public List<string> FfprobeFileNames { get; } = [];
 
         public override async Task<ProcessExecutionResult> RunAsync(
             string fileName,
             IReadOnlyList<string> arguments,
             IReadOnlyDictionary<string, string>? environment,
             CancellationToken cancellationToken) {
-            if (fileName.Equals("ffprobe", StringComparison.OrdinalIgnoreCase)) {
+            if (Path.GetFileName(fileName).Equals("ffprobe", StringComparison.OrdinalIgnoreCase)) {
+                FfprobeFileNames.Add(fileName);
                 return new ProcessExecutionResult(0, probeJson, string.Empty);
             }
 
+            FfmpegFileNames.Add(fileName);
             FfmpegArguments.Add(arguments);
             var outputPath = arguments[^1];
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
