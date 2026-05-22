@@ -12,7 +12,7 @@
   import type { V2FileDetail } from "$lib/api/v2";
   import { v2FileContentUrl } from "$lib/api/v2";
   import type { FileActionId } from "$lib/files/file-actions";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
   import { entityReferenceToThumbnailCard } from "$lib/entities/entity-thumbnail";
 
   interface Props {
@@ -228,12 +228,15 @@
 
       {#if linkedCards.length > 0}
         <div class="section-label">Linked entities</div>
-        <div class="linked-thumbnails">
-          {#each linkedCards as card (card.entity.id)}
-            <div class="linked-thumbnail">
-              <EntityThumbnail {card} selectable={false} titleAlign="center" titleSize="compact" />
-            </div>
-          {/each}
+        <div class="linked-grid">
+          <EntityGrid
+            cards={linkedCards}
+            selectable={false}
+            scrollMaxHeight={null}
+            initialPageSize={100}
+            minScale={3}
+            maxScale={6}
+          />
         </div>
       {/if}
     </div>
@@ -399,16 +402,8 @@
     font-weight: 500;
   }
 
-  .linked-thumbnails {
-    display: flex;
-    gap: 0.5rem;
-    overflow-x: auto;
-    padding-bottom: 0.25rem;
-  }
-
-  .linked-thumbnail {
-    flex-shrink: 0;
-    width: 7rem;
+  .linked-grid {
+    margin: 0 -0.75rem;
   }
 
   .preview {
