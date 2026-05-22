@@ -82,7 +82,7 @@ export async function orvalFetch<TData>(
   const path = url.startsWith("/api/") ? url.slice(4) : url;
   const headers = new Headers(init?.headers);
 
-  if (init?.body && !headers.has("Content-Type")) {
+  if (init?.body && !headers.has("Content-Type") && !(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
 

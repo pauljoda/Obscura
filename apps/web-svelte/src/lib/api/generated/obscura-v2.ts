@@ -14,6 +14,7 @@ import type {
   CancelJobsParams,
   ClearJobFailuresParams,
   CollectionDetail,
+  DeleteFileParams,
   EntityCard,
   EntityFlagsUpdateRequest,
   EntityListResponse,
@@ -22,11 +23,22 @@ import type {
   EntityMetadataUpdateRequest,
   EntityThumbnailBatchRequest,
   EntityThumbnailBatchResponse,
+  FileChildrenResponse,
+  FileCreateFolderRequest,
+  FileDetail,
+  FileMoveRequest,
+  FileOperationResponse,
+  FileRenameRequest,
+  FileRescanRequest,
+  FileRootsResponse,
   GalleryDetail,
+  GetFileContentParams,
+  GetFileDetailParams,
   GetJellyfinVideoHlsRelativeAssetParams,
   GetJellyfinVideoHlsSegmentParams,
   GetJellyfinVideoMasterPlaylistParams,
   GetOrganizePlanParams,
+  HeadFileContentParams,
   IdentifyBulkSession,
   IdentifyBulkStartRequest,
   IdentifyEntityRequest,
@@ -44,6 +56,7 @@ import type {
   ListBooksParams,
   ListCollectionsParams,
   ListEntitiesParams,
+  ListFileChildrenParams,
   ListGalleriesParams,
   ListIdentifyProvidersParams,
   ListImagesParams,
@@ -3284,6 +3297,441 @@ export const deleteLibraryRoot = async (id: string, options?: RequestInit): Prom
     method: 'DELETE'
 
 
+  }
+);}
+
+
+
+export type listFileRootsResponse200 = {
+  data: FileRootsResponse
+  status: 200
+}
+
+export type listFileRootsResponseSuccess = (listFileRootsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listFileRootsResponse = (listFileRootsResponseSuccess)
+
+export const getListFileRootsUrl = () => {
+
+
+
+
+  return `/api/files/roots`
+}
+
+/**
+ * @summary Lists watched roots for the Files page.
+ */
+export const listFileRoots = async ( options?: RequestInit): Promise<listFileRootsResponse> => {
+
+  return orvalFetch<listFileRootsResponse>(getListFileRootsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listFileChildrenResponse200 = {
+  data: FileChildrenResponse
+  status: 200
+}
+
+export type listFileChildrenResponseSuccess = (listFileChildrenResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listFileChildrenResponse = (listFileChildrenResponseSuccess)
+
+export const getListFileChildrenUrl = (params: ListFileChildrenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/files/children?${stringifiedParams}` : `/api/files/children`
+}
+
+/**
+ * @summary Lists direct children under one watched-root directory.
+ */
+export const listFileChildren = async (params: ListFileChildrenParams, options?: RequestInit): Promise<listFileChildrenResponse> => {
+
+  return orvalFetch<listFileChildrenResponse>(getListFileChildrenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getFileDetailResponse200 = {
+  data: FileDetail
+  status: 200
+}
+
+export type getFileDetailResponseSuccess = (getFileDetailResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getFileDetailResponse = (getFileDetailResponseSuccess)
+
+export const getGetFileDetailUrl = (params: GetFileDetailParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/files/detail?${stringifiedParams}` : `/api/files/detail`
+}
+
+/**
+ * @summary Gets file or directory details for the Files page.
+ */
+export const getFileDetail = async (params: GetFileDetailParams, options?: RequestInit): Promise<getFileDetailResponse> => {
+
+  return orvalFetch<getFileDetailResponse>(getGetFileDetailUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getFileContentResponse200 = {
+  data: void
+  status: 200
+}
+
+export type getFileContentResponseSuccess = (getFileContentResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getFileContentResponse = (getFileContentResponseSuccess)
+
+export const getGetFileContentUrl = (params: GetFileContentParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/files/content?${stringifiedParams}` : `/api/files/content`
+}
+
+/**
+ * @summary Streams a watched-root file with range support.
+ */
+export const getFileContent = async (params: GetFileContentParams, options?: RequestInit): Promise<getFileContentResponse> => {
+
+  return orvalFetch<getFileContentResponse>(getGetFileContentUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type headFileContentResponse200 = {
+  data: void
+  status: 200
+}
+
+export type headFileContentResponseSuccess = (headFileContentResponse200) & {
+  headers: Headers;
+};
+;
+
+export type headFileContentResponse = (headFileContentResponseSuccess)
+
+export const getHeadFileContentUrl = (params: HeadFileContentParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/files/content?${stringifiedParams}` : `/api/files/content`
+}
+
+/**
+ * @summary Probes a watched-root file with range metadata.
+ */
+export const headFileContent = async (params: HeadFileContentParams, options?: RequestInit): Promise<headFileContentResponse> => {
+
+  return orvalFetch<headFileContentResponse>(getHeadFileContentUrl(params),
+  {
+    ...options,
+    method: 'HEAD'
+
+
+  }
+);}
+
+
+
+export type createFileFolderResponse200 = {
+  data: FileOperationResponse
+  status: 200
+}
+
+export type createFileFolderResponseSuccess = (createFileFolderResponse200) & {
+  headers: Headers;
+};
+;
+
+export type createFileFolderResponse = (createFileFolderResponseSuccess)
+
+export const getCreateFileFolderUrl = () => {
+
+
+
+
+  return `/api/files/folders`
+}
+
+/**
+ * @summary Creates a folder under a watched root.
+ */
+export const createFileFolder = async (fileCreateFolderRequest: FileCreateFolderRequest, options?: RequestInit): Promise<createFileFolderResponse> => {
+
+  return orvalFetch<createFileFolderResponse>(getCreateFileFolderUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      fileCreateFolderRequest,)
+  }
+);}
+
+
+
+export type uploadFilesResponse200 = {
+  data: FileOperationResponse
+  status: 200
+}
+
+export type uploadFilesResponseSuccess = (uploadFilesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type uploadFilesResponse = (uploadFilesResponseSuccess)
+
+export const getUploadFilesUrl = () => {
+
+
+
+
+  return `/api/files/upload`
+}
+
+/**
+ * @summary Uploads files into a watched-root folder.
+ */
+export const uploadFiles = async ( options?: RequestInit): Promise<uploadFilesResponse> => {
+
+  return orvalFetch<uploadFilesResponse>(getUploadFilesUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type renameFileResponse200 = {
+  data: FileOperationResponse
+  status: 200
+}
+
+export type renameFileResponseSuccess = (renameFileResponse200) & {
+  headers: Headers;
+};
+;
+
+export type renameFileResponse = (renameFileResponseSuccess)
+
+export const getRenameFileUrl = () => {
+
+
+
+
+  return `/api/files/rename`
+}
+
+/**
+ * @summary Renames a watched-root file or folder.
+ */
+export const renameFile = async (fileRenameRequest: FileRenameRequest, options?: RequestInit): Promise<renameFileResponse> => {
+
+  return orvalFetch<renameFileResponse>(getRenameFileUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      fileRenameRequest,)
+  }
+);}
+
+
+
+export type moveFileResponse200 = {
+  data: FileOperationResponse
+  status: 200
+}
+
+export type moveFileResponseSuccess = (moveFileResponse200) & {
+  headers: Headers;
+};
+;
+
+export type moveFileResponse = (moveFileResponseSuccess)
+
+export const getMoveFileUrl = () => {
+
+
+
+
+  return `/api/files/move`
+}
+
+/**
+ * @summary Moves a watched-root file or folder.
+ */
+export const moveFile = async (fileMoveRequest: FileMoveRequest, options?: RequestInit): Promise<moveFileResponse> => {
+
+  return orvalFetch<moveFileResponse>(getMoveFileUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      fileMoveRequest,)
+  }
+);}
+
+
+
+export type deleteFileResponse200 = {
+  data: FileOperationResponse
+  status: 200
+}
+
+export type deleteFileResponseSuccess = (deleteFileResponse200) & {
+  headers: Headers;
+};
+;
+
+export type deleteFileResponse = (deleteFileResponseSuccess)
+
+export const getDeleteFileUrl = (params: DeleteFileParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/files?${stringifiedParams}` : `/api/files`
+}
+
+/**
+ * @summary Permanently deletes a watched-root file or folder.
+ */
+export const deleteFile = async (params: DeleteFileParams, options?: RequestInit): Promise<deleteFileResponse> => {
+
+  return orvalFetch<deleteFileResponse>(getDeleteFileUrl(params),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type rescanFileRootResponse200 = {
+  data: FileOperationResponse
+  status: 200
+}
+
+export type rescanFileRootResponseSuccess = (rescanFileRootResponse200) & {
+  headers: Headers;
+};
+;
+
+export type rescanFileRootResponse = (rescanFileRootResponseSuccess)
+
+export const getRescanFileRootUrl = () => {
+
+
+
+
+  return `/api/files/rescan`
+}
+
+/**
+ * @summary Queues scan jobs for a watched root.
+ */
+export const rescanFileRoot = async (fileRescanRequest: FileRescanRequest, options?: RequestInit): Promise<rescanFileRootResponse> => {
+
+  return orvalFetch<rescanFileRootResponse>(getRescanFileRootUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      fileRescanRequest,)
   }
 );}
 

@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { updateV2EntityMetadata, type V2EntityMetadataUpdateRequest } from "./v2";
+import {
+  updateV2EntityMetadata,
+  uploadV2Files,
+  v2FileContentUrl,
+  type V2EntityMetadataUpdateRequest,
+} from "./v2";
 
 describe("v2 api helpers", () => {
   afterEach(() => {
@@ -37,5 +42,37 @@ describe("v2 api helpers", () => {
       method: "PATCH",
       body: JSON.stringify(request),
     }));
+  });
+
+  it("posts watched-root uploads as multipart data without a json content type", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ scansQueued: 1 }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await uploadV2Files("root-1", "Incoming", [
+      { file: new File(["clip"], "clip.mp4"), relativePath: "Season 1/clip.mp4" },
+    ]);
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/files/upload");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBeInstanceOf(FormData);
+    expect(new Headers(init.headers).has("Content-Type")).toBe(false);
+
+    const form = init.body as FormData;
+    expect(form.get("rootId")).toBe("root-1");
+    expect(form.get("targetPath")).toBe("Incoming");
+    expect(form.get("relativePaths")).toBe("Season 1/clip.mp4");
+    expect(form.get("files")).toBeInstanceOf(File);
+  });
+
+  it("builds encoded file content urls", () => {
+    expect(v2FileContentUrl("root-1", "Season 1/clip 01.mp4")).toBe(
+      "/api/files/content?rootId=root-1&path=Season+1%2Fclip+01.mp4",
+    );
   });
 });

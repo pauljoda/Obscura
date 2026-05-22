@@ -4,27 +4,37 @@ import {
   cancelJobRun,
   cancelJobs,
   clearJobFailures,
+  createFileFolder,
   createEntityMarker as createEntityMarkerRequest,
   createJob,
   createLibraryRoot as createLibraryRootRequest,
+  deleteFile,
   deleteEntityMarker as deleteEntityMarkerRequest,
   deleteJellyfinUserPlayedItem,
   deleteLibraryRoot as deleteLibraryRootRequest,
+  getFileDetail,
+  getGetFileContentUrl,
   listEntities,
+  listFileChildren,
+  listFileRoots,
   listJobs,
   listVideoSeries,
   listVideos,
+  moveFile,
   postJellyfinSessionPing,
   postJellyfinSessionPlaying,
   postJellyfinSessionProgress as postJellyfinSessionProgressRequest,
   postJellyfinSessionStopped,
   postJellyfinUserPlayedItem,
+  renameFile,
   rebuildPreviews,
+  rescanFileRoot,
   updateEntityFlags,
   updateEntityMarker as updateEntityMarkerRequest,
   updateEntityPlayback as updateEntityPlaybackRequest,
   updateEntityRating,
   getSettings,
+  uploadFiles,
   getVideoSeries,
   getVideo,
   getImage,
@@ -62,6 +72,16 @@ import type {
   EntityListResponse,
   EntityThumbnail,
   EntityThumbnailBatchResponse,
+  FileChildrenResponse,
+  FileCreateFolderRequest,
+  FileDetail,
+  FileEntry,
+  FileMoveRequest,
+  FileOperationResponse,
+  FileRenameRequest,
+  FileRescanRequest,
+  FileRoot,
+  FileRootsResponse,
   GalleryDetail,
   ImageDetail,
   JobListResponse,
@@ -79,7 +99,7 @@ import type {
   VideoSeriesDetail,
   VideoSeasonDetail,
 } from "./generated/model";
-import { fetchV2Api, jellyfinApiPath } from "./orval-fetch";
+import { fetchV2Api, jellyfinApiPath, v2ApiPath } from "./orval-fetch";
 
 export type V2EntityCapability = EntityCapability;
 export type V2EntityCard = EntityThumbnail;
@@ -147,9 +167,19 @@ export type V2LibrarySettings = Omit<LibrarySettings, NumericLibrarySettingsFiel
 };
 export type V2LibraryRoot = LibraryRoot;
 export type V2LibraryBrowse = LibraryBrowseResponse;
+export type V2FileRoot = FileRoot;
+export type V2FileEntry = FileEntry;
+export type V2FileDetail = FileDetail;
+export type V2FileChildrenResponse = FileChildrenResponse;
+export type V2FileOperationResponse = FileOperationResponse;
 export interface V2LibraryConfigResponse {
   settings: V2LibrarySettings;
   roots: V2LibraryRoot[];
+}
+
+export interface V2FileUploadItem {
+  file: File;
+  relativePath: string;
 }
 
 export interface JellyfinPlaybackInfoRequest {
@@ -738,6 +768,112 @@ export async function deleteV2LibraryRoot(
   return unwrapGenerated(
     response as unknown as GeneratedResponse<{ ok: true }>,
     "Failed to remove library root",
+  );
+}
+
+export async function fetchV2FileRoots(
+  options?: V2RequestOptions,
+): Promise<FileRootsResponse> {
+  return unwrapGenerated(
+    await listFileRoots({ signal: options?.signal }),
+    "Failed to load file roots",
+  );
+}
+
+export async function fetchV2FileChildren(
+  rootId: string,
+  path = "",
+  options?: V2RequestOptions,
+): Promise<FileChildrenResponse> {
+  return unwrapGenerated(
+    await listFileChildren({ rootId, ...(path ? { path } : {}) }, { signal: options?.signal }),
+    "Failed to load folder",
+  );
+}
+
+export async function fetchV2FileDetail(
+  rootId: string,
+  path = "",
+  options?: V2RequestOptions,
+): Promise<FileDetail> {
+  return unwrapGenerated(
+    await getFileDetail({ rootId, ...(path ? { path } : {}) }, { signal: options?.signal }),
+    "Failed to load file details",
+  );
+}
+
+export function v2FileContentUrl(rootId: string, path = ""): string {
+  return v2ApiPath(getGetFileContentUrl({ rootId, path }));
+}
+
+export async function createV2FileFolder(
+  payload: FileCreateFolderRequest,
+  options?: V2RequestOptions,
+): Promise<FileOperationResponse> {
+  return unwrapGenerated(
+    await createFileFolder(payload, { signal: options?.signal }),
+    "Failed to create folder",
+  );
+}
+
+export async function uploadV2Files(
+  rootId: string,
+  targetPath: string,
+  items: V2FileUploadItem[],
+  options?: V2RequestOptions,
+): Promise<FileOperationResponse> {
+  const form = new FormData();
+  form.append("rootId", rootId);
+  form.append("targetPath", targetPath);
+  for (const item of items) {
+    form.append("relativePaths", item.relativePath);
+    form.append("files", item.file);
+  }
+
+  return unwrapGenerated(
+    await uploadFiles({ body: form, signal: options?.signal }),
+    "Failed to upload files",
+  );
+}
+
+export async function renameV2File(
+  payload: FileRenameRequest,
+  options?: V2RequestOptions,
+): Promise<FileOperationResponse> {
+  return unwrapGenerated(
+    await renameFile(payload, { signal: options?.signal }),
+    "Failed to rename file",
+  );
+}
+
+export async function moveV2File(
+  payload: FileMoveRequest,
+  options?: V2RequestOptions,
+): Promise<FileOperationResponse> {
+  return unwrapGenerated(
+    await moveFile(payload, { signal: options?.signal }),
+    "Failed to move file",
+  );
+}
+
+export async function deleteV2File(
+  rootId: string,
+  path: string,
+  options?: V2RequestOptions,
+): Promise<FileOperationResponse> {
+  return unwrapGenerated(
+    await deleteFile({ rootId, path }, { signal: options?.signal }),
+    "Failed to delete file",
+  );
+}
+
+export async function rescanV2FileRoot(
+  payload: FileRescanRequest,
+  options?: V2RequestOptions,
+): Promise<FileOperationResponse> {
+  return unwrapGenerated(
+    await rescanFileRoot(payload, { signal: options?.signal }),
+    "Failed to queue file rescan",
   );
 }
 

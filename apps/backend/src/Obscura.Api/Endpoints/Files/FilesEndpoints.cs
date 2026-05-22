@@ -39,26 +39,13 @@ public static class FilesEndpoints {
             .WithSummary("Gets file or directory details for the Files page.")
             .Produces<FileDetail>();
 
-        group.MapMethods("/content", ["GET", "HEAD"], async (
-            Guid rootId,
-            string? path,
-            FilesService files,
-            CancellationToken cancellationToken) => {
-            var result = await RunAsync(
-                () => files.GetContentInfoAsync(new FileDetailRequest(rootId, path), cancellationToken));
-            if (result.Error is { } error) {
-                return ToProblem(error);
-            }
-
-            var content = result.Value!;
-            return Results.File(
-                File.OpenRead(content.AbsolutePath),
-                content.MimeType,
-                enableRangeProcessing: true,
-                lastModified: content.LastModified);
-        })
+        group.MapGet("/content", StreamContent)
             .WithName("GetFileContent")
             .WithSummary("Streams a watched-root file with range support.");
+
+        group.MapMethods("/content", ["HEAD"], StreamContent)
+            .WithName("HeadFileContent")
+            .WithSummary("Probes a watched-root file with range metadata.");
 
         group.MapPost("/folders", async (
             FileCreateFolderRequest request,
@@ -154,6 +141,25 @@ public static class FilesEndpoints {
 
     private static IResult ToResult<T>(ResultOrError<T> result) =>
         result.Error is null ? Results.Ok(result.Value) : ToProblem(result.Error);
+
+    private static async Task<IResult> StreamContent(
+        Guid rootId,
+        string? path,
+        FilesService files,
+        CancellationToken cancellationToken) {
+        var result = await RunAsync(
+            () => files.GetContentInfoAsync(new FileDetailRequest(rootId, path), cancellationToken));
+        if (result.Error is { } error) {
+            return ToProblem(error);
+        }
+
+        var content = result.Value!;
+        return Results.File(
+            File.OpenRead(content.AbsolutePath),
+            content.MimeType,
+            enableRangeProcessing: true,
+            lastModified: content.LastModified);
+    }
 
     private static IResult ToProblem(FileOperationException error) {
         var problem = new ApiProblem(error.Code, error.Message);
