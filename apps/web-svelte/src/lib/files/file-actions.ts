@@ -6,6 +6,12 @@ export interface FileAction {
   destructive?: boolean;
 }
 
+const rootActions: FileAction[] = [
+  { id: "open", label: "Open" },
+  { id: "new-folder", label: "New folder" },
+  { id: "rescan", label: "Rescan" },
+];
+
 const directoryActions: FileAction[] = [
   { id: "open", label: "Open" },
   { id: "new-folder", label: "New folder" },
@@ -22,7 +28,8 @@ const fileActions: FileAction[] = [
   { id: "delete", label: "Delete", destructive: true },
 ];
 
-export function fileContextActions(kind: string): FileAction[] {
+export function fileContextActions(kind: string, isRoot?: boolean): FileAction[] {
+  if (isRoot) return rootActions;
   return kind === "directory" ? directoryActions : fileActions;
 }
 

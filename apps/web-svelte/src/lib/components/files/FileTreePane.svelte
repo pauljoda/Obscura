@@ -64,14 +64,17 @@
     });
 
     const rect = context.anchorRect;
-    const menuHeight = fileContextActions(item.kind).length * 32 + 2;
+    const meta = registry.get(item.path as string);
+    const isRoot = meta?.path === "";
+    const actions = fileContextActions(item.kind, isRoot);
+    const menuHeight = actions.length * 32 + 2;
     const menuWidth = 160;
     const top = rect.bottom + menuHeight > window.innerHeight ? Math.max(4, rect.top - menuHeight) : rect.bottom;
     const left = rect.right + menuWidth > window.innerWidth ? Math.max(4, rect.right - menuWidth) : rect.left;
     menu.style.top = `${top}px`;
     menu.style.left = `${left}px`;
 
-    for (const action of fileContextActions(item.kind)) {
+    for (const action of actions) {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = action.label;

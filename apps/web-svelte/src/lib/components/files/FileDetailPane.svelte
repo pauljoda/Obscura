@@ -48,6 +48,7 @@
 
   const entry = $derived(detail?.entry ?? null);
   const isDirectory = $derived(entry?.kind === "directory");
+  const isRoot = $derived(isDirectory && (!entry?.path || entry.path === "."));
   const contentUrl = $derived(entry ? v2FileContentUrl(entry.rootId, entry.path) : "");
   const mime = $derived(entry?.mimeType ?? "");
   const previewKind = $derived(resolvePreviewKind(entry?.name ?? "", mime, isDirectory));
@@ -163,10 +164,12 @@
         <button type="button" onclick={() => onAction?.("new-folder")}><FolderPlus class="h-3.5 w-3.5" />New folder</button>
         <button type="button" onclick={() => onAction?.("rescan")}><ScanLine class="h-3.5 w-3.5" />Rescan</button>
       {/if}
-      <button type="button" onclick={() => onAction?.("rename")}><Pencil class="h-3.5 w-3.5" />Rename</button>
-      <button type="button" onclick={() => onAction?.("move")}><FileArchive class="h-3.5 w-3.5" />Move</button>
-      <div class="toolbar-spacer"></div>
-      <button class="danger" type="button" onclick={() => onAction?.("delete")}><Trash2 class="h-3.5 w-3.5" /></button>
+      {#if !isRoot}
+        <button type="button" onclick={() => onAction?.("rename")}><Pencil class="h-3.5 w-3.5" />Rename</button>
+        <button type="button" onclick={() => onAction?.("move")}><FileArchive class="h-3.5 w-3.5" />Move</button>
+        <div class="toolbar-spacer"></div>
+        <button class="danger" type="button" onclick={() => onAction?.("delete")}><Trash2 class="h-3.5 w-3.5" /></button>
+      {/if}
     </div>
 
     <input
