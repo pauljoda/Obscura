@@ -45,13 +45,13 @@ describe("series detail layout", () => {
     expect(source).not.toContain("credit-scroller");
   });
 
-  it("moves series links and files out of the main details tab", () => {
+  it("moves series links out of the main details tab", () => {
     const source = readLocalSource("./[id]/+page.svelte");
 
     expect(source).toContain("tabs={detailTabs}");
     expect(source).toContain("sections={detailSections}");
     expect(source).toContain('id: "metadata"');
-    expect(source).toContain('sections: ["links", "files"]');
+    expect(source).toContain('sections: ["links"]');
     expect(source).toContain('sections: ["description", "tags", "cast-and-crew"]');
   });
 
@@ -73,13 +73,13 @@ describe("series detail layout", () => {
     expect(source).not.toContain("item\" : \"items\"");
   });
 
-  it("moves season links and files out of the main details tab", () => {
+  it("moves season links out of the main details tab", () => {
     const source = readLocalSource("./[id]/seasons/[seasonId]/+page.svelte");
 
     expect(source).toContain("tabs={detailTabs}");
     expect(source).toContain("sections={detailSections}");
     expect(source).toContain('id: "metadata"');
-    expect(source).toContain('sections: ["links", "files"]');
+    expect(source).toContain('sections: ["links"]');
     expect(source).toContain('sections: ["description", "tags", "cast-and-crew"]');
   });
 });

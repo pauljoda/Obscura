@@ -95,13 +95,13 @@
       },
     ];
 
-    if (card.links.length > 0 || card.files.length > 0) {
+    if (card.links.length > 0) {
       tabs.push({
         id: "metadata",
         label: "Metadata",
         icon: SlidersHorizontal,
-        count: card.links.length + card.files.length,
-        sections: ["links", "files"],
+        count: card.links.length,
+        sections: ["links"],
       });
     }
 

@@ -57,7 +57,7 @@ describe("v2 api helpers", () => {
       { file: new File(["clip"], "clip.mp4"), relativePath: "Season 1/clip.mp4" },
     ]);
 
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("/api/files/upload");
     expect(init.method).toBe("POST");
     expect(init.body).toBeInstanceOf(FormData);

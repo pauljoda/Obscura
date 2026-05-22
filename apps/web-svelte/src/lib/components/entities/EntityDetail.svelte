@@ -12,7 +12,6 @@
     Flame,
     CheckCircle,
     ExternalLink,
-    FileText,
     Link,
     ListOrdered,
     MonitorCog,
@@ -207,7 +206,6 @@
     { id: "description", label: "Description" },
     { id: "tags", label: "Tags" },
     { id: "links", label: "Links", icon: Link },
-    { id: "files", label: "Files", icon: FileText },
     { id: "studio", label: "Studio", icon: Building2 },
     { id: "credits", label: "Credits", icon: Users },
     { id: "stats", label: "Stats", icon: BarChart3 },
@@ -237,7 +235,6 @@
     "sources",
     "fingerprints",
     "links",
-    "files",
   ];
   const standaloneMetadataSections = $derived.by(() =>
     standaloneMetadataSectionIds
@@ -297,8 +294,6 @@
         return card.tags.length > 0;
       case "links":
         return card.links.length > 0;
-      case "files":
-        return card.files.length > 0;
       case "studio":
         return Boolean(cardFull.studio);
       case "credits":
@@ -797,28 +792,6 @@
   </section>
 {/snippet}
 
-{#snippet filesSection()}
-  {#if card.files.length > 0}
-    <section class="detail-section">
-      <h2 class="section-label">
-        <FileText class="h-4 w-4" />
-        Files
-      </h2>
-      <div class="file-list">
-        {#each card.files as file (file.path)}
-          <div class="file-row">
-            <span class="file-role">{file.role}</span>
-            <span class="file-path mono">{file.path}</span>
-            {#if file.mimeType}
-              <span class="file-mime mono">{file.mimeType}</span>
-            {/if}
-          </div>
-        {/each}
-      </div>
-    </section>
-  {/if}
-{/snippet}
-
 {#snippet referenceItem(credit: EntityDetailCredit)}
   <div class="reference-thumbnail">
     <EntityThumbnail
@@ -1085,8 +1058,6 @@
     {@render tagsSection()}
   {:else if section.id === "links"}
     {@render linksSection()}
-  {:else if section.id === "files"}
-    {@render filesSection()}
   {:else if section.id === "studio"}
     {@render studioSection()}
   {:else if section.id === "credits"}
@@ -2214,53 +2185,7 @@
     color: var(--detail-text-muted);
   }
 
-  /* ── Files ──────────────────────────────────────────────── */
-
-  .file-list {
-    display: grid;
-    gap: 0;
-  }
-
-  .file-row {
-    display: flex;
-    align-items: baseline;
-    gap: 0.6rem;
-    padding: 0.4rem 0;
-    border-bottom: 1px solid color-mix(in srgb, var(--detail-border) 50%, transparent);
-    font-size: 0.82rem;
-  }
-
-  .file-row:last-child {
-    border-bottom: none;
-  }
-
-  .file-role {
-    flex-shrink: 0;
-    min-width: 4rem;
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--detail-text-muted);
-  }
-
-  .file-path {
-    color: var(--detail-text);
-    word-break: break-all;
-  }
-
-  .file-mime {
-    flex-shrink: 0;
-    color: var(--detail-text-muted);
-    font-size: 0.72rem;
-  }
-
   /* ── Shared ─────────────────────────────────────────────── */
-
-  .mono {
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.78rem;
-  }
 
   /* ── Responsive ─────────────────────────────────────────── */
 

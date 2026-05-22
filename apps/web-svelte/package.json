@@ -20,6 +20,7 @@
     "@obscura/contracts": "workspace:*",
     "@obscura/media-core": "workspace:*",
     "@obscura/ui-svelte": "workspace:*",
+    "@pierre/trees": "1.0.0-beta.4",
     "@tiptap/core": "^3.23.6",
     "@tiptap/extension-link": "^3.23.6",
     "@tiptap/extension-placeholder": "^3.23.6",

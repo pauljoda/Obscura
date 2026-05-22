@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Files now has a dedicated workspace for managing watched-root folders, including browsing, previews, uploads, folder creation, rename, move, permanent delete, and rescan actions from one place.
+- Media detail pages no longer show their own file list tabs, making Files the primary place to inspect and operate on disk files.
 - Metadata edits and plugin identify results now use kind-guarded patch routes, so plugins can safely update videos, series, people, studios, and related metadata without crossing entity types.
 - People now replaces Actors across the app navigation and browse experience, including the canonical `/people` route for person profiles.
 - Entity thumbnail titles now wrap to two lines instead of scrolling on a single line, making longer titles much easier to read at a glance, and the details area was refined to feel less empty when metadata is sparse.
@@ -53,6 +55,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Plugin execution no longer rewrites `python` commands to `python3`; the manifest `script` executable is now used verbatim.
 
 ### Added
+- A new Files page centralizes watched-root file management with a lazy directory tree, metadata/detail panel, preview support, upload actions, and common file operations.
 - Entity metadata patching now supports guarded kind-aware routes and domain PATCH routes for videos, series, studios, tags, and other entity detail pages.
 - MarkdownEditor form component: tiptap-based WYSIWYG with Dark Room toolbar styling, markdown serialization, and formatting support (bold, italic, headings, lists, blockquotes, code, links).
 - EntityPicker form component: multi/single-select entity reference picker with debounced live API search, thumbnail avatars, keyboard navigation, and inline creation for new items.
@@ -62,6 +65,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - `EntityListResponse.totalCount` reports the unbounded count of entities matching the response's filters, so paginated UIs can render accurate `page X of Y` indicators and a true seek-to-end target without re-counting after every cursor advance.
 
 ### Changed
+- Entity detail pages now defer visible file management to the Files page instead of showing per-entity file tabs.
 - Browse search now hits the server instead of filtering the loaded page locally, so the toolbar search box searches the full library. Queries are debounced 300ms and abort in-flight requests when superseded.
 - The entity grid toolbar now uses the same glass material as the pagination strip, with unified borders across the search box, sort/view/filter buttons, and the thumbnail-size slider so the controls read as one material family. The active-filter row reserves its space even when empty, so adding or clearing a filter chip no longer nudges the grid. On mobile the trailing filter/preset/clear buttons hug the right edge instead of stranding on the left with empty space beside them.
 - Entity browse pages received a visual polish pass: pagination became a transport-style strip with a brass progress indicator, the search toolbar layout is stable while typing and filtering, thumbnail hover/selection now uses a brass underline and gentler shadows, and the kind tabs got a glowing accent rail.

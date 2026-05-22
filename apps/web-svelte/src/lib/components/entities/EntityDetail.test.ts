@@ -80,7 +80,7 @@ describe("EntityDetail", () => {
             label: "Files",
             count: 1,
             icon: FileText,
-            sections: ["custom-files", "files"],
+            sections: ["custom-files"],
           },
         ],
         sections: [
@@ -105,7 +105,7 @@ describe("EntityDetail", () => {
     expect(screen.getByRole("tab", { name: "Files 1" })).toHaveAttribute("aria-selected", "true");
     expect(document.querySelector("svg.lucide-file-text")).toBeInTheDocument();
     expect(screen.getByText("File info panel")).toBeInTheDocument();
-    expect(screen.getByText("/media/bunny.mp4")).toBeInTheDocument();
+    expect(screen.queryByText("/media/bunny.mp4")).not.toBeInTheDocument();
     expect(screen.queryByText("A gentle rabbit adventure.")).not.toBeInTheDocument();
   });
 

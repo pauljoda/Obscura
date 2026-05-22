@@ -438,7 +438,6 @@ export function presentSections(card: EntityDetailCard | EntityDetailCardFull): 
   if (card.flags.length > 0) sections.push("flags");
   if (card.tags.length > 0) sections.push("tags");
   if (card.links.length > 0) sections.push("links");
-  if (card.files.length > 0) sections.push("files");
   const full = card as EntityDetailCardFull;
   if (full.studio) sections.push("studio");
   if (full.credits?.length > 0) sections.push("credits");

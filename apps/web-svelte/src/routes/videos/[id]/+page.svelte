@@ -3,7 +3,6 @@
   import { page } from "$app/state";
   import {
     Captions,
-    FileText,
     Info,
     MapPin,
     MonitorCog,
@@ -184,13 +183,6 @@
         icon: Captions,
         count: playerProps?.subtitleTracks.length ?? 0,
         sections: ["transcript"],
-      },
-      {
-        id: "files",
-        label: "Files",
-        icon: FileText,
-        count: card.files.length,
-        sections: ["files"],
       },
     ];
   });

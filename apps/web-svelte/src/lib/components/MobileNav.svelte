@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { BookOpen, Film, Images, Users } from "@lucide/svelte";
+  import { Film, FolderTree, Images, Users } from "@lucide/svelte";
   import { resolve } from "$app/paths";
   import { page } from "$app/state";
   import type { Component } from "svelte";
@@ -16,9 +16,9 @@
   }
 
   const primaryTabs: PrimaryTab[] = [
+    { label: "Files", href: "/files", icon: FolderTree },
     { label: "Videos", href: "/videos", icon: Film },
     { label: "Galleries", href: "/galleries", icon: Images },
-    { label: "Books", href: "/books", icon: BookOpen },
     { label: "People", href: "/people", icon: Users },
   ];
 

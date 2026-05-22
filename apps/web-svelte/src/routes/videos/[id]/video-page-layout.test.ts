@@ -95,7 +95,7 @@ describe("/videos/[id] detail layout", () => {
     expect(pageSource).toContain('id: "metadata"');
     expect(pageSource).toContain('id: "markers"');
     expect(pageSource).toContain('id: "transcript"');
-    expect(pageSource).toContain('id: "files"');
+    expect(pageSource).not.toContain('id: "files"');
     expect(pageSource).toContain("icon:");
     expect(pageSource).toContain("{#snippet sectionContent(section)}");
     expect(videoSectionsSource).toContain("<VideoTranscriptPanel");
@@ -103,6 +103,6 @@ describe("/videos/[id] detail layout", () => {
     expect(videoSectionsSource).toContain("markers={card.markers}");
     expect(videoSectionsSource).toContain("entityId={videoId}");
     expect(pageSource).toContain('layout: "grid"');
-    expect(pageSource).toContain('sections: ["files"]');
+    expect(pageSource).not.toContain('sections: ["files"]');
   });
 });
