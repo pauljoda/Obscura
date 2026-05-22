@@ -38,8 +38,10 @@
   }: Props = $props();
 
   let host: HTMLDivElement;
-  let tree: FileTree | null = null;
+  let tree = $state<FileTree | null>(null);
   let unsubscribe: (() => void) | null = null;
+  let removeTreeClickBridge: (() => void) | null = null;
+  let suppressSelectionEvent = false;
   let lastPathsKey = "";
 
   function basename(path: string): string {
@@ -81,13 +83,22 @@
     for (const meta of targets) onExpand?.(meta);
   }
 
+  function bridgeRowClick(event: MouseEvent): void {
+    const row = event
+      .composedPath()
+      .find((target): target is HTMLElement =>
+        target instanceof HTMLElement && target.matches("button[data-type='item']"),
+      );
+    const treePath = row?.dataset.itemPath;
+    if (treePath) onSelect?.(treePath);
+  }
+
   onMount(() => {
     void (async () => {
       const module = await import("@pierre/trees");
       tree = new module.FileTree({
         paths,
         initialExpansion: "closed",
-        initialSelectedPaths: selectedPath ? [selectedPath] : [],
         icons: { set: "complete", colored: true },
         search: true,
         initialSearchQuery: search || null,
@@ -109,6 +120,7 @@
           },
         },
         onSelectionChange: (selectedPaths) => {
+          if (suppressSelectionEvent) return;
           const next = selectedPaths[0];
           if (next) onSelect?.(next);
         },
@@ -119,9 +131,32 @@
           --trees-border-color-override: rgba(196, 154, 90, 0.2);
           --trees-selected-bg-override: rgba(196, 154, 90, 0.18);
           --trees-focus-ring-override: rgba(196, 154, 90, 0.58);
+          background: rgba(18, 17, 16, 0.96) !important;
+          color: #ede7da;
+        }
+        [data-file-tree-virtualized-wrapper],
+        [data-file-tree-virtualized-root],
+        [data-file-tree-virtualized-scroll],
+        [data-file-tree-virtualized-list],
+        [data-file-tree-virtualized-sticky],
+        [data-truncate-marker] {
+          background: rgba(18, 17, 16, 0.96) !important;
+          color: #ede7da;
+        }
+        input[data-file-tree-search-input] {
+          border: 1px solid rgba(196, 154, 90, 0.18);
+          border-radius: 0;
+          background: rgba(255, 255, 255, 0.035) !important;
+          color: #ede7da;
+          font-family: Inter, system-ui, sans-serif;
+        }
+        input[data-file-tree-search-input]::placeholder {
+          color: #9b9588;
         }
         button[data-type='item'] {
           border-radius: 0;
+          background: transparent !important;
+          color: #ede7da;
           font-family: Inter, system-ui, sans-serif;
         }
         button[data-type='item'][data-item-selected] {
@@ -155,12 +190,15 @@
         `,
       });
       tree.render({ containerWrapper: host });
+      host.addEventListener("click", bridgeRowClick);
+      removeTreeClickBridge = () => host.removeEventListener("click", bridgeRowClick);
       unsubscribe = tree.subscribe(checkLazyExpansion);
       checkLazyExpansion();
       lastPathsKey = paths.join("\n");
     })();
 
     return () => {
+      removeTreeClickBridge?.();
       unsubscribe?.();
       tree?.cleanUp();
     };
@@ -184,7 +222,13 @@
   $effect(() => {
     if (!tree || !selectedPath) return;
     const item = tree.getItem(selectedPath);
-    if (!item?.isSelected()) item?.select();
+    if (!item?.isSelected()) {
+      suppressSelectionEvent = true;
+      item?.select();
+      queueMicrotask(() => {
+        suppressSelectionEvent = false;
+      });
+    }
     tree.scrollToPath(selectedPath, { offset: "nearest", focus: false });
   });
 </script>
