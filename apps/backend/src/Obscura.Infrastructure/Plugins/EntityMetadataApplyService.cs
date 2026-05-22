@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Obscura.Application.Entities;
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.Plugins;
 using Obscura.Domain.Entities;
@@ -18,7 +19,7 @@ public sealed record PluginArtworkServiceOptions(string CacheRoot);
 /// <summary>
 /// Applies selected plugin metadata proposals into v2 entity capability rows.
 /// </summary>
-public sealed class EntityMetadataApplyService {
+public sealed class EntityMetadataApplyService : IEntityMetadataPatchService {
     private readonly ObscuraDbContext _db;
     private readonly PluginArtworkServiceOptions _options;
     private readonly HttpClient _http;
@@ -50,6 +51,14 @@ public sealed class EntityMetadataApplyService {
     public async Task<bool> ApplyPatchAsync(
         Guid entityId,
         EntityMetadataUpdateRequest request,
+        CancellationToken cancellationToken) =>
+        await ApplyPatchAsync(entityId, request, expectedKind: null, cancellationToken) == EntityMetadataPatchResult.Applied;
+
+    /// <inheritdoc />
+    public async Task<EntityMetadataPatchResult> ApplyPatchAsync(
+        Guid entityId,
+        EntityMetadataUpdateRequest request,
+        string? expectedKind,
         CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Patch);
@@ -60,7 +69,12 @@ public sealed class EntityMetadataApplyService {
         var entity = await _db.Entities
             .FirstOrDefaultAsync(row => row.Id == entityId && row.DeletedAt == null, cancellationToken);
         if (entity is null) {
-            return false;
+            return EntityMetadataPatchResult.NotFound;
+        }
+
+        if (!string.IsNullOrWhiteSpace(expectedKind) &&
+            !IsKindCompatible(entity.KindCode, expectedKind)) {
+            return EntityMetadataPatchResult.KindMismatch;
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -71,17 +85,17 @@ public sealed class EntityMetadataApplyService {
         }
 
         if (request.Children is { Count: > 0 }) {
-            await ApplyStructuralChildrenAsync(request.Children, now, cancellationToken);
+            await ApplyStructuralChildrenAsync(request.Children, now, [entity.Id], cancellationToken);
         }
 
         if (request.Relationships is { Count: > 0 } &&
             (fields.Contains("credits") || fields.Contains("studio"))) {
-            await CascadeRelationshipImagesAsync(request.Relationships, now, cancellationToken);
+            await ApplyRelationshipProposalsAsync(entityId, request.Relationships, now, cancellationToken);
         }
 
         entity.UpdatedAt = now;
         await _db.SaveChangesAsync(cancellationToken);
-        return true;
+        return EntityMetadataPatchResult.Applied;
     }
 
     private static HashSet<string> FieldSet(IEnumerable<string> fields) =>
@@ -266,10 +280,10 @@ public sealed class EntityMetadataApplyService {
 
         var relationshipProposals = RelationshipProposals(proposal);
         if (relationshipProposals.Count > 0 && (selected.Contains("credits") || selected.Contains("studio"))) {
-            await CascadeRelationshipImagesAsync(relationshipProposals, now, cancellationToken);
+            await ApplyRelationshipProposalsAsync(entityId, relationshipProposals, now, cancellationToken);
         }
 
-        await ApplyStructuralChildrenAsync(StructuralChildProposals(proposal), now, cancellationToken);
+        await ApplyStructuralChildrenAsync(StructuralChildProposals(proposal), now, [entity.Id], cancellationToken);
 
         entity.UpdatedAt = now;
         await _db.SaveChangesAsync(cancellationToken);
@@ -745,15 +759,16 @@ public sealed class EntityMetadataApplyService {
     }
 
     /// <summary>
-    /// Downloads images from relationship proposals into linked Person and Studio entities
+    /// Applies metadata and artwork from relationship proposals into linked Person and Studio entities
     /// that were created or resolved during credits/studio apply.
     /// </summary>
-    private async Task CascadeRelationshipImagesAsync(
+    private async Task ApplyRelationshipProposalsAsync(
+        Guid sourceEntityId,
         IReadOnlyList<EntityMetadataProposal> relationships,
         DateTimeOffset now,
         CancellationToken cancellationToken) {
         foreach (var child in relationships) {
-            if (child.Images.Count == 0 || string.IsNullOrWhiteSpace(child.Patch.Title)) {
+            if (string.IsNullOrWhiteSpace(child.Patch.Title)) {
                 continue;
             }
 
@@ -763,6 +778,16 @@ public sealed class EntityMetadataApplyService {
 
             var linkedEntity = await FindEntityByKindAndTitleAsync(child.TargetKind, child.Patch.Title.Trim(), cancellationToken);
             if (linkedEntity is null) {
+                continue;
+            }
+
+            if (linkedEntity.Id == sourceEntityId) {
+                continue;
+            }
+
+            await ApplyPatchToEntityAsync(linkedEntity, child.Patch, [], now, cancellationToken);
+
+            if (child.Images.Count == 0) {
                 continue;
             }
 
@@ -778,28 +803,37 @@ public sealed class EntityMetadataApplyService {
             var image = child.Images.FirstOrDefault(img => img.Kind is "poster") ?? child.Images.FirstOrDefault(img => img.Kind is "logo") ?? child.Images[0];
             var role = child.TargetKind == "studio" ? EntityFileRole.Logo : EntityFileRole.Poster;
 
-            try {
-                var bytes = await _http.GetByteArrayAsync(image.Url, cancellationToken);
-                var ext = ExtensionFromUrl(image.Url);
-                var relativePath = Path.Combine("plugins", "artwork", linkedEntity.Id.ToString(), $"{role.ToString().ToLowerInvariant()}-{ShortHash(image.Url)}{ext}");
-                var physicalPath = Path.Combine(_options.CacheRoot, relativePath);
-                Directory.CreateDirectory(Path.GetDirectoryName(physicalPath)!);
-                await File.WriteAllBytesAsync(physicalPath, bytes, cancellationToken);
+            await DownloadImageIfMissingAsync(linkedEntity, image, role, now, cancellationToken);
+        }
+    }
 
-                var publicPath = $"/assets/{relativePath.Replace(Path.DirectorySeparatorChar, '/')}";
-                _db.EntityFiles.Add(new EntityFileRow {
-                    Id = Guid.NewGuid(),
-                    EntityId = linkedEntity.Id,
-                    Role = role,
-                    Path = publicPath,
-                    MimeType = MimeTypeFromExtension(ext),
-                    CreatedAt = now,
-                    UpdatedAt = now
-                });
+    private async Task DownloadImageIfMissingAsync(
+        EntityRow entity,
+        ImageCandidate image,
+        EntityFileRole role,
+        DateTimeOffset now,
+        CancellationToken cancellationToken) {
+        try {
+            var bytes = await _http.GetByteArrayAsync(image.Url, cancellationToken);
+            var ext = ExtensionFromUrl(image.Url);
+            var relativePath = Path.Combine("plugins", "artwork", entity.Id.ToString(), $"{role.ToString().ToLowerInvariant()}-{ShortHash(image.Url)}{ext}");
+            var physicalPath = Path.Combine(_options.CacheRoot, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(physicalPath)!);
+            await File.WriteAllBytesAsync(physicalPath, bytes, cancellationToken);
 
-                linkedEntity.UpdatedAt = now;
-            } catch (HttpRequestException) {
-            }
+            var publicPath = $"/assets/{relativePath.Replace(Path.DirectorySeparatorChar, '/')}";
+            _db.EntityFiles.Add(new EntityFileRow {
+                Id = Guid.NewGuid(),
+                EntityId = entity.Id,
+                Role = role,
+                Path = publicPath,
+                MimeType = MimeTypeFromExtension(ext),
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+
+            entity.UpdatedAt = now;
+        } catch (HttpRequestException) {
         }
     }
 
@@ -809,25 +843,32 @@ public sealed class EntityMetadataApplyService {
     private async Task ApplyStructuralChildrenAsync(
         IReadOnlyList<EntityMetadataProposal> children,
         DateTimeOffset now,
+        HashSet<Guid> visited,
         CancellationToken cancellationToken) {
         foreach (var child in children) {
             if (child.TargetEntityId is null) {
                 continue;
             }
 
+            if (!visited.Add(child.TargetEntityId.Value)) {
+                continue;
+            }
+
             var childEntity = await _db.Entities
                 .FirstOrDefaultAsync(row => row.Id == child.TargetEntityId.Value && row.DeletedAt == null, cancellationToken);
             if (childEntity is null) {
+                visited.Remove(child.TargetEntityId.Value);
                 continue;
             }
 
             await ApplyPatchToEntityAsync(childEntity, child.Patch, child.Images, now, cancellationToken);
             var relationshipProposals = RelationshipProposals(child);
             if (relationshipProposals.Count > 0 && (child.Patch.Credits.Count > 0 || !string.IsNullOrWhiteSpace(child.Patch.Studio))) {
-                await CascadeRelationshipImagesAsync(relationshipProposals, now, cancellationToken);
+                await ApplyRelationshipProposalsAsync(childEntity.Id, relationshipProposals, now, cancellationToken);
             }
 
-            await ApplyStructuralChildrenAsync(StructuralChildProposals(child), now, cancellationToken);
+            await ApplyStructuralChildrenAsync(StructuralChildProposals(child), now, visited, cancellationToken);
+            visited.Remove(child.TargetEntityId.Value);
         }
     }
 
@@ -941,6 +982,11 @@ public sealed class EntityMetadataApplyService {
 
     private static bool IsRelationshipMetadataKind(string kind) =>
         kind is "person" or "studio" or "tag";
+
+    private static bool IsKindCompatible(string entityKind, string expectedKind) =>
+        entityKind.Equals(expectedKind, StringComparison.OrdinalIgnoreCase) ||
+        (entityKind.Equals(EntityKindRegistry.Video.Code, StringComparison.OrdinalIgnoreCase) &&
+            expectedKind.Equals("video-episode", StringComparison.OrdinalIgnoreCase));
 
     private async Task<bool> HasEntityFileWithAnyRoleAsync(
         Guid entityId,

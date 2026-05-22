@@ -19,7 +19,14 @@ public sealed record IdentifyMatchHints(
 /// <param name="Id">Obscura entity identifier.</param>
 /// <param name="Kind">Obscura entity kind code.</param>
 /// <param name="Title">Current title.</param>
-public sealed record IdentifyEntitySnapshot(Guid Id, string Kind, string Title);
+/// <param name="ExternalIds">Provider-specific identities already attached to the entity.</param>
+/// <param name="Urls">Entity URLs that may carry provider identity.</param>
+public sealed record IdentifyEntitySnapshot(
+    Guid Id,
+    string Kind,
+    string Title,
+    IReadOnlyDictionary<string, string>? ExternalIds = null,
+    IReadOnlyList<string>? Urls = null);
 
 /// <summary>
 /// Structural context for a plugin identify request.

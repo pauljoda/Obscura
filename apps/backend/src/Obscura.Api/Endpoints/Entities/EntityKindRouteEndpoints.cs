@@ -37,6 +37,18 @@ internal static class EntityKindRouteEndpoints {
             .Produces(StatusCodes.Status200OK, detailResponseType)
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
+        group.MapPatch("/{id:guid}", async (
+            Guid id,
+            EntityMetadataUpdateRequest request,
+            IEntityMetadataPatchService metadata,
+            IEntityReadService entities,
+            CancellationToken cancellationToken) =>
+            await EntityDetailEndpoint.PatchEntityAsync(id, kind, request, metadata, entities, cancellationToken))
+            .WithName($"{detailName}Patch")
+            .Produces(StatusCodes.Status200OK, detailResponseType)
+            .Produces<ApiProblem>(StatusCodes.Status400BadRequest)
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
+
         return group;
     }
 

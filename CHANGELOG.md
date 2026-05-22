@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Metadata edits and plugin identify results now use kind-guarded patch routes, so plugins can safely update videos, series, people, studios, and related metadata without crossing entity types.
 - People now replaces Actors across the app navigation and browse experience, including the canonical `/people` route for person profiles.
 - Entity thumbnail titles now wrap to two lines instead of scrolling on a single line, making longer titles much easier to read at a glance, and the details area was refined to feel less empty when metadata is sparse.
 - Entity detail edit mode now features a tiptap WYSIWYG markdown editor for descriptions, a searchable tag picker with live API search and inline tag creation, and an icon-only edit toggle replacing the old labeled toolbar.
@@ -40,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Browse grids now fit their internal scroll area to the visible page instead of clipping below the app frame.
 
 ### Changed
+- Plugin identification now receives richer structural ancestor context and applies relationship proposals with their full metadata, artwork, external IDs, URLs, stats, and descriptions.
 - The person browse section and person detail links now use People terminology and `/people` URLs instead of Actors and `/performers`.
 - Entity thumbnail titles now wrap to two lines instead of scrolling on a single line, and the details section layout was updated to gracefully adapt to varying title lengths while keeping metadata aligned.
 - Clicking a thumbnail while items are selected now toggles selection instead of navigating, so multi-select flows no longer accidentally leave the page.
@@ -47,6 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Plugin execution no longer rewrites `python` commands to `python3`; the manifest `script` executable is now used verbatim.
 
 ### Added
+- Entity metadata patching now supports guarded kind-aware routes and domain PATCH routes for videos, series, studios, tags, and other entity detail pages.
 - MarkdownEditor form component: tiptap-based WYSIWYG with Dark Room toolbar styling, markdown serialization, and formatting support (bold, italic, headings, lists, blockquotes, code, links).
 - EntityPicker form component: multi/single-select entity reference picker with debounced live API search, thumbnail avatars, keyboard navigation, and inline creation for new items.
 - Editable EntityDetail sections now save through one global entity metadata patch endpoint, shared with identify proposal application so manual edits and plugin metadata use the same backend path.

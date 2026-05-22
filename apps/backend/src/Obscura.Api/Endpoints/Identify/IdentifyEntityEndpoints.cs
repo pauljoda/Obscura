@@ -1,6 +1,7 @@
 using Obscura.Contracts.Plugins;
 using Obscura.Contracts.System;
 using Obscura.Contracts.Entities;
+using Obscura.Application.Entities;
 using Obscura.Infrastructure.Plugins;
 
 namespace Obscura.Api.Endpoints;
@@ -25,11 +26,11 @@ internal static class IdentifyEntityEndpoints {
         group.MapPost("/entities/{entityId:guid}/apply", async (
             Guid entityId,
             ApplyIdentifyProposalRequest request,
-            EntityMetadataApplyService metadata,
+            IEntityMetadataPatchService metadata,
             CancellationToken cancellationToken) => {
-                bool applied;
+                EntityMetadataPatchResult result;
                 try {
-                    applied = await metadata.ApplyPatchAsync(
+                    result = await metadata.ApplyPatchAsync(
                         entityId,
                         new EntityMetadataUpdateRequest(
                             request.SelectedFields,
@@ -37,12 +38,13 @@ internal static class IdentifyEntityEndpoints {
                             request.SelectedImages,
                             request.Proposal.Children,
                             request.Proposal.Relationships),
+                        expectedKind: null,
                         cancellationToken);
                 } catch (ArgumentException ex) {
                     return Results.BadRequest(new ApiProblem("invalid_entity_metadata_patch", ex.Message));
                 }
 
-                if (!applied) {
+                if (result is EntityMetadataPatchResult.NotFound or EntityMetadataPatchResult.KindMismatch) {
                     return Results.NotFound(new ApiProblem("entity_not_found", $"Entity '{entityId}' was not found."));
                 }
 

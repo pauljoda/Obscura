@@ -1,12 +1,24 @@
 using Obscura.Application.Entities;
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.System;
-using Obscura.Infrastructure.Plugins;
 
 namespace Obscura.Api.Endpoints;
 
 internal static class EntityDetailEndpoint {
     internal static RouteGroupBuilder MapEntityDetailEndpoint(this RouteGroupBuilder group) {
+        group.MapPatch("/{kind}/{id:guid}", async (
+            string kind,
+            Guid id,
+            EntityMetadataUpdateRequest request,
+            IEntityMetadataPatchService metadata,
+            IEntityReadService entities,
+            CancellationToken cancellationToken) =>
+            await PatchEntityAsync(id, kind, request, metadata, entities, cancellationToken))
+            .WithName("UpdateEntityByKind")
+            .Produces<EntityCard>()
+            .Produces<ApiProblem>(StatusCodes.Status400BadRequest)
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
+
         group.MapGet("/{id:guid}", async (
             Guid id,
             IEntityReadService entities,
@@ -19,27 +31,38 @@ internal static class EntityDetailEndpoint {
         group.MapPatch("/{id:guid}", async (
             Guid id,
             EntityMetadataUpdateRequest request,
-            EntityMetadataApplyService metadata,
+            IEntityMetadataPatchService metadata,
             IEntityReadService entities,
-            CancellationToken cancellationToken) => {
-                bool applied;
-                try {
-                    applied = await metadata.ApplyPatchAsync(id, request, cancellationToken);
-                } catch (ArgumentException ex) {
-                    return Results.BadRequest(new ApiProblem("invalid_entity_metadata_patch", ex.Message));
-                }
-
-                if (!applied) {
-                    return Results.NotFound(new ApiProblem("entity_not_found", $"Entity '{id}' was not found."));
-                }
-
-                return await EntityEndpointResults.GetEntityAsync(id, entities, cancellationToken);
-            })
+            CancellationToken cancellationToken) =>
+            await PatchEntityAsync(id, expectedKind: null, request, metadata, entities, cancellationToken))
             .WithName("UpdateEntity")
             .Produces<EntityCard>()
             .Produces<ApiProblem>(StatusCodes.Status400BadRequest)
             .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
         return group;
+    }
+
+    internal static async Task<IResult> PatchEntityAsync(
+        Guid id,
+        string? expectedKind,
+        EntityMetadataUpdateRequest request,
+        IEntityMetadataPatchService metadata,
+        IEntityReadService entities,
+        CancellationToken cancellationToken) {
+        EntityMetadataPatchResult result;
+        try {
+            result = await metadata.ApplyPatchAsync(id, request, expectedKind, cancellationToken);
+        } catch (ArgumentException ex) {
+            return Results.BadRequest(new ApiProblem("invalid_entity_metadata_patch", ex.Message));
+        }
+
+        if (result is EntityMetadataPatchResult.NotFound or EntityMetadataPatchResult.KindMismatch) {
+            return Results.NotFound(new ApiProblem("entity_not_found", $"Entity '{id}' was not found."));
+        }
+
+        return expectedKind is null
+            ? await EntityEndpointResults.GetEntityAsync(id, entities, cancellationToken)
+            : await EntityKindRouteEndpoints.GetKindDetailAsync(id, expectedKind, entities, cancellationToken);
     }
 }

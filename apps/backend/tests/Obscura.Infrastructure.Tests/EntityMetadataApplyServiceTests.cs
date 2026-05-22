@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Application.Entities;
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.Plugins;
 using Obscura.Domain.Entities;
@@ -144,6 +145,25 @@ public sealed class EntityMetadataApplyServiceTests {
             CancellationToken.None);
 
         Assert.False(applied);
+    }
+
+    [Fact]
+    public async Task ApplyPatchRejectsKindMismatchWithoutMutatingEntity() {
+        await using var db = CreateContext();
+        var entityId = Guid.Parse("23232323-2323-2323-2323-232323232323");
+        SeedEntity(db, entityId, "video", "Original Title");
+        await db.SaveChangesAsync();
+
+        var service = new EntityMetadataApplyService(db, new PluginArtworkServiceOptions(Path.GetTempPath()));
+
+        var result = await service.ApplyPatchAsync(
+            entityId,
+            new EntityMetadataUpdateRequest(Fields: ["title"], Patch: EmptyPatch() with { Title = "Wrong Kind" }),
+            expectedKind: "video-series",
+            CancellationToken.None);
+
+        Assert.Equal(EntityMetadataPatchResult.KindMismatch, result);
+        Assert.Equal("Original Title", (await db.Entities.FindAsync([entityId]))?.Title);
     }
 
     [Fact]
@@ -679,6 +699,63 @@ public sealed class EntityMetadataApplyServiceTests {
         var studioId = await db.Entities.Where(row => row.KindCode == "studio" && row.Title == "Chair Pictures").Select(row => row.Id).SingleAsync();
         Assert.Equal(EntityFileRole.Poster, (await db.EntityFiles.SingleAsync(row => row.EntityId == actorId)).Role);
         Assert.Equal(EntityFileRole.Logo, (await db.EntityFiles.SingleAsync(row => row.EntityId == studioId)).Role);
+    }
+
+    [Fact]
+    public async Task ApplyRelationshipProposalsHydratesLinkedEntityMetadata() {
+        await using var db = CreateContext();
+        var movieId = Guid.Parse("24242424-2424-2424-2424-242424242424");
+        SeedEntity(db, movieId, "video", "Old Movie");
+        await db.SaveChangesAsync();
+
+        var actorRelationship = new EntityMetadataProposal(
+            ProposalId: "tmdb:person:31",
+            Provider: "tmdb",
+            TargetKind: "person",
+            Confidence: 1,
+            MatchReason: "credit",
+            Patch: EmptyPatch() with {
+                Title = "Lead Actor",
+                Description = "Actor biography.",
+                ExternalIds = new Dictionary<string, string> { ["tmdb"] = "31" },
+                Urls = ["https://www.themoviedb.org/person/31"],
+                Stats = new Dictionary<string, int> { ["popularity"] = 12 }
+            },
+            Images: [new ImageCandidate("poster", "https://example.test/lead.jpg", "tmdb", null, null, null, null)],
+            Children: [],
+            Candidates: []);
+        var proposal = new EntityMetadataProposal(
+            ProposalId: "tmdb:movie:1",
+            Provider: "tmdb",
+            TargetKind: "video",
+            Confidence: 1,
+            MatchReason: "external-id",
+            Patch: EmptyPatch() with {
+                Credits = [new CreditPatch("Lead Actor", "cast", "Lead", 0)]
+            },
+            Images: [],
+            Children: [],
+            Candidates: [],
+            Relationships: [actorRelationship]);
+
+        var service = new EntityMetadataApplyService(
+            db,
+            new PluginArtworkServiceOptions(Path.GetTempPath()),
+            new HttpClient(new FixedImageHandler()));
+        await service.ApplyAsync(movieId, proposal, selectedFields: ["credits"], selectedImages: null, CancellationToken.None);
+
+        var actorId = await db.Entities
+            .Where(row => row.KindCode == "person" && row.Title == "Lead Actor")
+            .Select(row => row.Id)
+            .SingleAsync();
+        Assert.Equal("Actor biography.", (await db.EntityDescriptions.FindAsync([actorId]))?.Value);
+        Assert.Equal("31", (await db.EntityExternalIds.SingleAsync(row => row.EntityId == actorId)).Value);
+        Assert.Equal("https://www.themoviedb.org/person/31", await db.EntityUrls
+            .Where(row => row.EntityId == actorId)
+            .Select(row => row.Url)
+            .SingleAsync());
+        Assert.Equal(12, (await db.EntityStats.FindAsync([actorId, "popularity"]))?.Value);
+        Assert.Equal(EntityFileRole.Poster, (await db.EntityFiles.SingleAsync(row => row.EntityId == actorId)).Role);
     }
 
     [Fact]

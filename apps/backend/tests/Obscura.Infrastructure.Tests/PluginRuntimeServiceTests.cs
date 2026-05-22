@@ -243,6 +243,170 @@ public sealed class PluginRuntimeServiceTests : IDisposable {
     }
 
     [Fact]
+    public async Task IdentifyChoosesActionsFromCurrentEntityKindOnly() {
+        var pluginDir = Path.Combine(_tempRoot, "tmdb");
+        Directory.CreateDirectory(pluginDir);
+        await File.WriteAllTextAsync(
+            Path.Combine(pluginDir, "manifest.v2.json"),
+            """
+            {
+              "manifestVersion": 2,
+              "apiTags": ["v2"],
+              "id": "tmdb",
+              "name": "TMDB",
+              "version": "1.2.0",
+              "runtime": "dotnet-process",
+              "entry": "Obscura.Plugin.Tmdb.dll",
+              "compat": {
+                "pluginApiMin": "2.0.0",
+                "pluginApiMax": null,
+                "obscuraMin": "0.22.0",
+                "obscuraMax": null
+              },
+              "auth": [
+                { "key": "apiKey", "label": "API key", "required": true, "url": "https://www.themoviedb.org/settings/api" }
+              ],
+              "supports": [
+                { "entityKind": "video", "actions": ["lookup-id", "search"] },
+                { "entityKind": "video-series", "actions": ["search"] }
+              ]
+            }
+            """);
+
+        await using var db = CreateContext();
+        var now = DateTimeOffset.UtcNow;
+        var providerConfig = new ProviderConfigRow {
+            Id = Guid.NewGuid(),
+            ProviderCode = "tmdb",
+            DisplayName = "TMDB",
+            ProviderType = ProviderType.ExternalProcess,
+            Enabled = true,
+            SettingsJson = "{}",
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        var seriesId = Guid.Parse("25252525-2525-2525-2525-252525252525");
+        db.ProviderConfigs.Add(providerConfig);
+        db.ProviderCredentials.Add(new ProviderCredentialRow {
+            Id = Guid.NewGuid(),
+            ProviderConfigId = providerConfig.Id,
+            CredentialKey = "apiKey",
+            EncryptedValue = "secret",
+            CreatedAt = now,
+            UpdatedAt = now
+        });
+        db.Entities.Add(new EntityRow { Id = seriesId, KindCode = "video-series", Title = "Series", CreatedAt = now, UpdatedAt = now });
+        db.EntityExternalIds.Add(new EntityExternalIdRow {
+            Id = Guid.NewGuid(),
+            EntityId = seriesId,
+            Provider = "tmdb",
+            Value = "123",
+            CreatedAt = now,
+            UpdatedAt = now
+        });
+        await db.SaveChangesAsync();
+
+        var executor = new StructuralContextCapturingProcessExecutor();
+        var service = CreateIdentifyService(db, executor, pluginDir);
+
+        var response = await service.IdentifyAsync(seriesId, "tmdb", null, CancellationToken.None);
+
+        Assert.True(response.Ok);
+        Assert.Equal("search", Assert.Single(executor.Requests).Action);
+    }
+
+    [Fact]
+    public async Task DirectChildIdentifyIncludesHydratedAncestorsWithoutWalkingUpward() {
+        var pluginDir = Path.Combine(_tempRoot, "tmdb");
+        Directory.CreateDirectory(pluginDir);
+        await File.WriteAllTextAsync(
+            Path.Combine(pluginDir, "manifest.v2.json"),
+            """
+            {
+              "manifestVersion": 2,
+              "apiTags": ["v2"],
+              "id": "tmdb",
+              "name": "TMDB",
+              "version": "1.2.0",
+              "runtime": "dotnet-process",
+              "entry": "Obscura.Plugin.Tmdb.dll",
+              "compat": {
+                "pluginApiMin": "2.0.0",
+                "pluginApiMax": null,
+                "obscuraMin": "0.22.0",
+                "obscuraMax": null
+              },
+              "auth": [
+                { "key": "apiKey", "label": "API key", "required": true, "url": "https://www.themoviedb.org/settings/api" }
+              ],
+              "supports": [
+                { "entityKind": "video", "actions": ["search"] },
+                { "entityKind": "video-season", "actions": ["search"] },
+                { "entityKind": "video-series", "actions": ["search"] }
+              ]
+            }
+            """);
+
+        await using var db = CreateContext();
+        var now = DateTimeOffset.UtcNow;
+        var providerConfig = new ProviderConfigRow {
+            Id = Guid.NewGuid(),
+            ProviderCode = "tmdb",
+            DisplayName = "TMDB",
+            ProviderType = ProviderType.ExternalProcess,
+            Enabled = true,
+            SettingsJson = "{}",
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        var seriesId = Guid.Parse("26262626-2626-2626-2626-262626262626");
+        var seasonId = Guid.Parse("27272727-2727-2727-2727-272727272727");
+        var episodeId = Guid.Parse("28282828-2828-2828-2828-282828282828");
+        db.ProviderConfigs.Add(providerConfig);
+        db.ProviderCredentials.Add(new ProviderCredentialRow {
+            Id = Guid.NewGuid(),
+            ProviderConfigId = providerConfig.Id,
+            CredentialKey = "apiKey",
+            EncryptedValue = "secret",
+            CreatedAt = now,
+            UpdatedAt = now
+        });
+        db.Entities.AddRange(
+            new EntityRow { Id = seriesId, KindCode = "video-series", Title = "Parent Series", CreatedAt = now, UpdatedAt = now },
+            new EntityRow { Id = seasonId, KindCode = "video-season", Title = "Season 2", ParentEntityId = seriesId, SortOrder = 2, CreatedAt = now, UpdatedAt = now },
+            new EntityRow { Id = episodeId, KindCode = "video", Title = "Episode 3", ParentEntityId = seasonId, SortOrder = 3, CreatedAt = now, UpdatedAt = now });
+        db.EntityExternalIds.Add(new EntityExternalIdRow {
+            Id = Guid.NewGuid(),
+            EntityId = seriesId,
+            Provider = "tmdb",
+            Value = "999",
+            CreatedAt = now,
+            UpdatedAt = now
+        });
+        db.EntityUrls.Add(new EntityUrlRow {
+            Id = Guid.NewGuid(),
+            EntityId = seriesId,
+            Url = "https://www.themoviedb.org/tv/999",
+            SortOrder = 0,
+            CreatedAt = now
+        });
+        await db.SaveChangesAsync();
+
+        var executor = new StructuralContextCapturingProcessExecutor();
+        var service = CreateIdentifyService(db, executor, pluginDir);
+
+        var response = await service.IdentifyAsync(episodeId, "tmdb", null, CancellationToken.None);
+
+        Assert.True(response.Ok);
+        var request = Assert.Single(executor.Requests);
+        Assert.Equal(episodeId, request.Entity.Id);
+        Assert.Equal([seasonId, seriesId], request.StructuralContext?.Ancestors.Select(ancestor => ancestor.Id).ToArray());
+        Assert.Equal("999", request.StructuralContext?.Ancestors.Last().ExternalIds["tmdb"]);
+        Assert.Equal("https://www.themoviedb.org/tv/999", Assert.Single(request.StructuralContext!.Ancestors.Last().Urls));
+        Assert.Equal(3, request.StructuralContext.Positions["sortOrder"]);
+    }
+
+    [Fact]
     public async Task IdentifyMatchesProviderChildrenWhilePreservingRelationshipProposals() {
         var pluginDir = Path.Combine(_tempRoot, "tmdb");
         Directory.CreateDirectory(pluginDir);
@@ -339,6 +503,17 @@ public sealed class PluginRuntimeServiceTests : IDisposable {
 
         return new ObscuraDbContext(options);
     }
+
+    private IdentifyPluginService CreateIdentifyService(
+        ObscuraDbContext db,
+        ProcessExecutor executor,
+        string pluginDir) =>
+        new(
+            db,
+            new PluginCatalogService(db, new PluginCatalogOptions([pluginDir], _tempRoot, "0.22.1-dev")),
+            new IdentifyMatchHintResolver(db),
+            new DotnetPluginProcessRunner(executor, new PluginCatalogOptions([], _tempRoot, "0.22.1-dev")),
+            new EntityMetadataApplyService(db, new PluginArtworkServiceOptions(_tempRoot)));
 
     private sealed class CapturingProcessExecutor : ProcessExecutor {
         public string? FileName { get; private set; }

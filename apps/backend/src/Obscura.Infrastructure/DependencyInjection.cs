@@ -68,6 +68,8 @@ public static class DependencyInjection {
             provider.GetRequiredService<ObscuraDbContext>(),
             new PluginArtworkServiceOptions(cacheDir),
             provider.GetService<HttpClient>()));
+        services.AddScoped<IEntityMetadataPatchService>(provider =>
+            provider.GetRequiredService<EntityMetadataApplyService>());
         services.AddScoped<IdentifyPluginService>();
         services.AddSingleton<IdentifySessionStore>();
 

@@ -503,13 +503,14 @@ public sealed class IdentifyPluginService {
             return new IdentifyPluginResponse(false, null, $"Missing required plugin credentials: {string.Join(", ", missingAuth)}.");
         }
 
+        var ancestors = await LoadAncestorSnapshotsAsync(entity, descriptor.Manifest.Id, cancellationToken);
         return await IdentifyEntityWithStructuralContextAsync(
             entity,
             descriptor,
             auth,
             query,
-            ancestors: [],
-            parentSortOrder: null,
+            ancestors,
+            parentSortOrder: entity.SortOrder,
             visited: [],
             cancellationToken);
     }
@@ -527,9 +528,11 @@ public sealed class IdentifyPluginService {
 
     private static string ResolveAction(
         PluginManifestV2 manifest,
+        string entityKind,
         IdentifyQuery? query,
         IdentifyMatchHints hints) {
         var supports = manifest.Supports
+            .Where(support => support.EntityKind.Equals(entityKind, StringComparison.OrdinalIgnoreCase))
             .SelectMany(support => support.Actions)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var hasExplicitId = query?.ExternalIds?.ContainsKey(manifest.Id) == true ||
@@ -566,9 +569,9 @@ public sealed class IdentifyPluginService {
             : null;
         var request = new IdentifyPluginRequest(
             ProtocolVersion: 2,
-            Action: ResolveAction(descriptor.Manifest, query, hints),
+            Action: ResolveAction(descriptor.Manifest, entity.KindCode, query, hints),
             Auth: auth,
-            Entity: new IdentifyEntitySnapshot(entity.Id, entity.KindCode, entity.Title),
+            Entity: await SnapshotAsync(entity, descriptor.Manifest.Id, cancellationToken),
             Query: query ?? new IdentifyQuery(null, null, null),
             Hints: hints,
             StructuralContext: structuralContext);
@@ -584,7 +587,7 @@ public sealed class IdentifyPluginService {
             response.Result,
             descriptor,
             auth,
-            [new IdentifyEntitySnapshot(entity.Id, entity.KindCode, entity.Title), .. ancestors],
+            [await SnapshotAsync(entity, descriptor.Manifest.Id, cancellationToken), .. ancestors],
             visited,
             cancellationToken);
         visited.Remove(entity.Id);
@@ -661,6 +664,41 @@ public sealed class IdentifyPluginService {
             Children = structuralChildren,
             Relationships = RelationshipProposals(providerProposal)
         };
+    }
+
+    private async Task<IReadOnlyList<IdentifyEntitySnapshot>> LoadAncestorSnapshotsAsync(
+        EntityRow entity,
+        string providerId,
+        CancellationToken cancellationToken) {
+        var ancestors = new List<IdentifyEntitySnapshot>();
+        var parentId = entity.ParentEntityId;
+        var visited = new HashSet<Guid> { entity.Id };
+        while (parentId is { } id && visited.Add(id)) {
+            var parent = await _db.Entities
+                .AsNoTracking()
+                .FirstOrDefaultAsync(row => row.Id == id && row.DeletedAt == null, cancellationToken);
+            if (parent is null) {
+                break;
+            }
+
+            ancestors.Add(await SnapshotAsync(parent, providerId, cancellationToken));
+            parentId = parent.ParentEntityId;
+        }
+
+        return ancestors;
+    }
+
+    private async Task<IdentifyEntitySnapshot> SnapshotAsync(
+        EntityRow entity,
+        string providerId,
+        CancellationToken cancellationToken) {
+        var hints = await _hints.ResolveAsync(entity.Id, providerId, cancellationToken);
+        return new IdentifyEntitySnapshot(
+            entity.Id,
+            entity.KindCode,
+            entity.Title,
+            hints.ExternalIds,
+            hints.Urls);
     }
 
     private async Task<IReadOnlyList<StructuralChild>> LoadStructuralChildrenAsync(Guid parentEntityId, CancellationToken cancellationToken) {
