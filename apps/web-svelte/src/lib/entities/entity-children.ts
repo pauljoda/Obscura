@@ -27,7 +27,7 @@ export function getRelationshipIds(
   kind?: EntityKindCode,
 ): string[] {
   return (entity?.relationships ?? [])
-    .filter((group) => !kind || group.kind === kind)
+    .filter((group) => group.code === code && (!kind || group.kind === kind))
     .flatMap((group) => group.entities.map((relationship) => relationship.id));
 }
 

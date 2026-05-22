@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The temporary v2 migration, fresh-start, backup, and legacy-import tools were removed now that current builds run directly on the EF-backed entity model.
 - Identify review now separates structural children from related people and studios, so series cascades can carry seasons, episodes, credits, and artwork together.
 - Identify now applies full credit lists even when the same person has multiple roles on a title, preserving the combined credit metadata without crashing.
+- Series, season, and video detail pages now show identified cast, crew, studio, and tag relationships from the v2 relationship model.
 - Identify review now recognizes existing tags and credits in the v2 relationship model and lets review thumbnails be selected without navigating away.
 - The C# domain model was intentionally reset around abstract entities and mutable typed capabilities, creating a breaking foundation for the next EF/API integration pass.
 - Domain persistence now starts from an application-level `EntityRepository`, keeping entities persistence-ignorant while EF hydrates short-lived domain slices.
@@ -70,6 +71,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The thumbnail lab now shows how many cards are loaded and rendered on the current page so pagination behavior can be checked directly.
 
 ### Fixed
+- Identified cast, crew, studios, and tags now populate detail API relationship groups again, and season pages fall back to series-level cast and crew when the season has no separate relationship data.
 - Entity detail reference sections now render linked entity thumbnails in a single horizontal scrolling row without selection checkboxes, keeping checkbox selection scoped to full EntityGrid views.
 - Entity detail tabs now render shared rich metadata sections such as credits, studios, stats, technical data, sources, and fingerprints without each route having to provide a custom renderer.
 - Library scans now correctly remove galleries, books, and audio libraries only from the scanned root instead of accidentally deleting entities belonging to other roots.

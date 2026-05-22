@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { ArrowLeft, Film, Info, SlidersHorizontal } from "@lucide/svelte";
+  import { ArrowLeft, Film, Info, SlidersHorizontal, Users } from "@lucide/svelte";
   import {
     fetchV2Season,
     fetchV2Series,
@@ -16,14 +16,20 @@
     updateOptimisticEntityRating,
   } from "$lib/entities/entity-detail-state";
   import { getChildIds } from "$lib/entities/entity-children";
+  import EntityCastAndCrewSection from "$lib/components/entities/EntityCastAndCrewSection.svelte";
+  import type { EntityDetailTag } from "$lib/entities/entity-detail";
   import { entityCardToDetailCard, type EntityDetailCardFull } from "$lib/entities/entity-detail";
   import {
     fetchOrderedEntityThumbnails,
+    hydrateStandardRelationshipCards,
     thumbnailsToCards,
   } from "$lib/entities/entity-relationship-thumbnails";
   import type { EntityThumbnailCard } from "$lib/entities/entity-thumbnail";
   import { ENTITY_KIND } from "$lib/entities/v2-codes";
-  import EntityDetail, { type EntityDetailTab } from "$lib/components/entities/EntityDetail.svelte";
+  import EntityDetail, {
+    type EntityDetailSection,
+    type EntityDetailTab,
+  } from "$lib/components/entities/EntityDetail.svelte";
   import EntityGrid from "$lib/components/entities/EntityGrid.svelte";
 
   type LoadState = "loading" | "ready" | "error";
@@ -34,13 +40,19 @@
   let errorMessage: string | null = $state(null);
   let ratingBusy = $state(false);
   let episodeCards = $state<EntityThumbnailCard[]>([]);
+  let studioCards = $state<EntityThumbnailCard[]>([]);
+  let creditCards = $state<EntityThumbnailCard[]>([]);
+  let relationshipTags = $state<EntityDetailTag[]>([]);
 
   const seriesId = $derived(page.params.id ?? "");
   const seasonId = $derived(page.params.seasonId ?? "");
 
   const card = $derived.by((): EntityDetailCardFull | null => {
     if (!season) return null;
-    return entityCardToDetailCard(season);
+    return {
+      ...entityCardToDetailCard(season),
+      tags: relationshipTags,
+    };
   });
 
   const seasonNumber = $derived.by(() => {
@@ -56,6 +68,16 @@
     return cap?.items ?? [];
   });
 
+  const hasCastAndCrew = $derived(studioCards.length > 0 || creditCards.length > 0);
+  const detailSections = $derived.by((): EntityDetailSection[] => [
+    {
+      id: "cast-and-crew",
+      label: "Cast and Crew",
+      icon: Users,
+      hidden: !hasCastAndCrew,
+    },
+  ]);
+
   const detailTabs = $derived.by((): EntityDetailTab[] => {
     if (!card) return [];
     const tabs: EntityDetailTab[] = [
@@ -63,7 +85,7 @@
         id: "details",
         label: "Details",
         icon: Info,
-        sections: ["description", "tags"],
+        sections: ["description", "tags", "cast-and-crew"],
       },
     ];
 
@@ -94,7 +116,10 @@
       ]);
       parentSeries = seriesDetail;
       season = seasonDetail;
-      await hydrateEpisodeThumbnails(seasonDetail);
+      await Promise.all([
+        hydrateEpisodeThumbnails(seasonDetail),
+        hydrateSeasonRelationships(seasonDetail, seriesDetail),
+      ]);
       loadState = "ready";
     } catch (err) {
       errorMessage = err instanceof Error ? err.message : String(err);
@@ -126,6 +151,24 @@
     const episodeIds = getChildIds(seasonDetail, ENTITY_KIND.video);
     episodeCards = thumbnailsToCards(await fetchOrderedEntityThumbnails(episodeIds));
   }
+
+  async function hydrateSeasonRelationships(
+    seasonDetail: V2VideoSeasonDetail,
+    seriesDetail: V2VideoSeriesDetail,
+  ) {
+    let relationshipCards = await hydrateStandardRelationshipCards(seasonDetail);
+    if (
+      relationshipCards.studioCards.length === 0 &&
+      relationshipCards.creditCards.length === 0 &&
+      relationshipCards.relationshipTags.length === 0
+    ) {
+      relationshipCards = await hydrateStandardRelationshipCards(seriesDetail);
+    }
+
+    studioCards = relationshipCards.studioCards;
+    creditCards = relationshipCards.creditCards;
+    relationshipTags = relationshipCards.relationshipTags;
+  }
 </script>
 
 <svelte:head>
@@ -154,6 +197,7 @@
       {ratingBusy}
       posterSize="large"
       tabs={detailTabs}
+      sections={detailSections}
     >
       {#snippet heroMeta()}
         {#if parentSeries}
@@ -172,6 +216,12 @@
       {#snippet heroBadges()}
         {#if seasonNumber != null}
           <span class="position-badge">S{String(seasonNumber).padStart(2, "0")}</span>
+        {/if}
+      {/snippet}
+
+      {#snippet sectionContent(section)}
+        {#if section.id === "cast-and-crew"}
+          <EntityCastAndCrewSection {studioCards} {creditCards} />
         {/if}
       {/snippet}
     </EntityDetail>

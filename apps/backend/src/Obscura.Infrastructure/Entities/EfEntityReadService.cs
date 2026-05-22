@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Obscura.Application.Entities;
 using Obscura.Contracts.Entities;
@@ -105,12 +106,14 @@ public sealed class EfEntityReadService : IEntityReadService {
             return null;
         }
 
-        var card = EntityCardProjector.ToCard(entity);
+        var card = EntityCardProjector.ToCard(entity) with {
+            Relationships = await ProjectRelationshipGroupsAsync(id, cancellationToken)
+        };
         if (!card.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase)) {
             return null;
         }
 
-        var creditMetadata = EntityCardProjector.CreditMetadata(entity);
+        var creditMetadata = await ProjectCreditMetadataAsync(id, cancellationToken);
         return _kindMappers.TryGetValue(entity.Kind, out var mapper)
             ? mapper.ProjectDetail(entity, card, creditMetadata)
             : card;
@@ -170,6 +173,98 @@ public sealed class EfEntityReadService : IEntityReadService {
                 flag?.IsOrganized ?? false);
         }).ToArray();
     }
+
+    private async Task<IReadOnlyList<EntityGroup>> ProjectRelationshipGroupsAsync(
+        Guid entityId,
+        CancellationToken cancellationToken) {
+        var links = await _db.EntityRelationshipLinks.AsNoTracking()
+            .Where(link => link.EntityId == entityId)
+            .OrderBy(link => link.RelationshipCode)
+            .ThenBy(link => link.SortOrder)
+            .ThenBy(link => link.TargetEntityId)
+            .ToArrayAsync(cancellationToken);
+        if (links.Length == 0) {
+            return [];
+        }
+
+        var targetIds = links.Select(link => link.TargetEntityId).Distinct().ToArray();
+        var targetRows = await _db.Entities.AsNoTracking()
+            .Where(entity => targetIds.Contains(entity.Id) && entity.DeletedAt == null)
+            .ToDictionaryAsync(entity => entity.Id, cancellationToken);
+
+        var groups = new List<EntityGroup>();
+        foreach (var group in links.GroupBy(link => new { link.RelationshipCode, link.TargetKindCode })) {
+            var orderedRows = group
+                .Select(link => targetRows.GetValueOrDefault(link.TargetEntityId))
+                .Where(row => row is not null)
+                .Select(row => row!)
+                .ToArray();
+            if (orderedRows.Length == 0) {
+                continue;
+            }
+
+            groups.Add(new EntityGroup(
+                group.Key.TargetKindCode,
+                RelationshipLabel(group.Key.RelationshipCode),
+                await ProjectThumbnailsAsync(orderedRows, cancellationToken)) {
+                Code = group.Key.RelationshipCode
+            });
+        }
+
+        return groups;
+    }
+
+    private async Task<IReadOnlyList<EntityCreditMetadata>> ProjectCreditMetadataAsync(
+        Guid entityId,
+        CancellationToken cancellationToken) {
+        var links = await _db.EntityRelationshipLinks.AsNoTracking()
+            .Where(link => link.EntityId == entityId &&
+                           link.RelationshipCode == "cast" &&
+                           link.TargetKindCode == EntityKindRegistry.Person.Code)
+            .OrderBy(link => link.SortOrder)
+            .ThenBy(link => link.TargetEntityId)
+            .ToArrayAsync(cancellationToken);
+
+        return links
+            .Select(link => {
+                var metadata = DecodeCreditMetadata(link.MetadataJson);
+                return new EntityCreditMetadata(
+                    link.TargetEntityId,
+                    metadata.Role,
+                    metadata.Character);
+            })
+            .ToArray();
+    }
+
+    private static (string? Role, string? Character) DecodeCreditMetadata(string? metadataJson) {
+        if (string.IsNullOrWhiteSpace(metadataJson)) {
+            return (null, null);
+        }
+
+        try {
+            using var document = JsonDocument.Parse(metadataJson);
+            var root = document.RootElement;
+            return (
+                TryGetString(root, "role"),
+                TryGetString(root, "character"));
+        } catch (JsonException) {
+            return (null, null);
+        }
+    }
+
+    private static string? TryGetString(JsonElement root, string propertyName) =>
+        root.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
+            ? property.GetString()
+            : null;
+
+    private static string RelationshipLabel(string code) =>
+        code switch {
+            "cast" => "Cast",
+            "studio" => "Studios",
+            "tags" => "Tags",
+            "related" => "Related",
+            _ => code.Replace('-', ' ')
+        };
 
     private static string EncodeCursor(string title, Guid id) =>
         Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{title}\n{id:N}"));

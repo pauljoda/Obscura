@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { CreditPatch } from './creditPatch';
+import type { EntityMetadataFlagsPatch } from './entityMetadataFlagsPatch';
 import type { EntityMetadataPatchDates } from './entityMetadataPatchDates';
 import type { EntityMetadataPatchExternalIds } from './entityMetadataPatchExternalIds';
 import type { EntityMetadataPatchPositions } from './entityMetadataPatchPositions';
@@ -26,4 +27,10 @@ export interface EntityMetadataPatch {
   positions: EntityMetadataPatchPositions;
   /** @nullable */
   classification: string | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  rating?: number | string | null;
+  flags?: null | EntityMetadataFlagsPatch;
 }

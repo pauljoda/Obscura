@@ -25,7 +25,14 @@ public sealed record EntityThumbnail(
 /// <param name="Kind">Entity kind code represented by the group.</param>
 /// <param name="Label">Human-readable group label, such as Episodes, Tags, or Cast.</param>
 /// <param name="Entities">Entities in deterministic display order.</param>
-public sealed record EntityGroup(string Kind, string Label, IReadOnlyList<EntityThumbnail> Entities);
+public sealed record EntityGroup(string Kind, string Label, IReadOnlyList<EntityThumbnail> Entities) {
+    /// <summary>
+    /// Relationship code represented by this group, such as <c>cast</c>, <c>studio</c>,
+    /// or <c>tags</c>. Structural child groups leave this unset because their grouping
+    /// is already fully described by <see cref="Kind"/>.
+    /// </summary>
+    public string? Code { get; init; }
+}
 
 /// <summary>Batch thumbnail request body.</summary>
 /// <param name="Ids">Entity identifiers to resolve.</param>

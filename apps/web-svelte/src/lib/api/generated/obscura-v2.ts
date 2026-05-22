@@ -19,6 +19,7 @@ import type {
   EntityListResponse,
   EntityMarkerWriteRequest,
   EntityMetadataProposal,
+  EntityMetadataUpdateRequest,
   EntityThumbnailBatchRequest,
   EntityThumbnailBatchResponse,
   GalleryDetail,
@@ -846,6 +847,53 @@ export const getEntity = async (id: string, options?: RequestInit): Promise<getE
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type updateEntityResponse200 = {
+  data: EntityCard
+  status: 200
+}
+
+export type updateEntityResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
+export type updateEntityResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type updateEntityResponseSuccess = (updateEntityResponse200) & {
+  headers: Headers;
+};
+export type updateEntityResponseError = (updateEntityResponse400 | updateEntityResponse404) & {
+  headers: Headers;
+};
+
+export type updateEntityResponse = (updateEntityResponseSuccess | updateEntityResponseError)
+
+export const getUpdateEntityUrl = (id: string,) => {
+
+
+
+
+  return `/api/entities/${id}`
+}
+
+export const updateEntity = async (id: string,
+    entityMetadataUpdateRequest: EntityMetadataUpdateRequest, options?: RequestInit): Promise<updateEntityResponse> => {
+
+  return orvalFetch<updateEntityResponse>(getUpdateEntityUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      entityMetadataUpdateRequest,)
   }
 );}
 
@@ -3043,6 +3091,11 @@ export type applyIdentifyProposalResponse204 = {
   status: 204
 }
 
+export type applyIdentifyProposalResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
 export type applyIdentifyProposalResponse404 = {
   data: ApiProblem
   status: 404
@@ -3051,7 +3104,7 @@ export type applyIdentifyProposalResponse404 = {
 export type applyIdentifyProposalResponseSuccess = (applyIdentifyProposalResponse204) & {
   headers: Headers;
 };
-export type applyIdentifyProposalResponseError = (applyIdentifyProposalResponse404) & {
+export type applyIdentifyProposalResponseError = (applyIdentifyProposalResponse400 | applyIdentifyProposalResponse404) & {
   headers: Headers;
 };
 

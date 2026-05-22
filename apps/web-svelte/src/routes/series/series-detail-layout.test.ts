@@ -77,8 +77,9 @@ describe("series detail layout", () => {
     const source = readLocalSource("./[id]/seasons/[seasonId]/+page.svelte");
 
     expect(source).toContain("tabs={detailTabs}");
+    expect(source).toContain("sections={detailSections}");
     expect(source).toContain('id: "metadata"');
     expect(source).toContain('sections: ["links", "files"]');
-    expect(source).toContain('sections: ["description", "tags"]');
+    expect(source).toContain('sections: ["description", "tags", "cast-and-crew"]');
   });
 });

@@ -10,4 +10,6 @@ export interface EntityGroup {
   kind: string;
   label: string;
   entities: EntityThumbnail[];
+  /** @nullable */
+  code?: string | null;
 }
