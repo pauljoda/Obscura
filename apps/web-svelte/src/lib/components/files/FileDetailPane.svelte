@@ -128,14 +128,13 @@
       <button class="icon-button" type="button" onclick={onBack} aria-label="Back to folders">←</button>
     {/if}
     <div class="title-lockup">
-      <span>{isDirectory ? "Folder" : "File"}</span>
       <h1>{entry?.name ?? "Select a file"}</h1>
       {#if entry}
-        <p>{entry.path || "Root"}</p>
+        <p>{entry.path && entry.path !== "." ? entry.path : "/"}</p>
       {/if}
     </div>
     <button class="icon-button" type="button" onclick={onRefresh} aria-label="Refresh details">
-      <RefreshCw class="h-4 w-4" />
+      <RefreshCw class="h-3.5 w-3.5" />
     </button>
   </div>
 
@@ -144,18 +143,21 @@
   {:else if loading}
     <div class="state-panel">Loading...</div>
   {:else if !detail || !entry}
-    <div class="state-panel">Choose a watched root or file.</div>
+    <div class="state-panel empty">
+      <ImageIcon class="h-6 w-6" />
+      <span>Select a file or folder to view details</span>
+    </div>
   {:else}
-    <div class="actions">
+    <div class="detail-toolbar">
       {#if isDirectory}
-        <button type="button" onclick={() => fileInput?.click()}><Upload class="h-4 w-4" />Files</button>
-        <button type="button" onclick={() => folderInput?.click()}><FilePlus2 class="h-4 w-4" />Folder upload</button>
-        <button type="button" onclick={() => onAction?.("new-folder")}><FolderPlus class="h-4 w-4" />New folder</button>
-        <button type="button" onclick={() => onAction?.("rescan")}><ScanLine class="h-4 w-4" />Rescan</button>
+        <button type="button" onclick={() => fileInput?.click()}><Upload class="h-3.5 w-3.5" />Upload</button>
+        <button type="button" onclick={() => onAction?.("new-folder")}><FolderPlus class="h-3.5 w-3.5" />New folder</button>
+        <button type="button" onclick={() => onAction?.("rescan")}><ScanLine class="h-3.5 w-3.5" />Rescan</button>
       {/if}
-      <button type="button" onclick={() => onAction?.("rename")}><Pencil class="h-4 w-4" />Rename</button>
-      <button type="button" onclick={() => onAction?.("move")}><FileArchive class="h-4 w-4" />Move</button>
-      <button class="danger" type="button" onclick={() => onAction?.("delete")}><Trash2 class="h-4 w-4" />Delete</button>
+      <button type="button" onclick={() => onAction?.("rename")}><Pencil class="h-3.5 w-3.5" />Rename</button>
+      <button type="button" onclick={() => onAction?.("move")}><FileArchive class="h-3.5 w-3.5" />Move</button>
+      <div class="toolbar-spacer"></div>
+      <button class="danger" type="button" onclick={() => onAction?.("delete")}><Trash2 class="h-3.5 w-3.5" /></button>
     </div>
 
     <input
@@ -174,41 +176,46 @@
       onchange={(event) => onUploadFolder?.(event.currentTarget.files)}
     />
 
-    <div class="meta-grid">
-      <div><span>Size</span><strong>{formatBytes(entry.sizeBytes)}</strong></div>
-      <div><span>Kind</span><strong>{entry.kind}</strong></div>
-      <div><span>Modified</span><strong>{formatDate(entry.modifiedAt)}</strong></div>
-      <div><span>Created</span><strong>{formatDate(detail.createdAt)}</strong></div>
-      <div><span>MIME</span><strong>{entry.mimeType ?? "—"}</strong></div>
-      <div><span>Linked</span><strong>{detail.linkedEntities.length}</strong></div>
-    </div>
+    <div class="detail-body">
+      {#if previewKind !== "none"}
+        <div class="preview" data-kind={previewKind}>
+          {#if previewKind === "image"}
+            <img src={contentUrl} alt={entry.name} />
+          {:else if previewKind === "video"}
+            <!-- svelte-ignore a11y_media_has_caption -->
+            <video src={contentUrl} controls preload="metadata"></video>
+          {:else if previewKind === "audio"}
+            <audio src={contentUrl} controls></audio>
+          {:else if previewKind === "text"}
+            {#if previewError}
+              <div class="state-panel error">{previewError}</div>
+            {:else}
+              <pre>{textPreview ?? "Loading preview..."}</pre>
+            {/if}
+          {/if}
+        </div>
+      {/if}
 
-    {#if detail.linkedEntities.length > 0}
-      <div class="linked-strip">
-        {#each detail.linkedEntities as linked (linked.entityId)}
-          <a href={`/${linked.kind}/${linked.entityId}`}>{linked.title}</a>
-        {/each}
-      </div>
-    {/if}
-
-    <div class="preview" data-kind={previewKind}>
-      {#if previewKind === "image"}
-        <img src={contentUrl} alt={entry.name} />
-      {:else if previewKind === "video"}
-        <!-- svelte-ignore a11y_media_has_caption -->
-        <video src={contentUrl} controls preload="metadata"></video>
-      {:else if previewKind === "audio"}
-        <audio src={contentUrl} controls></audio>
-      {:else if previewKind === "text"}
-        {#if previewError}
-          <div class="state-panel error">{previewError}</div>
-        {:else}
-          <pre>{textPreview ?? "Loading preview..."}</pre>
+      <div class="section-label">Properties</div>
+      <div class="meta-grid">
+        <div><span>Size</span><strong>{formatBytes(entry.sizeBytes)}</strong></div>
+        <div><span>Kind</span><strong>{entry.kind}</strong></div>
+        <div><span>Modified</span><strong>{formatDate(entry.modifiedAt)}</strong></div>
+        <div><span>Created</span><strong>{formatDate(detail.createdAt)}</strong></div>
+        {#if entry.mimeType}
+          <div><span>MIME</span><strong>{entry.mimeType}</strong></div>
         {/if}
-      {:else}
-        <div class="empty-preview">
-          <ImageIcon class="h-8 w-8" />
-          <span>Preview unavailable</span>
+        {#if detail.linkedEntities.length > 0}
+          <div><span>Linked</span><strong>{detail.linkedEntities.length}</strong></div>
+        {/if}
+      </div>
+
+      {#if detail.linkedEntities.length > 0}
+        <div class="section-label">Linked entities</div>
+        <div class="linked-strip">
+          {#each detail.linkedEntities as linked (linked.entityId)}
+            <a href={`/${linked.kind}/${linked.entityId}`}>{linked.title}</a>
+          {/each}
         </div>
       {/if}
     </div>
@@ -219,142 +226,194 @@
   .detail-pane {
     display: grid;
     min-height: 0;
-    grid-template-rows: auto auto auto auto 1fr;
-    gap: 1rem;
-    overflow: auto;
-    padding: 1rem;
-    background:
-      linear-gradient(180deg, rgba(196, 154, 90, 0.055), transparent 16rem),
-      var(--color-bg);
+    grid-template-rows: auto auto 1fr;
+    overflow: hidden;
+    background: var(--color-bg);
   }
 
   .detail-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    border-bottom: 1px solid rgba(196, 154, 90, 0.18);
-    padding-bottom: 0.85rem;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--color-border-subtle);
+    padding: 0.5rem 0.75rem;
+    background: var(--color-surface-1);
+    min-height: 2.75rem;
   }
 
   .title-lockup {
     min-width: 0;
-  }
-
-  .title-lockup span,
-  .meta-grid span {
-    color: var(--color-text-muted);
-    font-family: "JetBrains Mono", monospace;
-    font-size: 0.68rem;
-    text-transform: uppercase;
+    flex: 1;
   }
 
   .title-lockup h1 {
-    margin: 0.08rem 0 0;
-    overflow-wrap: anywhere;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     color: var(--color-text-primary);
-    font-family: Geist, Inter, sans-serif;
-    font-size: clamp(1.25rem, 4vw, 2rem);
-    line-height: 1.05;
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.3;
   }
 
   .title-lockup p {
-    margin: 0.3rem 0 0;
-    overflow-wrap: anywhere;
-    color: var(--color-text-muted);
-    font-size: 0.78rem;
-  }
-
-  .icon-button,
-  .actions button {
-    border: 1px solid rgba(196, 154, 90, 0.22);
-    border-radius: 0;
-    background: rgba(255, 255, 255, 0.045);
-    color: var(--color-text-primary);
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-text-disabled);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
   }
 
   .icon-button {
     display: grid;
-    width: 2.35rem;
-    height: 2.35rem;
+    width: 1.75rem;
+    height: 1.75rem;
     place-items: center;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
   }
 
-  .actions {
+  .icon-button:hover {
+    background: var(--color-surface-3);
+    color: var(--color-text-primary);
+  }
+
+  .detail-toolbar {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 1px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    padding: 0.25rem 0.5rem;
+    background: var(--color-surface-1);
   }
 
-  .actions button {
+  .detail-toolbar button {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    min-height: 2.2rem;
-    padding: 0.45rem 0.65rem;
-    font-size: 0.78rem;
+    gap: 0.3rem;
+    min-height: 1.65rem;
+    padding: 0.2rem 0.5rem;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 0.72rem;
+    cursor: pointer;
+    white-space: nowrap;
   }
 
-  .actions button:hover,
-  .icon-button:hover {
-    border-color: rgba(196, 154, 90, 0.6);
-    box-shadow: 0 0 18px rgba(196, 154, 90, 0.15);
+  .detail-toolbar button:hover {
+    background: var(--color-surface-3);
+    color: var(--color-text-primary);
   }
 
-  .actions .danger {
-    color: #f2a4a4;
+  .detail-toolbar .danger {
+    color: var(--color-text-muted);
+  }
+
+  .detail-toolbar .danger:hover {
+    color: var(--color-error-text);
+    background: var(--color-error-muted);
+  }
+
+  .toolbar-spacer {
+    flex: 1;
   }
 
   .hidden-input {
     display: none;
   }
 
+  .detail-body {
+    overflow-y: auto;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .section-label {
+    color: var(--color-text-disabled);
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-top: 0.25rem;
+  }
+
   .meta-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    border: 1px solid rgba(196, 154, 90, 0.14);
-    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+  }
+
+  .meta-grid span {
+    color: var(--color-text-disabled);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
   .meta-grid div {
     min-width: 0;
-    border-bottom: 1px solid rgba(196, 154, 90, 0.1);
-    padding: 0.75rem;
+    border-bottom: 1px solid var(--color-border-subtle);
+    padding: 0.4rem 0.6rem;
   }
 
   .meta-grid strong {
     display: block;
     overflow-wrap: anywhere;
-    margin-top: 0.3rem;
-    color: var(--color-text-primary);
-    font-size: 0.82rem;
+    margin-top: 0.1rem;
+    color: var(--color-text-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
   }
 
   .linked-strip {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.45rem;
+    gap: 0.3rem;
   }
 
   .linked-strip a {
-    border: 1px solid rgba(196, 154, 90, 0.2);
-    color: var(--color-text-primary);
-    padding: 0.35rem 0.55rem;
+    border: 1px solid var(--color-border-default);
+    background: var(--color-surface-2);
+    color: var(--color-text-secondary);
+    padding: 0.2rem 0.45rem;
+    font-size: 0.72rem;
     text-decoration: none;
+  }
+
+  .linked-strip a:hover {
+    border-color: var(--color-border-accent);
+    color: var(--color-text-primary);
   }
 
   .preview {
     display: grid;
-    min-height: 18rem;
-    border: 1px solid rgba(196, 154, 90, 0.16);
-    background: rgba(0, 0, 0, 0.22);
+    min-height: 12rem;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+    box-shadow: var(--shadow-well);
   }
 
   .preview img,
   .preview video {
     width: 100%;
     height: 100%;
-    max-height: 62vh;
+    max-height: 50vh;
     object-fit: contain;
   }
 
@@ -367,36 +426,34 @@
   .preview pre {
     margin: 0;
     overflow: auto;
-    padding: 1rem;
-    color: var(--color-text-primary);
-    font-size: 0.78rem;
+    max-height: 40vh;
+    padding: 0.6rem;
+    color: var(--color-text-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
     line-height: 1.55;
     white-space: pre-wrap;
   }
 
-  .empty-preview,
   .state-panel {
     display: grid;
-    min-height: 12rem;
+    height: 100%;
     place-items: center;
-    color: var(--color-text-muted);
+    color: var(--color-text-disabled);
     text-align: center;
+    font-size: 0.8rem;
   }
 
-  .empty-preview {
-    gap: 0.65rem;
+  .state-panel.empty {
+    gap: 0.5rem;
     align-content: center;
   }
 
   .state-panel.error {
-    color: #f2a4a4;
+    color: var(--color-error-text);
   }
 
   @media (min-width: 768px) {
-    .detail-pane {
-      padding: 1.25rem;
-    }
-
     .meta-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }

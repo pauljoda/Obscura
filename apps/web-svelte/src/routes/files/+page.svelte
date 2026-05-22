@@ -37,6 +37,8 @@
   let loadingDetail = $state(false);
   let error = $state<string | null>(null);
   let mobileDetail = $state(false);
+  let treeWidthPx = $state(320);
+  let resizing = $state(false);
   let syncedQueryKey = "";
 
   const selectedMeta = $derived(selectedTreePath ? registry.get(selectedTreePath) ?? null : null);
@@ -321,6 +323,27 @@
     })();
   });
 
+  function onResizeStart(event: PointerEvent): void {
+    event.preventDefault();
+    resizing = true;
+    const startX = event.clientX;
+    const startWidth = treeWidthPx;
+
+    function onMove(moveEvent: PointerEvent): void {
+      const delta = moveEvent.clientX - startX;
+      treeWidthPx = Math.max(200, Math.min(startWidth + delta, window.innerWidth * 0.6));
+    }
+
+    function onUp(): void {
+      resizing = false;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    }
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
+
   onMount(() => {
     void loadRoots();
   });
@@ -330,7 +353,12 @@
   <title>Files | Obscura</title>
 </svelte:head>
 
-<main class:show-detail={mobileDetail} class="files-page">
+<main
+  class:show-detail={mobileDetail}
+  class:resizing
+  class="files-page"
+  style:--tree-width="{treeWidthPx}px"
+>
   <FileTreePane
     paths={treePaths}
     {registry}
@@ -345,6 +373,11 @@
     onRename={(treePath, newName) => void renameFile(registry.get(treePath)!, newName)}
     onAction={(action, treePath) => void handleAction(action, treePath)}
   />
+
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="resize-handle" onpointerdown={onResizeStart}>
+    <div class="resize-handle-bar"></div>
+  </div>
 
   <FileDetailPane
     {detail}
@@ -363,10 +396,11 @@
 <style>
   .files-page {
     display: grid;
-    height: calc(100vh - 3.5rem);
     min-height: 0;
     overflow: hidden;
     background: var(--color-bg);
+    margin: -1.25rem;
+    height: calc(100% + 2.5rem);
   }
 
   .files-page :global(.detail-pane) {
@@ -381,15 +415,46 @@
     display: grid;
   }
 
+  .resize-handle {
+    display: none;
+  }
+
+  .files-page.resizing {
+    user-select: none;
+    cursor: col-resize;
+  }
+
   @media (min-width: 768px) {
     .files-page {
-      grid-template-columns: minmax(18rem, 34vw) minmax(0, 1fr);
+      grid-template-columns: var(--tree-width, 320px) auto minmax(0, 1fr);
     }
 
     .files-page :global(.detail-pane),
     .files-page.show-detail :global(.detail-pane),
     .files-page.show-detail :global(.files-tree-pane) {
       display: grid;
+    }
+
+    .resize-handle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 5px;
+      cursor: col-resize;
+      background: var(--color-border-subtle);
+      transition: background var(--duration-fast) var(--ease-default);
+      touch-action: none;
+    }
+
+    .resize-handle:hover,
+    .resizing .resize-handle {
+      background: var(--color-border-accent);
+    }
+
+    .resize-handle-bar {
+      width: 1px;
+      height: 100%;
+      background: transparent;
     }
   }
 </style>

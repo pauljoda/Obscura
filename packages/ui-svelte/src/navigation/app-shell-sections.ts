@@ -11,7 +11,6 @@ export const appShellSections = [
     id: "browse",
     kicker: "Browse",
     items: [
-      { label: "Files", href: "/files", icon: "folder-tree" },
       { label: "Videos", href: "/videos", icon: "film" },
       { label: "Series", href: "/series", icon: "folder" },
       { label: "Images", href: "/images", icon: "image" },
@@ -28,6 +27,7 @@ export const appShellSections = [
     id: "operate",
     kicker: "Operate",
     items: [
+      { label: "Files", href: "/files", icon: "folder-tree" },
       { label: "Identify", href: "/identify", icon: "scan-search" },
       { label: "Plugins", href: "/plugins", icon: "puzzle" },
       { label: "Jobs", href: "/jobs", icon: "activity" },
