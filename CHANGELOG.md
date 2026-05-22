@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 ### What's New
+- Entity thumbnail titles now wrap to two lines instead of scrolling on a single line, making longer titles much easier to read at a glance, and the details area was refined to feel less empty when metadata is sparse.
 - Entity detail edit mode now features a tiptap WYSIWYG markdown editor for descriptions, a searchable tag picker with live API search and inline tag creation, and an icon-only edit toggle replacing the old labeled toolbar.
 - Entity detail pages now support tab-scoped editing for reusable sections: users can enter edit mode, update fields inline with validation, save explicitly, and get warned before leaving a tab with unsaved changes. Rich metadata sections such as studios, credits, stats, dates, technical data, progress, positions, classification, sources, and fingerprints remain visible through the shared detail section system.
 - The entity browse experience was refined into a "reel-transport" control room aesthetic — the pagination strip now reads like a deck counter with a brass progress hairline and grouped transport buttons, the toolbar no longer reshuffles when you search, thumbnails carry a quieter shadow with a brass underline accent on hover and select, and the kind tabs gained a glowing brass indicator. Mobile layouts stay legible without pushing the grid around when filters appear.
@@ -38,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Browse grids now fit their internal scroll area to the visible page instead of clipping below the app frame.
 
 ### Changed
+- Entity thumbnail titles now wrap to two lines instead of scrolling on a single line, and the details section layout was updated to gracefully adapt to varying title lengths while keeping metadata aligned.
 - Clicking a thumbnail while items are selected now toggles selection instead of navigating, so multi-select flows no longer accidentally leave the page.
 - The bulk selection bar now shows Select All, Clear, and NSFW toggle as dedicated controls; page-specific actions move into an Actions flyout menu for a cleaner toolbar on mobile.
 - Plugin execution no longer rewrites `python` commands to `python3`; the manifest `script` executable is now used verbatim.

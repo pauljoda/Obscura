@@ -293,13 +293,8 @@
   {#if !imageOnly}
     <div class="details" class:has-subtitle={Boolean(card.subtitle || subtitleContent)}>
       <div class="copy">
-        <h3 class={`title-align-${titleAlign} title-size-${titleSize}`} aria-label={card.entity.title}>
-          <OverflowTicker
-            text={card.entity.title}
-            align={titleAlign}
-            scaleToFit={titleSize === "compact"}
-            minScale={0.62}
-          />
+        <h3 class={`title-align-${titleAlign} title-size-${titleSize}`} title={card.entity.title} aria-label={card.entity.title}>
+          {card.entity.title}
         </h3>
         {#if subtitleContent}
           <div class={`subtitle subtitle-custom title-align-${titleAlign}`}>
@@ -776,13 +771,15 @@
   }
 
   .copy {
-    display: block;
+    display: flex;
+    flex-direction: column;
     min-width: 0;
+    flex: 1 1 auto;
   }
 
   .subtitle {
     overflow: hidden;
-    margin: 0.18rem 0 0;
+    margin: 0.25rem 0 0;
     color: rgb(196 201 212 / 0.72);
     font-family: var(--font-mono, "JetBrains Mono", monospace);
     font-size: 0.64rem;
@@ -809,11 +806,11 @@
   }
 
   .details {
-    display: grid;
-    grid-template-rows: 1.35rem 1.3rem;
+    display: flex;
+    flex-direction: column;
     gap: 0.55rem;
     min-width: 0;
-    block-size: 4.55rem;
+    min-block-size: 4.55rem;
     padding: 0.72rem 0.78rem 0.7rem;
     background:
       linear-gradient(180deg, rgb(10 12 15 / 0.94), rgb(9 10 12 / 0.98)),
@@ -821,15 +818,11 @@
   }
 
   .details.has-subtitle {
-    grid-template-rows: minmax(0, 2.3rem) minmax(1.15rem, auto);
-    gap: 0.35rem;
-    block-size: auto;
-    min-block-size: 4.55rem;
+    gap: 0.45rem;
   }
 
   .entity-thumbnail.is-list .details {
-    align-content: center;
-    block-size: auto;
+    justify-content: center;
     min-block-size: 5.25rem;
     padding: 0.72rem 0.9rem;
   }
@@ -845,16 +838,20 @@
   }
 
   h3 {
-    display: block;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     margin: 0;
     min-width: 0;
     overflow: hidden;
     font-family: var(--font-heading, Geist, sans-serif);
     font-size: 0.88rem;
     font-weight: 680;
-    line-height: 1.18;
+    line-height: 1.25;
     letter-spacing: 0;
-    white-space: nowrap;
+    white-space: normal;
+    text-overflow: ellipsis;
   }
 
   .title-size-compact {
@@ -879,7 +876,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.28rem;
-    margin: 0;
+    margin: auto 0 0;
     max-block-size: 1.3rem;
     overflow: hidden;
   }
@@ -923,9 +920,8 @@
     }
 
     .details {
-      grid-template-rows: 1.12rem 1.18rem;
       gap: 0.46rem;
-      block-size: 4.18rem;
+      min-block-size: 4.18rem;
       padding: 0.62rem;
     }
 
