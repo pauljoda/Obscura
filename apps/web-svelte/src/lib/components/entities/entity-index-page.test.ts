@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { V2EntityCard } from "$lib/api/v2";
-import { EntityIndexPageState } from "./entity-index-page.svelte";
+import { EntityIndexPageState } from "./entity-index-page.svelte.ts";
 
 const fetchV2Entities = vi.fn();
 

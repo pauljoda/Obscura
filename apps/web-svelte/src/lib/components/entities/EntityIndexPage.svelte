@@ -3,7 +3,7 @@
   import { onMount } from "svelte";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import EntityGrid from "./EntityGrid.svelte";
-  import { EntityIndexPageState } from "./entity-index-page.svelte";
+  import { EntityIndexPageState } from "./entity-index-page.svelte.ts";
   import type { EntityGridRequest } from "$lib/entities/entity-grid";
   import type { V2EntityCard } from "$lib/api/v2";
 
