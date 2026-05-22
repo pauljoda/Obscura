@@ -249,6 +249,66 @@ describe("EntityDetail", () => {
     });
   });
 
+  it("saves shared editable metadata fields through the tab patch", async () => {
+    const card = {
+      ...buildCard(),
+      description: "Old description",
+      stats: [{ code: "runtimeMinutes", label: "Runtime", value: "92" }],
+      dates: [],
+      technical: [],
+      fingerprints: [],
+      markers: [],
+      subtitles: [],
+      progress: null,
+      positions: [{ code: "episodeNumber", value: 2, label: "Episode 2" }],
+      classification: { value: "movie", system: "kind" },
+      sources: [],
+      studio: null,
+      credits: [],
+    } satisfies EntityDetailCardFull;
+    const onMetadataSave = vi.fn().mockResolvedValue(undefined);
+
+    render(EntityDetail, {
+      props: {
+        card,
+        tabs: [{ id: "details", label: "Details", sections: ["description", "stats", "positions", "classification"] }],
+        onMetadataSave,
+      },
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Edit Details" }));
+    await fireEvent.input(screen.getByRole("textbox", { name: "Title" }), {
+      target: { value: "Big Buck Bunny Remastered" },
+    });
+    await fireEvent.input(screen.getByRole("textbox", { name: "Rating" }), {
+      target: { value: "4.5" },
+    });
+    await fireEvent.click(screen.getByLabelText("Favorite"));
+    await fireEvent.input(screen.getByRole("textbox", { name: "Stats" }), {
+      target: { value: "runtimeMinutes=94\nvoteCount=12" },
+    });
+    await fireEvent.input(screen.getByRole("textbox", { name: "Positions" }), {
+      target: { value: "episodeNumber=3" },
+    });
+    await fireEvent.input(screen.getByRole("textbox", { name: "Classification" }), {
+      target: { value: "short" },
+    });
+    await fireEvent.click(screen.getByRole("button", { name: "Save Details" }));
+
+    expect(onMetadataSave).toHaveBeenCalledWith({
+      fields: ["title", "description", "rating", "flags", "stats", "positions", "classification"],
+      patch: expect.objectContaining({
+        title: "Big Buck Bunny Remastered",
+        description: "Old description",
+        rating: 4.5,
+        flags: { isFavorite: true, isNsfw: false, isOrganized: false },
+        stats: { runtimeMinutes: 94, voteCount: 12 },
+        positions: { episodeNumber: 3 },
+        classification: "short",
+      }),
+    });
+  });
+
   it("blocks dirty tab navigation until the user discards edits", async () => {
     const card = buildCard();
     card.links = [{ label: "https://example.test", url: "https://example.test" }];

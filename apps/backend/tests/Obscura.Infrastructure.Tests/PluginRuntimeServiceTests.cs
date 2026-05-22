@@ -400,10 +400,13 @@ public sealed class PluginRuntimeServiceTests : IDisposable {
         Assert.True(response.Ok);
         var request = Assert.Single(executor.Requests);
         Assert.Equal(episodeId, request.Entity.Id);
-        Assert.Equal([seasonId, seriesId], request.StructuralContext?.Ancestors.Select(ancestor => ancestor.Id).ToArray());
-        Assert.Equal("999", request.StructuralContext?.Ancestors.Last().ExternalIds["tmdb"]);
-        Assert.Equal("https://www.themoviedb.org/tv/999", Assert.Single(request.StructuralContext!.Ancestors.Last().Urls));
-        Assert.Equal(3, request.StructuralContext.Positions["sortOrder"]);
+        Assert.NotNull(request.StructuralContext);
+        var structuralContext = request.StructuralContext;
+        var seriesAncestor = structuralContext.Ancestors.Last();
+        Assert.Equal([seasonId, seriesId], structuralContext.Ancestors.Select(ancestor => ancestor.Id).ToArray());
+        Assert.Equal("999", seriesAncestor.ExternalIds!["tmdb"]);
+        Assert.Equal("https://www.themoviedb.org/tv/999", Assert.Single(seriesAncestor.Urls!));
+        Assert.Equal(3, structuralContext.Positions["sortOrder"]);
     }
 
     [Fact]

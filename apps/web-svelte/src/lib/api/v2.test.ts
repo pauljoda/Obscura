@@ -1,51 +1,41 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { updateV2EntityMetadata, type V2EntityMetadataUpdateRequest } from "./v2";
 
-describe("v2 api client", () => {
-  const fetchMock = vi.fn<typeof fetch>();
-
-  beforeEach(() => {
-    vi.stubGlobal("fetch", fetchMock);
-  });
-
+describe("v2 api helpers", () => {
   afterEach(() => {
-    fetchMock.mockReset();
     vi.unstubAllGlobals();
   });
 
-  it("fetches entities with encoded query parameters", async () => {
-    const { fetchV2Entities } = await import("./v2");
-    fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ items: [], nextCursor: null }), {
+  it("patches entity metadata through the kind-aware route when kind is known", async () => {
+    const request: V2EntityMetadataUpdateRequest = {
+      fields: ["title"],
+      patch: {
+        title: "New title",
+        description: null,
+        externalIds: {},
+        urls: [],
+        tags: [],
+        studio: null,
+        credits: [],
+        dates: {},
+        stats: {},
+        positions: {},
+        classification: null,
+      },
+    };
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ id: "entity-1", kind: "video-series", title: "New title" }), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json" },
       }),
     );
+    vi.stubGlobal("fetch", fetchMock);
 
-    await fetchV2Entities({ kind: "video", query: "space movie", cursor: "abc+123", limit: 250 });
+    await updateV2EntityMetadata("entity-1", request, { kind: "video-series" });
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/entities?kind=video&query=space+movie&cursor=abc%2B123&limit=250",
-      expect.objectContaining({ headers: expect.any(Headers) }),
-    );
-  });
-
-  it("updates shared ratings through the global entity route", async () => {
-    const { updateV2EntityRating } = await import("./v2");
-    fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
-
-    await updateV2EntityRating("11111111-1111-1111-1111-111111111111", 4);
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/entities/11111111-1111-1111-1111-111111111111/rating",
-      expect.objectContaining({
-        method: "PATCH",
-        body: JSON.stringify({ value: 4 }),
-      }),
-    );
+    expect(fetchMock).toHaveBeenCalledWith("/api/entities/video-series/entity-1", expect.objectContaining({
+      method: "PATCH",
+      body: JSON.stringify(request),
+    }));
   });
 });

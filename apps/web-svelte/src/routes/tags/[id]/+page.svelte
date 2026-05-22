@@ -85,7 +85,7 @@
 
   async function handleMetadataSave(request: EntityMetadataUpdateRequest) {
     if (!tag) return;
-    await updateV2EntityMetadata(tag.id, request);
+    await updateV2EntityMetadata(tag.id, request, { kind: tag.kind });
     await loadTag();
   }
 </script>

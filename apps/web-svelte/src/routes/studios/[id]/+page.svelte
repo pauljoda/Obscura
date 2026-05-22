@@ -91,7 +91,7 @@
 
   async function handleMetadataSave(request: EntityMetadataUpdateRequest) {
     if (!studio) return;
-    await updateV2EntityMetadata(studio.id, request);
+    await updateV2EntityMetadata(studio.id, request, { kind: studio.kind });
     await loadStudio();
   }
 </script>

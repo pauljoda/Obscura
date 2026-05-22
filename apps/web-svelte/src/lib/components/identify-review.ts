@@ -54,6 +54,13 @@ export function relationshipProposals(result: EntityMetadataProposal): EntityMet
   });
 }
 
+export function reviewChildProposals(result: EntityMetadataProposal): EntityMetadataProposal[] {
+  return [
+    ...structuralChildProposals(result),
+    ...relationshipProposals(result),
+  ];
+}
+
 export function findRelationshipImage(
   result: EntityMetadataProposal,
   targetKind: string,
@@ -107,7 +114,10 @@ export function buildProposalForApply(
     children: structuralChildProposals(result)
       .filter((child) => selections.selectedCascade[child.proposalId] !== false)
       .map((child) => buildProposalForApply(child, selections)),
-    relationships: relationshipProposals(result).filter((child) => shouldKeepRelationship(child, patch, fields)),
+    relationships: relationshipProposals(result)
+      .filter((child) => selections.selectedCascade[child.proposalId] !== false)
+      .filter((child) => shouldKeepRelationship(child, patch, fields))
+      .map((child) => buildProposalForApply(child, selections)),
   };
 }
 

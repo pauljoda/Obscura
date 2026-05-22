@@ -217,6 +217,10 @@ export interface V2RequestOptions {
   signal?: AbortSignal;
 }
 
+export interface V2EntityMetadataUpdateOptions extends V2RequestOptions {
+  kind?: string | null;
+}
+
 export interface V2EntityMetadataFlagsPatch {
   isFavorite?: boolean | null;
   isNsfw?: boolean | null;
@@ -521,9 +525,10 @@ export function updateV2EntityFlags(
 export function updateV2EntityMetadata(
   id: string,
   request: V2EntityMetadataUpdateRequest,
-  options?: V2RequestOptions,
+  options?: V2EntityMetadataUpdateOptions,
 ): Promise<V2EntityDetailCard> {
-  return fetchV2Api<V2EntityDetailCard>(`/entities/${id}`, {
+  const kindPath = options?.kind ? `/${encodeURIComponent(options.kind)}` : "";
+  return fetchV2Api<V2EntityDetailCard>(`/entities${kindPath}/${id}`, {
     method: "PATCH",
     body: JSON.stringify(request),
     signal: options?.signal,

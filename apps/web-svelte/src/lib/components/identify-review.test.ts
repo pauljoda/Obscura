@@ -4,6 +4,7 @@ import {
   buildProposalForApply,
   findRelationshipImage,
   isNewRelationshipTitle,
+  reviewChildProposals,
   relationshipProposals,
   relationshipTitlesFromEntityThumbnails,
   structuralChildProposals,
@@ -23,6 +24,7 @@ describe("identify review helpers", () => {
 
     expect(structuralChildProposals(root).map((child) => child.proposalId)).toEqual(["season-1"]);
     expect(relationshipProposals(root).map((child) => child.proposalId)).toEqual(["actor-1", "studio-1"]);
+    expect(reviewChildProposals(root).map((child) => child.proposalId)).toEqual(["season-1", "actor-1", "studio-1"]);
     expect(findRelationshipImage(root, "person", "Series Actor")).toBe("https://example.test/actor.jpg");
   });
 
@@ -70,6 +72,31 @@ describe("identify review helpers", () => {
     expect(payloadEpisode.patch.title).toBe("The Chair Company S01E02");
     expect(payloadEpisode.patch.credits).toEqual([{ name: "Guest Actor", role: "guest", character: "Visitor", sortOrder: 0 }]);
     expect(expectSingle(payloadEpisode.relationships).patch.title).toBe("Guest Actor");
+  });
+
+  it("uses cascade selection to exclude relationship proposals", () => {
+    const actor = proposal("actor-1", "person", { title: "Series Actor" });
+    const root = proposal("series", "video-series", {
+      credits: [{ name: "Series Actor", role: "actor", character: "Host", sortOrder: 0 }],
+      relationships: [actor],
+    });
+
+    const payload = buildProposalForApply(root, {
+      selectedFieldsByProposal: {
+        series: { credits: true },
+      },
+      selectedImagesByProposal: {},
+      selectedCreditsByProposal: {
+        series: { "actor:Series Actor:Host:0": true },
+      },
+      selectedTagsByProposal: {},
+      selectedCascade: {
+        "actor-1": false,
+      },
+    });
+
+    expect(payload.patch.credits).toHaveLength(1);
+    expect(payload.relationships).toEqual([]);
   });
 
   it("resolves existing tag and credit titles from v2 relationship ids", () => {

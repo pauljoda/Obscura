@@ -81,12 +81,20 @@
   }
 
   interface EntityDetailEditDraft {
+    title: string;
     description: string;
     externalIdsText: string;
     linksText: string;
     tagsText: string;
     tagPicks: EntityPickerItem[];
     datesText: string;
+    statsText: string;
+    positionsText: string;
+    classification: string;
+    ratingText: string;
+    isFavorite: boolean;
+    isNsfw: boolean;
+    isOrganized: boolean;
   }
 
   interface Props {
@@ -145,12 +153,20 @@
   let editError = $state<string | null>(null);
   let initialDraft = $state<EntityDetailEditDraft | null>(null);
   let editDraft = $state<EntityDetailEditDraft>({
+    title: "",
     description: "",
     externalIdsText: "",
     linksText: "",
     tagsText: "",
     tagPicks: [],
     datesText: "",
+    statsText: "",
+    positionsText: "",
+    classification: "",
+    ratingText: "",
+    isFavorite: false,
+    isNsfw: false,
+    isOrganized: false,
   });
 
   const isFavorite = $derived(card.flags.find((f) => f.code === "favorite")?.active ?? false);
@@ -200,6 +216,8 @@
     { id: "progress", label: "Progress", icon: Play },
     { id: "positions", label: "Positions", icon: ListOrdered },
     { id: "classification", label: "Classification", icon: Badge },
+    { id: "rating", label: "Rating", icon: Star },
+    { id: "flags", label: "Flags", icon: CheckCircle },
     { id: "source", label: "Source", icon: Database },
     { id: "sources", label: "Sources", icon: Database },
     { id: "fingerprints", label: "Fingerprints", icon: Fingerprint },
@@ -255,7 +273,17 @@
 
   function sectionEditable(section: EntityDetailSection): boolean {
     if (section.editable != null) return section.editable;
-    return ["description", "tags", "links", "dates"].includes(section.id);
+    return [
+      "description",
+      "tags",
+      "links",
+      "dates",
+      "stats",
+      "positions",
+      "classification",
+      "rating",
+      "flags",
+    ].includes(section.id);
   }
 
   function sectionHasContent(section: EntityDetailSection): boolean {
@@ -287,6 +315,10 @@
         return (cardFull.positions?.length ?? 0) > 0;
       case "classification":
         return Boolean(cardFull.classification);
+      case "rating":
+        return Boolean(card.rating);
+      case "flags":
+        return card.flags.length > 0;
       case "source":
       case "sources":
         return (cardFull.sources?.length ?? 0) > 0 || (cardFull.fingerprints?.length ?? 0) > 0;
@@ -306,6 +338,7 @@
 
   function draftFromCard(): EntityDetailEditDraft {
     return {
+      title: card.entity.title,
       description: card.description ?? "",
       externalIdsText: card.links
         .filter(hasProvider)
@@ -324,6 +357,13 @@
       datesText: "dates" in card
         ? (card as EntityDetailCard & { dates?: Array<{ code: string; value: string }> }).dates?.map((date) => `${date.code}=${date.value}`).join("\n") ?? ""
         : "",
+      statsText: (cardFull.stats ?? []).map((stat) => `${stat.code}=${stat.value}`).join("\n"),
+      positionsText: (cardFull.positions ?? []).map((position) => `${position.code}=${position.value}`).join("\n"),
+      classification: cardFull.classification?.value ?? "",
+      ratingText: card.rating?.value == null ? "" : String(card.rating.value),
+      isFavorite,
+      isNsfw,
+      isOrganized,
     };
   }
 
@@ -400,6 +440,33 @@
     return result;
   }
 
+  function parseNumberKeyValueLines(value: string): Record<string, number> {
+    const result: Record<string, number> = {};
+    for (const line of parseListLines(value)) {
+      const separator = line.indexOf("=");
+      if (separator <= 0) continue;
+      const key = line.slice(0, separator).trim();
+      const fieldValue = Number(line.slice(separator + 1).trim());
+      if (key && Number.isFinite(fieldValue)) result[key] = fieldValue;
+    }
+    return result;
+  }
+
+  function invalidKeyValueLine(value: string): string | undefined {
+    return parseListLines(value).find((line) => {
+      const separator = line.indexOf("=");
+      return separator <= 0 || separator === line.length - 1;
+    });
+  }
+
+  function invalidNumberKeyValueLine(value: string): string | undefined {
+    return parseListLines(value).find((line) => {
+      const separator = line.indexOf("=");
+      if (separator <= 0 || separator === line.length - 1) return true;
+      return !Number.isFinite(Number(line.slice(separator + 1).trim()));
+    });
+  }
+
   function validateDraft(activeSections: EntityDetailSection[], draft: EntityDetailEditDraft): string[] {
     const errors: string[] = [];
     if (activeSections.some((section) => section.id === "links")) {
@@ -413,18 +480,29 @@
       });
       if (invalid) errors.push("Links must be absolute http or https URLs.");
 
-      const invalidExternalId = parseListLines(draft.externalIdsText).find((line) => {
-        const separator = line.indexOf("=");
-        return separator <= 0 || separator === line.length - 1;
-      });
+      const invalidExternalId = invalidKeyValueLine(draft.externalIdsText);
       if (invalidExternalId) errors.push("External IDs must use provider=value lines.");
     }
     if (activeSections.some((section) => section.id === "dates")) {
-      const invalidLine = parseListLines(draft.datesText).find((line) => {
-        const separator = line.indexOf("=");
-        return separator <= 0 || separator === line.length - 1;
-      });
+      const invalidLine = invalidKeyValueLine(draft.datesText);
       if (invalidLine) errors.push("Dates must use code=value lines.");
+    }
+    if (activeSections.some((section) => section.id === "stats")) {
+      const invalidLine = invalidNumberKeyValueLine(draft.statsText);
+      if (invalidLine) errors.push("Stats must use code=number lines.");
+    }
+    if (activeSections.some((section) => section.id === "positions")) {
+      const invalidLine = invalidNumberKeyValueLine(draft.positionsText);
+      if (invalidLine) errors.push("Positions must use code=number lines.");
+    }
+    if (activeSections.some((section) => section.id === "rating") || activeSections.some((section) => section.id === "description")) {
+      if (draft.ratingText.trim()) {
+        const rating = Number(draft.ratingText.trim());
+        const max = card.rating?.max ?? 5;
+        if (!Number.isFinite(rating) || rating < 0 || rating > max) {
+          errors.push(`Rating must be a number from 0 to ${max}.`);
+        }
+      }
     }
     return errors;
   }
@@ -442,29 +520,69 @@
       stats: {},
       positions: {},
       classification: null,
+      rating: null,
+      flags: null,
     };
   }
 
   function buildMetadataUpdate(activeSections: EntityDetailSection[], draft: EntityDetailEditDraft): EntityMetadataUpdateRequest {
     const fields: string[] = [];
     const patch = emptyPatch();
-    if (activeSections.some((section) => section.id === "description")) {
-      fields.push("description");
+    const hasSection = (sectionId: string) => activeSections.some((section) => section.id === sectionId);
+    const addField = (field: string) => {
+      if (!fields.includes(field)) fields.push(field);
+    };
+    if (hasSection("description")) {
+      addField("title");
+      addField("description");
+      addField("rating");
+      addField("flags");
+      patch.title = draft.title.trim() ? draft.title.trim() : null;
       patch.description = draft.description.trim() ? draft.description.trim() : null;
+      patch.rating = draft.ratingText.trim() ? Number(draft.ratingText.trim()) : null;
+      patch.flags = {
+        isFavorite: draft.isFavorite,
+        isNsfw: draft.isNsfw,
+        isOrganized: draft.isOrganized,
+      };
     }
-    if (activeSections.some((section) => section.id === "links")) {
-      fields.push("urls");
-      fields.push("externalIds");
+    if (hasSection("links")) {
+      addField("urls");
+      addField("externalIds");
       patch.urls = parseListLines(draft.linksText);
       patch.externalIds = parseKeyValueLines(draft.externalIdsText);
     }
-    if (activeSections.some((section) => section.id === "tags")) {
-      fields.push("tags");
+    if (hasSection("tags")) {
+      addField("tags");
       patch.tags = draft.tagPicks.map((p) => p.title);
     }
-    if (activeSections.some((section) => section.id === "dates")) {
-      fields.push("dates");
+    if (hasSection("dates")) {
+      addField("dates");
       patch.dates = parseKeyValueLines(draft.datesText);
+    }
+    if (hasSection("stats")) {
+      addField("stats");
+      patch.stats = parseNumberKeyValueLines(draft.statsText);
+    }
+    if (hasSection("positions")) {
+      addField("positions");
+      patch.positions = parseNumberKeyValueLines(draft.positionsText);
+    }
+    if (hasSection("classification")) {
+      addField("classification");
+      patch.classification = draft.classification.trim() ? draft.classification.trim() : null;
+    }
+    if (hasSection("rating") && !hasSection("description")) {
+      addField("rating");
+      patch.rating = draft.ratingText.trim() ? Number(draft.ratingText.trim()) : null;
+    }
+    if (hasSection("flags") && !hasSection("description")) {
+      addField("flags");
+      patch.flags = {
+        isFavorite: draft.isFavorite,
+        isNsfw: draft.isNsfw,
+        isOrganized: draft.isOrganized,
+      };
     }
     return { fields, patch };
   }
@@ -555,6 +673,25 @@
 
 {#snippet descriptionEditSection()}
   <section class="detail-section edit-section">
+    <label class="edit-field">
+      <span class="edit-field-label">Title</span>
+      <input bind:value={editDraft.title} aria-label="Title" class="edit-input" />
+    </label>
+    <div class="edit-inline-grid">
+      <label class="edit-field">
+        <span class="edit-field-label">Rating</span>
+        <span class="edit-field-hint">0 to {card.rating?.max ?? 5}; empty clears</span>
+        <input bind:value={editDraft.ratingText} aria-label="Rating" inputmode="decimal" class="edit-input" />
+      </label>
+      <div class="edit-field">
+        <span class="edit-field-label">Flags</span>
+        <div class="edit-checkbox-row">
+          <label><input type="checkbox" bind:checked={editDraft.isFavorite} /> Favorite</label>
+          <label><input type="checkbox" bind:checked={editDraft.isNsfw} /> NSFW</label>
+          <label><input type="checkbox" bind:checked={editDraft.isOrganized} /> Organized</label>
+        </div>
+      </div>
+    </div>
     <MarkdownEditor
       value={editDraft.description}
       onChange={(v) => (editDraft.description = v)}
@@ -604,6 +741,59 @@
       <span class="edit-field-hint">code=value, one per line</span>
       <textarea bind:value={editDraft.datesText} aria-label="Dates" rows="4" class="edit-textarea"></textarea>
     </label>
+  </section>
+{/snippet}
+
+{#snippet statsEditSection()}
+  <section class="detail-section edit-section">
+    <label class="edit-field">
+      <span class="edit-field-label">Stats</span>
+      <span class="edit-field-hint">code=number, one per line</span>
+      <textarea bind:value={editDraft.statsText} aria-label="Stats" rows="4" class="edit-textarea"></textarea>
+    </label>
+  </section>
+{/snippet}
+
+{#snippet positionsEditSection()}
+  <section class="detail-section edit-section">
+    <label class="edit-field">
+      <span class="edit-field-label">Positions</span>
+      <span class="edit-field-hint">code=number, one per line</span>
+      <textarea bind:value={editDraft.positionsText} aria-label="Positions" rows="4" class="edit-textarea"></textarea>
+    </label>
+  </section>
+{/snippet}
+
+{#snippet classificationEditSection()}
+  <section class="detail-section edit-section">
+    <label class="edit-field">
+      <span class="edit-field-label">Classification</span>
+      <span class="edit-field-hint">Empty clears the value</span>
+      <input bind:value={editDraft.classification} aria-label="Classification" class="edit-input" />
+    </label>
+  </section>
+{/snippet}
+
+{#snippet ratingEditSection()}
+  <section class="detail-section edit-section">
+    <label class="edit-field">
+      <span class="edit-field-label">Rating</span>
+      <span class="edit-field-hint">0 to {card.rating?.max ?? 5}; empty clears</span>
+      <input bind:value={editDraft.ratingText} aria-label="Rating" inputmode="decimal" class="edit-input" />
+    </label>
+  </section>
+{/snippet}
+
+{#snippet flagsEditSection()}
+  <section class="detail-section edit-section">
+    <div class="edit-field">
+      <span class="edit-field-label">Flags</span>
+      <div class="edit-checkbox-row">
+        <label><input type="checkbox" bind:checked={editDraft.isFavorite} /> Favorite</label>
+        <label><input type="checkbox" bind:checked={editDraft.isNsfw} /> NSFW</label>
+        <label><input type="checkbox" bind:checked={editDraft.isOrganized} /> Organized</label>
+      </div>
+    </div>
   </section>
 {/snippet}
 
@@ -879,6 +1069,16 @@
     {@render linksEditSection()}
   {:else if isEditingActiveTab && section.id === "dates"}
     {@render datesEditSection()}
+  {:else if isEditingActiveTab && section.id === "stats"}
+    {@render statsEditSection()}
+  {:else if isEditingActiveTab && section.id === "positions"}
+    {@render positionsEditSection()}
+  {:else if isEditingActiveTab && section.id === "classification"}
+    {@render classificationEditSection()}
+  {:else if isEditingActiveTab && section.id === "rating"}
+    {@render ratingEditSection()}
+  {:else if isEditingActiveTab && section.id === "flags"}
+    {@render flagsEditSection()}
   {:else if section.id === "description"}
     {@render descriptionSection()}
   {:else if section.id === "tags"}
@@ -1817,6 +2017,19 @@
     margin-bottom: 0.15rem;
   }
 
+  .edit-inline-grid {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  @media (min-width: 720px) {
+    .edit-inline-grid {
+      grid-template-columns: minmax(8rem, 0.55fr) minmax(12rem, 1fr);
+      align-items: start;
+    }
+  }
+
+  .edit-input,
   .edit-textarea {
     width: 100%;
     min-width: 0;
@@ -1833,6 +2046,31 @@
     transition: border-color 0.18s, box-shadow 0.18s;
   }
 
+  .edit-input {
+    resize: none;
+  }
+
+  .edit-checkbox-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.85rem;
+    min-height: 2.55rem;
+    align-items: center;
+    color: var(--detail-text);
+    font-size: 0.82rem;
+  }
+
+  .edit-checkbox-row label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .edit-checkbox-row input {
+    accent-color: var(--color-accent, #c49a5a);
+  }
+
+  .edit-input:focus,
   .edit-textarea:focus {
     border-color: var(--color-border-accent, rgba(199, 155, 92, 0.24));
     box-shadow: var(--shadow-focus-accent, 0 0 0 2px rgba(199, 155, 92, 0.12));

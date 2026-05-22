@@ -524,7 +524,7 @@
 
   async function handleMetadataSave(request: EntityMetadataUpdateRequest) {
     if (!video) return;
-    await updateV2EntityMetadata(video.id, request);
+    await updateV2EntityMetadata(video.id, request, { kind: video.kind });
     await refreshVideo();
   }
 </script>

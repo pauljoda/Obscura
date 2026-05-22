@@ -812,6 +812,55 @@ export const listEntities = async (params?: ListEntitiesParams, options?: Reques
 
 
 
+export type updateEntityByKindResponse200 = {
+  data: EntityCard
+  status: 200
+}
+
+export type updateEntityByKindResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
+export type updateEntityByKindResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type updateEntityByKindResponseSuccess = (updateEntityByKindResponse200) & {
+  headers: Headers;
+};
+export type updateEntityByKindResponseError = (updateEntityByKindResponse400 | updateEntityByKindResponse404) & {
+  headers: Headers;
+};
+
+export type updateEntityByKindResponse = (updateEntityByKindResponseSuccess | updateEntityByKindResponseError)
+
+export const getUpdateEntityByKindUrl = (kind: string,
+    id: string,) => {
+
+
+
+
+  return `/api/entities/${kind}/${id}`
+}
+
+export const updateEntityByKind = async (kind: string,
+    id: string,
+    entityMetadataUpdateRequest: EntityMetadataUpdateRequest, options?: RequestInit): Promise<updateEntityByKindResponse> => {
+
+  return orvalFetch<updateEntityByKindResponse>(getUpdateEntityByKindUrl(kind,id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      entityMetadataUpdateRequest,)
+  }
+);}
+
+
+
 export type getEntityResponse200 = {
   data: EntityCard
   status: 200
@@ -1267,6 +1316,53 @@ export const getVideo = async (id: string, options?: RequestInit): Promise<getVi
 
 
 
+export type getVideoPatchResponse200 = {
+  data: VideoDetail
+  status: 200
+}
+
+export type getVideoPatchResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
+export type getVideoPatchResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getVideoPatchResponseSuccess = (getVideoPatchResponse200) & {
+  headers: Headers;
+};
+export type getVideoPatchResponseError = (getVideoPatchResponse400 | getVideoPatchResponse404) & {
+  headers: Headers;
+};
+
+export type getVideoPatchResponse = (getVideoPatchResponseSuccess | getVideoPatchResponseError)
+
+export const getGetVideoPatchUrl = (id: string,) => {
+
+
+
+
+  return `/api/videos/${id}`
+}
+
+export const getVideoPatch = async (id: string,
+    entityMetadataUpdateRequest: EntityMetadataUpdateRequest, options?: RequestInit): Promise<getVideoPatchResponse> => {
+
+  return orvalFetch<getVideoPatchResponse>(getGetVideoPatchUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      entityMetadataUpdateRequest,)
+  }
+);}
+
+
+
 export type getVideoSubtitleResponse200 = {
   data: void
   status: 200
@@ -1437,6 +1533,53 @@ export const getVideoSeries = async (id: string, options?: RequestInit): Promise
 
 
 
+export type getVideoSeriesPatchResponse200 = {
+  data: VideoSeriesDetail
+  status: 200
+}
+
+export type getVideoSeriesPatchResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
+export type getVideoSeriesPatchResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getVideoSeriesPatchResponseSuccess = (getVideoSeriesPatchResponse200) & {
+  headers: Headers;
+};
+export type getVideoSeriesPatchResponseError = (getVideoSeriesPatchResponse400 | getVideoSeriesPatchResponse404) & {
+  headers: Headers;
+};
+
+export type getVideoSeriesPatchResponse = (getVideoSeriesPatchResponseSuccess | getVideoSeriesPatchResponseError)
+
+export const getGetVideoSeriesPatchUrl = (id: string,) => {
+
+
+
+
+  return `/api/series/${id}`
+}
+
+export const getVideoSeriesPatch = async (id: string,
+    entityMetadataUpdateRequest: EntityMetadataUpdateRequest, options?: RequestInit): Promise<getVideoSeriesPatchResponse> => {
+
+  return orvalFetch<getVideoSeriesPatchResponse>(getGetVideoSeriesPatchUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      entityMetadataUpdateRequest,)
+  }
+);}
+
+
+
 export type listImagesResponse200 = {
   data: EntityListResponse
   status: 200
@@ -1512,6 +1655,53 @@ export const getImage = async (id: string, options?: RequestInit): Promise<getIm
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type getImagePatchResponse200 = {
+  data: ImageDetail
+  status: 200
+}
+
+export type getImagePatchResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
+export type getImagePatchResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getImagePatchResponseSuccess = (getImagePatchResponse200) & {
+  headers: Headers;
+};
+export type getImagePatchResponseError = (getImagePatchResponse400 | getImagePatchResponse404) & {
+  headers: Headers;
+};
+
+export type getImagePatchResponse = (getImagePatchResponseSuccess | getImagePatchResponseError)
+
+export const getGetImagePatchUrl = (id: string,) => {
+
+
+
+
+  return `/api/images/${id}`
+}
+
+export const getImagePatch = async (id: string,
+    entityMetadataUpdateRequest: EntityMetadataUpdateRequest, options?: RequestInit): Promise<getImagePatchResponse> => {
+
+  return orvalFetch<getImagePatchResponse>(getGetImagePatchUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      entityMetadataUpdateRequest,)
   }
 );}
 
@@ -1597,6 +1787,53 @@ export const getGallery = async (id: string, options?: RequestInit): Promise<get
 
 
 
+export type getGalleryPatchResponse200 = {
+  data: GalleryDetail
+  status: 200
+}
+
+export type getGalleryPatchResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
+export type getGalleryPatchResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getGalleryPatchResponseSuccess = (getGalleryPatchResponse200) & {
+  headers: Headers;
+};
+export type getGalleryPatchResponseError = (getGalleryPatchResponse400 | getGalleryPatchResponse404) & {
+  headers: Headers;
+};
+
+export type getGalleryPatchResponse = (getGalleryPatchResponseSuccess | getGalleryPatchResponseError)
+
+export const getGetGalleryPatchUrl = (id: string,) => {
+
+
+
+
+  return `/api/galleries/${id}`
+}
+
+export const getGalleryPatch = async (id: string,
+    entityMetadataUpdateRequest: EntityMetadataUpdateRequest, options?: RequestInit): Promise<getGalleryPatchResponse> => {
+
+  return orvalFetch<getGalleryPatchResponse>(getGetGalleryPatchUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      entityMetadataUpdateRequest,)
+  }
+);}
+
+
+
 export type listBooksResponse200 = {
   data: EntityListResponse
   status: 200
@@ -1672,6 +1909,53 @@ export const getBook = async (id: string, options?: RequestInit): Promise<getBoo
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type getBookPatchResponse200 = {
+  data: BookDetail
+  status: 200
+}
+
+export type getBookPatchResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
+export type getBookPatchResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getBookPatchResponseSuccess = (getBookPatchResponse200) & {
+  headers: Headers;
+};
+export type getBookPatchResponseError = (getBookPatchResponse400 | getBookPatchResponse404) & {
+  headers: Headers;
+};
+
+export type getBookPatchResponse = (getBookPatchResponseSuccess | getBookPatchResponseError)
+
+export const getGetBookPatchUrl = (id: string,) => {
+
+
+
+
+  return `/api/books/${id}`
+}
+
+export const getBookPatch = async (id: string,
+    entityMetadataUpdateRequest: EntityMetadataUpdateRequest, options?: RequestInit): Promise<getBookPatchResponse> => {
+
+  return orvalFetch<getBookPatchResponse>(getGetBookPatchUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      entityMetadataUpdateRequest,)
   }
 );}
 
@@ -1757,6 +2041,53 @@ export const getAudioLibrary = async (id: string, options?: RequestInit): Promis
 
 
 
+export type getAudioLibraryPatchResponse200 = {
+  data: AudioLibraryDetail
+  status: 200
+}
+
+export type getAudioLibraryPatchResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
+export type getAudioLibraryPatchResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getAudioLibraryPatchResponseSuccess = (getAudioLibraryPatchResponse200) & {
+  headers: Headers;
+};
+export type getAudioLibraryPatchResponseError = (getAudioLibraryPatchResponse400 | getAudioLibraryPatchResponse404) & {
+  headers: Headers;
+};
+
+export type getAudioLibraryPatchResponse = (getAudioLibraryPatchResponseSuccess | getAudioLibraryPatchResponseError)
+
+export const getGetAudioLibraryPatchUrl = (id: string,) => {
+
+
+
+
+  return `/api/audio-libraries/${id}`
+}
+
+export const getAudioLibraryPatch = async (id: string,
+    entityMetadataUpdateRequest: EntityMetadataUpdateRequest, options?: RequestInit): Promise<getAudioLibraryPatchResponse> => {
+
+  return orvalFetch<getAudioLibraryPatchResponse>(getGetAudioLibraryPatchUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      entityMetadataUpdateRequest,)
+  }
+);}
+
+
+
 export type listAudioTracksResponse200 = {
   data: EntityListResponse
   status: 200
@@ -1832,6 +2163,53 @@ export const getAudioTrack = async (id: string, options?: RequestInit): Promise<
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type getAudioTrackPatchResponse200 = {
+  data: AudioTrackDetail
+  status: 200
+}
+
+export type getAudioTrackPatchResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
+export type getAudioTrackPatchResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getAudioTrackPatchResponseSuccess = (getAudioTrackPatchResponse200) & {
+  headers: Headers;
+};
+export type getAudioTrackPatchResponseError = (getAudioTrackPatchResponse400 | getAudioTrackPatchResponse404) & {
+  headers: Headers;
+};
+
+export type getAudioTrackPatchResponse = (getAudioTrackPatchResponseSuccess | getAudioTrackPatchResponseError)
+
+export const getGetAudioTrackPatchUrl = (id: string,) => {
+
+
+
+
+  return `/api/audio-tracks/${id}`
+}
+
+export const getAudioTrackPatch = async (id: string,
+    entityMetadataUpdateRequest: EntityMetadataUpdateRequest, options?: RequestInit): Promise<getAudioTrackPatchResponse> => {
+
+  return orvalFetch<getAudioTrackPatchResponse>(getGetAudioTrackPatchUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      entityMetadataUpdateRequest,)
   }
 );}
 
@@ -1917,6 +2295,53 @@ export const getPerson = async (id: string, options?: RequestInit): Promise<getP
 
 
 
+export type getPersonPatchResponse200 = {
+  data: PersonDetail
+  status: 200
+}
+
+export type getPersonPatchResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
+export type getPersonPatchResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getPersonPatchResponseSuccess = (getPersonPatchResponse200) & {
+  headers: Headers;
+};
+export type getPersonPatchResponseError = (getPersonPatchResponse400 | getPersonPatchResponse404) & {
+  headers: Headers;
+};
+
+export type getPersonPatchResponse = (getPersonPatchResponseSuccess | getPersonPatchResponseError)
+
+export const getGetPersonPatchUrl = (id: string,) => {
+
+
+
+
+  return `/api/people/${id}`
+}
+
+export const getPersonPatch = async (id: string,
+    entityMetadataUpdateRequest: EntityMetadataUpdateRequest, options?: RequestInit): Promise<getPersonPatchResponse> => {
+
+  return orvalFetch<getPersonPatchResponse>(getGetPersonPatchUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      entityMetadataUpdateRequest,)
+  }
+);}
+
+
+
 export type listStudiosResponse200 = {
   data: EntityListResponse
   status: 200
@@ -1992,6 +2417,53 @@ export const getStudio = async (id: string, options?: RequestInit): Promise<getS
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type getStudioPatchResponse200 = {
+  data: StudioDetail
+  status: 200
+}
+
+export type getStudioPatchResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
+export type getStudioPatchResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getStudioPatchResponseSuccess = (getStudioPatchResponse200) & {
+  headers: Headers;
+};
+export type getStudioPatchResponseError = (getStudioPatchResponse400 | getStudioPatchResponse404) & {
+  headers: Headers;
+};
+
+export type getStudioPatchResponse = (getStudioPatchResponseSuccess | getStudioPatchResponseError)
+
+export const getGetStudioPatchUrl = (id: string,) => {
+
+
+
+
+  return `/api/studios/${id}`
+}
+
+export const getStudioPatch = async (id: string,
+    entityMetadataUpdateRequest: EntityMetadataUpdateRequest, options?: RequestInit): Promise<getStudioPatchResponse> => {
+
+  return orvalFetch<getStudioPatchResponse>(getGetStudioPatchUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      entityMetadataUpdateRequest,)
   }
 );}
 
@@ -2077,6 +2549,53 @@ export const getTag = async (id: string, options?: RequestInit): Promise<getTagR
 
 
 
+export type getTagPatchResponse200 = {
+  data: TagDetail
+  status: 200
+}
+
+export type getTagPatchResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
+export type getTagPatchResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getTagPatchResponseSuccess = (getTagPatchResponse200) & {
+  headers: Headers;
+};
+export type getTagPatchResponseError = (getTagPatchResponse400 | getTagPatchResponse404) & {
+  headers: Headers;
+};
+
+export type getTagPatchResponse = (getTagPatchResponseSuccess | getTagPatchResponseError)
+
+export const getGetTagPatchUrl = (id: string,) => {
+
+
+
+
+  return `/api/tags/${id}`
+}
+
+export const getTagPatch = async (id: string,
+    entityMetadataUpdateRequest: EntityMetadataUpdateRequest, options?: RequestInit): Promise<getTagPatchResponse> => {
+
+  return orvalFetch<getTagPatchResponse>(getGetTagPatchUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      entityMetadataUpdateRequest,)
+  }
+);}
+
+
+
 export type listCollectionsResponse200 = {
   data: EntityListResponse
   status: 200
@@ -2152,6 +2671,53 @@ export const getCollection = async (id: string, options?: RequestInit): Promise<
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type getCollectionPatchResponse200 = {
+  data: CollectionDetail
+  status: 200
+}
+
+export type getCollectionPatchResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
+export type getCollectionPatchResponse404 = {
+  data: ApiProblem
+  status: 404
+}
+
+export type getCollectionPatchResponseSuccess = (getCollectionPatchResponse200) & {
+  headers: Headers;
+};
+export type getCollectionPatchResponseError = (getCollectionPatchResponse400 | getCollectionPatchResponse404) & {
+  headers: Headers;
+};
+
+export type getCollectionPatchResponse = (getCollectionPatchResponseSuccess | getCollectionPatchResponseError)
+
+export const getGetCollectionPatchUrl = (id: string,) => {
+
+
+
+
+  return `/api/collections/${id}`
+}
+
+export const getCollectionPatch = async (id: string,
+    entityMetadataUpdateRequest: EntityMetadataUpdateRequest, options?: RequestInit): Promise<getCollectionPatchResponse> => {
+
+  return orvalFetch<getCollectionPatchResponse>(getGetCollectionPatchUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      entityMetadataUpdateRequest,)
   }
 );}
 

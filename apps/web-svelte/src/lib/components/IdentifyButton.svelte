@@ -19,8 +19,8 @@
     buildProposalForApply,
     findRelationshipImage,
     isNewRelationshipTitle,
+    reviewChildProposals,
     relationshipTitlesFromEntityThumbnails,
-    structuralChildProposals,
     type IdentifyRelationshipTitles,
   } from "$lib/components/identify-review";
   import {
@@ -500,7 +500,7 @@
 
   function findProposal(root: EntityMetadataProposal, proposalId: string): EntityMetadataProposal | null {
     if (root.proposalId === proposalId) return root;
-    for (const child of root.children) {
+    for (const child of reviewChildProposals(root)) {
       const found = findProposal(child, proposalId);
       if (found) return found;
     }
@@ -508,7 +508,7 @@
   }
 
   function findParentProposalId(root: EntityMetadataProposal, proposalId: string): string | null {
-    for (const child of root.children) {
+    for (const child of reviewChildProposals(root)) {
       if (child.proposalId === proposalId) return root.proposalId;
       const nested = findParentProposalId(child, proposalId);
       if (nested) return nested;
@@ -525,6 +525,7 @@
     return {
       ...root,
       children: root.children.map((child) => replaceProposal(child, proposalId, replacement)),
+      relationships: root.relationships.map((child) => replaceProposal(child, proposalId, replacement)),
     };
   }
 
@@ -578,7 +579,7 @@
 
   function visitProposal(root: EntityMetadataProposal, visit: (proposal: EntityMetadataProposal) => void) {
     visit(root);
-    for (const child of root.children) visitProposal(child, visit);
+    for (const child of reviewChildProposals(root)) visitProposal(child, visit);
   }
 
   function setImageSelection(kind: string, url: string | null) {
@@ -595,7 +596,7 @@
   }
 
   function relationshipChildren(result: EntityMetadataProposal): EntityMetadataProposal[] {
-    return structuralChildProposals(result);
+    return reviewChildProposals(result);
   }
 
   function toCascadeNode(child: EntityMetadataProposal): CascadeNode {
@@ -706,13 +707,13 @@
 
   function defaultCascadeSelection(result: EntityMetadataProposal): Record<string, boolean> {
     const selected: Record<string, boolean> = {};
-    for (const child of structuralChildProposals(result)) markCascadeSelected(child, selected);
+    for (const child of reviewChildProposals(result)) markCascadeSelected(child, selected);
     return selected;
   }
 
   function markCascadeSelected(child: EntityMetadataProposal, selected: Record<string, boolean>) {
     selected[child.proposalId] = true;
-    for (const nested of structuralChildProposals(child)) markCascadeSelected(nested, selected);
+    for (const nested of reviewChildProposals(child)) markCascadeSelected(nested, selected);
   }
 
   function defaultImageSelection(images: ImageCandidate[]): Record<string, string | null> {
@@ -901,6 +902,39 @@
                 <span class="match-alt">{activeProposal.candidates.length} candidates</span>
               {/if}
             </div>
+
+            <!-- Candidates -->
+            {#if activeProposal.candidates.length > 1}
+              <section class="section-card">
+                <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('candidates')} onkeydown={(e) => e.key === 'Enter' && toggleSection('candidates')}>
+                  <h4>Other matches</h4>
+                  <div class="section-meta">
+                    <span class="count-badge">{activeProposal.candidates.length}</span>
+                    <span class="chevron" class:rotated={!expandedSections.candidates}><ChevronDown class="h-3.5 w-3.5" /></span>
+                  </div>
+                </div>
+                {#if expandedSections.candidates}
+                  <div class="section-body">
+                    <div class="candidate-list">
+                      {#each activeProposal.candidates as candidate (candidate.externalIds.tmdb ?? candidate.title)}
+                        <button type="button" class="candidate-card" onclick={() => rerunCandidate(candidate)}>
+                          {#if candidate.posterUrl}
+                            <img src={candidate.posterUrl} alt="" class="candidate-poster" />
+                          {:else}
+                            <div class="candidate-poster-empty"><ImageIcon class="h-4 w-4" /></div>
+                          {/if}
+                          <div class="candidate-info">
+                            <strong>{candidate.title}</strong>
+                            <small>{candidate.year ?? "Unknown year"}</small>
+                          </div>
+                          <ChevronRight class="h-3.5 w-3.5" />
+                        </button>
+                      {/each}
+                    </div>
+                  </div>
+                {/if}
+              </section>
+            {/if}
 
             <!-- Scalar Fields -->
             <section class="section-card">
@@ -1175,38 +1209,6 @@
               </section>
             {/if}
 
-            <!-- Candidates -->
-            {#if activeProposal.candidates.length > 1}
-              <section class="section-card">
-                <div class="section-header" role="button" tabindex="0" onclick={() => toggleSection('candidates')} onkeydown={(e) => e.key === 'Enter' && toggleSection('candidates')}>
-                  <h4>Other matches</h4>
-                  <div class="section-meta">
-                    <span class="count-badge">{activeProposal.candidates.length}</span>
-                    <span class="chevron" class:rotated={!expandedSections.candidates}><ChevronDown class="h-3.5 w-3.5" /></span>
-                  </div>
-                </div>
-                {#if expandedSections.candidates}
-                  <div class="section-body">
-                    <div class="candidate-list">
-                      {#each activeProposal.candidates as candidate (candidate.externalIds.tmdb ?? candidate.title)}
-                        <button type="button" class="candidate-card" onclick={() => rerunCandidate(candidate)}>
-                          {#if candidate.posterUrl}
-                            <img src={candidate.posterUrl} alt="" class="candidate-poster" />
-                          {:else}
-                            <div class="candidate-poster-empty"><ImageIcon class="h-4 w-4" /></div>
-                          {/if}
-                          <div class="candidate-info">
-                            <strong>{candidate.title}</strong>
-                            <small>{candidate.year ?? "Unknown year"}</small>
-                          </div>
-                          <ChevronRight class="h-3.5 w-3.5" />
-                        </button>
-                      {/each}
-                    </div>
-                  </div>
-                {/if}
-              </section>
-            {/if}
           </div>
         {/if}
       </div>
