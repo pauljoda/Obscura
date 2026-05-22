@@ -42,7 +42,6 @@
   let syncedQueryKey = "";
 
   const selectedMeta = $derived(selectedTreePath ? registry.get(selectedTreePath) ?? null : null);
-  const selectedIsFile = $derived(selectedMeta?.kind === "file");
 
   function loadedKey(meta: Pick<FileTreeNodeMeta, "rootId" | "path">): string {
     return `${meta.rootId}:${meta.path}`;
@@ -144,13 +143,8 @@
     if (meta.path) params.set("path", meta.path);
     await goto(`/files?${params.toString()}`, { replaceState: options.replaceUrl ?? false, noScroll: true, keepFocus: true });
 
-    if (meta.kind === "file") {
-      if (options.showDetail ?? true) mobileDetail = true;
-      await loadDetail(meta);
-    } else {
-      detail = null;
-      mobileDetail = false;
-    }
+    if (meta.kind === "file" && (options.showDetail ?? true)) mobileDetail = true;
+    await loadDetail(meta);
   }
 
   async function refreshSelected(): Promise<void> {
@@ -162,9 +156,7 @@
       loadedKeys = nextLoaded;
       await loadChildren(target);
     }
-    if (selectedMeta.kind === "file") {
-      await loadDetail(selectedMeta);
-    }
+    await loadDetail(selectedMeta);
   }
 
   async function createFolder(meta: FileTreeNodeMeta): Promise<void> {
@@ -406,8 +398,8 @@
   </div>
 
   <FileDetailPane
-    detail={selectedIsFile ? detail : null}
-    loading={selectedIsFile && loadingDetail}
+    {detail}
+    loading={loadingDetail}
     {error}
     mobile={mobileDetail}
     onBack={() => (mobileDetail = false)}

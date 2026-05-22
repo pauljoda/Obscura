@@ -72,12 +72,16 @@ public sealed record FileLinkedEntity(Guid EntityId, string Kind, string Title);
 /// <param name="CreatedAt">Creation timestamp when known.</param>
 /// <param name="LinkedEntities">Known Obscura entities whose source paths match this path.</param>
 /// <param name="CanPreview">Whether the content endpoint can be used for an inline preview.</param>
+/// <param name="DirectoryFileCount">Total file count when the entry is a directory; null for files.</param>
+/// <param name="DirectoryTotalSizeBytes">Recursive size in bytes when the entry is a directory; null for files.</param>
 public sealed record FileDetail(
     FileEntry Entry,
     string AbsolutePath,
     DateTimeOffset? CreatedAt,
     IReadOnlyList<FileLinkedEntity> LinkedEntities,
-    bool CanPreview);
+    bool CanPreview,
+    long? DirectoryFileCount = null,
+    long? DirectoryTotalSizeBytes = null);
 
 /// <summary>
 /// Request to create one folder under a watched root.

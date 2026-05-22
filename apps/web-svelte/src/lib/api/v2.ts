@@ -169,7 +169,10 @@ export type V2LibraryRoot = LibraryRoot;
 export type V2LibraryBrowse = LibraryBrowseResponse;
 export type V2FileRoot = FileRoot;
 export type V2FileEntry = FileEntry;
-export type V2FileDetail = FileDetail;
+export type V2FileDetail = FileDetail & {
+  directoryFileCount?: number | null;
+  directoryTotalSizeBytes?: number | null;
+};
 export type V2FileChildrenResponse = FileChildrenResponse;
 export type V2FileOperationResponse = FileOperationResponse;
 export interface V2LibraryConfigResponse {

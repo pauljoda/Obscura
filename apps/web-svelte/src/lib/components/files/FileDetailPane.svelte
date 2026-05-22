@@ -1,7 +1,6 @@
 <script lang="ts">
   import {
     FileArchive,
-    FilePlus2,
     FolderPlus,
     Image as ImageIcon,
     Pencil,
@@ -13,6 +12,8 @@
   import type { V2FileDetail } from "$lib/api/v2";
   import { v2FileContentUrl } from "$lib/api/v2";
   import type { FileActionId } from "$lib/files/file-actions";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import { entityReferenceToThumbnailCard } from "$lib/entities/entity-thumbnail";
 
   interface Props {
     detail: V2FileDetail | null;
@@ -50,6 +51,15 @@
   const contentUrl = $derived(entry ? v2FileContentUrl(entry.rootId, entry.path) : "");
   const mime = $derived(entry?.mimeType ?? "");
   const previewKind = $derived(resolvePreviewKind(entry?.name ?? "", mime, isDirectory));
+
+  const linkedCards = $derived(
+    (detail?.linkedEntities ?? []).map((linked) =>
+      entityReferenceToThumbnailCard(
+        { id: linked.entityId, kind: linked.kind, title: linked.title },
+        { aspectRatio: "square" },
+      ),
+    ),
+  );
 
   function resolvePreviewKind(name: string, mimeType: string, directory: boolean): "image" | "video" | "audio" | "text" | "none" {
     if (directory) return "none";
@@ -198,23 +208,31 @@
 
       <div class="section-label">Properties</div>
       <div class="meta-grid">
-        <div><span>Size</span><strong>{formatBytes(entry.sizeBytes)}</strong></div>
+        {#if isDirectory}
+          {#if detail.directoryTotalSizeBytes != null}
+            <div><span>Total size</span><strong>{formatBytes(detail.directoryTotalSizeBytes)}</strong></div>
+          {/if}
+          {#if detail.directoryFileCount != null}
+            <div><span>Files</span><strong>{detail.directoryFileCount.toLocaleString()}</strong></div>
+          {/if}
+        {:else}
+          <div><span>Size</span><strong>{formatBytes(entry.sizeBytes)}</strong></div>
+        {/if}
         <div><span>Kind</span><strong>{entry.kind}</strong></div>
         <div><span>Modified</span><strong>{formatDate(entry.modifiedAt)}</strong></div>
         <div><span>Created</span><strong>{formatDate(detail.createdAt)}</strong></div>
         {#if entry.mimeType}
           <div><span>MIME</span><strong>{entry.mimeType}</strong></div>
         {/if}
-        {#if detail.linkedEntities.length > 0}
-          <div><span>Linked</span><strong>{detail.linkedEntities.length}</strong></div>
-        {/if}
       </div>
 
-      {#if detail.linkedEntities.length > 0}
+      {#if linkedCards.length > 0}
         <div class="section-label">Linked entities</div>
-        <div class="linked-strip">
-          {#each detail.linkedEntities as linked (linked.entityId)}
-            <a href={`/${linked.kind}/${linked.entityId}`}>{linked.title}</a>
+        <div class="linked-thumbnails">
+          {#each linkedCards as card (card.entity.id)}
+            <div class="linked-thumbnail">
+              <EntityThumbnail {card} selectable={false} titleAlign="center" titleSize="compact" />
+            </div>
           {/each}
         </div>
       {/if}
@@ -381,24 +399,16 @@
     font-weight: 500;
   }
 
-  .linked-strip {
+  .linked-thumbnails {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.3rem;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
   }
 
-  .linked-strip a {
-    border: 1px solid var(--color-border-default);
-    background: var(--color-surface-2);
-    color: var(--color-text-secondary);
-    padding: 0.2rem 0.45rem;
-    font-size: 0.72rem;
-    text-decoration: none;
-  }
-
-  .linked-strip a:hover {
-    border-color: var(--color-border-accent);
-    color: var(--color-text-primary);
+  .linked-thumbnail {
+    flex-shrink: 0;
+    width: 7rem;
   }
 
   .preview {

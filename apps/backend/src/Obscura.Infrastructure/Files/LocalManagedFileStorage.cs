@@ -43,6 +43,25 @@ public sealed class LocalManagedFileStorage : IManagedFileStorage {
         cancellationToken.ThrowIfCancellationRequested();
         var info = GetExistingInfo(path.AbsolutePath);
         var entry = ToEntry(path.Root.Id, path.Root.Path, info);
+
+        long? dirFileCount = null;
+        long? dirTotalSize = null;
+        if (info is DirectoryInfo dir) {
+            try {
+                var files = dir.EnumerateFiles("*", SearchOption.AllDirectories);
+                long count = 0;
+                long size = 0;
+                foreach (var f in files) {
+                    count++;
+                    size += f.Length;
+                }
+                dirFileCount = count;
+                dirTotalSize = size;
+            } catch {
+                // Permission or I/O errors — leave nulls.
+            }
+        }
+
         return Task.FromResult(new FileDetail(
             entry,
             path.AbsolutePath,
@@ -50,7 +69,9 @@ public sealed class LocalManagedFileStorage : IManagedFileStorage {
                 ? null
                 : new DateTimeOffset(info.CreationTimeUtc, TimeSpan.Zero),
             linkedEntities,
-            entry.Kind == "file" && IsPreviewable(entry.MimeType)));
+            entry.Kind == "file" && IsPreviewable(entry.MimeType),
+            dirFileCount,
+            dirTotalSize));
     }
 
     /// <inheritdoc />

@@ -50,15 +50,53 @@
 
   function renderContextMenu(item: ContextMenuItem, context: ContextMenuOpenContext): HTMLElement {
     const menu = document.createElement("div");
-    menu.className = "obscura-file-context-menu";
     menu.dataset.testid = "files-context-menu";
+    menu.dataset.fileTreeContextMenuRoot = "true";
+    Object.assign(menu.style, {
+      position: "fixed",
+      zIndex: "9999",
+      display: "grid",
+      minWidth: "10rem",
+      border: "1px solid rgba(164, 172, 185, 0.12)",
+      background: "#181d27",
+      boxShadow: "0 12px 40px rgba(0, 0, 0, 0.6)",
+      backdropFilter: "blur(20px)",
+      fontFamily: "Inter, system-ui, sans-serif",
+    });
+
+    const rect = context.anchorRect;
+    const menuHeight = fileContextActions(item.kind).length * 32 + 2;
+    const menuWidth = 160;
+    const top = rect.bottom + menuHeight > window.innerHeight ? Math.max(4, rect.top - menuHeight) : rect.bottom;
+    const left = rect.right + menuWidth > window.innerWidth ? Math.max(4, rect.right - menuWidth) : rect.left;
+    menu.style.top = `${top}px`;
+    menu.style.left = `${left}px`;
 
     for (const action of fileContextActions(item.kind)) {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = action.label;
       button.dataset.action = action.id;
-      if (action.destructive) button.dataset.destructive = "true";
+      Object.assign(button.style, {
+        display: "block",
+        width: "100%",
+        border: "0",
+        borderRadius: "0",
+        background: "transparent",
+        color: action.destructive ? "#cc7880" : "#c8ccd4",
+        padding: "0.5rem 0.75rem",
+        textAlign: "left",
+        font: "500 0.8rem Inter, system-ui, sans-serif",
+        cursor: "pointer",
+      });
+      button.addEventListener("mouseenter", () => {
+        button.style.background = "#1f2533";
+        button.style.color = action.destructive ? "#cc7880" : "#f5f2ea";
+      });
+      button.addEventListener("mouseleave", () => {
+        button.style.background = "transparent";
+        button.style.color = action.destructive ? "#cc7880" : "#c8ccd4";
+      });
       button.addEventListener("click", () => {
         if (action.id === "rename") {
           tree?.startRenaming(item.path);
@@ -137,31 +175,13 @@
       box-shadow: inset 2px 0 0 var(--color-accent-500, #c79b5c);
       color: var(--color-text-primary, #f5f2ea);
     }
-    .obscura-file-context-menu {
-      display: grid;
-      min-width: 10rem;
-      border: 1px solid var(--color-border-default, rgba(164, 172, 185, 0.12));
-      background: var(--color-surface-3, #181d27);
-      box-shadow: var(--shadow-elevated, 0 12px 40px rgba(0, 0, 0, 0.6));
-      backdrop-filter: blur(20px);
-    }
-    .obscura-file-context-menu button {
-      border: 0;
-      border-radius: 0;
-      background: transparent;
-      color: var(--color-text-secondary, #c8ccd4);
-      padding: 0.5rem 0.75rem;
-      text-align: left;
-      font: 500 0.8rem Inter, system-ui, sans-serif;
-    }
-    .obscura-file-context-menu button:hover,
-    .obscura-file-context-menu button:focus-visible {
-      background: var(--color-surface-4, #1f2533);
+    button[data-type='item'][data-item-drag-target='true'] {
+      background: rgba(196, 154, 90, 0.10) !important;
+      box-shadow: inset 2px 0 0 var(--color-accent-500, #c79b5c);
       color: var(--color-text-primary, #f5f2ea);
-      outline: none;
     }
-    .obscura-file-context-menu button[data-destructive='true'] {
-      color: var(--color-error-text, #cc7880);
+    button[data-type='item'][data-item-dragging='true'] {
+      opacity: 0.4;
     }
   `;
 
