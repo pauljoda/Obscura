@@ -18,7 +18,7 @@ describe("file tree state", () => {
 
   it("maps display tree paths back to root ids and relative paths", () => {
     const registry = createFileTreeRegistry([root]);
-    const rootPath = fileTreeRootPath(root);
+    const rootTreePath = `${fileTreeRootPath(root)}/`;
     const entries: V2FileEntry[] = [
       {
         rootId: root.id,
@@ -31,8 +31,8 @@ describe("file tree state", () => {
       },
     ];
 
-    upsertFileTreeEntries(registry, rootPath, entries);
-    const meta = registry.get(fileTreeEntryPath(rootPath, entries[0]));
+    upsertFileTreeEntries(registry, rootTreePath, entries);
+    const meta = registry.get(fileTreeEntryPath(rootTreePath, entries[0]));
 
     expect(meta).toMatchObject({
       rootId: root.id,
@@ -44,8 +44,8 @@ describe("file tree state", () => {
 
   it("returns expanded unloaded directories once", () => {
     const registry = createFileTreeRegistry([root]);
-    const rootPath = fileTreeRootPath(root);
-    const paths = upsertFileTreeEntries(registry, rootPath, [
+    const rootTreePath = `${fileTreeRootPath(root)}/`;
+    const paths = upsertFileTreeEntries(registry, rootTreePath, [
       {
         rootId: root.id,
         path: "Series",
@@ -56,11 +56,11 @@ describe("file tree state", () => {
         modifiedAt: null,
       },
     ]);
-    const isExpanded = vi.fn((treePath: string) => treePath.endsWith("Series"));
+    const isExpanded = vi.fn((treePath: string) => treePath.endsWith("Series/"));
 
-    expect(unloadedExpandedDirectories([rootPath, ...paths], registry, new Set([`${root.id}:`]), isExpanded))
-      .toEqual([registry.get(`${rootPath}/Series`)]);
-    expect(unloadedExpandedDirectories([rootPath, ...paths], registry, new Set([`${root.id}:`, `${root.id}:Series`]), isExpanded))
+    expect(unloadedExpandedDirectories([rootTreePath, ...paths], registry, new Set([`${root.id}:`]), isExpanded))
+      .toEqual([registry.get(`${rootTreePath}Series/`)]);
+    expect(unloadedExpandedDirectories([rootTreePath, ...paths], registry, new Set([`${root.id}:`, `${root.id}:Series`]), isExpanded))
       .toEqual([]);
   });
 });

@@ -93,117 +93,131 @@
     if (treePath) onSelect?.(treePath);
   }
 
+  const treeCSS = `
+    :host {
+      --trees-fg-override: var(--color-text-primary, #f5f2ea);
+      --trees-muted-fg-override: var(--color-text-muted, #a4acb9);
+      --trees-border-color-override: var(--color-border-subtle, rgba(164, 172, 185, 0.06));
+      --trees-selected-bg-override: var(--color-surface-2, #11151c);
+      --trees-focus-ring-override: var(--color-border-accent-strong, rgba(199, 155, 92, 0.45));
+      background: var(--color-surface-1, #0d1017) !important;
+      color: var(--color-text-primary, #f5f2ea);
+    }
+    [data-file-tree-virtualized-wrapper],
+    [data-file-tree-virtualized-root],
+    [data-file-tree-virtualized-scroll],
+    [data-file-tree-virtualized-list],
+    [data-file-tree-virtualized-sticky],
+    [data-truncate-marker] {
+      background: var(--color-surface-1, #0d1017) !important;
+      color: var(--color-text-primary, #f5f2ea);
+    }
+    input[data-file-tree-search-input] {
+      border: 1px solid var(--color-border-default, rgba(164, 172, 185, 0.12));
+      border-radius: 0;
+      background: var(--color-surface-2, #11151c) !important;
+      color: var(--color-text-primary, #f5f2ea);
+      font-family: Inter, system-ui, sans-serif;
+    }
+    input[data-file-tree-search-input]::placeholder {
+      color: var(--color-text-disabled, #5a6070);
+    }
+    button[data-type='item'] {
+      border-radius: 0;
+      background: transparent !important;
+      color: var(--color-text-secondary, #c8ccd4);
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 0.8rem;
+    }
+    button[data-type='item']:hover {
+      background: var(--color-surface-2, #11151c) !important;
+    }
+    button[data-type='item'][data-item-selected] {
+      background: var(--color-surface-2, #11151c) !important;
+      box-shadow: inset 2px 0 0 var(--color-accent-500, #c79b5c);
+      color: var(--color-text-primary, #f5f2ea);
+    }
+    .obscura-file-context-menu {
+      display: grid;
+      min-width: 10rem;
+      border: 1px solid var(--color-border-default, rgba(164, 172, 185, 0.12));
+      background: var(--color-surface-3, #181d27);
+      box-shadow: var(--shadow-elevated, 0 12px 40px rgba(0, 0, 0, 0.6));
+      backdrop-filter: blur(20px);
+    }
+    .obscura-file-context-menu button {
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: var(--color-text-secondary, #c8ccd4);
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      font: 500 0.8rem Inter, system-ui, sans-serif;
+    }
+    .obscura-file-context-menu button:hover,
+    .obscura-file-context-menu button:focus-visible {
+      background: var(--color-surface-4, #1f2533);
+      color: var(--color-text-primary, #f5f2ea);
+      outline: none;
+    }
+    .obscura-file-context-menu button[data-destructive='true'] {
+      color: var(--color-error-text, #cc7880);
+    }
+  `;
+
+  function createTree(module: typeof import("@pierre/trees"), initialPaths: string[]): void {
+    const rootPaths = initialPaths.filter((p) => registry.get(p)?.path === "");
+    tree = new module.FileTree({
+      paths: initialPaths,
+      initialExpansion: "closed",
+      initialExpandedPaths: rootPaths,
+      icons: { set: "complete", colored: true },
+      search: false,
+      dragAndDrop: {
+        canDrag: (draggedPaths) => draggedPaths.length === 1,
+        canDrop: () => true,
+        onDropComplete: (event) => onMove?.(event.draggedPaths[0], event.target.directoryPath),
+      },
+      renaming: {
+        canRename: () => true,
+        onRename: (event) => onRename?.(event.sourcePath, basename(event.destinationPath)),
+      },
+      composition: {
+        contextMenu: {
+          enabled: true,
+          triggerMode: "both",
+          buttonVisibility: "always",
+          render: renderContextMenu,
+        },
+      },
+      onSelectionChange: (selectedPaths) => {
+        if (suppressSelectionEvent) return;
+        const next = selectedPaths[0];
+        if (next) onSelect?.(next);
+      },
+      unsafeCSS: treeCSS,
+    });
+    tree.render({ containerWrapper: host });
+    host.addEventListener("click", bridgeRowClick);
+    removeTreeClickBridge = () => host.removeEventListener("click", bridgeRowClick);
+    unsubscribe = tree.subscribe(checkLazyExpansion);
+    checkLazyExpansion();
+    lastPathsKey = initialPaths.join("\n");
+  }
+
   onMount(() => {
+    let cancelled = false;
     void (async () => {
       const module = await import("@pierre/trees");
-      tree = new module.FileTree({
-        paths,
-        initialExpansion: "closed",
-        icons: { set: "complete", colored: true },
-        search: false,
-        dragAndDrop: {
-          canDrag: (draggedPaths) => draggedPaths.length === 1,
-          canDrop: () => true,
-          onDropComplete: (event) => onMove?.(event.draggedPaths[0], event.target.directoryPath),
-        },
-        renaming: {
-          canRename: () => true,
-          onRename: (event) => onRename?.(event.sourcePath, basename(event.destinationPath)),
-        },
-        composition: {
-          contextMenu: {
-            enabled: true,
-            triggerMode: "both",
-            buttonVisibility: "always",
-            render: renderContextMenu,
-          },
-        },
-        onSelectionChange: (selectedPaths) => {
-          if (suppressSelectionEvent) return;
-          const next = selectedPaths[0];
-          if (next) onSelect?.(next);
-        },
-        unsafeCSS: `
-        :host {
-          --trees-fg-override: var(--color-text-primary, #f5f2ea);
-          --trees-muted-fg-override: var(--color-text-muted, #a4acb9);
-          --trees-border-color-override: var(--color-border-subtle, rgba(164, 172, 185, 0.06));
-          --trees-selected-bg-override: var(--color-surface-2, #11151c);
-          --trees-focus-ring-override: var(--color-border-accent-strong, rgba(199, 155, 92, 0.45));
-          background: var(--color-surface-1, #0d1017) !important;
-          color: var(--color-text-primary, #f5f2ea);
-        }
-        [data-file-tree-virtualized-wrapper],
-        [data-file-tree-virtualized-root],
-        [data-file-tree-virtualized-scroll],
-        [data-file-tree-virtualized-list],
-        [data-file-tree-virtualized-sticky],
-        [data-truncate-marker] {
-          background: var(--color-surface-1, #0d1017) !important;
-          color: var(--color-text-primary, #f5f2ea);
-        }
-        input[data-file-tree-search-input] {
-          border: 1px solid var(--color-border-default, rgba(164, 172, 185, 0.12));
-          border-radius: 0;
-          background: var(--color-surface-2, #11151c) !important;
-          color: var(--color-text-primary, #f5f2ea);
-          font-family: Inter, system-ui, sans-serif;
-        }
-        input[data-file-tree-search-input]::placeholder {
-          color: var(--color-text-disabled, #5a6070);
-        }
-        button[data-type='item'] {
-          border-radius: 0;
-          background: transparent !important;
-          color: var(--color-text-secondary, #c8ccd4);
-          font-family: Inter, system-ui, sans-serif;
-          font-size: 0.8rem;
-        }
-        button[data-type='item']:hover {
-          background: var(--color-surface-2, #11151c) !important;
-        }
-        button[data-type='item'][data-item-selected] {
-          background: var(--color-surface-2, #11151c) !important;
-          box-shadow: inset 2px 0 0 var(--color-accent-500, #c79b5c);
-          color: var(--color-text-primary, #f5f2ea);
-        }
-        .obscura-file-context-menu {
-          display: grid;
-          min-width: 10rem;
-          border: 1px solid var(--color-border-default, rgba(164, 172, 185, 0.12));
-          background: var(--color-surface-3, #181d27);
-          box-shadow: var(--shadow-elevated, 0 12px 40px rgba(0, 0, 0, 0.6));
-          backdrop-filter: blur(20px);
-        }
-        .obscura-file-context-menu button {
-          border: 0;
-          border-radius: 0;
-          background: transparent;
-          color: var(--color-text-secondary, #c8ccd4);
-          padding: 0.5rem 0.75rem;
-          text-align: left;
-          font: 500 0.8rem Inter, system-ui, sans-serif;
-        }
-        .obscura-file-context-menu button:hover,
-        .obscura-file-context-menu button:focus-visible {
-          background: var(--color-surface-4, #1f2533);
-          color: var(--color-text-primary, #f5f2ea);
-          outline: none;
-        }
-        .obscura-file-context-menu button[data-destructive='true'] {
-          color: var(--color-error-text, #cc7880);
-        }
-        `,
-      });
-      tree.render({ containerWrapper: host });
-      host.addEventListener("click", bridgeRowClick);
-      removeTreeClickBridge = () => host.removeEventListener("click", bridgeRowClick);
-      unsubscribe = tree.subscribe(checkLazyExpansion);
-      checkLazyExpansion();
-      lastPathsKey = paths.join("\n");
+      while (paths.length === 0 && !cancelled) {
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      if (cancelled) return;
+      createTree(module, paths);
     })();
 
     return () => {
+      cancelled = true;
       removeTreeClickBridge?.();
       unsubscribe?.();
       tree?.cleanUp();
@@ -214,7 +228,13 @@
     if (!tree) return;
     const nextKey = paths.join("\n");
     if (nextKey !== lastPathsKey) {
-      tree.resetPaths(paths, { initialExpandedPaths: paths.filter((path) => loadedKeys.has(`${registry.get(path)?.rootId}:${registry.get(path)?.path}`)) });
+      const expandedPaths = paths.filter((path) => {
+        const meta = registry.get(path);
+        if (!meta || meta.kind !== "directory") return false;
+        if (meta.path === "") return true;
+        return loadedKeys.has(`${meta.rootId}:${meta.path}`);
+      });
+      tree.resetPaths(paths, { initialExpandedPaths: expandedPaths });
       lastPathsKey = nextKey;
       checkLazyExpansion();
     }

@@ -42,6 +42,7 @@
   let syncedQueryKey = "";
 
   const selectedMeta = $derived(selectedTreePath ? registry.get(selectedTreePath) ?? null : null);
+  const selectedIsFile = $derived(selectedMeta?.kind === "file");
 
   function loadedKey(meta: Pick<FileTreeNodeMeta, "rootId" | "path">): string {
     return `${meta.rootId}:${meta.path}`;
@@ -56,7 +57,7 @@
   }
 
   function directoryTarget(meta: FileTreeNodeMeta | null): FileTreeNodeMeta | null {
-    if (!meta) return roots[0] ? registry.get(fileTreeRootPath(roots[0])) ?? null : null;
+    if (!meta) return roots[0] ? registry.get(`${fileTreeRootPath(roots[0], roots)}/`) ?? null : null;
     if (meta.kind === "directory") return meta;
     const parent = parentPath(meta.path);
     return [...registry.values()].find((candidate) => candidate.rootId === meta.rootId && candidate.path === parent) ?? meta;
@@ -72,12 +73,28 @@
     try {
       const response = await fetchV2FileRoots();
       roots = response.roots;
-      registry = createFileTreeRegistry(roots);
-      treePaths = roots.map(fileTreeRootPath);
-      loadedKeys = new Set();
-      if (roots[0] && !selectedTreePath) {
-        await selectTreePath(fileTreeRootPath(roots[0]), { replaceUrl: true, showDetail: false });
+      const nextRegistry = createFileTreeRegistry(roots);
+      const rootTreePaths = roots.map((r) => `${fileTreeRootPath(r, roots)}/`);
+      const allPaths = [...rootTreePaths];
+      const nextLoadedKeys = new Set<string>();
+
+      const results = await Promise.allSettled(roots.map(async (root) => {
+        const rootTreePath = `${fileTreeRootPath(root, roots)}/`;
+        const children = await fetchV2FileChildren(root.id, "");
+        return { rootTreePath, root, children };
+      }));
+
+      for (const result of results) {
+        if (result.status !== "fulfilled") continue;
+        const { rootTreePath, root, children } = result.value;
+        const childPaths = upsertFileTreeEntries(nextRegistry, rootTreePath, children.entries);
+        allPaths.push(...childPaths);
+        nextLoadedKeys.add(`${root.id}:`);
       }
+
+      registry = nextRegistry;
+      treePaths = [...new Set(allPaths)];
+      loadedKeys = nextLoadedKeys;
     } catch (loadError) {
       error = loadError instanceof Error ? loadError.message : "Failed to load watched roots";
     } finally {
@@ -122,11 +139,18 @@
     const meta = registry.get(treePath);
     if (!meta) return;
     selectedTreePath = treePath;
-    if (options.showDetail ?? true) mobileDetail = true;
+
     const params = new URLSearchParams({ rootId: meta.rootId });
     if (meta.path) params.set("path", meta.path);
     await goto(`/files?${params.toString()}`, { replaceState: options.replaceUrl ?? false, noScroll: true, keepFocus: true });
-    await loadDetail(meta);
+
+    if (meta.kind === "file") {
+      if (options.showDetail ?? true) mobileDetail = true;
+      await loadDetail(meta);
+    } else {
+      detail = null;
+      mobileDetail = false;
+    }
   }
 
   async function refreshSelected(): Promise<void> {
@@ -138,7 +162,9 @@
       loadedKeys = nextLoaded;
       await loadChildren(target);
     }
-    await loadDetail(selectedMeta);
+    if (selectedMeta.kind === "file") {
+      await loadDetail(selectedMeta);
+    }
   }
 
   async function createFolder(meta: FileTreeNodeMeta): Promise<void> {
@@ -234,7 +260,7 @@
       nextLoaded.delete(loadedKey(target));
       loadedKeys = nextLoaded;
       await loadChildren(target);
-      await loadDetail(target);
+      if (selectedMeta?.kind === "file") await loadDetail(target);
     } catch (uploadError) {
       const message = uploadError instanceof Error ? uploadError.message : "Upload failed";
       error = message.includes("already exists")
@@ -314,12 +340,12 @@
     syncedQueryKey = queryKey;
     const root = roots.find((candidate) => candidate.id === rootId);
     if (!root) return;
-    const rootTreePath = fileTreeRootPath(root);
+    const rootTreePath = `${fileTreeRootPath(root, roots)}/`;
     void (async () => {
       const rootMeta = registry.get(rootTreePath);
       if (!rootMeta) return;
-      if (path && !registry.has(`${rootTreePath}/${path}`)) await loadChildren(rootMeta);
-      await selectTreePath(path ? `${rootTreePath}/${path}` : rootTreePath, { replaceUrl: true, showDetail: false });
+      if (path && !registry.has(`${rootTreePath}${path}`)) await loadChildren(rootMeta);
+      await selectTreePath(path ? `${rootTreePath}${path}` : rootTreePath, { replaceUrl: true, showDetail: false });
     })();
   });
 
@@ -380,8 +406,8 @@
   </div>
 
   <FileDetailPane
-    {detail}
-    loading={loadingDetail}
+    detail={selectedIsFile ? detail : null}
+    loading={selectedIsFile && loadingDetail}
     {error}
     mobile={mobileDetail}
     onBack={() => (mobileDetail = false)}

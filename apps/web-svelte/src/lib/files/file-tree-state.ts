@@ -8,19 +8,28 @@ export interface FileTreeNodeMeta {
   treePath: string;
 }
 
-export function fileTreeRootPath(root: Pick<V2FileRoot, "id" | "label" | "path">): string {
+export function fileTreeRootPath(root: Pick<V2FileRoot, "id" | "label" | "path">, allRoots?: Pick<V2FileRoot, "id" | "label" | "path">[]): string {
   const label = root.label?.trim() || root.path?.split(/[\\/]/).filter(Boolean).at(-1) || "Library";
-  return `${label} (${root.id.slice(0, 8)})`;
+  if (allRoots) {
+    const duplicates = allRoots.filter((other) => {
+      const otherLabel = other.label?.trim() || other.path?.split(/[\\/]/).filter(Boolean).at(-1) || "Library";
+      return otherLabel === label && other.id !== root.id;
+    });
+    if (duplicates.length > 0) return `${label} (${root.id.slice(0, 8)})`;
+  }
+  return label;
 }
 
 export function fileTreeEntryPath(rootTreePath: string, entry: Pick<V2FileEntry, "path">): string {
-  return entry.path ? `${rootTreePath}/${entry.path}` : rootTreePath;
+  if (!entry.path) return rootTreePath;
+  const base = rootTreePath.endsWith("/") ? rootTreePath.slice(0, -1) : rootTreePath;
+  return `${base}/${entry.path}`;
 }
 
 export function createFileTreeRegistry(roots: V2FileRoot[]): Map<string, FileTreeNodeMeta> {
   const registry = new Map<string, FileTreeNodeMeta>();
   for (const root of roots) {
-    const treePath = fileTreeRootPath(root);
+    const treePath = `${fileTreeRootPath(root, roots)}/`;
     registry.set(treePath, {
       rootId: root.id,
       path: "",
@@ -39,7 +48,8 @@ export function upsertFileTreeEntries(
 ): string[] {
   const treePaths: string[] = [];
   for (const entry of entries) {
-    const treePath = fileTreeEntryPath(rootTreePath, entry);
+    const basePath = fileTreeEntryPath(rootTreePath, entry);
+    const treePath = entry.kind === "directory" ? `${basePath}/` : basePath;
     registry.set(treePath, {
       rootId: entry.rootId,
       path: entry.path,
