@@ -5,6 +5,31 @@ namespace Obscura.Infrastructure.Tests;
 
 public sealed class MediaToolServiceTests {
     [Fact]
+    public void ToolOptionsPreferJellyfinFfmpegWhenNoPathIsConfigured() {
+        var options = MediaToolOptions.FromConfiguration(null, null, name =>
+            name == "jellyfin-ffmpeg" ? "jellyfin-ffmpeg" : null);
+
+        Assert.Equal("jellyfin-ffmpeg", options.FfmpegPath);
+        Assert.Equal("jellyfin-ffprobe", options.FfprobePath);
+    }
+
+    [Fact]
+    public void ToolOptionsKeepConfiguredFfmpegPath() {
+        var options = MediaToolOptions.FromConfiguration("/opt/media/ffmpeg", null, _ => "jellyfin-ffmpeg");
+
+        Assert.Equal("/opt/media/ffmpeg", options.FfmpegPath);
+        Assert.Equal("/opt/media/ffprobe", options.FfprobePath);
+    }
+
+    [Fact]
+    public void ToolOptionsResolveCompanionProbeForNamedFfmpegAliases() {
+        Assert.Equal(
+            "/Users/pauldavis/.local/bin/jellyfin-ffprobe",
+            MediaToolOptions.ResolveFfprobePath("/Users/pauldavis/.local/bin/jellyfin-ffmpeg"));
+        Assert.Equal("ffprobe7", MediaToolOptions.ResolveFfprobePath("ffmpeg7"));
+    }
+
+    [Fact]
     public async Task CheckReportsAvailableFfmpegAndFfprobeVersions() {
         var service = new MediaToolService(new FakeProcessExecutor(new Dictionary<string, ProcessExecutionResult> {
             ["ffmpeg"] = new(0, "ffmpeg version 7.1\nbuilt with clang", ""),

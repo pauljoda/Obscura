@@ -16,4 +16,17 @@ public interface IMaintenancePersistence {
     /// Returns the base cache directory path (e.g. /data/cache).
     /// </summary>
     string GetCacheBasePath();
+
+    /// <summary>
+    /// Removes generated preview/cache records and files for an entity so a rebuild job
+    /// creates fresh derived media instead of reusing stale thumbnails, previews,
+    /// trickplay sheets, or waveforms.
+    /// </summary>
+    /// <param name="kind">Entity kind whose generated asset paths should be invalidated.</param>
+    /// <param name="entityId">Entity identifier to invalidate.</param>
+    /// <param name="cancellationToken">Cancellation token for database work.</param>
+    Task ClearGeneratedPreviewAssetsAsync(
+        EntityKind kind,
+        Guid entityId,
+        CancellationToken cancellationToken);
 }

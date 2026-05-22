@@ -53,8 +53,8 @@ public static class DependencyInjection {
         services.AddDbContext<ObscuraDbContext>((provider, options) =>
             options.UseNpgsql(provider.GetRequiredService<NpgsqlDataSource>()));
         services.AddSingleton<ProcessExecutor>();
-        var mediaToolOptions = new MediaToolOptions(
-            configuration["OBSCURA_FFMPEG_PATH"] ?? configuration["Obscura:Hls:FfmpegPath"] ?? "ffmpeg",
+        var mediaToolOptions = MediaToolOptions.FromConfiguration(
+            configuration["OBSCURA_FFMPEG_PATH"] ?? configuration["Obscura:Hls:FfmpegPath"],
             configuration["OBSCURA_FFPROBE_PATH"] ?? configuration["Obscura:Hls:FfprobePath"]);
 
         services.AddSingleton(mediaToolOptions);

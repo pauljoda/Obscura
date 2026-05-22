@@ -91,6 +91,8 @@ public sealed class JobService {
             var entityIds = await _maintenance.GetActiveEntityIdsByKindAsync(kind, cancellationToken);
             foreach (var entityId in entityIds) {
                 var id = entityId.ToString();
+                await _maintenance.ClearGeneratedPreviewAssetsAsync(kind, entityId, cancellationToken);
+
                 if (await _queue.HasPendingAsync(jobType, id, cancellationToken)) {
                     skipped++;
                     continue;

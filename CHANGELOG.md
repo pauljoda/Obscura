@@ -41,7 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Python plugin and Stash scraper commands now run exactly as declared, so manifests should use `python3` explicitly when they need Python 3 instead of relying on an automatic command rewrite.
 - Video playback controls now stay synchronized with the native media element, so playback, seeking, and the buffered range render correctly while HLS plays.
 - Adaptive video playback now keeps decoded video visible over stale poster artwork and can prebuffer more of the stream during local playback.
-- HDR and Dolby Vision videos now avoid direct browser playback unless support is explicit, and adaptive playback plus generated preview artwork use SDR tone mapping to avoid purple or washed-out colors. Docker builds now ship Jellyfin FFmpeg so Dolby Vision tone mapping has the required encoder/filter support by default.
+- HDR and Dolby Vision videos now avoid direct browser playback unless support is explicit, and adaptive playback plus generated preview artwork use SDR tone mapping to avoid purple or washed-out colors. Docker builds now ship Jellyfin FFmpeg, and local installs prefer a `jellyfin-ffmpeg` command when available, so Dolby Vision tone mapping has the required encoder/filter support by default.
 - Browse grids now use docked pagination inside the shared entity grid, so large media lists keep a predictable scroll area and avoid rendering thousands of thumbnails at once.
 - Browse grids now fit their internal scroll area to the visible page instead of clipping below the app frame.
 
@@ -108,6 +108,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video playback now drives the visible progress and buffer rails from the native video element, fixing stale player controls while adaptive HLS plays.
 - Adaptive video playback now keeps decoded video visible over stale poster artwork and can prebuffer more of the stream during local playback.
 - HDR and Dolby Vision videos now route through SDR tone-mapped adaptive playback by default, and generated thumbnails, preview clips, and trickplay tiles use the same color-aware path.
+- Local adaptive playback now prefers `jellyfin-ffmpeg`/`jellyfin-ffprobe` when those commands are installed, fixing Dolby Vision HLS segment failures caused by stock FFmpeg builds without `tonemapx`.
+- Force rebuilding previews now clears old generated thumbnails, preview clips, trickplay data, and waveforms before queueing rebuild jobs, so stale purple HDR/Dolby Vision artwork is not reused.
 - Configured custom ffmpeg builds now apply consistently to media probing, playback transcodes, thumbnails, previews, subtitles, waveforms, and trickplay generation instead of only adaptive HLS.
 
 ### Removed
