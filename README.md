@@ -1,3 +1,9 @@
+> [!IMPORTANT]
+> ## 🚚 This project has moved!
+> **Obscura** has been renamed to **Prismedia** and development continues at:
+> ### 👉 https://github.com/pauljoda/Prismedia
+> This repository is archived. Please update your bookmarks, clones, and any references.
+
 <p align="center">
   <img src="docs/logo.svg" width="128" height="128" alt="Obscura" />
 </p>
